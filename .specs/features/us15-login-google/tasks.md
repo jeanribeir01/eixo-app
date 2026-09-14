@@ -9,7 +9,7 @@ Implement these tasks with the `tlc-spec-driven` skill: **activate it by name an
 ---
 
 **Design**: `.specs/features/us15-login-google/design.md`
-**Status**: In Progress
+**Status**: Done (Verifier PASS — ver validation.md)
 **Linear**: EIX-13 (mãe) · commits usam `Refs: EIX-NN` / `Closes EIX-NN`
 
 ---
