@@ -246,9 +246,8 @@ Todo PR precisa passar nos três.
 
 | Sintoma | Causa provável | Solução |
 |---|---|---|
-| `DEVELOPER_ERROR` ao tocar no botão | SHA-1 ou package do client Android não batem, ou `EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID` não é o client **Web** | Revise a seção 4; mudanças no Google Cloud podem levar alguns minutos para valer |
+| "Não foi possível entrar. Tente novamente." | O app mostra essa mesma mensagem genérica tanto para `DEVELOPER_ERROR` do Google (SHA-1/package do client Android não batem, ou `EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID` não é o client **Web**) quanto para o Supabase recusando o token — **não dá pra saber qual é só olhando a tela** | Confira nesta ordem: (1) seção 4 — client Android com SHA-1 correto e client Web certo no `.env`; (2) Supabase → provider Google ativo e com o Client ID Web em **Client IDs**. Mudanças no Google Cloud podem levar alguns minutos para valer |
 | "Google Play Services indisponível neste dispositivo." | Emulador sem Play Store | Crie o AVD com imagem *Google Play* (seção 2.3) |
-| "Não foi possível entrar. Tente novamente." | Supabase recusou o token | Confira se o provider Google está ativo e se o Client ID Web está em **Client IDs** no Supabase |
 | App fecha na abertura citando `EXPO_PUBLIC_...` | `.env` ausente ou incompleto | Seção 5; depois reinicie com `npm start -- --clear` |
 | `adb: command not found` / `emulator` não encontrado | SDK fora do PATH | Seção 2.2, e abra um terminal novo |
 | `SDK location not found` no Gradle | `ANDROID_HOME` não definido | Seção 2.2 |
