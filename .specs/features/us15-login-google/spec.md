@@ -127,9 +127,9 @@ nenhuma outra US que depende de usuário autenticado pode ser demonstrada.
 | AUTH-07 | P1: Entrar com Google | Tasks | Pending |
 | AUTH-08 | P1: Sessão persistente e segura | Tasks | Pending |
 | AUTH-09 | P1: Sessão persistente e segura | Tasks | Pending |
-| AUTH-10 | P1: Sessão persistente e segura | Tasks | Pending |
-| AUTH-11 | P1: Sessão persistente e segura | Tasks | Pending |
-| AUTH-12 | P1: Sessão persistente e segura | Tasks | Pending |
+| AUTH-10 | P1: Sessão persistente e segura | T3 | Implementing |
+| AUTH-11 | P1: Sessão persistente e segura | T3 | Implementing |
+| AUTH-12 | P1: Sessão persistente e segura | T3 | Implementing |
 | AUTH-13 | P1: Home de teste com Sair | Tasks | Pending |
 | AUTH-14 | P1: Home de teste com Sair | Tasks | Pending |
 | AUTH-15 | P1: Home de teste com Sair | Tasks | Pending |

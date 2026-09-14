@@ -133,10 +133,12 @@ T5 → T6 → T7 → T8
 
 **Done when**:
 
-- [ ] Valor de 5000 caracteres gravado e lido idêntico, com cada parte ≤ 1800
-- [ ] `removeItem` apaga todas as partes; leitura depois retorna `null`
-- [ ] Variável ausente gera erro que cita o nome dela
-- [ ] Gate check passes: `npm test`
+- [x] Valor de 5000 caracteres gravado e lido idêntico, com cada parte ≤ 1800
+- [x] `removeItem` apaga todas as partes; leitura depois retorna `null`
+- [x] Variável ausente gera erro que cita o nome dela
+- [x] Gate check passes: `npm test` (23 testes)
+
+**Status**: ✅ Complete — `jest.setup.ts` define variáveis fictícias porque `env.ts` valida ao ser importado.
 
 **Tests**: unit
 **Gate**: quick
