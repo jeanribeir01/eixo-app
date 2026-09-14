@@ -118,21 +118,21 @@ nenhuma outra US que depende de usuário autenticado pode ser demonstrada.
 
 | Requirement ID | Story | Phase | Status |
 | -------------- | ----- | ----- | ------ |
-| AUTH-01 | P1: Entrar com Google | Tasks | Pending |
-| AUTH-02 | P1: Entrar com Google | Tasks | Pending |
-| AUTH-03 | P1: Entrar com Google | Tasks | Pending |
-| AUTH-04 | P1: Entrar com Google | Tasks | Pending |
-| AUTH-05 | P1: Entrar com Google | Tasks | Pending |
-| AUTH-06 | P1: Entrar com Google | Tasks | Pending |
-| AUTH-07 | P1: Entrar com Google | Tasks | Pending |
-| AUTH-08 | P1: Sessão persistente e segura | Tasks | Pending |
-| AUTH-09 | P1: Sessão persistente e segura | Tasks | Pending |
-| AUTH-10 | P1: Sessão persistente e segura | Tasks | Pending |
-| AUTH-11 | P1: Sessão persistente e segura | Tasks | Pending |
-| AUTH-12 | P1: Sessão persistente e segura | Tasks | Pending |
-| AUTH-13 | P1: Home de teste com Sair | Tasks | Pending |
-| AUTH-14 | P1: Home de teste com Sair | Tasks | Pending |
-| AUTH-15 | P1: Home de teste com Sair | Tasks | Pending |
+| AUTH-01 | P1: Entrar com Google | T5 | Verified |
+| AUTH-02 | P1: Entrar com Google | T4 | Verified |
+| AUTH-03 | P1: Entrar com Google | T2, T6 | Verified |
+| AUTH-04 | P1: Entrar com Google | T4 | Verified |
+| AUTH-05 | P1: Entrar com Google | T4 | Verified |
+| AUTH-06 | P1: Entrar com Google | T4 | Verified |
+| AUTH-07 | P1: Entrar com Google | T4 | Verified |
+| AUTH-08 | P1: Sessão persistente e segura | T5 | Verified |
+| AUTH-09 | P1: Sessão persistente e segura | T5 | Verified |
+| AUTH-10 | P1: Sessão persistente e segura | T3 | Verified |
+| AUTH-11 | P1: Sessão persistente e segura | T3 | Verified |
+| AUTH-12 | P1: Sessão persistente e segura | T3 | Verified |
+| AUTH-13 | P1: Home de teste com Sair | T7 | Verified |
+| AUTH-14 | P1: Home de teste com Sair | T7 | Verified |
+| AUTH-15 | P1: Home de teste com Sair | T4, T5, T7 | Verified |
 
 **Coverage:** 15 total, 15 mapped to tasks, 0 unmapped
 

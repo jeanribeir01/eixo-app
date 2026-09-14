@@ -9,7 +9,7 @@ Implement these tasks with the `tlc-spec-driven` skill: **activate it by name an
 ---
 
 **Design**: `.specs/features/us15-login-google/design.md`
-**Status**: In Progress
+**Status**: Done (Verifier PASS — ver validation.md)
 **Linear**: EIX-13 (mãe) · commits usam `Refs: EIX-NN` / `Closes EIX-NN`
 
 ---
@@ -24,7 +24,7 @@ Implement these tasks with the `tlc-spec-driven` skill: **activate it by name an
 | Auth service + store (`src/features/auth/*.ts`) | unit | All branches; 1:1 to ACs; every listed edge case | `src/features/auth/__tests__/*.test.ts` | `npm test` |
 | UI primitives (`src/ui`) | unit (RNTL) | Variants, disabled/loading, min touch target | `src/ui/__tests__/*.test.tsx` | `npm test` |
 | Views (`src/features/auth/*View.tsx`) | unit (RNTL) | Happy + every error path in ACs | `src/features/auth/__tests__/*.test.tsx` | `npm test` |
-| Routes / layout (`app/`) | integration (`expo-router/testing-library`) | Guard: no session → Login; session → Home; restoring → nothing | `app/__tests__/*.test.tsx` | `npm test` |
+| Routes / layout (`app/`) | integration (`expo-router/testing-library`) | Guard: no session → Login; session → Home; restoring → nothing | `__tests__/routes/*.test.tsx` (fora de `app/`, senão o expo-router trata o teste como rota) | `npm test` |
 | Config / docs (`app.config.ts`, README, ADR) | none | build gate only | - | build gate |
 
 ## Gate Check Commands
@@ -77,10 +77,12 @@ T5 → T6 → T7 → T8
 
 **Done when**:
 
-- [ ] `tsconfig.json` com `strict: true`
-- [ ] `app/_layout.tsx` mínimo renderiza via expo-router
-- [ ] `.gitignore` inclui `android/`, `ios/`, `.env`; `.env.example` com as 3 variáveis
-- [ ] Gate check passes: `npm run typecheck && npm run lint && npm test` (1 smoke test)
+- [x] `tsconfig.json` com `strict: true`
+- [x] `app/_layout.tsx` mínimo renderiza via expo-router
+- [x] `.gitignore` inclui `android/`, `ios/`, `.env`; `.env.example` com as 3 variáveis
+- [x] Gate check passes: `npm run typecheck && npm run lint && npm test` (1 smoke test)
+
+**Status**: ✅ Complete — RNTL fixado em 13.x (o `expo-router/testing-library` do SDK 57 ainda usa a API síncrona do RNTL 13); `react-dom` 19.2.3 instalado para o npm resolver o peer opcional do Expo; `tsconfig` declara `types: ["jest"]` (TypeScript 6 não inclui `@types` automaticamente).
 
 **Tests**: integration
 **Gate**: build
@@ -103,10 +105,12 @@ T5 → T6 → T7 → T8
 
 **Done when**:
 
-- [ ] Button `primary` (fundo accent, borda accentEdge, texto branco) e `ghost` (transparente, borda border)
-- [ ] Button com `loading` fica desabilitado, mostra indicador e não dispara `onPress`
-- [ ] Button tem `minHeight` 44
-- [ ] Gate check passes: `npm test`
+- [x] Button `primary` (fundo accent, borda accentEdge, texto branco) e `ghost` (transparente, borda border)
+- [x] Button com `loading` fica desabilitado, mostra indicador e não dispara `onPress`
+- [x] Button tem `minHeight` 44
+- [x] Gate check passes: `npm test` (7 testes)
+
+**Status**: ✅ Complete — `Screen`, `Text` e `Card` não têm AC própria; são exercitados pelos testes das Views (T6/T7).
 
 **Tests**: unit
 **Gate**: quick
@@ -129,10 +133,12 @@ T5 → T6 → T7 → T8
 
 **Done when**:
 
-- [ ] Valor de 5000 caracteres gravado e lido idêntico, com cada parte ≤ 1800
-- [ ] `removeItem` apaga todas as partes; leitura depois retorna `null`
-- [ ] Variável ausente gera erro que cita o nome dela
-- [ ] Gate check passes: `npm test`
+- [x] Valor de 5000 caracteres gravado e lido idêntico, com cada parte ≤ 1800
+- [x] `removeItem` apaga todas as partes; leitura depois retorna `null`
+- [x] Variável ausente gera erro que cita o nome dela
+- [x] Gate check passes: `npm test` (23 testes)
+
+**Status**: ✅ Complete — `jest.setup.ts` define variáveis fictícias porque `env.ts` valida ao ser importado.
 
 **Tests**: unit
 **Gate**: quick
@@ -155,10 +161,12 @@ T5 → T6 → T7 → T8
 
 **Done when**:
 
-- [ ] Sucesso chama `signInWithIdToken({ provider: 'google', token })` e retorna `{ ok: true }`
-- [ ] Cancelado → `cancelled`; Play Services → `play_services`; sem idToken → `no_id_token`; erro Supabase/outro → `unknown`
-- [ ] `signOut` chama os dois signOut e encerra Supabase mesmo se o Google falhar
-- [ ] Gate check passes: `npm test`
+- [x] Sucesso chama `signInWithIdToken({ provider: 'google', token })` e retorna `{ ok: true }`
+- [x] Cancelado → `cancelled`; Play Services → `play_services`; sem idToken → `no_id_token`; erro Supabase/outro → `unknown`
+- [x] `signOut` chama os dois signOut e encerra Supabase mesmo se o Google falhar
+- [x] Gate check passes: `npm test` (38 testes)
+
+**Status**: ✅ Complete — `IN_PROGRESS` do Google cai em `unknown`, conforme AUTH-07 ("qualquer outro erro"); na prática não ocorre porque o botão fica desabilitado (AUTH-03). Testes usam o mock oficial do módulo nativo da lib.
 
 **Tests**: unit
 **Gate**: quick
@@ -181,9 +189,11 @@ T5 → T6 → T7 → T8
 
 **Done when**:
 
-- [ ] Sem sessão → rota de Login; com sessão → Home; restaurando → nenhuma das duas
-- [ ] Evento `SIGNED_OUT` volta ao Login
-- [ ] Gate check passes: `npm run typecheck && npm test`
+- [x] Sem sessão → rota de Login; com sessão → Home; restaurando → nenhuma das duas
+- [x] Evento `SIGNED_OUT` volta ao Login
+- [x] Gate check passes: `npm run typecheck && npm test` (47 testes)
+
+**Status**: ✅ Complete — Home ficou em `app/(app)/index.tsx` (rota `/`) em vez de `home.tsx`: é o padrão da doc do expo-router para `Stack.Protected`, e evita uma rota raiz vazia. O smoke test do scaffold (`__tests__/routes/layout.test.tsx`) e o placeholder `app/index.tsx` foram substituídos por `__tests__/routes/authGuard.test.tsx`, que renderiza o mesmo layout raiz com os cenários de sessão. A sessão vem só do evento `INITIAL_SESSION` do `onAuthStateChange` (sem `getSession()` separado).
 
 **Tests**: integration
 **Gate**: full
@@ -206,8 +216,10 @@ T5 → T6 → T7 → T8
 
 **Done when**:
 
-- [ ] Loading desabilita o botão; cancelamento não mostra texto; cada código mostra a mensagem exata do spec
-- [ ] Gate check passes: `npm test`
+- [x] Loading desabilita o botão; cancelamento não mostra texto; cada código mostra a mensagem exata do spec
+- [x] Gate check passes: `npm test` (54 testes)
+
+**Status**: ✅ Complete — sem highlight cyan no título: o CLAUDE.md §8 restringe o Highlighted Text Span a títulos de dashboard. Criado o primitivo `Column` (gap por token) para a tela não definir estilo próprio. `expo-asset` instalado (peer obrigatório do `expo-font`).
 
 **Tests**: unit
 **Gate**: quick
@@ -230,9 +242,11 @@ T5 → T6 → T7 → T8
 
 **Done when**:
 
-- [ ] Nome e e-mail visíveis; foto quando existe, inicial quando não; e-mail no lugar do nome vazio
-- [ ] "Sair" chama `signOut`
-- [ ] Gate check passes: `npm test`
+- [x] Nome e e-mail visíveis; foto quando existe, inicial quando não; e-mail no lugar do nome vazio
+- [x] "Sair" chama `signOut`
+- [x] Gate check passes: `npm test` (59 testes)
+
+**Status**: ✅ Complete — criado o primitivo `Avatar` (foto ou inicial). `user_metadata` do Google validado com Zod na borda.
 
 **Tests**: unit
 **Gate**: quick
@@ -255,9 +269,11 @@ T5 → T6 → T7 → T8
 
 **Done when**:
 
-- [ ] `npx expo config --type public` mostra `android.package = com.eixocerto.app`
-- [ ] README cobre emulador (Windows/Linux), Supabase, Google Cloud, `.env`, `expo run:android`, troubleshooting, fluxo Linear
-- [ ] Gate check passes: `npm run typecheck && npm run lint && npm test`
+- [x] `npx expo config --type public` mostra `android.package = com.eixocerto.app`
+- [x] README cobre emulador (Windows/Linux), Supabase, Google Cloud, `.env`, `expo run:android`, troubleshooting, fluxo Linear
+- [x] Gate check passes: `npm run typecheck && npm run lint && npm test` (59 testes)
+
+**Status**: ✅ Complete — `expo prebuild --platform android` validado (package, regras de backup do SecureStore no manifest). Plugin do Google Sign-In deliberadamente fora do config (ver ADR 0001). SHA-1 do keystore de debug documentado no README. Adicionados `expo-system-ui` (aviso do prebuild) e `expo-dev-client`.
 
 **Tests**: none
 **Gate**: build

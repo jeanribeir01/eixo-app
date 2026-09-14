@@ -29,10 +29,10 @@
 ## Handoff
 
 - **Feature**: `.specs/features/us15-login-google`
-- **Phase / Task**: Phase 1 / T1
-- **Completed**: none
+- **Phase / Task**: Execute concluído (T1–T8) + Verifier PASS
+- **Completed**: T1, T2, T3, T4, T5, T6, T7, T8
 - **In-progress** (file:line): none
-- **Next step**: Scaffold do app Expo (T1)
-- **Blockers**: credenciais Supabase/Google (EIX-14, EIX-15) só bloqueiam a UAT no emulador
+- **Next step**: UAT no emulador após credenciais (EIX-14, EIX-15); criar repo GitHub, push e PR
+- **Blockers**: credenciais Supabase e client Android do Google Cloud (manuais)
 - **Uncommitted files**: none
 - **Branch**: jeanribeiro1905/eix-13-us15-login-com-google-no-app-expo
