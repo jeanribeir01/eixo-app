@@ -20,7 +20,26 @@ const config: ExpoConfig = {
     },
     predictiveBackGestureEnabled: false,
   },
-  plugins: ['expo-router', 'expo-status-bar'],
+  plugins: [
+    'expo-router',
+    'expo-status-bar',
+    // Exclui os dados do SecureStore do backup automático do Android: uma sessão restaurada em outro
+    // aparelho não conseguiria ser lida (a chave de criptografia fica no Keystore do aparelho original).
+    'expo-secure-store',
+    [
+      'expo-splash-screen',
+      {
+        image: './assets/splash-icon.png',
+        imageWidth: 160,
+        resizeMode: 'contain',
+        backgroundColor: '#fafaf9', // tokens.colors.canvas
+      },
+    ],
+    // O plugin '@react-native-google-signin/google-signin' NÃO entra aqui de propósito:
+    // sem opções ele configura o Firebase (exige google-services.json) e com opções só mexe no iOS.
+    // No Android sem Firebase, o autolinking já instala o módulo nativo. Ao adicionar iOS, inclua:
+    // ['@react-native-google-signin/google-signin', { iosUrlScheme: 'com.googleusercontent.apps.<ID>' }]
+  ],
   experiments: {
     typedRoutes: true,
   },

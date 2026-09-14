@@ -269,9 +269,11 @@ T5 → T6 → T7 → T8
 
 **Done when**:
 
-- [ ] `npx expo config --type public` mostra `android.package = com.eixocerto.app`
-- [ ] README cobre emulador (Windows/Linux), Supabase, Google Cloud, `.env`, `expo run:android`, troubleshooting, fluxo Linear
-- [ ] Gate check passes: `npm run typecheck && npm run lint && npm test`
+- [x] `npx expo config --type public` mostra `android.package = com.eixocerto.app`
+- [x] README cobre emulador (Windows/Linux), Supabase, Google Cloud, `.env`, `expo run:android`, troubleshooting, fluxo Linear
+- [x] Gate check passes: `npm run typecheck && npm run lint && npm test` (59 testes)
+
+**Status**: ✅ Complete — `expo prebuild --platform android` validado (package, regras de backup do SecureStore no manifest). Plugin do Google Sign-In deliberadamente fora do config (ver ADR 0001). SHA-1 do keystore de debug documentado no README. Adicionados `expo-system-ui` (aviso do prebuild) e `expo-dev-client`.
 
 **Tests**: none
 **Gate**: build
