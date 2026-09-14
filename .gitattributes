@@ -1,0 +1,6 @@
+# A equipe desenvolve em Windows e Linux: normalizar para LF evita diffs gigantes só de fim de linha.
+* text=auto eol=lf
+*.png binary
+*.jpg binary
+*.ttf binary
+*.jar binary
