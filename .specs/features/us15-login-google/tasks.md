@@ -105,10 +105,12 @@ T5 → T6 → T7 → T8
 
 **Done when**:
 
-- [ ] Button `primary` (fundo accent, borda accentEdge, texto branco) e `ghost` (transparente, borda border)
-- [ ] Button com `loading` fica desabilitado, mostra indicador e não dispara `onPress`
-- [ ] Button tem `minHeight` 44
-- [ ] Gate check passes: `npm test`
+- [x] Button `primary` (fundo accent, borda accentEdge, texto branco) e `ghost` (transparente, borda border)
+- [x] Button com `loading` fica desabilitado, mostra indicador e não dispara `onPress`
+- [x] Button tem `minHeight` 44
+- [x] Gate check passes: `npm test` (7 testes)
+
+**Status**: ✅ Complete — `Screen`, `Text` e `Card` não têm AC própria; são exercitados pelos testes das Views (T6/T7).
 
 **Tests**: unit
 **Gate**: quick
