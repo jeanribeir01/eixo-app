@@ -12,6 +12,7 @@
   },
   "dependencies": {
     "@expo-google-fonts/inter": "^0.4.2",
+    "@react-native-google-signin/google-signin": "^16.1.5",
     "@supabase/supabase-js": "^2.116.0",
     "expo": "~57.0.22",
     "expo-constants": "~57.0.18",
@@ -41,7 +42,8 @@
   "jest": {
     "preset": "jest-expo",
     "setupFiles": [
-      "<rootDir>/jest.setup.ts"
+      "<rootDir>/jest.setup.ts",
+      "<rootDir>/node_modules/@react-native-google-signin/google-signin/jest/build/jest/setup.js"
     ],
     "moduleNameMapper": {
       "^@/(.*)$": "<rootDir>/src/$1"

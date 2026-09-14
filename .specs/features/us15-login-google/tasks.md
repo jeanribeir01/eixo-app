@@ -161,10 +161,12 @@ T5 → T6 → T7 → T8
 
 **Done when**:
 
-- [ ] Sucesso chama `signInWithIdToken({ provider: 'google', token })` e retorna `{ ok: true }`
-- [ ] Cancelado → `cancelled`; Play Services → `play_services`; sem idToken → `no_id_token`; erro Supabase/outro → `unknown`
-- [ ] `signOut` chama os dois signOut e encerra Supabase mesmo se o Google falhar
-- [ ] Gate check passes: `npm test`
+- [x] Sucesso chama `signInWithIdToken({ provider: 'google', token })` e retorna `{ ok: true }`
+- [x] Cancelado → `cancelled`; Play Services → `play_services`; sem idToken → `no_id_token`; erro Supabase/outro → `unknown`
+- [x] `signOut` chama os dois signOut e encerra Supabase mesmo se o Google falhar
+- [x] Gate check passes: `npm test` (38 testes)
+
+**Status**: ✅ Complete — `IN_PROGRESS` do Google cai em `unknown`, conforme AUTH-07 ("qualquer outro erro"); na prática não ocorre porque o botão fica desabilitado (AUTH-03). Testes usam o mock oficial do módulo nativo da lib.
 
 **Tests**: unit
 **Gate**: quick

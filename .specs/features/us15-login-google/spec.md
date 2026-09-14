@@ -119,12 +119,12 @@ nenhuma outra US que depende de usuário autenticado pode ser demonstrada.
 | Requirement ID | Story | Phase | Status |
 | -------------- | ----- | ----- | ------ |
 | AUTH-01 | P1: Entrar com Google | Tasks | Pending |
-| AUTH-02 | P1: Entrar com Google | Tasks | Pending |
+| AUTH-02 | P1: Entrar com Google | T4 | Implementing |
 | AUTH-03 | P1: Entrar com Google | Tasks | Pending |
-| AUTH-04 | P1: Entrar com Google | Tasks | Pending |
-| AUTH-05 | P1: Entrar com Google | Tasks | Pending |
-| AUTH-06 | P1: Entrar com Google | Tasks | Pending |
-| AUTH-07 | P1: Entrar com Google | Tasks | Pending |
+| AUTH-04 | P1: Entrar com Google | T4 | Implementing |
+| AUTH-05 | P1: Entrar com Google | T4 | Implementing |
+| AUTH-06 | P1: Entrar com Google | T4 | Implementing |
+| AUTH-07 | P1: Entrar com Google | T4 | Implementing |
 | AUTH-08 | P1: Sessão persistente e segura | Tasks | Pending |
 | AUTH-09 | P1: Sessão persistente e segura | Tasks | Pending |
 | AUTH-10 | P1: Sessão persistente e segura | T3 | Implementing |
@@ -132,7 +132,7 @@ nenhuma outra US que depende de usuário autenticado pode ser demonstrada.
 | AUTH-12 | P1: Sessão persistente e segura | T3 | Implementing |
 | AUTH-13 | P1: Home de teste com Sair | Tasks | Pending |
 | AUTH-14 | P1: Home de teste com Sair | Tasks | Pending |
-| AUTH-15 | P1: Home de teste com Sair | Tasks | Pending |
+| AUTH-15 | P1: Home de teste com Sair | T4 | Implementing |
 
 **Coverage:** 15 total, 15 mapped to tasks, 0 unmapped
 
