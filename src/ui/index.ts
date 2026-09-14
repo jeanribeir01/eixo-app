@@ -1,3 +1,4 @@
+export { Avatar } from './Avatar';
 export { Button, type ButtonProps, type ButtonVariant } from './Button';
 export { Card } from './Card';
 export { Column } from './Column';

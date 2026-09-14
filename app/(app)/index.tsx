@@ -1,6 +1,5 @@
-import { Text } from '@/ui';
+import { HomeView } from '@/features/auth/HomeView';
 
-// Rota "/" para usuário autenticado. A HomeView entra na T7.
 export default function HomeRoute() {
-  return <Text>Home</Text>;
+  return <HomeView />;
 }

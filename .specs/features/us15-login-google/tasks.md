@@ -242,9 +242,11 @@ T5 → T6 → T7 → T8
 
 **Done when**:
 
-- [ ] Nome e e-mail visíveis; foto quando existe, inicial quando não; e-mail no lugar do nome vazio
-- [ ] "Sair" chama `signOut`
-- [ ] Gate check passes: `npm test`
+- [x] Nome e e-mail visíveis; foto quando existe, inicial quando não; e-mail no lugar do nome vazio
+- [x] "Sair" chama `signOut`
+- [x] Gate check passes: `npm test` (59 testes)
+
+**Status**: ✅ Complete — criado o primitivo `Avatar` (foto ou inicial). `user_metadata` do Google validado com Zod na borda.
 
 **Tests**: unit
 **Gate**: quick
