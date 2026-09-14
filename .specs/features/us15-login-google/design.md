@@ -24,8 +24,8 @@ sequenceDiagram
   R-->>U: Stack.Protected libera (app)/home
 ```
 
-Na abertura do app, `sessionStore.init()` chama `supabase.auth.getSession()` (lê do SecureStore) e só
-então esconde a splash. O layout raiz nunca navega manualmente: ele troca o `guard` do
+Na abertura do app, `startSessionSync()` se inscreve no `onAuthStateChange`; o primeiro evento
+(`INITIAL_SESSION`) chega depois de o supabase-js ler o SecureStore, e só então a splash some. O layout raiz nunca navega manualmente: ele troca o `guard` do
 `Stack.Protected` conforme a sessão, e o expo-router redireciona sozinho.
 
 ## Componentes
@@ -37,12 +37,12 @@ então esconde a splash. O layout raiz nunca navega manualmente: ele troca o `gu
 | `src/supabase/client.ts` | Instância única do `supabase-js` | env, secureStorage |
 | `src/features/auth/errors.ts` | `AuthErrorCode` + mensagens em português | — |
 | `src/features/auth/googleAuth.ts` | `configureGoogleSignIn`, `signInWithGoogle`, `signOut` | google-signin, client, errors |
-| `src/features/auth/sessionStore.ts` | Zustand: `session`, `isRestoring`, `init()` | client |
+| `src/features/auth/sessionStore.ts` | Zustand: `session`, `isRestoring`, `startSessionSync()` | client |
 | `src/ui/*` | tokens + `Screen`, `Text`, `Button`, `Card` | tokens |
 | `src/features/auth/LoginView.tsx` | UI do Login (estado local de loading/erro) | ui, googleAuth |
 | `src/features/auth/HomeView.tsx` | UI da Home com dados da sessão | ui, googleAuth, sessionStore |
 | `app/_layout.tsx` | Fontes, splash, `Stack.Protected` por sessão | sessionStore |
-| `app/(auth)/login.tsx`, `app/(app)/home.tsx` | Rotas finas que só renderizam as Views | Views |
+| `app/(auth)/login.tsx`, `app/(app)/index.tsx` | Rotas finas que só renderizam as Views (`/login` e `/`) | Views |
 
 ## Tech Decisions (locais à feature)
 

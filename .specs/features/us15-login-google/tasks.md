@@ -189,9 +189,11 @@ T5 → T6 → T7 → T8
 
 **Done when**:
 
-- [ ] Sem sessão → rota de Login; com sessão → Home; restaurando → nenhuma das duas
-- [ ] Evento `SIGNED_OUT` volta ao Login
-- [ ] Gate check passes: `npm run typecheck && npm test`
+- [x] Sem sessão → rota de Login; com sessão → Home; restaurando → nenhuma das duas
+- [x] Evento `SIGNED_OUT` volta ao Login
+- [x] Gate check passes: `npm run typecheck && npm test` (47 testes)
+
+**Status**: ✅ Complete — Home ficou em `app/(app)/index.tsx` (rota `/`) em vez de `home.tsx`: é o padrão da doc do expo-router para `Stack.Protected`, e evita uma rota raiz vazia. O smoke test do scaffold (`__tests__/routes/layout.test.tsx`) e o placeholder `app/index.tsx` foram substituídos por `__tests__/routes/authGuard.test.tsx`, que renderiza o mesmo layout raiz com os cenários de sessão. A sessão vem só do evento `INITIAL_SESSION` do `onAuthStateChange` (sem `getSession()` separado).
 
 **Tests**: integration
 **Gate**: full

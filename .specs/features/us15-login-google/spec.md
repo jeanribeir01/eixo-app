@@ -118,15 +118,15 @@ nenhuma outra US que depende de usuário autenticado pode ser demonstrada.
 
 | Requirement ID | Story | Phase | Status |
 | -------------- | ----- | ----- | ------ |
-| AUTH-01 | P1: Entrar com Google | Tasks | Pending |
+| AUTH-01 | P1: Entrar com Google | T5 | Implementing |
 | AUTH-02 | P1: Entrar com Google | T4 | Implementing |
 | AUTH-03 | P1: Entrar com Google | Tasks | Pending |
 | AUTH-04 | P1: Entrar com Google | T4 | Implementing |
 | AUTH-05 | P1: Entrar com Google | T4 | Implementing |
 | AUTH-06 | P1: Entrar com Google | T4 | Implementing |
 | AUTH-07 | P1: Entrar com Google | T4 | Implementing |
-| AUTH-08 | P1: Sessão persistente e segura | Tasks | Pending |
-| AUTH-09 | P1: Sessão persistente e segura | Tasks | Pending |
+| AUTH-08 | P1: Sessão persistente e segura | T5 | Implementing |
+| AUTH-09 | P1: Sessão persistente e segura | T5 | Implementing |
 | AUTH-10 | P1: Sessão persistente e segura | T3 | Implementing |
 | AUTH-11 | P1: Sessão persistente e segura | T3 | Implementing |
 | AUTH-12 | P1: Sessão persistente e segura | T3 | Implementing |
