@@ -24,7 +24,7 @@ Implement these tasks with the `tlc-spec-driven` skill: **activate it by name an
 | Auth service + store (`src/features/auth/*.ts`) | unit | All branches; 1:1 to ACs; every listed edge case | `src/features/auth/__tests__/*.test.ts` | `npm test` |
 | UI primitives (`src/ui`) | unit (RNTL) | Variants, disabled/loading, min touch target | `src/ui/__tests__/*.test.tsx` | `npm test` |
 | Views (`src/features/auth/*View.tsx`) | unit (RNTL) | Happy + every error path in ACs | `src/features/auth/__tests__/*.test.tsx` | `npm test` |
-| Routes / layout (`app/`) | integration (`expo-router/testing-library`) | Guard: no session → Login; session → Home; restoring → nothing | `app/__tests__/*.test.tsx` | `npm test` |
+| Routes / layout (`app/`) | integration (`expo-router/testing-library`) | Guard: no session → Login; session → Home; restoring → nothing | `__tests__/routes/*.test.tsx` (fora de `app/`, senão o expo-router trata o teste como rota) | `npm test` |
 | Config / docs (`app.config.ts`, README, ADR) | none | build gate only | - | build gate |
 
 ## Gate Check Commands
@@ -77,10 +77,12 @@ T5 → T6 → T7 → T8
 
 **Done when**:
 
-- [ ] `tsconfig.json` com `strict: true`
-- [ ] `app/_layout.tsx` mínimo renderiza via expo-router
-- [ ] `.gitignore` inclui `android/`, `ios/`, `.env`; `.env.example` com as 3 variáveis
-- [ ] Gate check passes: `npm run typecheck && npm run lint && npm test` (1 smoke test)
+- [x] `tsconfig.json` com `strict: true`
+- [x] `app/_layout.tsx` mínimo renderiza via expo-router
+- [x] `.gitignore` inclui `android/`, `ios/`, `.env`; `.env.example` com as 3 variáveis
+- [x] Gate check passes: `npm run typecheck && npm run lint && npm test` (1 smoke test)
+
+**Status**: ✅ Complete — RNTL fixado em 13.x (o `expo-router/testing-library` do SDK 57 ainda usa a API síncrona do RNTL 13); `react-dom` 19.2.3 instalado para o npm resolver o peer opcional do Expo; `tsconfig` declara `types: ["jest"]` (TypeScript 6 não inclui `@types` automaticamente).
 
 **Tests**: integration
 **Gate**: build
