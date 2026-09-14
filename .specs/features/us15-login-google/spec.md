@@ -120,7 +120,7 @@ nenhuma outra US que depende de usuário autenticado pode ser demonstrada.
 | -------------- | ----- | ----- | ------ |
 | AUTH-01 | P1: Entrar com Google | T5 | Implementing |
 | AUTH-02 | P1: Entrar com Google | T4 | Implementing |
-| AUTH-03 | P1: Entrar com Google | Tasks | Pending |
+| AUTH-03 | P1: Entrar com Google | T2, T6 | Implementing |
 | AUTH-04 | P1: Entrar com Google | T4 | Implementing |
 | AUTH-05 | P1: Entrar com Google | T4 | Implementing |
 | AUTH-06 | P1: Entrar com Google | T4 | Implementing |

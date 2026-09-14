@@ -216,8 +216,10 @@ T5 → T6 → T7 → T8
 
 **Done when**:
 
-- [ ] Loading desabilita o botão; cancelamento não mostra texto; cada código mostra a mensagem exata do spec
-- [ ] Gate check passes: `npm test`
+- [x] Loading desabilita o botão; cancelamento não mostra texto; cada código mostra a mensagem exata do spec
+- [x] Gate check passes: `npm test` (54 testes)
+
+**Status**: ✅ Complete — sem highlight cyan no título: o CLAUDE.md §8 restringe o Highlighted Text Span a títulos de dashboard. Criado o primitivo `Column` (gap por token) para a tela não definir estilo próprio. `expo-asset` instalado (peer obrigatório do `expo-font`).
 
 **Tests**: unit
 **Gate**: quick

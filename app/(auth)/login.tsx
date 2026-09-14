@@ -1,6 +1,5 @@
-import { Text } from '@/ui';
+import { LoginView } from '@/features/auth/LoginView';
 
-// Rota "/login". A LoginView entra na T6.
 export default function LoginRoute() {
-  return <Text>Login</Text>;
+  return <LoginView />;
 }
