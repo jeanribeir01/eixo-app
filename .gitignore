@@ -30,6 +30,14 @@ yarn-error.*
 .DS_Store
 *.pem
 
+# Windows
+Thumbs.db
+
+# editores/IDEs
+.idea/
+.vscode/
+*.log
+
 # local env files (credenciais nunca vão para o git; use .env.example como modelo)
 .env
 .env*.local
