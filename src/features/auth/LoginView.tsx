@@ -34,7 +34,7 @@ export function LoginView() {
         <Text tone="body">Use sua conta Google para acessar a gestão financeira e a frota da empresa.</Text>
       </Column>
 
-      <Button label="Continuar com Google" onPress={handleGooglePress} loading={isLoading} />
+      <Button label="Continuar com Google" onPress={handleGooglePress} loading={isLoading} variant="google" />
 
       {errorMessage && (
         // role "alert" faz o leitor de tela anunciar o erro assim que ele aparece.

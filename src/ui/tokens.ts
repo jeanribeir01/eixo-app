@@ -20,6 +20,18 @@ export const spacing = { xs: 4, sm: 8, md: 12, base: 16, lg: 24, xl: 32, xxl: 48
 
 export const radius = { icon: 4, input: 6, card: 10, feature: 16, pill: 9999 } as const;
 
+// Sombra "subtle" do DESIGN_CYAN (rgba(0,0,0,0.05) 0 1px 2px). Sombra é exceção, não regra:
+// só o botão do Google usa hoje. RN pede shadow* (iOS) + elevation (Android) separados.
+export const shadow = {
+  subtle: {
+    shadowColor: '#000000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.05,
+    shadowRadius: 2,
+    elevation: 1,
+  },
+} as const;
+
 // Alvo de toque mínimo (44×44pt): o guia foi feito para mouse, o app é usado com o dedo.
 export const touchTarget = 44;
 
