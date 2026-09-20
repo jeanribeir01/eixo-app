@@ -45,7 +45,7 @@ Módulos: Caixa (movimentações, dívidas, saldo), Frota (veículos, manutenç�
 ### 2.2 TypeScript
 
 - `strict: true`. **`any` é proibido** — use `unknown` + narrowing se necessário.
-- Tipos do banco vêm de `src/types/database.ts` (gerado por `supabase gen types`). Não redeclare tipos de tabela na mão.
+- Tipos do banco vêm do arquivo gerado por `supabase gen types`; não redeclare tipos de tabela na mão.
 - Validação de formulário com Zod, com mensagens de erro **em português**.
 
 ### 2.3 Estrutura de pastas
