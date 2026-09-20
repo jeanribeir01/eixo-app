@@ -5,7 +5,7 @@ description: Escreve consultas e mutações ao Supabase no Eixo App com tipos ge
 
 # supabase-query
 
-Não existe API intermediária: o app fala direto com o Postgres. **O RLS é a única fronteira de autorização.** Query correta no cliente não substitui policy correta no banco.
+Não existe API intermediária para as operações online do Supabase; nas rotinas offline-first, a UI lê/escreve SQLite e o sincronizador usa o client para drenar a outbox. O RLS continua sendo a fronteira de autorização no backend.
 
 ## Antes de escrever
 
