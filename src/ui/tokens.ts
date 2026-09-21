@@ -14,6 +14,12 @@ export const colors = {
   accent: '#3ba6f1', // CTA primária e ícones — único acento cromático
   accentEdge: '#3398e1', // bordas de ação e links
   onAccent: '#ffffff', // texto sobre o botão cyan
+  // Exceção semântica do DESIGN_CYAN (financeiro): só no valor, ícone ou chip de entrada/saída —
+  // nunca em cartão, borda ou fundo inteiro, e nunca como único indicador (acompanhar de sinal/rótulo).
+  success: '#1a7f4f',
+  successWash: '#dcf5e6',
+  danger: '#b42318',
+  dangerWash: '#fde8e6',
 } as const;
 
 export const spacing = { xs: 4, sm: 8, md: 12, base: 16, lg: 24, xl: 32, xxl: 48 } as const;
