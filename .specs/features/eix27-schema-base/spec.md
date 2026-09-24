@@ -169,11 +169,11 @@ de uma vez, com as regras de integridade no banco, RLS por perfil e os tipos Typ
 | DB-06 | P1: Tabelas — AC7, AC8 | Design | Implementing |
 | DB-07 | P1: Tabelas — AC9 | Design | Implementing |
 | SEED-01 | P1: Dados padrão — AC1–AC4 | Design | Implementing |
-| RLS-01 | P1: RLS — AC1, AC10 | Design | Pending |
+| RLS-01 | P1: RLS — AC1, AC10 | Design | Implementing |
 | RLS-02 | P1: RLS — AC2 | Design | Implementing |
-| RLS-03 | P1: RLS — AC3, AC5 | Design | Pending |
-| RLS-04 | P1: RLS — AC4, AC6, AC7 | Design | Pending |
-| RLS-05 | P1: RLS — AC8, AC9 | Design | Pending |
+| RLS-03 | P1: RLS — AC3, AC5 | Design | Implementing |
+| RLS-04 | P1: RLS — AC4, AC6, AC7 | Design | Implementing |
+| RLS-05 | P1: RLS — AC8, AC9 | Design | Implementing |
 | STO-01 | P1: Comprovantes — AC1–AC3 | Design | Pending |
 | TYPE-01 | P2: Tipos — AC1, AC3 | Design | Pending |
 | DOC-01 | P2: Tipos — AC2 | Design | Implementing |

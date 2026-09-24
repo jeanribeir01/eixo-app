@@ -252,13 +252,13 @@ T9 → T10
 
 **Done when**:
 
-- [ ] `relrowsecurity` verdadeiro nas 10 tabelas
-- [ ] Motorista: zero linhas em movimentacao/divida/categoria/forma_pagamento; só as próprias viagens
-- [ ] Admin/Financeiro leem e gravam financeiro; Admin/Gestor gravam frota
-- [ ] Autenticado lê veiculo, rota, perfil; anon lê zero linhas
-- [ ] Não-Admin não grava usuario/perfil; delete em categoria/forma_pagamento/usuario/perfil rejeitado
-- [ ] Gate check passes: `npm test -- supabase/tests`
-- [ ] Test count: ≥ 10 novos testes
+- [x] `relrowsecurity` verdadeiro nas 10 tabelas
+- [x] Motorista: zero linhas em movimentacao/divida/categoria/forma_pagamento; só as próprias viagens
+- [x] Admin/Financeiro leem e gravam financeiro; Admin/Gestor gravam frota
+- [x] Autenticado lê veiculo, rota, perfil; anon lê zero linhas
+- [x] Não-Admin não grava usuario/perfil; delete em categoria/forma_pagamento/usuario/perfil rejeitado
+- [x] Gate check passes: `npm test -- supabase/tests`
+- [x] Test count: ≥ 10 novos testes (12 novos)
 
 **Tests**: integration
 **Gate**: full
