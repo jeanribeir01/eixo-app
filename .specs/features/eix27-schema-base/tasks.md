@@ -222,13 +222,13 @@ T9 → T10
 
 **Done when**:
 
-- [ ] Movimentação sem viagem e sem dívida aceita; com IDs inexistentes rejeitada
-- [ ] `Pago` sem `data_pagamento` rejeitado; `Pendente` com `data_pagamento` aceito
-- [ ] `valor` e `valor_parcela` negativos rejeitados
-- [ ] `data_atualizacao` muda no update
-- [ ] Todas as 10 tabelas existem em `public`
-- [ ] Gate check passes: `npm run typecheck && npm run lint && npm test`
-- [ ] Test count: ≥ 7 novos testes
+- [x] Movimentação sem viagem e sem dívida aceita; com IDs inexistentes rejeitada
+- [x] `Pago` sem `data_pagamento` rejeitado; `Pendente` com `data_pagamento` aceito
+- [x] `valor` e `valor_parcela` negativos rejeitados
+- [x] `data_atualizacao` muda no update
+- [x] Todas as 10 tabelas existem em `public`
+- [x] Gate check passes: `npm run typecheck && npm run lint && npm test`
+- [x] Test count: ≥ 7 novos testes (8 novos)
 
 **Tests**: integration
 **Gate**: build

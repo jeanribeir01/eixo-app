@@ -162,9 +162,9 @@ de uma vez, com as regras de integridade no banco, RLS por perfil e os tipos Typ
 | Requirement ID | Story | Phase | Status |
 | -------------- | ----- | ----- | ------ |
 | DB-01 | P1: Tabelas — AC1 | Design | Implementing |
-| DB-02 | P1: Tabelas — AC2, AC3 | Design | Pending |
+| DB-02 | P1: Tabelas — AC2, AC3 | Design | Implementing |
 | DB-03 | P1: Tabelas — AC4 | Design | Implementing |
-| DB-04 | P1: Tabelas — AC5 | Design | Pending |
+| DB-04 | P1: Tabelas — AC5 | Design | Implementing |
 | DB-05 | P1: Tabelas — AC6 + placa normalizada | Design | Implementing |
 | DB-06 | P1: Tabelas — AC7, AC8 | Design | Implementing |
 | DB-07 | P1: Tabelas — AC9 | Design | Implementing |
