@@ -165,10 +165,10 @@ T9 → T10
 
 **Done when**:
 
-- [ ] 6 categorias (5 Saida + Frete Entrada) e 4 formas de pagamento, todas ativas
-- [ ] Reaplicar a migration mantém um registro por nome
-- [ ] Gate check passes: `npm test -- supabase/tests`
-- [ ] Test count: ≥ 3 novos testes
+- [x] 6 categorias (5 Saida + Frete Entrada) e 4 formas de pagamento, todas ativas
+- [x] Reaplicar a migration mantém um registro por nome
+- [x] Gate check passes: `npm test -- supabase/tests`
+- [x] Test count: ≥ 3 novos testes (3 novos)
 
 **Tests**: integration
 **Gate**: full
