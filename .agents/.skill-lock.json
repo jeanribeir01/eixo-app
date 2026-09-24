@@ -20,10 +20,9 @@
       "source": "local",
       "contentHash": "8de88d993b2556a6b38c26fd79c863f06bf7746faf87c0c9fd1b9a198a49e1ac",
       "installedAt": "2026-09-14T01:33:32.477Z",
-      "updatedAt": "2026-09-14T01:33:32.533Z",
+      "updatedAt": "2026-09-24T11:47:04.017Z",
       "agents": [
         "cursor",
-        "claude-code",
         "windsurf"
       ],
       "method": "copy",

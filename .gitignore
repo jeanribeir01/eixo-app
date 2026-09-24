@@ -51,3 +51,6 @@ coverage/
 # generated native folders — regenerados por `npx expo run:android` (Continuous Native Generation)
 /ios
 /android
+
+# backup gerado pelo agent-skills a cada install
+.agents/.skill-lock.json.backup
