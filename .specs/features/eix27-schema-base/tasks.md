@@ -136,12 +136,12 @@ T9 → T10
 
 **Done when**:
 
-- [ ] Tabelas `perfil` e `usuario` existem; 4 perfis inseridos, idempotente
-- [ ] Insert em `auth.users` cria `usuario` com perfil Motorista, nome e `google_subject_id`
-- [ ] Update em `usuario` altera `data_atualizacao`
-- [ ] `auth_perfil()` retorna o perfil do usuário logado e nulo sem linha em `usuario`
-- [ ] Gate check passes: `npm test -- supabase/tests`
-- [ ] Test count: ≥ 5 novos testes
+- [x] Tabelas `perfil` e `usuario` existem; 4 perfis inseridos, idempotente
+- [x] Insert em `auth.users` cria `usuario` com perfil Motorista, nome e `google_subject_id`
+- [x] Update em `usuario` altera `data_atualizacao`
+- [x] `auth_perfil()` retorna o perfil do usuário logado e nulo sem linha em `usuario`
+- [x] Gate check passes: `npm test -- supabase/tests`
+- [x] Test count: ≥ 5 novos testes (7 novos)
 
 **Tests**: integration
 **Gate**: full

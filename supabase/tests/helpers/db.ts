@@ -42,8 +42,9 @@ interface UsuarioDeTeste {
  * Roda `executar` numa transação como o usuário dado: cria a linha em `auth.users`
  * (o `handle_new_user` da migration base cria a linha em `public.usuario` como
  * Motorista), promove o perfil se pedido um diferente, troca para a role
- * `authenticated` e define `auth.uid()` via `request.jwt.claim.sub`. A transação
- * sempre desfaz ao final, então um teste nunca vaza estado para o próximo.
+ * `authenticated` e define `auth.uid()` via `request.jwt.claim.sub`. Como qualquer
+ * transação, o resultado é gravado ao final (só desfaz se `executar` lançar) — os
+ * testes usam IDs únicos por caso para não colidir entre si.
  */
 export async function comoUsuario<T>(
   db: Banco,
