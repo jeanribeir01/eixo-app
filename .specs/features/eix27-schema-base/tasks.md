@@ -309,9 +309,9 @@ T9 → T10
 
 **Done when**:
 
-- [ ] `db push` aplicou as 6 migrations sem erro
-- [ ] `database.ts` gerado com as 10 tabelas e os 5 enums
-- [ ] Gate check passes: `npm run typecheck && npm run lint && npm test`
+- [x] `db push` aplicou as 6 migrations sem erro
+- [x] `database.ts` gerado com as 10 tabelas e os 5 enums
+- [x] Gate check passes: `npm run typecheck && npm run lint && npm test`
 
 **Tests**: none
 **Gate**: build
