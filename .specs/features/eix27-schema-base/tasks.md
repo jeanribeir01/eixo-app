@@ -111,8 +111,8 @@ T9 → T10
 
 **Done when**:
 
-- [ ] ADR com contexto, decisão, dependências introduzidas e consequências
-- [ ] Gate check passes: `npm run typecheck && npm run lint && npm test`
+- [x] ADR com contexto, decisão, dependências introduzidas e consequências
+- [x] Gate check passes: `npm run typecheck && npm run lint && npm test`
 
 **Tests**: none
 **Gate**: build

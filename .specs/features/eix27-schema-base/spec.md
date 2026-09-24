@@ -176,7 +176,7 @@ de uma vez, com as regras de integridade no banco, RLS por perfil e os tipos Typ
 | RLS-05 | P1: RLS — AC8, AC9 | Design | Pending |
 | STO-01 | P1: Comprovantes — AC1–AC3 | Design | Pending |
 | TYPE-01 | P2: Tipos — AC1, AC3 | Design | Pending |
-| DOC-01 | P2: Tipos — AC2 | Design | Pending |
+| DOC-01 | P2: Tipos — AC2 | Design | Implementing |
 
 **Coverage:** 16 total, 0 mapped to tasks, 16 unmapped ⚠️
 
