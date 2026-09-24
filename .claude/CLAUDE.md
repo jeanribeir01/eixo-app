@@ -317,7 +317,6 @@ docs/
   DESIGN-CYAN.md            # design system — NORMATIVO, fonte de verdade visual
   exemplos/                 # implementações de referência
   adr/                      # decisões de arquitetura
-  specs/                    # spec.md / plan.md / tasks.md por US
 ```
 
 **RNF08 na prática:** `features/financeiro` e `features/frota` **não importam uma da
@@ -530,7 +529,7 @@ próprio.
 ## 9. Metodologia e governança
 
 - **Spec-Driven Development:** cada US tem `spec.md`, `plan.md` e `tasks.md` em
-  `docs/specs/`, integrados a GitHub Projects e Issues.
+  `.specs/features/` (skill `tlc-spec-driven`), integrados a GitHub Projects e Issues.
 - **Intent-Driven Development:** *Acceptance Briefs* com critérios de aceite observáveis
   (`AC-NNN`). Nada de critério ambíguo — a equipe é iniciante e ambiguidade vira retrabalho.
 - **Sprints Scrum bi-semanais** com entregas incrementais.
@@ -593,7 +592,7 @@ npm test
 - Escreva em **TypeScript strict**. Sem `any`, sem `@ts-ignore` sem justificativa em comentário.
 - Nomes de domínio em **português**, seguindo a especificação (`Movimentacao`,
   `hodometroInicial`). Código de infraestrutura em inglês. Não misture dentro da mesma entidade.
-- Antes de implementar uma US, leia o `spec.md` correspondente em `docs/specs/`.
+- Antes de implementar uma US, leia o `spec.md` correspondente em `.specs/features/`.
 - **Toda tabela nova vem com RLS policy no mesmo PR.** Sem policy, o dado está exposto.
 - Toda escrita de dados do motorista passa pelo fluxo offline-first da seção 7.
 - **Antes de criar qualquer componente visual, leia `docs/DESIGN-CYAN.md`.** Ele é
