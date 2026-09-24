@@ -82,12 +82,12 @@ T9 → T10
 
 **Done when**:
 
-- [ ] `supabase/config.toml` gerado pela CLI
-- [ ] `criarBanco()` sobe PGlite, aplica stubs e todas as migrations existentes em ordem de nome
-- [ ] `comoUsuario()` troca para role `authenticated` com `auth.uid()` do usuário criado
-- [ ] Smoke test: `select 1` como superuser e `auth.uid()` retorna o id definido
-- [ ] Gate check passes: `npm test -- supabase/tests`
-- [ ] Test count: 2 tests pass
+- [x] `supabase/config.toml` gerado pela CLI
+- [x] `criarBanco()` sobe PGlite, aplica stubs e todas as migrations existentes em ordem de nome
+- [x] `comoUsuario()` troca para role `authenticated` com `auth.uid()` do usuário criado
+- [x] Smoke test: `select 1` como superuser e `auth.uid()` retorna o id definido
+- [x] Gate check passes: `npm test -- supabase/tests`
+- [x] Test count: 2 tests pass
 
 **Tests**: integration
 **Gate**: full
