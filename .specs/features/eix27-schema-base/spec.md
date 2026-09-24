@@ -161,24 +161,24 @@ de uma vez, com as regras de integridade no banco, RLS por perfil e os tipos Typ
 
 | Requirement ID | Story | Phase | Status |
 | -------------- | ----- | ----- | ------ |
-| DB-01 | P1: Tabelas — AC1 | Design | Implementing |
-| DB-02 | P1: Tabelas — AC2, AC3 | Design | Implementing |
-| DB-03 | P1: Tabelas — AC4 | Design | Implementing |
-| DB-04 | P1: Tabelas — AC5 | Design | Implementing |
-| DB-05 | P1: Tabelas — AC6 + placa normalizada | Design | Implementing |
-| DB-06 | P1: Tabelas — AC7, AC8 | Design | Implementing |
-| DB-07 | P1: Tabelas — AC9 | Design | Implementing |
-| SEED-01 | P1: Dados padrão — AC1–AC4 | Design | Implementing |
-| RLS-01 | P1: RLS — AC1, AC10 | Design | Implementing |
-| RLS-02 | P1: RLS — AC2 | Design | Implementing |
-| RLS-03 | P1: RLS — AC3, AC5 | Design | Implementing |
-| RLS-04 | P1: RLS — AC4, AC6, AC7 | Design | Implementing |
-| RLS-05 | P1: RLS — AC8, AC9 | Design | Implementing |
-| STO-01 | P1: Comprovantes — AC1–AC3 | Design | Implementing |
-| TYPE-01 | P2: Tipos — AC1, AC3 | Design | Implementing |
-| DOC-01 | P2: Tipos — AC2 | Design | Implementing |
+| DB-01 | P1: Tabelas — AC1 | Execute | Verified |
+| DB-02 | P1: Tabelas — AC2, AC3 | Execute | Verified |
+| DB-03 | P1: Tabelas — AC4 | Execute | Verified |
+| DB-04 | P1: Tabelas — AC5 | Execute | Verified |
+| DB-05 | P1: Tabelas — AC6 + placa normalizada | Execute | Verified |
+| DB-06 | P1: Tabelas — AC7, AC8 | Execute | Verified |
+| DB-07 | P1: Tabelas — AC9 | Execute | Verified |
+| SEED-01 | P1: Dados padrão — AC1–AC4 | Execute | Verified |
+| RLS-01 | P1: RLS — AC1, AC10 | Execute | Verified |
+| RLS-02 | P1: RLS — AC2 | Execute | Verified |
+| RLS-03 | P1: RLS — AC3, AC5 | Execute | Verified |
+| RLS-04 | P1: RLS — AC4, AC6, AC7 | Execute | Verified |
+| RLS-05 | P1: RLS — AC8, AC9 | Execute | Verified |
+| STO-01 | P1: Comprovantes — AC1–AC3 | Execute | Verified |
+| TYPE-01 | P2: Tipos — AC1, AC3 | Execute | Verified |
+| DOC-01 | P2: Tipos — AC2 | Execute | Verified |
 
-**Coverage:** 16 total, 0 mapped to tasks, 16 unmapped ⚠️
+**Coverage:** 16 total, 16 mapped to tasks, 0 unmapped
 
 ---
 

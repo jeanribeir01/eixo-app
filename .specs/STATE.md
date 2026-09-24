@@ -52,11 +52,11 @@
 
 ## Handoff
 
-- **Feature**: `.specs/features/us15-login-google`
-- **Phase / Task**: Execute concluído (T1–T8) + Verifier PASS
-- **Completed**: T1, T2, T3, T4, T5, T6, T7, T8
+- **Feature**: `.specs/features/eix27-schema-base`
+- **Phase / Task**: Execute concluído (T1–T10) + Verifier PASS
+- **Completed**: T1, T2, T3, T4, T5, T6, T7, T8, T9, T10
 - **In-progress** (file:line): none
-- **Next step**: UAT no emulador após credenciais (EIX-14, EIX-15); criar repo GitHub, push e PR
-- **Blockers**: credenciais Supabase e client Android do Google Cloud (manuais)
+- **Next step**: push da branch e PR (revisor: Eduardo)
+- **Blockers**: none
 - **Uncommitted files**: none
-- **Branch**: jeanribeiro1905/eix-13-us15-login-com-google-no-app-expo
+- **Branch**: feat/eix-27-schema-base

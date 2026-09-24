@@ -9,7 +9,7 @@ Implement these tasks with the `tlc-spec-driven` skill: **activate it by name an
 ---
 
 **Design**: `.specs/features/eix27-schema-base/design.md`
-**Status**: In Progress
+**Status**: Done (Verifier PASS — ver validation.md)
 **Linear**: EIX-27 · commits usam `Refs: EIX-27`
 
 ---
