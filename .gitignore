@@ -54,3 +54,7 @@ coverage/
 
 # backup gerado pelo agent-skills a cada install
 .agents/.skill-lock.json.backup
+
+# saídas locais da skill harness-eval
+.harness-eval/
+__pycache__/
