@@ -8,7 +8,7 @@
     "android": "expo run:android",
     "typecheck": "tsc --noEmit",
     "lint": "expo lint",
-    "test": "jest --selectProjects app && node --experimental-vm-modules node_modules/.bin/jest --selectProjects supabase"
+    "test": "jest --selectProjects app && node --experimental-vm-modules node_modules/jest/bin/jest.js --selectProjects supabase"
   },
   "dependencies": {
     "@expo-google-fonts/inter": "^0.4.2",
