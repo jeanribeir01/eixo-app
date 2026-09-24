@@ -192,13 +192,13 @@ T9 → T10
 
 **Done when**:
 
-- [ ] Placa repetida rejeitada; placa em minúscula ou com espaço rejeitada
-- [ ] `hodometro_final <= inicial` rejeitado; viagem aberta com final nulo aceita
-- [ ] `Finalizada` sem `hodometro_final` rejeitada
-- [ ] `manutencao.valor` negativo rejeitado
-- [ ] FKs obrigatórias de `viagem` e `manutencao` rejeitam nulo
-- [ ] Gate check passes: `npm test -- supabase/tests`
-- [ ] Test count: ≥ 7 novos testes
+- [x] Placa repetida rejeitada; placa em minúscula ou com espaço rejeitada
+- [x] `hodometro_final <= inicial` rejeitado; viagem aberta com final nulo aceita
+- [x] `Finalizada` sem `hodometro_final` rejeitada
+- [x] `manutencao.valor` negativo rejeitado
+- [x] FKs obrigatórias de `viagem` e `manutencao` rejeitam nulo
+- [x] Gate check passes: `npm test -- supabase/tests`
+- [x] Test count: ≥ 7 novos testes (9 novos)
 
 **Tests**: integration
 **Gate**: full
