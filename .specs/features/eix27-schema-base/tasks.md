@@ -9,7 +9,7 @@ Implement these tasks with the `tlc-spec-driven` skill: **activate it by name an
 ---
 
 **Design**: `.specs/features/eix27-schema-base/design.md`
-**Status**: Approved
+**Status**: In Progress
 **Linear**: EIX-27 · commits usam `Refs: EIX-27`
 
 ---
@@ -335,9 +335,9 @@ T9 → T10
 
 **Done when**:
 
-- [ ] README descreve login, link, push, gen types e `npm test -- supabase/tests`
-- [ ] `.claude/CLAUDE.md` aponta `src/types/database.ts`
-- [ ] Gate check passes: `npm run typecheck && npm run lint && npm test`
+- [x] README descreve login, link, push, gen types e `npm test -- supabase/tests`
+- [x] `.claude/CLAUDE.md` aponta `src/types/database.ts`
+- [x] Gate check passes: `npm run typecheck && npm run lint && npm test`
 
 **Tests**: none
 **Gate**: build

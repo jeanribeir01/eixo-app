@@ -121,7 +121,7 @@ Três camadas de tipo, cada uma com uma origem única:
 
 | Camada | Origem | Quem consome |
 |---|---|---|
-| **Tipos de tabela** | Gerados de `supabase gen types` → `src/supabase/types.ts` | App e Edge Functions |
+| **Tipos de tabela** | Gerados de `supabase gen types` → `src/types/database.ts` | App e Edge Functions |
 | **Schemas de domínio** | Escritos à mão em `packages/domain/` com Zod | App (formulário) e Edge Function (payload) |
 | **Contratos de Edge Function** | `z.infer` dos schemas de domínio | App e Edge Function |
 
@@ -298,7 +298,8 @@ src/
     sync/                   # outbox, reconciliação, resolução de conflito
   supabase/
     client.ts               # cliente configurado com SecureStore adapter
-    types.ts                # tipos GERADOS — nunca editados à mão
+  types/
+    database.ts             # tipos GERADOS — nunca editados à mão
   ui/                       # primitivos + tokens + tema
   lib/                      # utils, formatadores, money, datas
 packages/
@@ -325,7 +326,7 @@ contrato explícito. Se precisar de um import cruzado, o contrato está faltando
 
 ### Tipos do banco
 
-Gere com a CLI: `supabase gen types typescript`. O resultado vai em `src/supabase/types.ts`
+Gere com a CLI: `supabase gen types typescript`. O resultado vai em `src/types/database.ts`
 e **nunca é editado à mão**. Tipo de tabela digitado manualmente é dívida técnica imediata.
 
 ### Offline-first (RNF01 / RNF07) — o padrão obrigatório
@@ -574,7 +575,7 @@ eas build --profile development --platform android
 supabase start                      # stack local (Docker)
 supabase migration new <nome>       # nova migration de nuvem
 supabase db push                    # aplicar migrations
-supabase gen types typescript --local > src/supabase/types.ts
+npx supabase gen types typescript --linked --schema public > src/types/database.ts
 
 supabase functions serve            # Edge Functions localmente
 supabase functions deploy criar-divida
