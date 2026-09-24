@@ -76,6 +76,90 @@
       ],
       "method": "copy",
       "global": false
+    },
+    "tlc-spec-driven": {
+      "name": "tlc-spec-driven",
+      "source": "local",
+      "contentHash": "9f4c793556001f3210a2d9fe3b41bf24e82e581c522d8dd50f65addfee169a29",
+      "installedAt": "2026-09-24T11:43:27.190Z",
+      "updatedAt": "2026-09-24T11:43:27.190Z",
+      "agents": [
+        "claude-code"
+      ],
+      "method": "copy",
+      "global": false
+    },
+    "create-adr": {
+      "name": "create-adr",
+      "source": "local",
+      "contentHash": "47ec663c849e8c1620c6f33a7be0055acdcf838c27ab7c16f44260244b80195a",
+      "installedAt": "2026-09-24T11:43:27.194Z",
+      "updatedAt": "2026-09-24T11:43:27.194Z",
+      "agents": [
+        "claude-code"
+      ],
+      "method": "copy",
+      "global": false
+    },
+    "security-best-practices": {
+      "name": "security-best-practices",
+      "source": "local",
+      "contentHash": "6fec09f7e43bb297ad6097e13469e85aa5b5d671a839b4f7e7871ef8eaa76c4e",
+      "installedAt": "2026-09-24T11:43:27.199Z",
+      "updatedAt": "2026-09-24T11:43:27.199Z",
+      "agents": [
+        "claude-code"
+      ],
+      "method": "copy",
+      "global": false
+    },
+    "mermaid-studio": {
+      "name": "mermaid-studio",
+      "source": "local",
+      "contentHash": "8a240b980cee9287a20ec6ea1e4837c5d6e43c756ab17fcebbf6b1087a609815",
+      "installedAt": "2026-09-24T11:43:27.205Z",
+      "updatedAt": "2026-09-24T11:43:27.205Z",
+      "agents": [
+        "claude-code"
+      ],
+      "method": "copy",
+      "global": false
+    },
+    "learning-opportunities": {
+      "name": "learning-opportunities",
+      "source": "local",
+      "contentHash": "47c4d62eebf29a61477c1b611c6ae360b028e1e23e09df1f6a33b5ff32b020f7",
+      "installedAt": "2026-09-24T11:43:27.209Z",
+      "updatedAt": "2026-09-24T11:43:27.209Z",
+      "agents": [
+        "claude-code"
+      ],
+      "method": "copy",
+      "global": false
+    },
+    "gh-address-comments": {
+      "name": "gh-address-comments",
+      "source": "local",
+      "contentHash": "a1808fb136b7118a7bdac65415e9a40a7982953f8b3339c97087fc0807865d88",
+      "installedAt": "2026-09-24T11:43:27.213Z",
+      "updatedAt": "2026-09-24T11:43:27.213Z",
+      "agents": [
+        "claude-code"
+      ],
+      "method": "copy",
+      "global": false
+    },
+    "spec-driven-eval": {
+      "name": "spec-driven-eval",
+      "source": "local",
+      "contentHash": "168d6860c6e84809a02c2abface032a4a625bdd81fec6131615e00a2cf87e311",
+      "installedAt": "2026-09-24T11:43:27.217Z",
+      "updatedAt": "2026-09-24T11:43:27.217Z",
+      "agents": [
+        "claude-code"
+      ],
+      "method": "copy",
+      "global": false
     }
   }
 }

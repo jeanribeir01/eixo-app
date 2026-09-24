@@ -13,6 +13,10 @@ Antes de escrever qualquer linha de código, nesta ordem:
 3. Leia a task do Linear que o usuário indicou (identificador `EIX-XX`) e trate os critérios de aceite como especificação.
 4. Só então planeje e escreva.
 
+**Spec-Driven.** Para feature nova ou US (não para ajuste pontual), use a skill `tlc-spec-driven`: ela conduz Specify → Design → Tasks → Execute e grava os artefatos em `.specs/` (`.specs/features/<feature>/`, `STATE.md`, `LESSONS.md`). Os critérios de aceite da task do Linear são a entrada da fase Specify.
+
+Pré-requisito: **Python 3** no PATH — a skill roda scripts de validação de spec, tasks e mensagem de commit. No Windows o comando pode ser `py` ou `python` em vez de `python3`.
+
 Se `DESIGN_CYAN.md` ou `.claude/skills/` não existirem no diretório atual, **pare e avise o usuário** em vez de improvisar um estilo próprio.
 
 ---
