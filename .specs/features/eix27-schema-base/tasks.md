@@ -282,10 +282,10 @@ T9 → T10
 
 **Done when**:
 
-- [ ] Bucket existe com `public = false`
-- [ ] Financeiro envia e lê objeto; Motorista e Gestor são rejeitados
-- [ ] Gate check passes: `npm run typecheck && npm run lint && npm test`
-- [ ] Test count: ≥ 3 novos testes
+- [x] Bucket existe com `public = false`
+- [x] Financeiro envia e lê objeto; Motorista e Gestor são rejeitados
+- [x] Gate check passes: `npm run typecheck && npm run lint && npm test`
+- [x] Test count: ≥ 3 novos testes (4 novos)
 
 **Tests**: integration
 **Gate**: build
