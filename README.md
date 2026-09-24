@@ -129,6 +129,37 @@ adb devices
 
 > A chave **service_role** nunca vai para o app, para o `.env` ou para o Git.
 
+### 3.1 Banco de dados: migrations e tipos
+
+O schema mora em `supabase/migrations/` (SQL) e é a única forma de mudar o banco. Não crie
+tabela pelo painel. A CLI roda via `npx`, sem instalação global e sem Docker.
+
+```bash
+npx supabase login                                    # uma vez por máquina, abre o navegador
+npx supabase link --project-ref xqbxvvvaphycjrqzzrif  # uma vez por clone
+npx supabase migration list                           # compara local x nuvem
+```
+
+**Aplicar migrations** — altera o banco que o time inteiro usa. Rode só depois do PR aprovado,
+e combine com o Tech Lead:
+
+```bash
+npx supabase db push
+```
+
+**Regenerar os tipos** depois de qualquer migration aplicada. O arquivo nunca é editado à mão:
+
+```bash
+npx supabase gen types typescript --linked --schema public > src/types/database.ts
+```
+
+**Nova migration:** `npx supabase migration new <nome>` cria o arquivo em `supabase/migrations/`.
+Toda tabela nova precisa de RLS e policy na mesma migration ou PR.
+
+**Testar as migrations localmente:** `npm test -- supabase/tests` aplica todas as migrations num
+Postgres em memória (PGlite) e testa constraints e RLS por perfil. Não toca na nuvem. Detalhes
+no `docs/adr/0002-schema-base-rls-e-testes-pglite.md`.
+
 ---
 
 ## 4. Configurar o Google Cloud

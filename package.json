@@ -8,7 +8,7 @@
     "android": "expo run:android",
     "typecheck": "tsc --noEmit",
     "lint": "expo lint",
-    "test": "jest"
+    "test": "jest --selectProjects app && node --experimental-vm-modules node_modules/jest/bin/jest.js --selectProjects supabase"
   },
   "dependencies": {
     "@expo-google-fonts/inter": "^0.4.2",
@@ -35,6 +35,7 @@
     "zustand": "^5.0.15"
   },
   "devDependencies": {
+    "@electric-sql/pglite": "^0.5.8",
     "@testing-library/react-native": "^13.3.3",
     "@types/jest": "^29.5.14",
     "@types/react": "~19.2.2",
@@ -46,16 +47,30 @@
     "typescript": "~6.0.3"
   },
   "jest": {
-    "preset": "jest-expo",
-    "setupFiles": [
-      "<rootDir>/jest.setup.ts",
-      "<rootDir>/node_modules/@react-native-google-signin/google-signin/jest/build/jest/setup.js"
-    ],
-    "moduleNameMapper": {
-      "^@/(.*)$": "<rootDir>/src/$1"
-    },
-    "transformIgnorePatterns": [
-      "node_modules/(?!((jest-)?react-native|@react-native(-community)?)|expo(nent)?|@expo(nent)?/.*|@expo-google-fonts/.*|react-navigation|@react-navigation/.*|@supabase/.*|standard-navigation)"
+    "projects": [
+      {
+        "displayName": "app",
+        "preset": "jest-expo",
+        "setupFiles": [
+          "<rootDir>/jest.setup.ts",
+          "<rootDir>/node_modules/@react-native-google-signin/google-signin/jest/build/jest/setup.js"
+        ],
+        "moduleNameMapper": {
+          "^@/(.*)$": "<rootDir>/src/$1"
+        },
+        "testPathIgnorePatterns": ["<rootDir>/supabase/"],
+        "transformIgnorePatterns": [
+          "node_modules/(?!((jest-)?react-native|@react-native(-community)?)|expo(nent)?|@expo(nent)?/.*|@expo-google-fonts/.*|react-navigation|@react-navigation/.*|@supabase/.*|standard-navigation)"
+        ]
+      },
+      {
+        "displayName": "supabase",
+        "preset": "jest-expo/node",
+        "testMatch": ["<rootDir>/supabase/tests/**/*.test.ts"],
+        "transform": {
+          "\\.[jt]sx?$": ["babel-jest", { "presets": ["expo/internal/babel-preset"] }]
+        }
+      }
     ]
   }
 }
