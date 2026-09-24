@@ -26,6 +26,30 @@
 - **Date**: 2026-09-13
 - **Status**: active
 
+### AD-004
+- **Decision**: Schema do Postgres em snake_case; toda tabela tem `data_inclusao` e `data_atualizacao` (trigger); enums nativos do Postgres; dinheiro em `numeric(12,2)`.
+- **Reason**: A EIX-27 nomeia as colunas em snake_case; camelCase no Postgres exige aspas em todo SQL.
+- **Trade-off**: Diverge dos nomes camelCase do CLAUDE.md seção 5; o mapeamento é 1:1 (`viagemId` → `viagem_id`).
+- **Scope**: `supabase/migrations`, `src/types/database.ts`, todas as US.
+- **Date**: 2026-09-24
+- **Status**: active
+
+### AD-005
+- **Decision**: Autorização por `auth_perfil()` (`security definer`, lê `usuario` + `perfil`) em vez de custom claim no JWT; primeiro login cria `usuario` como Motorista por trigger em `auth.users`.
+- **Reason**: Não exige Auth Hook e a troca de perfil vale na hora.
+- **Trade-off**: Um select extra por policy avaliada.
+- **Scope**: Todas as policies de RLS e Storage.
+- **Date**: 2026-09-24
+- **Status**: active
+
+### AD-006
+- **Decision**: Migrations testadas no Jest com `@electric-sql/pglite` e stubs mínimos de `auth`/`storage`; migrations aplicadas na nuvem com `npx supabase db push`; espelho Drizzle adiado para a US08.
+- **Reason**: Sem Docker (AD-003) não há Postgres local; PGlite roda Postgres real em WASM.
+- **Trade-off**: Stub não é o Supabase real; exceção à regra "migration local no mesmo PR" do CLAUDE.md até a US08.
+- **Scope**: `supabase/tests`, README, EIX-27.
+- **Date**: 2026-09-24
+- **Status**: active
+
 ## Handoff
 
 - **Feature**: `.specs/features/us15-login-google`
