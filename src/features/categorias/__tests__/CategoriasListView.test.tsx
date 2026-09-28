@@ -3,6 +3,9 @@ import { fireEvent, render, screen } from '@testing-library/react-native';
 import { CategoriasListView } from '../CategoriasListView';
 import { definirAtivaCategoria, listarCategorias } from '../categoriasRepository';
 
+// O runner do GitHub Actions é mais lento que a máquina local: o padrão de 5s estourava no CI.
+jest.setTimeout(15000);
+
 // Jest hoista jest.mock() acima dos imports/declarações do arquivo: a fábrica só pode
 // referenciar variáveis de fora do escopo se o nome começar com "mock" (babel-plugin-jest-hoist).
 const mockPush = jest.fn();

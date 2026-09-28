@@ -3,6 +3,9 @@ import { act, fireEvent, render, screen } from '@testing-library/react-native';
 import { CategoriaFormView } from '../CategoriaFormView';
 import { atualizarCategoria, buscarCategoriaPorId, criarCategoria } from '../categoriasRepository';
 
+// O runner do GitHub Actions é mais lento que a máquina local: o padrão de 5s estourava no CI.
+jest.setTimeout(15000);
+
 const mockPush = jest.fn();
 const mockBack = jest.fn();
 
