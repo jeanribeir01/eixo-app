@@ -1,114 +1,180 @@
 import { z } from 'zod';
 
+import { supabase } from '@/supabase/client';
+import { Constants } from '@/types/database';
+
 import type { Categoria, TipoCategoria } from './types';
 
-// Camada de acesso a dados isolada da tela (AGENTS.md §2.3, skill supabase-query): a tabela
-// `categoria` ainda não existe no Supabase (EIX-27 em andamento). Este módulo simula o client
-// com um array em memória, mas cada função já tem a assinatura e o formato de retorno
-// (`{ ok, data } | { ok: false, mensagem }`) que terá quando chamar `supabase.from('categoria')...`.
-// Trocar a implementação aqui não deve exigir mudar nenhuma tela.
+// Camada de acesso a dados isolada da tela (AGENTS.md §2.3, skill supabase-query): as telas só
+// conhecem estas funções e o formato `{ ok, data } | { ok: false, mensagem }`, nunca o Supabase.
+// A autorização (Admin e Financeiro) é decidida pelas policies de RLS da tabela `categoria`.
 
 export type Resultado<T> = { ok: true; data: T } | { ok: false; mensagem: string };
 
+const COLUNAS = 'id, titulo, tipo, ativa';
+
+// Catálogo pequeno por natureza; o limite só impede uma resposta sem teto (skill supabase-query).
+const LIMITE_LISTA = 500;
+
+const MENSAGEM_DUPLICADA = 'Já existe uma categoria com esse título.';
+const MENSAGEM_NAO_ENCONTRADA = 'Categoria não encontrada.';
+const MENSAGEM_DADOS_INVALIDOS = 'Os dados recebidos são inválidos. Tente novamente.';
+
+// Dado externo não é confiável só porque o TypeScript compilou: a resposta passa pelo Zod.
+// O enum vem de `Constants` (gerado), então acompanha o banco sem lista escrita à mão.
 const categoriaSchema = z.object({
   id: z.string(),
   titulo: z.string(),
-  tipo: z.enum(['Entrada', 'Saida']),
+  tipo: z.enum(Constants.public.Enums.tipo_categoria),
   ativa: z.boolean(),
 });
 
-// Categorias padrão do seed: aparecem já na primeira abertura (critério de aceite da EIX-28).
-// Quando a migration da EIX-27 existir, este seed vira um INSERT na própria migration.
-const SEED: Categoria[] = [
-  { id: 'seed-1', titulo: 'Frete', tipo: 'Entrada', ativa: true },
-  { id: 'seed-2', titulo: 'Outras entradas', tipo: 'Entrada', ativa: true },
-  { id: 'seed-3', titulo: 'Combustível', tipo: 'Saida', ativa: true },
-  { id: 'seed-4', titulo: 'Manutenção', tipo: 'Saida', ativa: true },
-  { id: 'seed-5', titulo: 'Pedágio', tipo: 'Saida', ativa: true },
-  { id: 'seed-6', titulo: 'Salário', tipo: 'Saida', ativa: true },
-  { id: 'seed-7', titulo: 'Outras despesas', tipo: 'Saida', ativa: true },
-];
+type ErroSupabase = { code: string };
 
-function clonarLista(lista: Categoria[]): Categoria[] {
-  return lista.map((categoria) => ({ ...categoria }));
+// Nunca mostra `error.message` do Postgres ao usuário: traduz os códigos que a tela sabe explicar.
+function traduzirErro(error: ErroSupabase, mensagemPadrao: string): string {
+  // 23505 = unique_violation na constraint (titulo, tipo). Cobre a corrida entre a checagem
+  // de duplicada abaixo e o insert/update, e devolve o mesmo erro de domínio para o campo.
+  if (error.code === '23505') return MENSAGEM_DUPLICADA;
+  // 42501 = insufficient_privilege: a policy de RLS recusou a escrita para este perfil.
+  if (error.code === '42501') return 'Você não tem permissão para alterar categorias.';
+  return mensagemPadrao;
 }
 
-let categorias: Categoria[] = clonarLista(SEED);
-
-// Placeholder até a integração real com Supabase existir: o padrão do projeto é UUID v7 gerado
-// no cliente (CLAUDE.md §5), o que exige escolher uma lib com o usuário (AGENTS.md §4). Enquanto
-// os dados vivem só neste módulo, um id simples é suficiente.
-function criarIdTemporario(): string {
-  return `tmp-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
+function normalizarTitulo(titulo: string): string {
+  return titulo.trim().toLowerCase();
 }
 
-// Duplicado é verificado contra TODAS as categorias, não só as ativas: senão o usuário criaria
-// uma segunda "Combustível" sem saber que já existe uma desativada — o caminho certo é reativá-la.
-function existeTitulo(titulo: string, ignorarId?: string): boolean {
-  const normalizado = titulo.trim().toLowerCase();
-  return categorias.some(
-    (categoria) => categoria.id !== ignorarId && categoria.titulo.trim().toLowerCase() === normalizado,
+// A constraint unique (titulo, tipo) do banco diferencia maiúsculas e não ignora espaços, então
+// "combustível " passaria por ela. Esta checagem aplica a regra da US01 antes de gravar.
+// Compara contra ativas E inativas: senão o usuário criaria uma segunda "Combustível" sem saber
+// que já existe uma desativada — o caminho certo é reativá-la.
+async function existeDuplicada(
+  titulo: string,
+  tipo: TipoCategoria,
+  ignorarId?: string,
+): Promise<Resultado<boolean>> {
+  const { data, error } = await supabase.from('categoria').select('id, titulo').eq('tipo', tipo);
+
+  if (error) {
+    return { ok: false, mensagem: traduzirErro(error, 'Não foi possível salvar a categoria. Tente novamente.') };
+  }
+
+  const normalizado = normalizarTitulo(titulo);
+  const duplicada = data.some(
+    (categoria) => categoria.id !== ignorarId && normalizarTitulo(categoria.titulo) === normalizado,
   );
+  return { ok: true, data: duplicada };
+}
+
+function validarCategoria(data: unknown): Resultado<Categoria> {
+  const parsed = categoriaSchema.safeParse(data);
+  if (!parsed.success) {
+    return { ok: false, mensagem: MENSAGEM_DADOS_INVALIDOS };
+  }
+  return { ok: true, data: parsed.data };
 }
 
 export async function buscarCategoriaPorId(id: string): Promise<Resultado<Categoria>> {
-  const categoria = categorias.find((item) => item.id === id);
-  if (!categoria) {
-    return { ok: false, mensagem: 'Categoria não encontrada.' };
+  const { data, error } = await supabase.from('categoria').select(COLUNAS).eq('id', id).maybeSingle();
+
+  if (error) {
+    return { ok: false, mensagem: traduzirErro(error, 'Não foi possível carregar a categoria. Tente novamente.') };
+  }
+  // Sem linha também é o que o RLS devolve quando o perfil não pode ler: para a tela, "não encontrada".
+  if (!data) {
+    return { ok: false, mensagem: MENSAGEM_NAO_ENCONTRADA };
   }
 
-  return { ok: true, data: { ...categoria } };
+  return validarCategoria(data);
 }
 
+// Traz ativas e inativas: a tela filtra localmente com o switch "Mostrar desativadas".
 export async function listarCategorias(): Promise<Resultado<Categoria[]>> {
-  const parsed = z.array(categoriaSchema).safeParse(categorias);
-  if (!parsed.success) {
-    return { ok: false, mensagem: 'Os dados recebidos são inválidos. Tente novamente.' };
+  const { data, error } = await supabase
+    .from('categoria')
+    .select(COLUNAS)
+    .order('titulo')
+    .limit(LIMITE_LISTA);
+
+  if (error) {
+    return { ok: false, mensagem: traduzirErro(error, 'Não foi possível carregar as categorias. Tente novamente.') };
   }
 
-  return { ok: true, data: clonarLista(parsed.data) };
+  const parsed = z.array(categoriaSchema).safeParse(data);
+  if (!parsed.success) {
+    return { ok: false, mensagem: MENSAGEM_DADOS_INVALIDOS };
+  }
+
+  return { ok: true, data: parsed.data };
 }
 
 export async function criarCategoria(input: { titulo: string; tipo: TipoCategoria }): Promise<Resultado<Categoria>> {
-  if (existeTitulo(input.titulo)) {
-    return { ok: false, mensagem: 'Já existe uma categoria com esse título.' };
+  const duplicada = await existeDuplicada(input.titulo, input.tipo);
+  if (!duplicada.ok) return duplicada;
+  if (duplicada.data) {
+    return { ok: false, mensagem: MENSAGEM_DUPLICADA };
   }
 
-  const nova: Categoria = { id: criarIdTemporario(), titulo: input.titulo.trim(), tipo: input.tipo, ativa: true };
-  categorias = [...categorias, nova];
-  return { ok: true, data: { ...nova } };
+  // id gerado pelo banco (gen_random_uuid): categoria é online-only, não precisa de id offline.
+  const { data, error } = await supabase
+    .from('categoria')
+    .insert({ titulo: input.titulo.trim(), tipo: input.tipo })
+    .select(COLUNAS)
+    .single();
+
+  if (error) {
+    return { ok: false, mensagem: traduzirErro(error, 'Não foi possível criar a categoria. Tente novamente.') };
+  }
+
+  return validarCategoria(data);
 }
 
 export async function atualizarCategoria(
   id: string,
   input: { titulo: string; tipo: TipoCategoria },
 ): Promise<Resultado<Categoria>> {
-  const existente = categorias.find((categoria) => categoria.id === id);
-  if (!existente) {
-    return { ok: false, mensagem: 'Categoria não encontrada.' };
-  }
-  if (existeTitulo(input.titulo, id)) {
-    return { ok: false, mensagem: 'Já existe uma categoria com esse título.' };
+  // Ignora o próprio id: salvar sem mudar o título não pode contar como duplicada.
+  const duplicada = await existeDuplicada(input.titulo, input.tipo, id);
+  if (!duplicada.ok) return duplicada;
+  if (duplicada.data) {
+    return { ok: false, mensagem: MENSAGEM_DUPLICADA };
   }
 
-  const atualizada: Categoria = { ...existente, titulo: input.titulo.trim(), tipo: input.tipo };
-  categorias = categorias.map((categoria) => (categoria.id === id ? atualizada : categoria));
-  return { ok: true, data: { ...atualizada } };
+  const { data, error } = await supabase
+    .from('categoria')
+    .update({ titulo: input.titulo.trim(), tipo: input.tipo })
+    .eq('id', id)
+    .select(COLUNAS)
+    .maybeSingle();
+
+  if (error) {
+    return { ok: false, mensagem: traduzirErro(error, 'Não foi possível atualizar a categoria. Tente novamente.') };
+  }
+  if (!data) {
+    return { ok: false, mensagem: MENSAGEM_NAO_ENCONTRADA };
+  }
+
+  return validarCategoria(data);
 }
 
-// Alterna ativa/inativa — nunca DELETE físico (AGENTS.md §2.4, §"Regras de dados não negociáveis").
+// Soft delete: alterna só a coluna `ativa` — nunca DELETE físico (AGENTS.md §2.4). A tabela
+// nem tem policy de delete; categoria desativada continua nos lançamentos antigos.
 export async function definirAtivaCategoria(id: string, ativa: boolean): Promise<Resultado<Categoria>> {
-  const existente = categorias.find((categoria) => categoria.id === id);
-  if (!existente) {
-    return { ok: false, mensagem: 'Categoria não encontrada.' };
+  const { data, error } = await supabase
+    .from('categoria')
+    .update({ ativa })
+    .eq('id', id)
+    .select(COLUNAS)
+    .maybeSingle();
+
+  if (error) {
+    const acao = ativa ? 'reativar' : 'desativar';
+    return { ok: false, mensagem: traduzirErro(error, `Não foi possível ${acao} a categoria. Tente novamente.`) };
+  }
+  if (!data) {
+    return { ok: false, mensagem: MENSAGEM_NAO_ENCONTRADA };
   }
 
-  const atualizada: Categoria = { ...existente, ativa };
-  categorias = categorias.map((categoria) => (categoria.id === id ? atualizada : categoria));
-  return { ok: true, data: { ...atualizada } };
-}
-
-// Só para teste: o array vive no módulo, então cada arquivo de teste precisa de um estado limpo.
-export function resetCategoriasParaTeste(): void {
-  categorias = clonarLista(SEED);
+  return validarCategoria(data);
 }

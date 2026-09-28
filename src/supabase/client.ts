@@ -2,12 +2,14 @@ import { createClient } from '@supabase/supabase-js';
 import { AppState } from 'react-native';
 
 import { env } from '@/lib/env';
+import type { Database } from '@/types/database';
 
 import { secureStorage } from './secureStorage';
 
 // Instância única do Supabase no app. Sem API intermediária: o app fala direto com o Supabase,
 // e a sessão fica apenas no armazenamento seguro do sistema (RNF04).
-export const supabase = createClient(env.supabaseUrl, env.supabaseAnonKey, {
+// O genérico <Database> faz `from('tabela')` usar os tipos gerados por `supabase gen types`.
+export const supabase = createClient<Database>(env.supabaseUrl, env.supabaseAnonKey, {
   auth: {
     storage: secureStorage,
     persistSession: true,

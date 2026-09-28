@@ -7,15 +7,15 @@ import { Button, Column, EmptyState, Input, Screen, Snackbar, Tabs, Text, colors
 
 import { atualizarCategoria, buscarCategoriaPorId, criarCategoria } from './categoriasRepository';
 import { categoriaSchema } from './schema';
-import type { TipoCategoria } from './types';
+import { rotuloTipoCategoria, type TipoCategoria } from './types';
 
 type Erros = Partial<Record<'titulo' | 'tipo', string>>;
 type Feedback = { mensagem: string; tone: 'success' | 'error' };
 type StatusCarga = 'carregando' | 'pronto' | 'erro';
 
 const opcoesTipo = [
-  { label: 'Entrada', value: 'Entrada' },
-  { label: 'Saída', value: 'Saida' },
+  { label: rotuloTipoCategoria.Entrada, value: 'Entrada' },
+  { label: rotuloTipoCategoria.Saida, value: 'Saida' },
 ];
 
 export type CategoriaFormViewProps = {

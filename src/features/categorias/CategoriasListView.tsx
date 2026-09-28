@@ -5,7 +5,7 @@ import { ActivityIndicator, FlatList } from 'react-native';
 import { Badge, Button, Column, EmptyState, Input, ListItem, Screen, Snackbar, Switch, Text, colors } from '@/ui';
 
 import { definirAtivaCategoria, listarCategorias } from './categoriasRepository';
-import type { Categoria } from './types';
+import { rotuloTipoCategoria, type Categoria } from './types';
 
 type Status = 'carregando' | 'pronto' | 'erro';
 
@@ -114,7 +114,7 @@ export function CategoriasListView() {
                   <Text weight="medium" tone={item.ativa ? 'primary' : 'muted'}>
                     {item.titulo}
                   </Text>
-                  <Badge label={item.tipo === 'Entrada' ? 'Entrada' : 'Saída'} tone={item.tipo === 'Entrada' ? 'success' : 'danger'} />
+                  <Badge label={rotuloTipoCategoria[item.tipo]} tone={item.tipo === 'Entrada' ? 'success' : 'danger'} />
                 </Column>
                 <Column direction="row" gap="sm" wrap>
                   <Button label="Editar" variant="ghost" onPress={() => router.push(`/categorias/${item.id}/editar`)} />
