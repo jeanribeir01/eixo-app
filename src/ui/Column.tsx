@@ -8,11 +8,25 @@ type ColumnProps = {
   // Espaço entre os filhos, sempre um token (nunca número solto na tela).
   gap?: keyof typeof spacing;
   align?: 'stretch' | 'center' | 'start';
+  // 'row' agrupa lado a lado (ex.: chip ao lado do título, ações de uma linha de lista).
+  direction?: 'column' | 'row';
+  wrap?: boolean;
 };
 
 const alignItems = { stretch: 'stretch', center: 'center', start: 'flex-start' } as const;
 
-// Empilha elementos na vertical. Existe para que as telas agrupem conteúdo sem criar StyleSheet próprio.
-export function Column({ children, gap = 'sm', align = 'stretch' }: ColumnProps) {
-  return <View style={{ gap: spacing[gap], alignItems: alignItems[align] }}>{children}</View>;
+// Empilha (ou enfileira, com direction="row") elementos sem que a tela crie StyleSheet próprio.
+export function Column({ children, gap = 'sm', align = 'stretch', direction = 'column', wrap = false }: ColumnProps) {
+  return (
+    <View
+      style={{
+        flexDirection: direction,
+        flexWrap: wrap ? 'wrap' : 'nowrap',
+        gap: spacing[gap],
+        alignItems: alignItems[align],
+      }}
+    >
+      {children}
+    </View>
+  );
 }
