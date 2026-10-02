@@ -224,9 +224,9 @@ T6 → T7 → T8
 
 **Done when**:
 
-- [ ] Lista mostra nome, e-mail, perfil e status; carregando, vazio e erro
-- [ ] Home mostra "Usuários" só para Admin
-- [ ] Gate quick verde
+- [x] Lista mostra nome, e-mail, perfil e status; carregando, vazio e erro
+- [x] Home mostra "Usuários" só para Admin
+- [x] Gate quick verde
 
 **Tests**: unit
 **Gate**: quick
