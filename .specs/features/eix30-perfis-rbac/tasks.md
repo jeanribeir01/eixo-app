@@ -107,8 +107,8 @@ T6 → T7 → T8
 
 **Done when**:
 
-- [ ] `Tables<'usuario'>` tem `status`; `Constants.public.Enums.status_usuario` existe
-- [ ] Build gate verde
+- [x] `Tables<'usuario'>` tem `status`; `Constants.public.Enums.status_usuario` existe
+- [x] Build gate verde
 
 **Tests**: none
 **Gate**: build
