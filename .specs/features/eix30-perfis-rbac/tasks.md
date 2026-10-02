@@ -153,9 +153,9 @@ T6 → T7 → T8
 
 **Done when**:
 
-- [ ] Sucesso, sem linha (não aprovado), erro e resposta inválida cobertos
-- [ ] `useProfile()` expõe os campos do AC5
-- [ ] Gate quick verde
+- [x] Sucesso, sem linha (não aprovado), erro e resposta inválida cobertos
+- [x] `useProfile()` expõe os campos do AC5
+- [x] Gate quick verde
 
 **Tests**: unit
 **Gate**: quick
