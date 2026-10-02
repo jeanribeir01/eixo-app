@@ -1,33 +1,32 @@
-// A tabela `veiculo` ainda não existe no Postgres (chega pela EIX-27). Enquanto isso, este é o
-// tipo de domínio usado pelo repositório mock; quando os tipos gerados existirem, este arquivo
-// deve ser substituído pelo tipo de `src/supabase/types.ts`.
-export type StatusVeiculo = 'Disponivel' | 'EmViagem' | 'EmManutencao' | 'Inativo';
+import type { Enums, Tables } from '@/types/database';
 
-export type Veiculo = {
-  id: string;
-  placa: string; // sempre normalizada: maiúscula, sem hífen
-  marca: string;
-  modelo: string;
-  anoFabricacao: number;
-  capacidadeCarga: number; // toneladas
-  status: StatusVeiculo;
-  createdAt: string;
-  updatedAt: string;
-};
+// Derivados dos tipos gerados por `supabase gen types typescript` — nunca digite o tipo de
+// tabela na mão (AGENTS.md §2.2, CLAUDE.md §12).
+//
+// TODO(EIX-37): o critério de aceite pede o status "Inativo" (soft delete do veículo), mas o enum
+// `status_veiculo` só tem Disponivel, EmViagem e EmManutencao. Depende de uma migration que ainda
+// não existe — quando ela entrar e os tipos forem regerados, o novo valor aparece aqui sozinho e o
+// `Record` abaixo passa a exigir o rótulo dele (o typecheck acusa).
+export type StatusVeiculo = Enums<'status_veiculo'>;
 
-// Campos que vêm do formulário/schema. O id não está aqui: por convenção do projeto (UUID v7
-// gerado no cliente), quem cria o veículo (a tela, numa etapa futura) fornece o id ao repositório.
-export type NovoVeiculoInput = {
-  placa: string;
-  marca: string;
-  modelo: string;
-  anoFabricacao: number;
-  capacidadeCarga: number;
-};
+// TODO(EIX-37): falta `ano_fabricacao` — a coluna não existe na tabela `veiculo` e depende de uma
+// migration que ainda não existe. Não adicionar o campo aqui antes de os tipos serem regerados.
+// Só as colunas que a tela usa; data_inclusao/data_atualizacao ficam no banco.
+export type Veiculo = Pick<Tables<'veiculo'>, 'id' | 'placa' | 'marca' | 'modelo' | 'capacidade_carga' | 'status'>;
 
-export type AtualizarVeiculoInput = NovoVeiculoInput;
+export type VeiculoInput = Pick<Veiculo, 'placa' | 'marca' | 'modelo' | 'capacidade_carga' | 'status'>;
 
 export type FiltroVeiculos = {
   busca?: string; // compara com placa (normalizada) e modelo, sem diferenciar maiúsculas/minúsculas
   status?: StatusVeiculo;
 };
+
+// O enum do banco não tem acento nem espaço ('EmManutencao'); isso existe só no que o usuário lê.
+export const rotuloStatusVeiculo: Record<StatusVeiculo, string> = {
+  Disponivel: 'Disponível',
+  EmViagem: 'Em Viagem',
+  EmManutencao: 'Em Manutenção',
+};
+
+// Ordem fixa usada nos filtros e no formulário.
+export const STATUS_VEICULO: StatusVeiculo[] = ['Disponivel', 'EmViagem', 'EmManutencao'];
