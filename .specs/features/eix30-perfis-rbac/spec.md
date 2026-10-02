@@ -135,14 +135,14 @@ Hoje todo login novo vira `Motorista` com acesso imediato, e não existe tela pa
 
 | Requirement ID | Story | Phase | Status |
 | -------------- | ----- | ----- | ------ |
-| RBAC-01 | P1: Novo usuário bloqueado — banco (AC1–AC5) | Tasks | Implementing |
-| RBAC-02 | P1: Novo usuário bloqueado — app (AC6–AC9) | Tasks | Pending |
-| RBAC-03 | P1: Admin gerencia — lista (AC1–AC4) | Tasks | Pending |
-| RBAC-04 | P1: Admin gerencia — alterações (AC5–AC9) | Tasks | Pending |
-| RBAC-05 | P1: Admin não perde o acesso — banco (AC1, AC2, AC4) | Tasks | Implementing |
-| RBAC-06 | P1: Admin não perde o acesso — app (AC3) | Tasks | Pending |
-| RBAC-07 | P1: helpers de permissão (AC1–AC4) | Tasks | Pending |
-| RBAC-08 | P1: `useProfile()` (AC5) | Tasks | Pending |
+| RBAC-01 | P1: Novo usuário bloqueado — banco (AC1–AC5) | Verify | Verified |
+| RBAC-02 | P1: Novo usuário bloqueado — app (AC6–AC9) | Verify | Verified |
+| RBAC-03 | P1: Admin gerencia — lista (AC1–AC4) | Verify | Verified |
+| RBAC-04 | P1: Admin gerencia — alterações (AC5–AC9) | Verify | Verified |
+| RBAC-05 | P1: Admin não perde o acesso — banco (AC1, AC2, AC4) | Verify | Verified |
+| RBAC-06 | P1: Admin não perde o acesso — app (AC3) | Verify | Verified |
+| RBAC-07 | P1: helpers de permissão (AC1–AC4) | Verify | Verified |
+| RBAC-08 | P1: `useProfile()` (AC5) | Verify | Verified |
 
 **Coverage:** 8 total, 8 mapped to tasks, 0 unmapped
 

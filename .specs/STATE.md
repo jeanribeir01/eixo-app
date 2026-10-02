@@ -52,11 +52,11 @@
 
 ## Handoff
 
-- **Feature**: `.specs/features/eix27-schema-base`
-- **Phase / Task**: Execute concluído (T1–T10) + Verifier PASS
-- **Completed**: T1, T2, T3, T4, T5, T6, T7, T8, T9, T10
+- **Feature**: `.specs/features/eix30-perfis-rbac`
+- **Phase / Task**: Execute concluído (T1–T8) + Verifier PASS (reverificação iteração 1)
+- **Completed**: T1–T8, Fix 1 (guard da rota `usuarios`), Fix 2 (gaps menores)
 - **In-progress** (file:line): none
-- **Next step**: push da branch e PR (revisor: Eduardo)
+- **Next step**: push da branch e PR (EIX-30)
 - **Blockers**: none
-- **Uncommitted files**: none
-- **Branch**: feat/eix-27-schema-base
+- **Uncommitted files**: none além do `package-lock.json` (só flags `peer`, não é da task)
+- **Branch**: feat/eix-30-us16-perfis-rbac

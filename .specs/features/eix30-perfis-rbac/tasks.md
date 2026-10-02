@@ -9,7 +9,7 @@ Implement these tasks with the `tlc-spec-driven` skill: **activate it by name an
 ---
 
 **Design**: inline (sem design.md — segue os padrões de `src/features/categorias` e `supabase/tests`)
-**Status**: In Progress
+**Status**: Done (Verifier PASS na reverificação de 2026-10-02)
 **Linear**: EIX-30 · commits usam `Refs: EIX-30`
 
 Decisões de design (inline):
