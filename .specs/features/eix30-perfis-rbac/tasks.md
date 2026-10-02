@@ -130,8 +130,8 @@ T6 → T7 → T8
 
 **Done when**:
 
-- [ ] Matriz 4 perfis × 3 status + usuário nulo coberta
-- [ ] Gate quick verde
+- [x] Matriz 4 perfis × 3 status + usuário nulo coberta
+- [x] Gate quick verde
 
 **Tests**: unit
 **Gate**: quick
