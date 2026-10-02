@@ -157,6 +157,27 @@ describe('migration usuario_status: aprovação de usuários', () => {
       expect(await lerUsuario(db, outroId)).toEqual({ status: 'Aprovado', perfil: 'Gestor de Frota' });
     });
 
+    it.each<PerfilNome>(['Gestor de Frota', 'Financeiro', 'Motorista'])(
+      '%s aprovado não altera perfil nem status de outro usuário (Admin gerencia AC9)',
+      async (perfil) => {
+        const naoAdminId = `30000000-0000-0000-0002-00000000000${perfil.length % 10}`;
+        const alvoId = '30000000-0000-0000-0000-000000000012';
+        await comoUsuario(db, { id: alvoId, perfil: 'Motorista', status: null }, async () => {});
+
+        const alteradas = await comoUsuario(db, { id: naoAdminId, perfil }, async (tx) => {
+          const resultado = await tx.query(
+            `update usuario set perfil_id = (select id from perfil where nome = 'Admin'), status = 'Aprovado'
+             where id = $1 returning id`,
+            [alvoId],
+          );
+          return resultado.rows.length;
+        });
+
+        expect(alteradas).toBe(0);
+        expect(await lerUsuario(db, alvoId)).toEqual({ status: 'AguardandoAprovacao', perfil: 'Motorista' });
+      },
+    );
+
     it('sem usuário logado (SQL Editor) a alteração é aceita (AC4)', async () => {
       await comoSuperuser(db, (tx) =>
         tx.query(

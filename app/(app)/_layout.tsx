@@ -10,6 +10,9 @@ export default function AppLayout() {
   // garante de fato: esconder a rota é usabilidade, não segurança.
   return (
     <Stack screenOptions={{ headerShown: false }}>
+      {/* Home declarada primeiro: o Stack abre na primeira tela listada, e sem isso o Admin
+          cairia direto em Usuários ao entrar no app. */}
+      <Stack.Screen name="index" />
       <Stack.Protected guard={isAdmin}>
         <Stack.Screen name="usuarios/index" />
         <Stack.Screen name="usuarios/[id]" />

@@ -129,6 +129,23 @@ describe('UsuarioDetalheView', () => {
     expect(screen.getByRole('button', { name: 'Aprovar' })).toBeOnTheScreen();
   });
 
+  it('falha ao salvar perfil: mostra o erro e mantém o perfil anterior (AC8)', async () => {
+    (alterarPerfilUsuario as jest.Mock).mockResolvedValue({
+      ok: false,
+      mensagem: 'Não foi possível alterar o perfil. Tente novamente.',
+    });
+    render(<UsuarioDetalheView />);
+    await screen.findByText('Bruno Lima');
+
+    fireEvent.press(screen.getByRole('button', { name: 'Perfil Financeiro' }));
+    fireEvent.press(screen.getByRole('button', { name: 'Salvar perfil' }));
+
+    expect(await screen.findByText('Não foi possível alterar o perfil. Tente novamente.')).toBeOnTheScreen();
+    expect(screen.queryByText('Perfil atualizado.')).not.toBeOnTheScreen();
+    // O botão segue habilitado: a escolha ainda difere do perfil gravado (Motorista).
+    expect(screen.getByRole('button', { name: 'Salvar perfil' })).toBeEnabled();
+  });
+
   it('próprio usuário: sem escolha de perfil e sem Bloquear, com aviso (Admin não perde acesso AC3)', async () => {
     logadoComo('u2');
     (buscarUsuarioPorId as jest.Mock).mockResolvedValue({
