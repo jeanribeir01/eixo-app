@@ -4,6 +4,7 @@ import * as SplashScreen from 'expo-splash-screen';
 import { useEffect } from 'react';
 
 import { configureGoogleSignIn } from '@/features/auth/googleAuth';
+import { carregarPerfil, limparPerfil, useProfile } from '@/features/auth/profileStore';
 import { startSessionSync, useSessionStore } from '@/features/auth/sessionStore';
 import { fontAssets } from '@/ui';
 
@@ -14,13 +15,25 @@ export default function RootLayout() {
   const [fontsLoaded] = useFonts(fontAssets);
   const session = useSessionStore((state) => state.session);
   const isRestoring = useSessionStore((state) => state.isRestoring);
+  const usuarioId = session?.user.id ?? null;
+  const { estado, isAprovado } = useProfile();
 
   useEffect(() => {
     configureGoogleSignIn();
     return startSessionSync();
   }, []);
 
+  // Perfil acompanha a conta logada: carrega no login e é descartado no logout, para a
+  // próxima conta não herdar o acesso da anterior (US16).
+  useEffect(() => {
+    if (usuarioId) carregarPerfil(usuarioId);
+    else limparPerfil();
+  }, [usuarioId]);
+
   const isReady = fontsLoaded && !isRestoring;
+  // Só entra na área do app quem está Aprovado. Enquanto o perfil carrega, falha ou não está
+  // aprovado, a única rota registrada é (pendente) — que mostra o estado certo para cada caso.
+  const temAcesso = session !== null && estado === 'pronto' && isAprovado;
 
   useEffect(() => {
     if (isReady) SplashScreen.hideAsync();
@@ -33,8 +46,11 @@ export default function RootLayout() {
   // Lembrete (CLAUDE.md): esconder rota é usabilidade, não segurança — quem protege dado é o RLS.
   return (
     <Stack screenOptions={{ headerShown: false }}>
-      <Stack.Protected guard={session !== null}>
+      <Stack.Protected guard={temAcesso}>
         <Stack.Screen name="(app)" />
+      </Stack.Protected>
+      <Stack.Protected guard={session !== null && !temAcesso}>
+        <Stack.Screen name="(pendente)" />
       </Stack.Protected>
       <Stack.Protected guard={session === null}>
         <Stack.Screen name="(auth)" />

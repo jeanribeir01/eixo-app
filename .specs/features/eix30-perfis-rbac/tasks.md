@@ -177,9 +177,9 @@ T6 → T7 → T8
 
 **Done when**:
 
-- [ ] Textos de pendente e bloqueado; Sair chama `signOut`
-- [ ] Erro de perfil com "Tentar novamente" e "Sair"
-- [ ] Build gate verde (fim de fase)
+- [x] Textos de pendente e bloqueado; Sair chama `signOut`
+- [x] Erro de perfil com "Tentar novamente" e "Sair"
+- [x] Build gate verde (fim de fase)
 
 **Tests**: unit
 **Gate**: build
