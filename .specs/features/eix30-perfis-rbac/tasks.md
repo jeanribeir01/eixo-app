@@ -248,10 +248,10 @@ T6 → T7 → T8
 
 **Done when**:
 
-- [ ] Salvar perfil, Aprovar e Bloquear com loading e Snackbar
-- [ ] Erro mantém dados e mostra mensagem
-- [ ] Próprio usuário: sem escolha de perfil e sem Bloquear, com aviso
-- [ ] Build gate verde
+- [x] Salvar perfil, Aprovar e Bloquear com loading e Snackbar
+- [x] Erro mantém dados e mostra mensagem
+- [x] Próprio usuário: sem escolha de perfil e sem Bloquear, com aviso
+- [x] Build gate verde
 
 **Tests**: unit
 **Gate**: build
