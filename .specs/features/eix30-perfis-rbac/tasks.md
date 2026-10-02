@@ -201,8 +201,8 @@ T6 → T7 → T8
 
 **Done when**:
 
-- [ ] Sucesso, erro do Supabase, 42501 e resposta inválida cobertos
-- [ ] Gate quick verde
+- [x] Sucesso, erro do Supabase, 42501 e resposta inválida cobertos
+- [x] Gate quick verde
 
 **Tests**: unit
 **Gate**: quick
