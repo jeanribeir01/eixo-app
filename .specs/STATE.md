@@ -54,9 +54,9 @@
 
 - **Feature**: `.specs/features/eix30-perfis-rbac`
 - **Phase / Task**: Execute concluído (T1–T8) + Verifier PASS (reverificação iteração 1)
-- **Completed**: T1–T8, Fix 1 (guard da rota `usuarios`), Fix 2 (gaps menores)
+- **Completed**: T1–T8, Fix 1 (guard da rota `usuarios`), Fix 2 (gaps menores), adaptação ao esquema da nuvem de 30/09 (`Ativo`, `P0001`) e `db push` do backfill (2026-10-02)
 - **In-progress** (file:line): none
-- **Next step**: push da branch e PR (EIX-30)
+- **Next step**: teste manual no app como Admin; depois push da branch e PR (EIX-30)
 - **Blockers**: none
-- **Uncommitted files**: none além do `package-lock.json` (só flags `peer`, não é da task)
+- **Uncommitted files**: none
 - **Branch**: feat/eix-30-us16-perfis-rbac
