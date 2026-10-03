@@ -1,5 +1,5 @@
 import type { Session } from '@supabase/supabase-js';
-import { router as navegador } from 'expo-router';
+import { router as navegador, type Href } from 'expo-router';
 import { act, renderRouter, screen } from 'expo-router/testing-library';
 import { Text } from 'react-native';
 
@@ -119,7 +119,7 @@ const abasProibidas = cenarios.flatMap((cenario) =>
   todasAsAbas.filter((aba) => !cenario.abas.includes(aba)).map((aba) => ({ ...cenario, aba })),
 );
 
-const rotaDaAba: Record<string, string> = {
+const rotaDaAba: Record<string, Href> = {
   Dashboards: '/dashboards',
   Financeiro: '/financeiro',
   Frota: '/frota',
