@@ -36,8 +36,8 @@ type ErroSupabase = { code: string };
 
 // Nunca mostra `error.message` do Postgres: traduz o código que a tela sabe explicar.
 function traduzirErro(error: ErroSupabase, mensagemPadrao: string): string {
-  // 42501 = insufficient_privilege: o trigger da EIX-30 recusou alterar o próprio perfil/status.
-  if (error.code === '42501') return 'Você não pode alterar o próprio perfil ou status.';
+  // P0001: o trigger usuario_impede_autoalteracao (EIX-30) recusou alterar o próprio perfil/status.
+  if (error.code === 'P0001') return 'Você não pode alterar o próprio perfil ou status.';
   return mensagemPadrao;
 }
 

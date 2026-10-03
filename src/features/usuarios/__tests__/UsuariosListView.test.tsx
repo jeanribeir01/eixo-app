@@ -24,7 +24,7 @@ const usuarios = [
     id: 'u1',
     nome: 'Ana Souza',
     email: 'ana@empresa.com',
-    status: 'Aprovado' as const,
+    status: 'Ativo' as const,
     perfil: { id: 'p1', nome: 'Admin' as const },
   },
   {
@@ -51,7 +51,7 @@ describe('UsuariosListView', () => {
     expect(await screen.findByText('Ana Souza')).toBeOnTheScreen();
     expect(screen.getByText('ana@empresa.com')).toBeOnTheScreen();
     expect(screen.getByText('Administrador')).toBeOnTheScreen();
-    expect(screen.getByText('Aprovado')).toBeOnTheScreen();
+    expect(screen.getByText('Ativo')).toBeOnTheScreen();
     expect(screen.getByText('Bruno Lima')).toBeOnTheScreen();
     expect(screen.getByText('bruno@empresa.com')).toBeOnTheScreen();
     expect(screen.getByText('Operador/Motorista')).toBeOnTheScreen();

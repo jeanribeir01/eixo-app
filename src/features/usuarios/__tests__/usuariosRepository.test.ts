@@ -71,7 +71,7 @@ describe('listarUsuarios', () => {
   });
 
   it('resposta fora do formato é recusada', async () => {
-    responder(ok([{ ...ana, status: 'Ativo' }]));
+    responder(ok([{ ...ana, status: 'Aprovado' }]));
 
     expect(await listarUsuarios()).toEqual({ ok: false, mensagem: 'Os dados recebidos são inválidos. Tente novamente.' });
   });
@@ -119,8 +119,8 @@ describe('alterarPerfilUsuario', () => {
     expect(resultado).toEqual({ ok: true, data: atualizado });
   });
 
-  it('42501 (alterar o próprio perfil): mensagem específica', async () => {
-    responder(erro('42501'));
+  it('P0001 (alterar o próprio perfil): mensagem específica', async () => {
+    responder(erro('P0001'));
 
     expect(await alterarPerfilUsuario('u1', 'p-fin')).toEqual({
       ok: false,
@@ -145,7 +145,7 @@ describe('alterarPerfilUsuario', () => {
 });
 
 describe('alterarStatusUsuario', () => {
-  it.each(['Aprovado', 'Bloqueado'] as const)('grava o status %s (AC6, AC7)', async (status) => {
+  it.each(['Ativo', 'Bloqueado'] as const)('grava o status %s (AC6, AC7)', async (status) => {
     const builder = responder(ok({ ...ana, status }));
 
     const resultado = await alterarStatusUsuario('u1', status);
@@ -157,7 +157,7 @@ describe('alterarStatusUsuario', () => {
   it('erro: mensagem padrão em português (AC8)', async () => {
     responder(erro('500'));
 
-    expect(await alterarStatusUsuario('u1', 'Aprovado')).toEqual({
+    expect(await alterarStatusUsuario('u1', 'Ativo')).toEqual({
       ok: false,
       mensagem: 'Não foi possível alterar o status. Tente novamente.',
     });

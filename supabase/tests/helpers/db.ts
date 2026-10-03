@@ -14,7 +14,7 @@ const MIGRATIONS_DIR = path.join(__dirname, '..', '..', 'migrations');
 
 export type Banco = PGlite;
 export type PerfilNome = 'Admin' | 'Gestor de Frota' | 'Financeiro' | 'Motorista';
-export type StatusUsuario = 'AguardandoAprovacao' | 'Aprovado' | 'Bloqueado';
+export type StatusUsuario = 'AguardandoAprovacao' | 'Ativo' | 'Bloqueado';
 
 /**
  * Sobe um banco novo, aplica os stubs e as migrations em ordem de nome. Com `antesDe`,
@@ -44,7 +44,7 @@ export async function aplicarMigration(db: Banco, arquivo: string): Promise<void
 interface UsuarioDeTeste {
   id: string;
   perfil?: PerfilNome | null;
-  // Padrão 'Aprovado': conta pendente não tem perfil para o RLS (EIX-30), e os testes de
+  // Padrão 'Ativo': conta pendente não tem perfil para o RLS (EIX-30), e os testes de
   // policy precisam do perfil valendo. `null` mantém o status que o banco gravou.
   status?: StatusUsuario | null;
   nome?: string;
@@ -55,7 +55,7 @@ interface UsuarioDeTeste {
  * Roda `executar` numa transação como o usuário dado: cria a linha em `auth.users`
  * (o `handle_new_user` da migration base cria a linha em `public.usuario` como
  * Motorista), promove o perfil se pedido um diferente, aplica o status (padrão
- * 'Aprovado'), troca para a role
+ * 'Ativo'), troca para a role
  * `authenticated` e define `auth.uid()` via `request.jwt.claim.sub`. Como qualquer
  * transação, o resultado é gravado ao final (só desfaz se `executar` lançar) — os
  * testes usam IDs únicos por caso para não colidir entre si.
@@ -98,7 +98,7 @@ export async function comoUsuario<T>(
        ) as existe`,
     );
 
-    const status = usuario.status === undefined ? 'Aprovado' : usuario.status;
+    const status = usuario.status === undefined ? 'Ativo' : usuario.status;
     if (status && colunaStatusExiste.rows[0]?.existe) {
       await tx.query(`update public.usuario set status = $2 where id = $1`, [usuario.id, status]);
     }

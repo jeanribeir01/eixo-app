@@ -42,7 +42,7 @@ function logadoComo(id: string) {
   useProfileStore.setState({
     usuarioId: id,
     estado: 'pronto',
-    usuario: { id, nome: 'Ana', email: 'ana@empresa.com', perfil: 'Admin', status: 'Aprovado' },
+    usuario: { id, nome: 'Ana', email: 'ana@empresa.com', perfil: 'Admin', status: 'Ativo' },
   });
 }
 
@@ -86,23 +86,23 @@ describe('UsuarioDetalheView', () => {
     expect(alterarPerfilUsuario).toHaveBeenCalledWith('u2', 'p-fin');
   });
 
-  it('Aprovar grava status Aprovado e mostra "Usuário aprovado." (AC6)', async () => {
-    (alterarStatusUsuario as jest.Mock).mockResolvedValue({ ok: true, data: { ...bruno, status: 'Aprovado' } });
+  it('Aprovar grava status Ativo e mostra "Usuário aprovado." (AC6)', async () => {
+    (alterarStatusUsuario as jest.Mock).mockResolvedValue({ ok: true, data: { ...bruno, status: 'Ativo' } });
     render(<UsuarioDetalheView />);
     await screen.findByText('Bruno Lima');
 
     fireEvent.press(screen.getByRole('button', { name: 'Aprovar' }));
 
     expect(await screen.findByText('Usuário aprovado.')).toBeOnTheScreen();
-    expect(alterarStatusUsuario).toHaveBeenCalledWith('u2', 'Aprovado');
+    expect(alterarStatusUsuario).toHaveBeenCalledWith('u2', 'Ativo');
     // Já aprovado: a ação disponível passa a ser Bloquear.
-    expect(screen.getByText('Aprovado')).toBeOnTheScreen();
+    expect(screen.getByText('Ativo')).toBeOnTheScreen();
     expect(screen.getByRole('button', { name: 'Bloquear' })).toBeOnTheScreen();
     expect(screen.queryByRole('button', { name: 'Aprovar' })).not.toBeOnTheScreen();
   });
 
   it('Bloquear grava status Bloqueado e mostra "Usuário bloqueado." (AC7)', async () => {
-    (buscarUsuarioPorId as jest.Mock).mockResolvedValue({ ok: true, data: { ...bruno, status: 'Aprovado' } });
+    (buscarUsuarioPorId as jest.Mock).mockResolvedValue({ ok: true, data: { ...bruno, status: 'Ativo' } });
     (alterarStatusUsuario as jest.Mock).mockResolvedValue({ ok: true, data: { ...bruno, status: 'Bloqueado' } });
     render(<UsuarioDetalheView />);
     await screen.findByText('Bruno Lima');
@@ -150,7 +150,7 @@ describe('UsuarioDetalheView', () => {
     logadoComo('u2');
     (buscarUsuarioPorId as jest.Mock).mockResolvedValue({
       ok: true,
-      data: { ...bruno, status: 'Aprovado', perfil: { id: 'p-adm', nome: 'Admin' } },
+      data: { ...bruno, status: 'Ativo', perfil: { id: 'p-adm', nome: 'Admin' } },
     });
     render(<UsuarioDetalheView />);
     await screen.findByText('Bruno Lima');

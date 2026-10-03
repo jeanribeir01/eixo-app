@@ -16,7 +16,7 @@ function sessionWith(email: string, metadata: Record<string, unknown>): Session 
 }
 
 function perfil(perfilNome: UsuarioLogado['perfil']): UsuarioLogado {
-  return { id: 'user-1', nome: 'Maria', email: 'maria@example.com', perfil: perfilNome, status: 'Aprovado' };
+  return { id: 'user-1', nome: 'Maria', email: 'maria@example.com', perfil: perfilNome, status: 'Ativo' };
 }
 
 beforeEach(() => {

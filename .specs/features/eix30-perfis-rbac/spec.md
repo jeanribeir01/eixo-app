@@ -28,12 +28,12 @@ Hoje todo login novo vira `Motorista` com acesso imediato, e não existe tela pa
 | Assumption / decision | Chosen default | Rationale | Confirmed? |
 | --------------------- | -------------- | --------- | ---------- |
 | Task pede perfis `Administrador` e `Operador/Motorista`; o enum aplicado usa `Admin` e `Motorista` | Enum do banco não muda; a UI exibe "Administrador", "Gestor de Frota", "Financeiro", "Operador/Motorista" | CLAUDE.md §5 exige os nomes do MER; seed dos 4 perfis já existe (EIX-27) | y |
-| Valores do status | Enum `status_usuario`: `AguardandoAprovacao`, `Aprovado`, `Bloqueado`; rótulos "Aguardando aprovação", "Aprovado", "Bloqueado" | Segue o padrão sem acento/espaço dos enums existentes (`EmViagem`, `Saida`) | y |
+| Valores do status | Enum `status_usuario`: `AguardandoAprovacao`, `Ativo`, `Bloqueado`; rótulos "Aguardando aprovação", "Ativo", "Bloqueado" | Segue o padrão sem acento/espaço dos enums existentes (`EmViagem`, `Saida`) | y |
 | Status das contas que já existem quando a migration roda | `AguardandoAprovacao` | Ninguém ganha acesso sem querer; o primeiro Admin é promovido por SQL no painel | y |
 | Contas de `auth.users` criadas antes do trigger `handle_new_user` (EIX-27) não têm linha em `usuario` | A migration cria a linha que falta (perfil Motorista, `AguardandoAprovacao`) | Sem a linha a conta não pode ser aprovada pela tela | y |
 | Perfil de quem entra pela primeira vez | Continua `Motorista` (menor privilégio), mas com status `AguardandoAprovacao` | `perfil_id` é not null; o status é que bloqueia o acesso | y |
 | Admin bloquear a si mesmo | Proibido, igual a rebaixar o próprio perfil | Mesmo risco: ficar sem Admin | y |
-| Bloqueado vs `ativo = false` | `ativo` continua sendo o soft delete; bloquear muda só `status` | Bloqueio é reversível pela tela; soft delete é outra regra | y |
+| Bloqueado vs `ativo = false` | `status` substitui a coluna `ativo`, que é removida; `Bloqueado` é o soft delete do usuário | Esquema já aplicado na nuvem em 30/09 (migrations 20260930000100..300); um só campo decide o acesso | y |
 | Tela de usuário não aprovado | Mesma tela para `AguardandoAprovacao` e `Bloqueado`, com texto diferente; botão Sair nas duas | O critério cita "não aprovado"; bloqueado também não é aprovado | y |
 | Usuário logado sem linha em `usuario` (falha rara) | Tratado como não aprovado | Fecha por padrão (deny-by-default) | y |
 | `canSeeFrota` | `true` para Admin e Gestor de Frota | Tabela RBAC do CLAUDE.md §7; a rotina de campo do Motorista é da US17 | y |
@@ -53,11 +53,11 @@ Hoje todo login novo vira `Motorista` com acesso imediato, e não existe tela pa
 **Acceptance Criteria**:
 
 1. WHEN uma conta é criada em `auth.users` THEN o banco SHALL criar a linha em `usuario` com status `AguardandoAprovacao`.
-2. WHILE o status do usuário for diferente de `Aprovado` a função `auth_perfil()` SHALL retornar `null`.
-3. WHILE o status do usuário for diferente de `Aprovado` o banco SHALL negar a leitura de `viagem`, inclusive das viagens em que ele é o motorista.
+2. WHILE o status do usuário for diferente de `Ativo` a função `auth_perfil()` SHALL retornar `null`.
+3. WHILE o status do usuário for diferente de `Ativo` o banco SHALL negar a leitura de `viagem` (inclusive das viagens em que ele é o motorista), `veiculo` e `rota`.
 4. WHEN a migration roda THEN o banco SHALL criar em `usuario` a linha que faltar para cada conta de `auth.users`, com perfil `Motorista` e status `AguardandoAprovacao`.
-5. WHEN a migration roda THEN toda linha já existente em `usuario` SHALL ficar com status `AguardandoAprovacao`.
-6. WHILE o usuário logado não estiver `Aprovado` o app SHALL mostrar a tela "Aguardando liberação" e nenhuma tela de módulo.
+5. WHEN a migration roda THEN a linha já existente em `usuario` SHALL ficar com status `Ativo` se `ativo = true` e `Bloqueado` se `ativo = false`.
+6. WHILE o usuário logado não estiver `Ativo` o app SHALL mostrar a tela "Aguardando liberação" e nenhuma tela de módulo.
 7. WHEN o usuário logado tem status `Bloqueado` THEN a tela SHALL mostrar o texto "Seu acesso foi bloqueado. Fale com o administrador.".
 8. WHEN o usuário toca "Sair" na tela "Aguardando liberação" THEN o app SHALL encerrar a sessão.
 9. IF o app não consegue carregar o perfil do usuário logado THEN o app SHALL mostrar "Não foi possível carregar seu perfil." com os botões "Tentar novamente" e "Sair".
@@ -79,7 +79,7 @@ Hoje todo login novo vira `Motorista` com acesso imediato, e não existe tela pa
 3. WHEN a lista de usuários está carregando THEN a tela SHALL mostrar o indicador "Carregando usuários".
 4. IF a lista de usuários falhar ao carregar THEN a tela SHALL mostrar "Não foi possível carregar" e o botão "Tentar novamente".
 5. WHEN o Admin salva um novo perfil para outro usuário THEN o banco SHALL gravar o novo `perfil_id` e o app SHALL mostrar "Perfil atualizado.".
-6. WHEN o Admin toca "Aprovar" em um usuário não aprovado THEN o banco SHALL gravar status `Aprovado` e o app SHALL mostrar "Usuário aprovado.".
+6. WHEN o Admin toca "Aprovar" em um usuário não aprovado THEN o banco SHALL gravar status `Ativo` e o app SHALL mostrar "Usuário aprovado.".
 7. WHEN o Admin toca "Bloquear" em um usuário aprovado THEN o banco SHALL gravar status `Bloqueado` e o app SHALL mostrar "Usuário bloqueado.".
 8. IF a gravação falhar THEN o app SHALL mostrar a mensagem de erro em português e manter os dados anteriores na tela.
 9. IF um usuário que não é Admin tenta alterar `usuario` THEN o banco SHALL rejeitar a alteração (policy existente da EIX-27).
@@ -96,12 +96,12 @@ Hoje todo login novo vira `Motorista` com acesso imediato, e não existe tela pa
 
 **Acceptance Criteria**:
 
-1. IF o usuário logado tenta alterar o próprio `perfil_id` THEN o banco SHALL rejeitar com SQLSTATE `42501`.
-2. IF o usuário logado tenta alterar o próprio `status` THEN o banco SHALL rejeitar com SQLSTATE `42501`.
+1. IF o usuário logado tenta alterar o próprio `perfil_id` THEN o banco SHALL rejeitar com SQLSTATE `P0001`.
+2. IF o usuário logado tenta alterar o próprio `status` THEN o banco SHALL rejeitar com SQLSTATE `P0001`.
 3. WHEN o Admin abre o próprio usuário THEN o app SHALL esconder a escolha de perfil e o botão "Bloquear" e mostrar "Você não pode alterar o próprio perfil nem bloquear a si mesmo.".
 4. WHEN uma alteração de perfil/status é feita sem usuário logado (SQL Editor do painel) THEN o banco SHALL aceitá-la.
 
-**Independent Test**: logado como Admin, abrir o próprio usuário → sem ações; tentativa via API → erro 42501.
+**Independent Test**: logado como Admin, abrir o próprio usuário → sem ações; tentativa via API → erro P0001.
 
 ---
 
@@ -113,10 +113,10 @@ Hoje todo login novo vira `Motorista` com acesso imediato, e não existe tela pa
 
 **Acceptance Criteria**:
 
-1. The `isAdmin` helper SHALL retornar `true` só para perfil `Admin` com status `Aprovado`.
-2. The `canSeeFinanceiro` helper SHALL retornar `true` só para `Admin` e `Financeiro` com status `Aprovado`.
-3. The `canSeeFrota` helper SHALL retornar `true` só para `Admin` e `Gestor de Frota` com status `Aprovado`.
-4. IF o status não é `Aprovado` ou não há usuário THEN todos os helpers SHALL retornar `false`.
+1. The `isAdmin` helper SHALL retornar `true` só para perfil `Admin` com status `Ativo`.
+2. The `canSeeFinanceiro` helper SHALL retornar `true` só para `Admin` e `Financeiro` com status `Ativo`.
+3. The `canSeeFrota` helper SHALL retornar `true` só para `Admin` e `Gestor de Frota` com status `Ativo`.
+4. IF o status não é `Ativo` ou não há usuário THEN todos os helpers SHALL retornar `false`.
 5. The `useProfile()` hook SHALL expor `usuario` (id, nome, email, perfil, status), o estado de carregamento (`carregando` | `pronto` | `erro`), `isAprovado`, `isAdmin`, `canSeeFinanceiro`, `canSeeFrota` e `recarregar`.
 
 **Independent Test**: testes unitários dos helpers para os 4 perfis × 3 status.

@@ -31,7 +31,7 @@ export default function RootLayout() {
   }, [usuarioId]);
 
   const isReady = fontsLoaded && !isRestoring;
-  // Só entra na área do app quem está Aprovado. Enquanto o perfil carrega, falha ou não está
+  // Só entra na área do app quem está com status Ativo (aprovado). Enquanto o perfil carrega, falha ou não está
   // aprovado, a única rota registrada é (pendente) — que mostra o estado certo para cada caso.
   const temAcesso = session !== null && estado === 'pronto' && isAprovado;
 

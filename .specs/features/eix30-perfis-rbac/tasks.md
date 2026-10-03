@@ -14,7 +14,7 @@ Implement these tasks with the `tlc-spec-driven` skill: **activate it by name an
 
 Decisões de design (inline):
 
-- Migration nova `20261002000100_usuario_status.sql`: enum `status_usuario`, coluna `usuario.status`, backfill de `usuario`, `create or replace` de `auth_perfil()` e `handle_new_user()`, trigger `usuario_impedir_auto_alteracao`, `viagem_select` recriada exigindo perfil. Migrations aplicadas não são editadas.
+- Migrations `20260930000100_status_usuario.sql`, `20260930000200_protege_proprio_usuario.sql` e `20260930000300_viagem_select_aprovado.sql` (já aplicadas na nuvem em 30/09, trazidas para o repo com `supabase migration fetch`): enum `status_usuario` (`AguardandoAprovacao`/`Ativo`/`Bloqueado`) no lugar de `ativo`, `auth_perfil()` exigindo `Ativo`, `veiculo`/`rota` só para aprovados, trigger `usuario_impede_autoalteracao` (P0001), `viagem_select` exigindo perfil. `20261002000100_usuario_backfill.sql` cria as linhas de `usuario` que faltarem. Migrations aplicadas não são editadas.
 - `src/types/database.ts`: atualizado no formato exato do `supabase gen types` (sem CLI linkada — AD-003); regenerar após `db push` deve dar diff vazio.
 - App: `src/features/auth/permissions.ts` (funções puras), `src/features/auth/profileStore.ts` (Zustand + `useProfile()`), `app/_layout.tsx` com guards sessão → perfil carregado → aprovado. Tela de usuários em `src/features/usuarios/`, rota em `app/(app)/usuarios/` protegida por `isAdmin`.
 
@@ -68,8 +68,8 @@ T6 → T7 → T8
 
 ### T1: Migration de status do usuário e travas de auto-alteração
 
-**What**: Criar `20261002000100_usuario_status.sql` e os testes PGlite; ajustar o harness para aprovar usuários de teste por padrão.
-**Where**: `supabase/migrations/20261002000100_usuario_status.sql`, `supabase/tests/usuario_status.test.ts`, `supabase/tests/helpers/db.ts`
+**What**: Trazer as migrations de 30/09, criar `20261002000100_usuario_backfill.sql` e os testes PGlite; ajustar o harness para aprovar usuários de teste por padrão.
+**Where**: `supabase/migrations/20260930000*.sql`, `supabase/migrations/20261002000100_usuario_backfill.sql`, `supabase/tests/usuario_status.test.ts`, `supabase/tests/helpers/db.ts`
 **Depends on**: None
 **Reuses**: `supabase/tests/helpers/db.ts`
 **Requirement**: RBAC-01, RBAC-05
@@ -81,10 +81,10 @@ T6 → T7 → T8
 
 **Done when**:
 
-- [x] Conta nova nasce `AguardandoAprovacao`; `auth_perfil()` é `null` fora de `Aprovado`
+- [x] Conta nova nasce `AguardandoAprovacao`; `auth_perfil()` é `null` fora de `Ativo`
 - [x] Não aprovado não lê `viagem` própria
 - [x] Backfill cria linha faltante e marca existentes como `AguardandoAprovacao`
-- [x] Auto-alteração de perfil/status rejeitada com 42501; sem `auth.uid()` é aceita
+- [x] Auto-alteração de perfil/status rejeitada com P0001; sem `auth.uid()` é aceita
 - [x] Testes PGlite existentes continuam verdes
 
 **Tests**: integration
@@ -201,7 +201,7 @@ T6 → T7 → T8
 
 **Done when**:
 
-- [x] Sucesso, erro do Supabase, 42501 e resposta inválida cobertos
+- [x] Sucesso, erro do Supabase, P0001 e resposta inválida cobertos
 - [x] Gate quick verde
 
 **Tests**: unit

@@ -8,7 +8,7 @@ import { useProfile } from './profileStore';
 
 // Única área de quem está logado mas não tem acesso: perfil ainda carregando, falha ao
 // carregar, conta aguardando aprovação ou bloqueada (US16). O layout raiz só manda para cá
-// quem não está Aprovado; nenhuma tela de módulo fica registrada para essa pessoa.
+// quem não está com status Ativo; nenhuma tela de módulo fica registrada para essa pessoa.
 export function AguardandoLiberacaoView() {
   const { usuario, estado, recarregar } = useProfile();
   const [verificando, setVerificando] = useState(false);

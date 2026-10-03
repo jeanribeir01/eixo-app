@@ -281,7 +281,6 @@ export type Database = {
       }
       usuario: {
         Row: {
-          ativo: boolean
           data_atualizacao: string
           data_inclusao: string
           email: string
@@ -292,7 +291,6 @@ export type Database = {
           status: Database["public"]["Enums"]["status_usuario"]
         }
         Insert: {
-          ativo?: boolean
           data_atualizacao?: string
           data_inclusao?: string
           email: string
@@ -303,7 +301,6 @@ export type Database = {
           status?: Database["public"]["Enums"]["status_usuario"]
         }
         Update: {
-          ativo?: boolean
           data_atualizacao?: string
           data_inclusao?: string
           email?: string
@@ -434,7 +431,7 @@ export type Database = {
     Enums: {
       perfil_nome: "Admin" | "Gestor de Frota" | "Financeiro" | "Motorista"
       status_pagamento: "Pendente" | "Pago"
-      status_usuario: "AguardandoAprovacao" | "Aprovado" | "Bloqueado"
+      status_usuario: "AguardandoAprovacao" | "Ativo" | "Bloqueado"
       status_veiculo: "Disponivel" | "EmViagem" | "EmManutencao"
       status_viagem: "EmAndamento" | "Finalizada" | "Cancelada"
       tipo_categoria: "Entrada" | "Saida"
@@ -567,7 +564,7 @@ export const Constants = {
     Enums: {
       perfil_nome: ["Admin", "Gestor de Frota", "Financeiro", "Motorista"],
       status_pagamento: ["Pendente", "Pago"],
-      status_usuario: ["AguardandoAprovacao", "Aprovado", "Bloqueado"],
+      status_usuario: ["AguardandoAprovacao", "Ativo", "Bloqueado"],
       status_veiculo: ["Disponivel", "EmViagem", "EmManutencao"],
       status_viagem: ["EmAndamento", "Finalizada", "Cancelada"],
       tipo_categoria: ["Entrada", "Saida"],

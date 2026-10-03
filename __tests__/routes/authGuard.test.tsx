@@ -47,7 +47,7 @@ function linhaUsuario(status: string, perfil = 'Motorista') {
 beforeEach(() => {
   useSessionStore.setState({ session: null, isRestoring: true });
   limparPerfil();
-  mockLinhaUsuario.mockResolvedValue({ data: linhaUsuario('Aprovado'), error: null });
+  mockLinhaUsuario.mockResolvedValue({ data: linhaUsuario('Ativo'), error: null });
   (supabase.auth.onAuthStateChange as jest.Mock).mockImplementation((listener: Listener) => {
     emit = listener;
     return { data: { subscription: { unsubscribe: jest.fn() } } };
@@ -153,7 +153,7 @@ describe('proteção de rotas por aprovação do perfil (EIX-30)', () => {
 
 describe('rota de usuários só existe para Admin (EIX-30, RBAC-03 AC1)', () => {
   it('Admin aprovado abre /usuarios', async () => {
-    mockLinhaUsuario.mockResolvedValue({ data: linhaUsuario('Aprovado', 'Admin'), error: null });
+    mockLinhaUsuario.mockResolvedValue({ data: linhaUsuario('Ativo', 'Admin'), error: null });
     renderRouter(routes, { initialUrl: '/' });
     act(() => emit('INITIAL_SESSION', session));
     await screen.findByText('Tela Home');
@@ -164,7 +164,7 @@ describe('rota de usuários só existe para Admin (EIX-30, RBAC-03 AC1)', () => 
   });
 
   it.each(['Gestor de Frota', 'Financeiro', 'Motorista'])('perfil %s aprovado não chega em /usuarios', async (perfil) => {
-    mockLinhaUsuario.mockResolvedValue({ data: linhaUsuario('Aprovado', perfil), error: null });
+    mockLinhaUsuario.mockResolvedValue({ data: linhaUsuario('Ativo', perfil), error: null });
     renderRouter(routes, { initialUrl: '/' });
     act(() => emit('INITIAL_SESSION', session));
     await screen.findByText('Tela Home');

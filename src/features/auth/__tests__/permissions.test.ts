@@ -20,7 +20,7 @@ const perfis = Object.keys(esperadoAprovado) as PerfilNome[];
 
 describe('permissions', () => {
   it.each(perfis)('perfil %s aprovado: isAdmin, canSeeFinanceiro e canSeeFrota seguem a matriz (AC1–AC3)', (perfil) => {
-    const usuario = { perfil, status: 'Aprovado' as const };
+    const usuario = { perfil, status: 'Ativo' as const };
 
     expect({
       isAdmin: isAdmin(usuario),

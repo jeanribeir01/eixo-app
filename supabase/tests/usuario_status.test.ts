@@ -1,5 +1,5 @@
 /** @jest-environment node */
-// Testes da migration 20261002000100_usuario_status.sql — spec.md (EIX-30):
+// Testes das migrations da EIX-30 (20260930000100..300 e 20261002000100_usuario_backfill) — spec.md:
 // "Novo usuário entra bloqueado" AC1–AC5 e "Admin não perde o próprio acesso" AC1, AC2, AC4.
 
 import {
@@ -12,7 +12,14 @@ import {
   type StatusUsuario,
 } from './helpers/db';
 
-const MIGRATION = '20261002000100_usuario_status.sql';
+// Primeira migration da EIX-30 e todas as que vêm depois dela, na ordem de nome.
+const PRIMEIRA_MIGRATION = '20260930000100_status_usuario.sql';
+const MIGRATIONS_EIX30 = [
+  PRIMEIRA_MIGRATION,
+  '20260930000200_protege_proprio_usuario.sql',
+  '20260930000300_viagem_select_aprovado.sql',
+  '20261002000100_usuario_backfill.sql',
+];
 
 type LinhaUsuario = { status: StatusUsuario; perfil: PerfilNome };
 
@@ -56,7 +63,7 @@ describe('migration usuario_status: aprovação de usuários', () => {
   it.each<[StatusUsuario, PerfilNome | null, string]>([
     ['AguardandoAprovacao', null, '30000000-0000-0000-0001-000000000001'],
     ['Bloqueado', null, '30000000-0000-0000-0001-000000000002'],
-    ['Aprovado', 'Financeiro', '30000000-0000-0000-0001-000000000003'],
+    ['Ativo', 'Financeiro', '30000000-0000-0000-0001-000000000003'],
   ])('auth_perfil() com status %s devolve %s (AC2)', async (status, esperado, id) => {
     const perfil = await comoUsuario(db, { id, perfil: 'Financeiro', status }, async (tx) => {
       const resultado = await tx.query<{ perfil: PerfilNome | null }>('select auth_perfil() as perfil');
@@ -98,7 +105,7 @@ describe('migration usuario_status: aprovação de usuários', () => {
     });
 
     it.each<[StatusUsuario, number]>([
-      ['Aprovado', 1],
+      ['Ativo', 1],
       ['AguardandoAprovacao', 0],
       ['Bloqueado', 0],
     ])('motorista com status %s lê %i viagem(ns) própria(s)', async (status, quantidade) => {
@@ -111,6 +118,31 @@ describe('migration usuario_status: aprovação de usuários', () => {
     });
   });
 
+  it.each<[StatusUsuario, boolean]>([
+    ['Ativo', true],
+    ['AguardandoAprovacao', false],
+    ['Bloqueado', false],
+  ])('com status %s, lê veiculo e rota: %s', async (status, le) => {
+    const id = `30000000-0000-0000-0003-00000000000${status.length % 10}`;
+    await comoSuperuser(db, async (tx) => {
+      await tx.query(
+        `insert into veiculo (placa, marca, modelo, capacidade_carga)
+         values ('VRA1B23', 'Scania', 'R450', 20000) on conflict do nothing`,
+      );
+      await tx.query(
+        `insert into rota (cidade_origem, cidade_destino, distancia_estimada_km) values ('Jundiaí', 'Sorocaba', 90)`,
+      );
+    });
+
+    const totais = await comoUsuario(db, { id, perfil: 'Motorista', status }, async (tx) => {
+      const veiculos = await tx.query('select id from veiculo');
+      const rotas = await tx.query('select id from rota');
+      return [veiculos.rows.length > 0, rotas.rows.length > 0];
+    });
+
+    expect(totais).toEqual([le, le]);
+  });
+
   describe('auto-alteração', () => {
     const adminId = '30000000-0000-0000-0000-000000000010';
     const outroId = '30000000-0000-0000-0000-000000000011';
@@ -120,7 +152,7 @@ describe('migration usuario_status: aprovação de usuários', () => {
       await comoUsuario(db, { id: outroId, status: null }, async () => {});
     });
 
-    it('Admin não altera o próprio perfil: 42501 (AC1)', async () => {
+    it('Admin não altera o próprio perfil: P0001 (AC1)', async () => {
       const codigo = await codigoDoErro(
         comoUsuario(db, { id: adminId, perfil: 'Admin' }, (tx) =>
           tx.query(
@@ -130,31 +162,31 @@ describe('migration usuario_status: aprovação de usuários', () => {
         ),
       );
 
-      expect(codigo).toBe('42501');
-      expect(await lerUsuario(db, adminId)).toEqual({ status: 'Aprovado', perfil: 'Admin' });
+      expect(codigo).toBe('P0001');
+      expect(await lerUsuario(db, adminId)).toEqual({ status: 'Ativo', perfil: 'Admin' });
     });
 
-    it('Admin não altera o próprio status: 42501 (AC2)', async () => {
+    it('Admin não altera o próprio status: P0001 (AC2)', async () => {
       const codigo = await codigoDoErro(
         comoUsuario(db, { id: adminId, perfil: 'Admin' }, (tx) =>
           tx.query(`update usuario set status = 'Bloqueado' where id = $1`, [adminId]),
         ),
       );
 
-      expect(codigo).toBe('42501');
-      expect(await lerUsuario(db, adminId)).toEqual({ status: 'Aprovado', perfil: 'Admin' });
+      expect(codigo).toBe('P0001');
+      expect(await lerUsuario(db, adminId)).toEqual({ status: 'Ativo', perfil: 'Admin' });
     });
 
     it('Admin altera perfil e status de outro usuário', async () => {
       await comoUsuario(db, { id: adminId, perfil: 'Admin' }, async (tx) => {
         await tx.query(
-          `update usuario set perfil_id = (select id from perfil where nome = 'Gestor de Frota'), status = 'Aprovado'
+          `update usuario set perfil_id = (select id from perfil where nome = 'Gestor de Frota'), status = 'Ativo'
            where id = $1`,
           [outroId],
         );
       });
 
-      expect(await lerUsuario(db, outroId)).toEqual({ status: 'Aprovado', perfil: 'Gestor de Frota' });
+      expect(await lerUsuario(db, outroId)).toEqual({ status: 'Ativo', perfil: 'Gestor de Frota' });
     });
 
     it.each<PerfilNome>(['Gestor de Frota', 'Financeiro', 'Motorista'])(
@@ -166,7 +198,7 @@ describe('migration usuario_status: aprovação de usuários', () => {
 
         const alteradas = await comoUsuario(db, { id: naoAdminId, perfil }, async (tx) => {
           const resultado = await tx.query(
-            `update usuario set perfil_id = (select id from perfil where nome = 'Admin'), status = 'Aprovado'
+            `update usuario set perfil_id = (select id from perfil where nome = 'Admin'), status = 'Ativo'
              where id = $1 returning id`,
             [alvoId],
           );
@@ -192,22 +224,29 @@ describe('migration usuario_status: aprovação de usuários', () => {
   });
 });
 
-describe('migration usuario_status: backfill de contas existentes', () => {
+describe('migrations da EIX-30: contas que já existiam', () => {
+  const ativoId = '31000000-0000-0000-0000-000000000002';
+  const inativoId = '31000000-0000-0000-0000-000000000003';
   const semLinhaId = '31000000-0000-0000-0000-000000000001';
-  const comLinhaId = '31000000-0000-0000-0000-000000000002';
   let db: Banco;
 
   beforeAll(async () => {
-    db = await criarBanco({ antesDe: MIGRATION });
+    db = await criarBanco({ antesDe: PRIMEIRA_MIGRATION });
 
-    // Conta com linha em usuario (trigger da EIX-27) e já promovida a Admin.
+    // Contas com linha em usuario (trigger da EIX-27): uma Admin ativa, outra desativada
+    // pelo soft delete antigo (`ativo = false`).
     await db.query(
       `insert into auth.users (id, email, raw_user_meta_data) values ($1, 'admin@teste.local', '{"full_name":"Ana"}')`,
-      [comLinhaId],
+      [ativoId],
     );
     await db.query(`update usuario set perfil_id = (select id from perfil where nome = 'Admin') where id = $1`, [
-      comLinhaId,
+      ativoId,
     ]);
+    await db.query(
+      `insert into auth.users (id, email, raw_user_meta_data) values ($1, 'inativo@teste.local', '{"full_name":"Caio"}')`,
+      [inativoId],
+    );
+    await db.query(`update usuario set ativo = false where id = $1`, [inativoId]);
 
     // Conta criada antes do trigger existir: sem linha em usuario.
     await db.query(`alter table auth.users disable trigger on_auth_user_created`);
@@ -217,7 +256,9 @@ describe('migration usuario_status: backfill de contas existentes', () => {
     );
     await db.query(`alter table auth.users enable trigger on_auth_user_created`);
 
-    await aplicarMigration(db, MIGRATION);
+    for (const migration of MIGRATIONS_EIX30) {
+      await aplicarMigration(db, migration);
+    }
   });
 
   afterAll(async () => {
@@ -233,7 +274,11 @@ describe('migration usuario_status: backfill de contas existentes', () => {
     expect(await lerUsuario(db, semLinhaId)).toEqual({ status: 'AguardandoAprovacao', perfil: 'Motorista' });
   });
 
-  it('linha existente fica AguardandoAprovacao e mantém o perfil (AC5)', async () => {
-    expect(await lerUsuario(db, comLinhaId)).toEqual({ status: 'AguardandoAprovacao', perfil: 'Admin' });
+  it('conta ativa continua com acesso e mantém o perfil (AC5)', async () => {
+    expect(await lerUsuario(db, ativoId)).toEqual({ status: 'Ativo', perfil: 'Admin' });
+  });
+
+  it('conta desativada vira Bloqueado (AC5)', async () => {
+    expect(await lerUsuario(db, inativoId)).toEqual({ status: 'Bloqueado', perfil: 'Motorista' });
   });
 });

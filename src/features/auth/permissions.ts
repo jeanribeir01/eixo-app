@@ -20,14 +20,14 @@ export const rotuloPerfil: Record<PerfilNome, string> = {
 
 export const rotuloStatus: Record<StatusUsuario, string> = {
   AguardandoAprovacao: 'Aguardando aprovação',
-  Aprovado: 'Aprovado',
+  Ativo: 'Ativo',
   Bloqueado: 'Bloqueado',
 };
 
-// Fecha por padrão: sem usuário, ou com status diferente de Aprovado, nenhuma permissão vale —
+// Fecha por padrão: sem usuário, ou com status diferente de Ativo, nenhuma permissão vale —
 // o mesmo que `auth_perfil()` faz no banco.
 export function isAprovado(usuario: PerfilDoUsuario | null): usuario is PerfilDoUsuario {
-  return usuario !== null && usuario.status === 'Aprovado';
+  return usuario !== null && usuario.status === 'Ativo';
 }
 
 function temPerfil(usuario: PerfilDoUsuario | null, perfis: readonly PerfilNome[]): boolean {

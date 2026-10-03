@@ -187,3 +187,15 @@ Run in a temporary `git worktree` (detached at HEAD) under the scratchpad, with 
 - **Gate**: typecheck clean, lint clean, app 192 passed (27 suites), supabase 62 passed (8 suites), 0 failed.
 - **Sensor**: 10/10 mutations killed.
 - **Traceability**: RBAC-01…08 → Verified (`spec.md` updated).
+
+---
+
+## Adaptação ao esquema da nuvem (2026-10-02)
+
+A nuvem já tinha uma versão da EIX-30 aplicada em 30/09, a partir de outro PC (`20260930000100..300`). A branch foi adaptada a ela, e não o contrário:
+
+- As três migrations foram trazidas com `supabase migration fetch`, sem alteração. A `20261002000100_usuario_status.sql`, nunca aplicada, foi substituída por `20261002000100_usuario_backfill.sql`, que só cria as linhas de `usuario` que faltarem.
+- O status `Aprovado` virou `Ativo` e a coluna `ativo` foi removida. O erro de auto-alteração passou de `42501` para `P0001`. `src/types/database.ts` foi regenerado com `supabase gen types --linked`.
+- A spec mudou em dois pontos. AC5: as linhas existentes viram `Ativo`/`Bloqueado` conforme `ativo`, e não `AguardandoAprovacao`. AC3: `veiculo` e `rota` também ficam fechados para quem não está aprovado.
+- **Novos testes**: leitura de `veiculo`/`rota` por status, e uma conta desativada que vira `Bloqueado`. **Sensor**: as policies de `veiculo`/`rota` voltando para `using (true)` → ✅ Killed (2 failed).
+- **Gate**: typecheck e lint limpos; app 192 passed, supabase 66 passed, 0 failed.

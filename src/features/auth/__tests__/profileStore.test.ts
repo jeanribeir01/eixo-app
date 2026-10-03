@@ -30,7 +30,7 @@ const linhaAdmin = {
   id: 'u1',
   nome: 'Ana',
   email: 'ana@empresa.com',
-  status: 'Aprovado',
+  status: 'Ativo',
   perfil: { nome: 'Admin' },
 };
 
@@ -51,7 +51,7 @@ describe('profileStore', () => {
     expect(mockEq).toHaveBeenCalledWith('id', 'u1');
     expect(useProfileStore.getState()).toMatchObject({
       estado: 'pronto',
-      usuario: { id: 'u1', nome: 'Ana', email: 'ana@empresa.com', perfil: 'Admin', status: 'Aprovado' },
+      usuario: { id: 'u1', nome: 'Ana', email: 'ana@empresa.com', perfil: 'Admin', status: 'Ativo' },
     });
   });
 
@@ -72,7 +72,7 @@ describe('profileStore', () => {
   });
 
   it('resposta fora do formato (status desconhecido): estado erro', async () => {
-    mockMaybeSingle.mockResolvedValue({ data: { ...linhaAdmin, status: 'Ativo' }, error: null });
+    mockMaybeSingle.mockResolvedValue({ data: { ...linhaAdmin, status: 'Aprovado' }, error: null });
 
     await carregarPerfil('u1');
 
@@ -124,7 +124,7 @@ describe('useProfile', () => {
 
     expect(result.current).toMatchObject({
       estado: 'pronto',
-      usuario: { id: 'u1', perfil: 'Financeiro', status: 'Aprovado' },
+      usuario: { id: 'u1', perfil: 'Financeiro', status: 'Ativo' },
       isAprovado: true,
       isAdmin: false,
       canSeeFinanceiro: true,

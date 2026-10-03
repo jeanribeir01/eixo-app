@@ -92,7 +92,7 @@ export function UsuarioDetalheView() {
   }
 
   function handleAlterarStatus(novoStatus: StatusUsuario) {
-    const aprovar = novoStatus === 'Aprovado';
+    const aprovar = novoStatus === 'Ativo';
     executar(aprovar ? 'aprovar' : 'bloquear', aprovar ? 'Usuário aprovado.' : 'Usuário bloqueado.', () =>
       alterarStatusUsuario(id, novoStatus),
     );
@@ -165,16 +165,16 @@ export function UsuarioDetalheView() {
       )}
 
       <Column gap="sm">
-        {usuario.status !== 'Aprovado' && (
+        {usuario.status !== 'Ativo' && (
           <Button
             label="Aprovar"
             variant="ghost"
-            onPress={() => handleAlterarStatus('Aprovado')}
+            onPress={() => handleAlterarStatus('Ativo')}
             disabled={acaoEmAndamento !== null}
             loading={acaoEmAndamento === 'aprovar'}
           />
         )}
-        {usuario.status === 'Aprovado' && !ehOProprioUsuario && (
+        {usuario.status === 'Ativo' && !ehOProprioUsuario && (
           <Button
             label="Bloquear"
             variant="ghost"
