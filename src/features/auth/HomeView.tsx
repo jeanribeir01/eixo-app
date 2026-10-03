@@ -1,9 +1,11 @@
 import type { Session } from '@supabase/supabase-js';
+import { useRouter } from 'expo-router';
 import { z } from 'zod';
 
 import { Avatar, Button, Card, Column, Screen, Text } from '@/ui';
 
 import { signOut } from './googleAuth';
+import { useProfile } from './profileStore';
 import { useSessionStore } from './sessionStore';
 
 // user_metadata vem do provedor (Google) sem tipo garantido: validamos na borda com Zod (CLAUDE.md §12).
@@ -29,7 +31,9 @@ function profileFromSession(session: Session) {
 }
 
 export function HomeView() {
+  const router = useRouter();
   const session = useSessionStore((state) => state.session);
+  const { isAdmin } = useProfile();
 
   // O layout só renderiza esta tela com sessão; o retorno nulo é apenas proteção de tipo.
   if (!session) return null;
@@ -54,6 +58,9 @@ export function HomeView() {
           <Text tone="body">{profile.email}</Text>
         </Column>
       </Card>
+
+      {/* Só o Admin vê o atalho; a rota também não existe para os outros perfis (US16). */}
+      {isAdmin && <Button label="Usuários" variant="ghost" onPress={() => router.push('/usuarios')} />}
 
       <Button label="Sair" variant="ghost" onPress={signOut} />
     </Screen>

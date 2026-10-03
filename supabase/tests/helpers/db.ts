@@ -14,9 +14,13 @@ const MIGRATIONS_DIR = path.join(__dirname, '..', '..', 'migrations');
 
 export type Banco = PGlite;
 export type PerfilNome = 'Admin' | 'Gestor de Frota' | 'Financeiro' | 'Motorista';
+export type StatusUsuario = 'AguardandoAprovacao' | 'Ativo' | 'Bloqueado';
 
-/** Sobe um banco novo, aplica os stubs e todas as migrations em ordem de nome. */
-export async function criarBanco(): Promise<Banco> {
+/**
+ * Sobe um banco novo, aplica os stubs e as migrations em ordem de nome. Com `antesDe`,
+ * para antes dessa migration — usado para preparar dados "antigos" e testar backfill.
+ */
+export async function criarBanco(opcoes: { antesDe?: string } = {}): Promise<Banco> {
   const db = new PGlite();
   await db.exec(readFileSync(STUBS_PATH, 'utf-8'));
 
@@ -25,15 +29,24 @@ export async function criarBanco(): Promise<Banco> {
     .sort();
 
   for (const arquivo of arquivosDeMigration) {
-    await db.exec(readFileSync(path.join(MIGRATIONS_DIR, arquivo), 'utf-8'));
+    if (opcoes.antesDe && arquivo >= opcoes.antesDe) break;
+    await aplicarMigration(db, arquivo);
   }
 
   return db;
 }
 
+/** Aplica uma migration de supabase/migrations/ pelo nome do arquivo. */
+export async function aplicarMigration(db: Banco, arquivo: string): Promise<void> {
+  await db.exec(readFileSync(path.join(MIGRATIONS_DIR, arquivo), 'utf-8'));
+}
+
 interface UsuarioDeTeste {
   id: string;
   perfil?: PerfilNome | null;
+  // Padrão 'Ativo': conta pendente não tem perfil para o RLS (EIX-30), e os testes de
+  // policy precisam do perfil valendo. `null` mantém o status que o banco gravou.
+  status?: StatusUsuario | null;
   nome?: string;
   email?: string;
 }
@@ -41,7 +54,8 @@ interface UsuarioDeTeste {
 /**
  * Roda `executar` numa transação como o usuário dado: cria a linha em `auth.users`
  * (o `handle_new_user` da migration base cria a linha em `public.usuario` como
- * Motorista), promove o perfil se pedido um diferente, troca para a role
+ * Motorista), promove o perfil se pedido um diferente, aplica o status (padrão
+ * 'Ativo'), troca para a role
  * `authenticated` e define `auth.uid()` via `request.jwt.claim.sub`. Como qualquer
  * transação, o resultado é gravado ao final (só desfaz se `executar` lançar) — os
  * testes usam IDs únicos por caso para não colidir entre si.
@@ -74,6 +88,19 @@ export async function comoUsuario<T>(
          where id = $1`,
         [usuario.id, usuario.perfil],
       );
+    }
+
+    // A coluna `status` só existe a partir da migration da EIX-30.
+    const colunaStatusExiste = await tx.query<{ existe: boolean }>(
+      `select exists (
+         select 1 from information_schema.columns
+         where table_schema = 'public' and table_name = 'usuario' and column_name = 'status'
+       ) as existe`,
+    );
+
+    const status = usuario.status === undefined ? 'Ativo' : usuario.status;
+    if (status && colunaStatusExiste.rows[0]?.existe) {
+      await tx.query(`update public.usuario set status = $2 where id = $1`, [usuario.id, status]);
     }
 
     await tx.query(`set local role authenticated`);

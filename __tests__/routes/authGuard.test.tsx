@@ -1,17 +1,25 @@
 import type { AuthChangeEvent, Session } from '@supabase/supabase-js';
+import { router as navegador } from 'expo-router';
 import { act, renderRouter, screen } from 'expo-router/testing-library';
 import { Text } from 'react-native';
 
+import { limparPerfil, useProfileStore } from '@/features/auth/profileStore';
 import { useSessionStore } from '@/features/auth/sessionStore';
 import { supabase } from '@/supabase/client';
 
 import AppLayout from '../../app/(app)/_layout';
 import AuthLayout from '../../app/(auth)/_layout';
+import PendenteLayout from '../../app/(pendente)/_layout';
 import RootLayout from '../../app/_layout';
 
 // Testa o layout raiz de verdade. As telas são stubs para o teste não depender do visual de Login/Home.
+// `from('usuario')...maybeSingle()` devolve a linha de perfil definida em `mockLinhaUsuario`.
+const mockLinhaUsuario = jest.fn();
 jest.mock('@/supabase/client', () => ({
-  supabase: { auth: { onAuthStateChange: jest.fn() } },
+  supabase: {
+    auth: { onAuthStateChange: jest.fn() },
+    from: () => ({ select: () => ({ eq: () => ({ maybeSingle: () => mockLinhaUsuario() }) }) }),
+  },
 }));
 jest.mock('@/features/auth/googleAuth', () => ({ configureGoogleSignIn: jest.fn() }));
 jest.mock('expo-font', () => ({ useFonts: () => [true, null] }));
@@ -25,12 +33,21 @@ const routes = {
   _layout: RootLayout,
   '(app)/_layout': AppLayout,
   '(app)/index': () => <Text>Tela Home</Text>,
+  '(app)/usuarios/index': () => <Text>Tela Usuarios</Text>,
   '(auth)/_layout': AuthLayout,
   '(auth)/login': () => <Text>Tela Login</Text>,
+  '(pendente)/_layout': PendenteLayout,
+  '(pendente)/aguardando': () => <Text>Tela Aguardando</Text>,
 };
+
+function linhaUsuario(status: string, perfil = 'Motorista') {
+  return { id: 'user-1', nome: 'Ana', email: 'ana@empresa.com', status, perfil: { nome: perfil } };
+}
 
 beforeEach(() => {
   useSessionStore.setState({ session: null, isRestoring: true });
+  limparPerfil();
+  mockLinhaUsuario.mockResolvedValue({ data: linhaUsuario('Ativo'), error: null });
   (supabase.auth.onAuthStateChange as jest.Mock).mockImplementation((listener: Listener) => {
     emit = listener;
     return { data: { subscription: { unsubscribe: jest.fn() } } };
@@ -85,5 +102,76 @@ describe('proteção de rotas por sessão', () => {
 
     expect(await screen.findByText('Tela Login')).toBeOnTheScreen();
     expect(screen.queryByText('Tela Home')).not.toBeOnTheScreen();
+  });
+});
+
+describe('proteção de rotas por aprovação do perfil (EIX-30)', () => {
+  it.each(['AguardandoAprovacao', 'Bloqueado'])(
+    'usuário com status %s vai para a tela de aguardando e não vê a Home (RBAC-02)',
+    async (status) => {
+      mockLinhaUsuario.mockResolvedValue({ data: linhaUsuario(status), error: null });
+      const router = renderRouter(routes, { initialUrl: '/' });
+
+      act(() => emit('INITIAL_SESSION', session));
+
+      expect(await screen.findByText('Tela Aguardando')).toBeOnTheScreen();
+      expect(screen.queryByText('Tela Home')).not.toBeOnTheScreen();
+      expect(router.getPathname()).toBe('/aguardando');
+    },
+  );
+
+  it('falha ao carregar o perfil também fica fora da Home (RBAC-02)', async () => {
+    mockLinhaUsuario.mockResolvedValue({ data: null, error: { code: '500', message: 'x' } });
+    renderRouter(routes, { initialUrl: '/' });
+
+    act(() => emit('INITIAL_SESSION', session));
+
+    expect(await screen.findByText('Tela Aguardando')).toBeOnTheScreen();
+    expect(screen.queryByText('Tela Home')).not.toBeOnTheScreen();
+  });
+
+  it('usuário aprovado entra na Home', async () => {
+    renderRouter(routes, { initialUrl: '/' });
+
+    act(() => emit('INITIAL_SESSION', session));
+
+    expect(await screen.findByText('Tela Home')).toBeOnTheScreen();
+    expect(screen.queryByText('Tela Aguardando')).not.toBeOnTheScreen();
+  });
+
+  it('logout descarta o perfil carregado (edge case da spec)', async () => {
+    renderRouter(routes, { initialUrl: '/' });
+    act(() => emit('INITIAL_SESSION', session));
+    await screen.findByText('Tela Home');
+
+    act(() => emit('SIGNED_OUT', null));
+
+    expect(await screen.findByText('Tela Login')).toBeOnTheScreen();
+    expect(useProfileStore.getState().usuario).toBeNull();
+  });
+});
+
+describe('rota de usuários só existe para Admin (EIX-30, RBAC-03 AC1)', () => {
+  it('Admin aprovado abre /usuarios', async () => {
+    mockLinhaUsuario.mockResolvedValue({ data: linhaUsuario('Ativo', 'Admin'), error: null });
+    renderRouter(routes, { initialUrl: '/' });
+    act(() => emit('INITIAL_SESSION', session));
+    await screen.findByText('Tela Home');
+
+    act(() => navegador.push('/usuarios'));
+
+    expect(await screen.findByText('Tela Usuarios')).toBeOnTheScreen();
+  });
+
+  it.each(['Gestor de Frota', 'Financeiro', 'Motorista'])('perfil %s aprovado não chega em /usuarios', async (perfil) => {
+    mockLinhaUsuario.mockResolvedValue({ data: linhaUsuario('Ativo', perfil), error: null });
+    renderRouter(routes, { initialUrl: '/' });
+    act(() => emit('INITIAL_SESSION', session));
+    await screen.findByText('Tela Home');
+
+    act(() => navegador.push('/usuarios'));
+
+    expect(await screen.findByText('Tela Home')).toBeOnTheScreen();
+    expect(screen.queryByText('Tela Usuarios')).not.toBeOnTheScreen();
   });
 });
