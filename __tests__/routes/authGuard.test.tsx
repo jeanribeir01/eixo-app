@@ -7,6 +7,8 @@ import { limparPerfil, useProfileStore } from '@/features/auth/profileStore';
 import { useSessionStore } from '@/features/auth/sessionStore';
 import { supabase } from '@/supabase/client';
 
+import InicioRoute from '../../app/(app)/(tabs)/index';
+import TabsLayout from '../../app/(app)/(tabs)/_layout';
 import AppLayout from '../../app/(app)/_layout';
 import AuthLayout from '../../app/(auth)/_layout';
 import PendenteLayout from '../../app/(pendente)/_layout';
@@ -29,11 +31,25 @@ let emit: Listener = () => undefined;
 
 const session = { access_token: 'token', user: { id: 'user-1' } } as unknown as Session;
 
+// Este arquivo testa só "dentro ou fora do app": toda aba é a mesma "Tela Home", porque qual aba
+// abre para cada perfil é assunto de navegacaoPorPerfil.test.tsx (US17).
+const telaHome = () => <Text>Tela Home</Text>;
+
 const routes = {
   _layout: RootLayout,
   '(app)/_layout': AppLayout,
-  '(app)/index': () => <Text>Tela Home</Text>,
+  '(app)/(tabs)/_layout': TabsLayout,
+  '(app)/(tabs)/index': InicioRoute,
+  '(app)/(tabs)/dashboards': telaHome,
+  '(app)/(tabs)/financeiro': telaHome,
+  '(app)/(tabs)/frota': telaHome,
+  '(app)/(tabs)/viagens': telaHome,
+  '(app)/(tabs)/configuracoes': telaHome,
   '(app)/usuarios/index': () => <Text>Tela Usuarios</Text>,
+  '(app)/usuarios/[id]': () => <Text>Tela Usuario</Text>,
+  '(app)/categorias/index': () => <Text>Tela Categorias</Text>,
+  '(app)/categorias/nova': () => <Text>Tela Nova Categoria</Text>,
+  '(app)/categorias/[id]/editar': () => <Text>Tela Editar Categoria</Text>,
   '(auth)/_layout': AuthLayout,
   '(auth)/login': () => <Text>Tela Login</Text>,
   '(pendente)/_layout': PendenteLayout,
@@ -79,7 +95,8 @@ describe('proteção de rotas por sessão', () => {
 
     expect(await screen.findByText('Tela Home')).toBeOnTheScreen();
     expect(screen.queryByText('Tela Login')).not.toBeOnTheScreen();
-    expect(router.getPathname()).toBe('/');
+    // `/` redireciona para a aba inicial do perfil; o perfil padrão destes testes é Motorista.
+    expect(router.getPathname()).toBe('/viagens');
   });
 
   it('ao receber a sessão do login, sai do Login e vai para a Home (AUTH-02)', async () => {
