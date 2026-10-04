@@ -5,13 +5,11 @@ import { ActivityIndicator, FlatList } from 'react-native';
 import { Button, Column, EmptyState, Input, ListItem, Screen, Snackbar, Switch, Text, colors } from '@/ui';
 
 import { definirAtivaFormaPagamento, listarFormasPagamento } from './formasPagamentoRepository';
-import type { FormaPagamento } from './types';
+import { isFormaFixa, type FormaPagamento } from './types';
 
 type Status = 'carregando' | 'pronto' | 'erro';
 
 type Feedback = { mensagem: string; tone: 'success' | 'error' };
-
-const METODOS_FIXOS = ['Boleto', 'Pix', 'TED', 'Cartão Corporativo'];
 
 export function FormasPagamentoListView() {
   const router = useRouter();
@@ -105,7 +103,7 @@ export function FormasPagamentoListView() {
           keyExtractor={(item) => item.id}
           style={{ flex: 1 }}
           renderItem={({ item }) => {
-            const isFixo = METODOS_FIXOS.includes(item.nome);
+            const isFixo = isFormaFixa(item.nome);
             return (
               <ListItem>
                 <Column gap="sm">

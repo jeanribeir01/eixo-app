@@ -7,12 +7,11 @@ import { Button, Column, EmptyState, Input, Screen, Snackbar, Text, colors } fro
 
 import { atualizarFormaPagamento, buscarFormaPagamentoPorId, criarFormaPagamento } from './formasPagamentoRepository';
 import { formaPagamentoSchema } from './schema';
+import { isFormaFixa } from './types';
 
 type Erros = Partial<Record<'nome', string>>;
 type Feedback = { mensagem: string; tone: 'success' | 'error' };
 type StatusCarga = 'carregando' | 'pronto' | 'erro';
-
-const METODOS_FIXOS = ['Boleto', 'Pix', 'TED', 'Cartão Corporativo'];
 
 export type FormaPagamentoFormViewProps = {
   formaPagamentoId?: string;
@@ -107,7 +106,7 @@ export function FormaPagamentoFormView({ formaPagamentoId }: FormaPagamentoFormV
     );
   }
 
-  const isFixo = METODOS_FIXOS.includes(nomeOriginal);
+  const isFixo = isFormaFixa(nomeOriginal);
 
   return (
     <Screen>

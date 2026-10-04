@@ -101,7 +101,7 @@ describe('formasPagamentoRepository', () => {
   describe('criarFormaPagamento', () => {
     it('grava o nome sem espaços e retorna', async () => {
       const dinheiro = { id: '4', nome: 'Dinheiro', ativa: true };
-      const [checagem, insercao] = responder(ok([pix]), ok(dinheiro));
+      const [, insercao] = responder(ok([pix]), ok(dinheiro));
 
       const resultado = await criarFormaPagamento({ nome: '  Dinheiro  ' });
 

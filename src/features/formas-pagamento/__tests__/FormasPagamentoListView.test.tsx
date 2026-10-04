@@ -8,6 +8,7 @@ jest.setTimeout(15000);
 const mockPush = jest.fn();
 
 jest.mock('expo-router', () => {
+  // eslint-disable-next-line @typescript-eslint/no-require-imports
   const react = require('react');
   return {
     useRouter: () => ({ push: mockPush }),
