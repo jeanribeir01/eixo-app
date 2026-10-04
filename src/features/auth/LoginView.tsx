@@ -1,26 +1,62 @@
 import { useState } from 'react';
+import { z } from 'zod';
 
-import { Button, Column, Screen, Text } from '@/ui';
+import { Button, Column, Input, Screen, Text } from '@/ui';
 
+import { loginEmailHabilitado, signInWithEmail } from './emailAuth';
 import { authErrorMessage } from './errors';
-import { signInWithGoogle } from './googleAuth';
+import { signInWithGoogle, type SignInResult } from './googleAuth';
+import { loginEmailSchema } from './schema';
 
-export function LoginView() {
-  const [isLoading, setIsLoading] = useState(false);
+type ErrosEmail = Partial<Record<'email' | 'senha', string>>;
+
+export type LoginViewProps = {
+  // Prop só para os testes ligarem o formulário; no app o valor vem do .env (ver emailAuth.ts).
+  mostrarLoginEmail?: boolean;
+};
+
+export function LoginView({ mostrarLoginEmail = loginEmailHabilitado }: LoginViewProps) {
+  const [loadingGoogle, setLoadingGoogle] = useState(false);
+  const [loadingEmail, setLoadingEmail] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [email, setEmail] = useState('');
+  const [senha, setSenha] = useState('');
+  const [errosEmail, setErrosEmail] = useState<ErrosEmail>({});
+
+  // Um login por vez: enquanto um está em andamento, o outro botão fica desabilitado.
+  const entrando = loadingGoogle || loadingEmail;
+
+  // Em caso de sucesso não fazemos nada aqui: a sessão nova dispara o redirect no layout raiz,
+  // e o botão continua em loading até a Home aparecer (evita "piscar" o botão habilitado).
+  function tratarFalha(result: SignInResult, pararLoading: () => void) {
+    if (!result.ok) {
+      setErrorMessage(authErrorMessage(result.code));
+      pararLoading();
+    }
+  }
 
   async function handleGooglePress() {
-    setIsLoading(true);
+    setLoadingGoogle(true);
     setErrorMessage(null);
 
     const result = await signInWithGoogle();
+    tratarFalha(result, () => setLoadingGoogle(false));
+  }
 
-    // Em caso de sucesso não fazemos nada aqui: a sessão nova dispara o redirect no layout raiz,
-    // e o botão continua em loading até a Home aparecer (evita "piscar" o botão habilitado).
-    if (!result.ok) {
-      setErrorMessage(authErrorMessage(result.code));
-      setIsLoading(false);
+  async function handleEmailPress() {
+    setErrorMessage(null);
+
+    const validacao = loginEmailSchema.safeParse({ email, senha });
+    if (!validacao.success) {
+      const fieldErrors = z.flattenError(validacao.error).fieldErrors;
+      setErrosEmail({ email: fieldErrors.email?.[0], senha: fieldErrors.senha?.[0] });
+      return;
     }
+    setErrosEmail({});
+
+    setLoadingEmail(true);
+    const result = await signInWithEmail(validacao.data.email, validacao.data.senha);
+    tratarFalha(result, () => setLoadingEmail(false));
   }
 
   return (
@@ -34,7 +70,49 @@ export function LoginView() {
         <Text tone="body">Use sua conta Google para acessar a gestão financeira e a frota da empresa.</Text>
       </Column>
 
-      <Button label="Continuar com Google" onPress={handleGooglePress} loading={isLoading} variant="google" />
+      <Button
+        label="Continuar com Google"
+        onPress={handleGooglePress}
+        loading={loadingGoogle}
+        disabled={loadingEmail}
+        variant="google"
+      />
+
+      {mostrarLoginEmail && (
+        <Column gap="md">
+          <Text variant="bodySm" tone="muted">
+            Ou entre com uma conta de teste
+          </Text>
+          <Input
+            label="E-mail"
+            placeholder="voce@empresa.com"
+            value={email}
+            onChangeText={setEmail}
+            error={errosEmail.email}
+            autoCapitalize="none"
+            autoComplete="email"
+            keyboardType="email-address"
+            editable={!entrando}
+          />
+          <Input
+            label="Senha"
+            value={senha}
+            onChangeText={setSenha}
+            error={errosEmail.senha}
+            secureTextEntry
+            autoCapitalize="none"
+            autoComplete="password"
+            editable={!entrando}
+          />
+          <Button
+            label="Entrar com e-mail"
+            onPress={handleEmailPress}
+            loading={loadingEmail}
+            disabled={loadingGoogle}
+            variant="ghost"
+          />
+        </Column>
+      )}
 
       {errorMessage && (
         // role "alert" faz o leitor de tela anunciar o erro assim que ele aparece.
