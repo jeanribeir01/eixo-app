@@ -50,13 +50,21 @@
 - **Date**: 2026-09-24
 - **Status**: active
 
+### AD-007
+- **Decision**: O fuso `America/Sao_Paulo` do "mês atual" da `resumo_caixa()` sem `referencia` fica sem teste discriminante; os testes passam `referencia` explícita.
+- **Reason**: São Paulo e UTC só divergem entre 21h e 24h do último dia do mês, e o `now()` do banco não é controlável no PGlite. Extrair um helper exigiria nova migration só para teste, com a RPC já aplicada na nuvem.
+- **Trade-off**: O comportamento perto da meia-noite não é testado; um teste estrutural (`pg_get_functiondef` contém `America/Sao_Paulo`) barra a troca do fuso, mas não um erro de lógica em volta dele.
+- **Scope**: `supabase/migrations/20261005000100_resumo_caixa.sql`, EIX-35.
+- **Date**: 2026-10-05
+- **Status**: active
+
 ## Handoff
 
-- **Feature**: `.specs/features/eix30-perfis-rbac`
-- **Phase / Task**: Execute concluído (T1–T8) + Verifier PASS (reverificação iteração 1)
-- **Completed**: T1–T8, Fix 1 (guard da rota `usuarios`), Fix 2 (gaps menores), adaptação ao esquema da nuvem de 30/09 (`Ativo`, `P0001`) e `db push` do backfill (2026-10-02)
+- **Feature**: `.specs/features/eix35-motor-saldo`
+- **Phase / Task**: Execute concluído (migration + testes, db push + tipos) + Verifier PASS (re-verificação 2)
+- **Completed**: RPC `resumo_caixa` (b2cd11e), tipos gerados (9819aa3), fixes do Verifier: referência/float/grant (f10142c), float em todos os campos + fuso estrutural (bdc8775); migration já aplicada na nuvem
 - **In-progress** (file:line): none
-- **Next step**: teste manual no app como Admin; depois push da branch e PR (EIX-30)
+- **Next step**: push da branch e PR (EIX-35); o Diogo troca o mock do PR #12 por `supabase.rpc('resumo_caixa')` e valida o retorno no `resumoCaixaSchema`
 - **Blockers**: none
-- **Uncommitted files**: none
-- **Branch**: feat/eix-30-us16-perfis-rbac
+- **Uncommitted files**: `package-lock.json` (churn do npm 11 local, não commitar)
+- **Branch**: feat/eix-35-us05-motor-saldo

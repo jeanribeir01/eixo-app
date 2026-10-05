@@ -1,0 +1,137 @@
+{
+  "schema": 1,
+  "promote_threshold": 2,
+  "window_days": 45,
+  "quarantine_threshold": 2,
+  "next_id": 8,
+  "lessons": [
+    {
+      "id": "L-001",
+      "key": "surviving_mutant::test utc to local date conversion with an instant near midnight and a pinned timezone so a utc shortcut fails the test",
+      "text": "Test UTC-to-local date conversion with an instant near midnight and a pinned timezone, so a UTC shortcut fails the test",
+      "signal": "surviving_mutant",
+      "scope": "src/lib datas, repositories",
+      "status": "confirmed",
+      "features": [
+        "eix33-movimentacoes",
+        "eix35-motor-saldo"
+      ],
+      "recurrence": 2,
+      "harmful": 0,
+      "evidence": [
+        "M11 src/features/movimentacoes/movimentacoesRepository.ts:66 (src/lib datas, repositories)",
+        "M14 supabase/migrations/20261005000100_resumo_caixa.sql:21 (src/lib datas, repositories)"
+      ],
+      "created": "2026-10-05T00:26:13Z",
+      "last_seen": "2026-10-05T13:35:12Z"
+    },
+    {
+      "id": "L-002",
+      "key": "spec_precision_gap::assert field labels exactly as the spec writes them and fix the spec or the code when they differ",
+      "text": "Assert field labels exactly as the spec writes them, and fix the spec or the code when they differ",
+      "signal": "spec_precision_gap",
+      "scope": "forms",
+      "status": "candidate",
+      "features": [
+        "eix33-movimentacoes"
+      ],
+      "recurrence": 1,
+      "harmful": 0,
+      "evidence": [
+        "MOV-01 AC1 src/features/movimentacoes/camposMovimentacao.ts:18 (forms)"
+      ],
+      "created": "2026-10-05T00:26:14Z",
+      "last_seen": "2026-10-05T00:26:14Z"
+    },
+    {
+      "id": "L-003",
+      "key": "ac_gap::set tz before jest workers start never via process env tz inside a test file and prove the test with tz utc",
+      "text": "Set TZ before Jest workers start, never via process.env.TZ inside a test file, and prove the test with TZ=UTC",
+      "signal": "ac_gap",
+      "scope": "jest, datas",
+      "status": "candidate",
+      "features": [
+        "eix33-movimentacoes"
+      ],
+      "recurrence": 1,
+      "harmful": 0,
+      "evidence": [
+        "MOV-08 AC1 src/features/movimentacoes/__tests__/dataDeReferencia.test.ts:7 (jest, datas)"
+      ],
+      "created": "2026-10-05T00:31:12Z",
+      "last_seen": "2026-10-05T00:31:12Z"
+    },
+    {
+      "id": "L-004",
+      "key": "surviving_mutant::use a reference date in a different period from today in at least one test so code that ignores the date parameter fails",
+      "text": "Use a reference date in a different period from today in at least one test, so code that ignores the date parameter fails",
+      "signal": "surviving_mutant",
+      "scope": "datas, sql-rpc",
+      "status": "candidate",
+      "features": [
+        "eix35-motor-saldo"
+      ],
+      "recurrence": 1,
+      "harmful": 0,
+      "evidence": [
+        "M15 supabase/migrations/20261005000100_resumo_caixa.sql:21 (datas, sql-rpc)"
+      ],
+      "created": "2026-10-05T13:35:12Z",
+      "last_seen": "2026-10-05T13:35:12Z"
+    },
+    {
+      "id": "L-005",
+      "key": "surviving_mutant::test cents conversion with amounts not exact in binary floating point such as 1 13 so a float cast fails the test",
+      "text": "Test cents conversion with amounts not exact in binary floating point such as 1.13, so a float cast fails the test",
+      "signal": "surviving_mutant",
+      "scope": "dinheiro, sql-rpc",
+      "status": "candidate",
+      "features": [
+        "eix35-motor-saldo"
+      ],
+      "recurrence": 1,
+      "harmful": 0,
+      "evidence": [
+        "M12/M21 supabase/migrations/20261005000100_resumo_caixa.sql:60,67 (dinheiro, sql-rpc)"
+      ],
+      "created": "2026-10-05T13:35:12Z",
+      "last_seen": "2026-10-05T13:35:12Z"
+    },
+    {
+      "id": "L-006",
+      "key": "surviving_mutant::assert grants and revokes directly with has function privilege because a second authorization check masks a missing revoke",
+      "text": "Assert grants and revokes directly with has_function_privilege, because a second authorization check masks a missing revoke",
+      "signal": "surviving_mutant",
+      "scope": "supabase, rls, grants",
+      "status": "candidate",
+      "features": [
+        "eix35-motor-saldo"
+      ],
+      "recurrence": 1,
+      "harmful": 0,
+      "evidence": [
+        "M10 supabase/migrations/20261005000100_resumo_caixa.sql:87 (supabase, rls, grants)"
+      ],
+      "created": "2026-10-05T13:35:13Z",
+      "last_seen": "2026-10-05T13:35:13Z"
+    },
+    {
+      "id": "L-007",
+      "key": "surviving_mutant::cover every money field with float trap values and check that each computed sum not only each input is inexact in binary",
+      "text": "Cover every money field with float-trap values and check that each computed sum, not only each input, is inexact in binary",
+      "signal": "surviving_mutant",
+      "scope": "dinheiro, sql-rpc",
+      "status": "candidate",
+      "features": [
+        "eix35-motor-saldo"
+      ],
+      "recurrence": 1,
+      "harmful": 0,
+      "evidence": [
+        "M21/M24/M25/M26 supabase/tests/resumo_caixa.test.ts:303-313 (dinheiro, sql-rpc)"
+      ],
+      "created": "2026-10-05T13:42:06Z",
+      "last_seen": "2026-10-05T13:42:06Z"
+    }
+  ]
+}

@@ -8,8 +8,7 @@ const toneColors = {
   muted: colors.textMuted,
   accent: colors.accentEdge,
   onAccent: colors.onAccent,
-  // Exceção semântica do financeiro (DESIGN_CYAN §1): só em valor de entrada/saída ou saldo, e
-  // sempre com sinal (+/−) ou rótulo junto — cor nunca é o único indicador.
+  // Só para valor de entrada/saída, sempre junto do sinal + / − (DESIGN_CYAN, cores semânticas).
   success: colors.success,
   danger: colors.danger,
 } as const;

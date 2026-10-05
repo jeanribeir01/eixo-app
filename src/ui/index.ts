@@ -9,6 +9,7 @@ export { GoogleLogo } from './GoogleLogo';
 export { Input, type InputProps } from './Input';
 export { ListItem, type ListItemProps } from './ListItem';
 export { Screen } from './Screen';
+export { Select, type SelectOption, type SelectProps } from './Select';
 export { Skeleton, type SkeletonProps } from './Skeleton';
 export { Snackbar, type SnackbarProps, type SnackbarTone } from './Snackbar';
 export { Switch, type SwitchProps } from './Switch';
