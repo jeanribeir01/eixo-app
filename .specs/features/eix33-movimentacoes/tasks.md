@@ -137,9 +137,10 @@ T8 → T9 → T10 → T11 → T12
 
 **Done when**:
 
-- [ ] `src/lib/__tests__/datas.test.ts`: máscara parcial e completa; 31/02/2026 e 00/10/2026 → null; 29/02/2028 válido; `intervaloDoMes(2026, 12)` vira o ano; `nomeDoMes(2026, 10)` = "Outubro 2026"; `hojeISO` usa data local (relógio falso)
-- [ ] Gate check passes: `npx jest --selectProjects app src/lib`
+- [x] `src/lib/__tests__/datas.test.ts`: máscara parcial e completa; 31/02/2026 e 00/10/2026 → null; 29/02/2028 válido; `intervaloDoMes(2026, 12)` vira o ano; `nomeDoMes(2026, 10)` = "Outubro 2026"; `hojeISO` usa data local (relógio falso)
+- [x] Gate check passes: `npx jest --selectProjects app src/lib`
 
+**Status**: ✅ Done
 **Tests**: unit
 **Gate**: quick
 
