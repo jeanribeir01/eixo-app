@@ -1,7 +1,7 @@
 import type { ResumoCaixa } from '../components/resumoCaixa';
 
-// Dados de mentira enquanto a EIX-35 (motor de saldo no banco) não mergeia. Os números já vêm
-// "calculados", como a view vai devolver: a tela nunca soma nada.
+// Fixtures de teste no formato do RPC `resumo_caixa` (EIX-35). Os números já vêm "calculados",
+// como o banco devolve: a tela nunca soma nada.
 
 // Cenário da demo: um financiamento pesa em novembro e o caixa projetado fica negativo nesse mês.
 export const resumoCaixaComDados: ResumoCaixa = {

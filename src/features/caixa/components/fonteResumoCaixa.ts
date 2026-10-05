@@ -1,4 +1,5 @@
-import { resumoCaixaComDados } from '../__mocks__/resumoCaixaMock';
+import { supabase } from '@/supabase/client';
+
 import { resumoCaixaSchema, type ResumoCaixa } from './resumoCaixa';
 
 // Única porta de dados da tela de saldo: a tela só conhece este formato, nunca o Supabase
@@ -14,9 +15,18 @@ export function validarResumoCaixa(data: unknown): Resultado<ResumoCaixa> {
   return { ok: true, data: parsed.data };
 }
 
-// TODO(EIX-35): trocar o mock pela leitura da view/RPC do motor de saldo via `supabase`, traduzindo
-// o erro para "Não foi possível carregar o saldo. Tente novamente." (sem vazar `error.message`).
-// O RLS de `movimentacao` já restringe a Admin e Financeiro.
+// O cálculo inteiro é do RPC `resumo_caixa` da EIX-35 (RNF06); aqui só chamamos e validamos.
+// Sem `referencia`, o banco usa "hoje" no fuso de São Paulo.
 export async function buscarResumoCaixa(): Promise<Resultado<ResumoCaixa>> {
-  return validarResumoCaixa(resumoCaixaComDados);
+  const { data, error } = await supabase.rpc('resumo_caixa');
+
+  if (error) {
+    // 42501 = o RPC recusou o perfil (só Admin e Financeiro). Mensagem própria para a tela não
+    // sugerir "tente novamente" quando tentar de novo não vai resolver.
+    if (error.code === '42501') return { ok: false, mensagem: 'Você não tem permissão para ver o saldo.' };
+    // Nunca exibe `error.message`: é detalhe técnico do Postgres.
+    return { ok: false, mensagem: 'Não foi possível carregar o saldo. Tente novamente.' };
+  }
+
+  return validarResumoCaixa(data);
 }

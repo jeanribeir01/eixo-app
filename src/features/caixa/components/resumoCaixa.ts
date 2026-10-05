@@ -1,8 +1,8 @@
 import { z } from 'zod';
 
-// Contrato PROVISÓRIO do resultado do motor de saldo (US05). O cálculo é da EIX-35 (view/RPC no
-// banco); esta tela só exibe — nenhuma soma é feita no app (RNF06). Quando a EIX-35 mergear, este
-// schema tem que bater com a view gerada em `src/types/database.ts`: o Zod é quem acusa a diferença.
+// Contrato do JSON devolvido pelo RPC `resumo_caixa` (EIX-35). O cálculo é todo do banco; esta
+// tela só exibe — nenhuma soma é feita no app (RNF06). O tipo gerado do RPC é só `Json`, então é
+// este schema que acusa se o banco mudar o formato.
 //
 // Dinheiro chega em centavos inteiros: nunca ponto flutuante para valor financeiro (CLAUDE.md §5).
 const centavos = z.number().int();
