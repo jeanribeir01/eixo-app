@@ -23,6 +23,8 @@ export default function AppLayout() {
         <Stack.Screen name="movimentacoes/index" />
         <Stack.Screen name="movimentacoes/nova" />
         <Stack.Screen name="movimentacoes/[id]/editar" />
+        {/* Saldo e projeção (US05) é do módulo Financeiro: mesmo guard, Admin e Financeiro. */}
+        <Stack.Screen name="caixa/index" />
       </Stack.Protected>
       <Stack.Protected guard={podeVerUsuarios}>
         <Stack.Screen name="usuarios/index" />
