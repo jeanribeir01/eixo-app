@@ -20,8 +20,6 @@ jest.mock('expo-router', () => {
 
 jest.mock('../fonteResumoCaixa', () => ({ buscarResumoCaixa: jest.fn() }));
 
-const NBSP = ' ';
-
 function responder(data: ResumoCaixa) {
   (buscarResumoCaixa as jest.Mock).mockResolvedValue({ ok: true, data });
 }
@@ -44,7 +42,7 @@ describe('SaldoProjecaoView', () => {
 
     render(<SaldoProjecaoView />);
 
-    const saldo = await screen.findByText(`+ R$${NBSP}12.500,00`);
+    const saldo = await screen.findByText('+ R$ 12.500,00');
     expect(saldo).toHaveStyle({ color: colors.success });
 
     for (const mes of ['Outubro de 2026', 'Novembro de 2026', 'Dezembro de 2026', 'Janeiro de 2027']) {
@@ -52,11 +50,11 @@ describe('SaldoProjecaoView', () => {
     }
     expect(screen.getAllByText('Entradas pendentes:')).toHaveLength(4);
     expect(screen.getAllByText('Saídas pendentes:')).toHaveLength(4);
-    expect(screen.getByText(`− R$${NBSP}16.000,00`)).toBeOnTheScreen();
+    expect(screen.getByText('− R$ 16.000,00')).toBeOnTheScreen();
 
     expect(screen.getByText('Pendentes sem data de vencimento')).toBeOnTheScreen();
     expect(screen.getByText('2 movimentações')).toBeOnTheScreen();
-    expect(screen.getByText(`− R$${NBSP}1.200,00`)).toBeOnTheScreen();
+    expect(screen.getByText('− R$ 1.200,00')).toBeOnTheScreen();
   });
 
   it('mês com saldo projetado negativo: valor em vermelho com sinal e alerta', async () => {
@@ -66,7 +64,7 @@ describe('SaldoProjecaoView', () => {
 
     // Só novembro fecha negativo no mock: exatamente um alerta.
     expect(await screen.findAllByText('⚠ Saldo negativo')).toHaveLength(1);
-    expect(screen.getByText(`− R$${NBSP}2.000,00`)).toHaveStyle({ color: colors.danger });
+    expect(screen.getByText('− R$ 2.000,00')).toHaveStyle({ color: colors.danger });
   });
 
   it('sem mês negativo, nenhum alerta aparece', async () => {
@@ -86,7 +84,7 @@ describe('SaldoProjecaoView', () => {
 
     render(<SaldoProjecaoView />);
 
-    expect(await screen.findByText(`− R$${NBSP}300,00`)).toHaveStyle({ color: colors.danger });
+    expect(await screen.findByText('− R$ 300,00')).toHaveStyle({ color: colors.danger });
   });
 
   it('estado vazio: nenhuma movimentação ainda', async () => {
@@ -119,13 +117,13 @@ describe('SaldoProjecaoView', () => {
       .mockResolvedValueOnce({ ok: true, data: { ...resumoCaixaComDados, saldoAtualCentavos: 1_500_000 } });
 
     render(<SaldoProjecaoView />);
-    await screen.findByText(`+ R$${NBSP}12.500,00`);
+    await screen.findByText('+ R$ 12.500,00');
 
     await act(async () => {
       screen.UNSAFE_getByType(RefreshControl).props.onRefresh();
     });
 
-    expect(await screen.findByText(`+ R$${NBSP}15.000,00`)).toBeOnTheScreen();
+    expect(await screen.findByText('+ R$ 15.000,00')).toBeOnTheScreen();
     expect(screen.getByText('Saldo atualizado.')).toBeOnTheScreen();
   });
 
@@ -135,13 +133,13 @@ describe('SaldoProjecaoView', () => {
       .mockResolvedValueOnce({ ok: false, mensagem: 'Não foi possível carregar o saldo. Tente novamente.' });
 
     render(<SaldoProjecaoView />);
-    await screen.findByText(`+ R$${NBSP}12.500,00`);
+    await screen.findByText('+ R$ 12.500,00');
 
     await act(async () => {
       screen.UNSAFE_getByType(RefreshControl).props.onRefresh();
     });
 
     expect(await screen.findByText('Não foi possível carregar o saldo. Tente novamente.')).toBeOnTheScreen();
-    expect(screen.getByText(`+ R$${NBSP}12.500,00`)).toBeOnTheScreen();
+    expect(screen.getByText('+ R$ 12.500,00')).toBeOnTheScreen();
   });
 });
