@@ -295,9 +295,10 @@ T8 → T9 → T10 → T11 → T12
 
 **Done when**:
 
-- [ ] `__tests__/MovimentacaoFormView.test.tsx`: render com todos os campos e status Pendente; data de pagamento só aparece com Pago; rótulo "Recebido" com categoria de Entrada; cada validação bloqueia sem chamar o repositório; criar com sucesso → Snackbar "Movimentação registrada." e `router.back()`; erro do repositório mantém o form e mostra Snackbar; loading no Salvar ignora segundo toque; edição carrega dados (inclusive categoria inativa) e salva "Movimentação atualizada."; id inexistente → "Movimentação não encontrada." + Voltar
-- [ ] Gate check passes: `npx jest --selectProjects app src/features/movimentacoes`
+- [x] `__tests__/MovimentacaoFormView.test.tsx`: render com todos os campos e status Pendente; data de pagamento só aparece com Pago; rótulo "Recebido" com categoria de Entrada; cada validação bloqueia sem chamar o repositório; criar com sucesso → Snackbar "Movimentação registrada." e `router.back()`; erro do repositório mantém o form e mostra Snackbar; loading no Salvar ignora segundo toque; edição carrega dados (inclusive categoria inativa) e salva "Movimentação atualizada."; id inexistente → "Movimentação não encontrada." + Voltar
+- [x] Gate check passes: `npx jest --selectProjects app src/features/movimentacoes`
 
+**Status**: ✅ Done
 **Tests**: unit
 **Gate**: quick
 
