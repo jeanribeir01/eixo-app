@@ -22,7 +22,7 @@ function doisDigitos(numero: number): string {
 
 // Data como texto ISO a partir dos campos locais — nunca via toISOString(), que converte
 // para UTC e pode trocar o dia (23h30 em Brasília já é amanhã em UTC).
-function dataLocalISO(data: Date): string {
+export function dataLocalISO(data: Date): string {
   return `${data.getFullYear()}-${doisDigitos(data.getMonth() + 1)}-${doisDigitos(data.getDate())}`;
 }
 

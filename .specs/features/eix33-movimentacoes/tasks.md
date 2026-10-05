@@ -242,9 +242,10 @@ T8 → T9 → T10 → T11 → T12
 
 **Done when**:
 
-- [ ] `__tests__/movimentacoesRepository.test.ts`: filtro `.or()` do mês com vencimento/inclusão; valor convertido para centavos na leitura e para reais na escrita; insert não envia `data_inclusao`/`data_atualizacao`; 42501, 23514, 23503 traduzidos; delete com 0 linhas → mensagem da spec; resposta inválida → mensagem de dados inválidos; opções só ativas
-- [ ] Gate check passes: `npx jest --selectProjects app src/features/movimentacoes`
+- [x] `__tests__/movimentacoesRepository.test.ts`: filtro `.or()` do mês com vencimento/inclusão; valor convertido para centavos na leitura e para reais na escrita; insert não envia `data_inclusao`/`data_atualizacao`; 42501, 23514, 23503 traduzidos; delete com 0 linhas → mensagem da spec; resposta inválida → mensagem de dados inválidos; opções só ativas
+- [x] Gate check passes: `npx jest --selectProjects app src/features/movimentacoes`
 
+**Status**: ✅ Done
 **Tests**: unit
 **Gate**: quick
 
