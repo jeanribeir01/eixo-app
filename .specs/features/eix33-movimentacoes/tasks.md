@@ -111,9 +111,10 @@ T8 → T9 → T10 → T11 → T12
 
 **Done when**:
 
-- [ ] `src/lib/__tests__/money.test.ts`: `1234` → `R$ 12,34`; `150000` → `R$ 1.500,00`; `0` → `R$ 0,00`; letras ignoradas; limite de 12 dígitos; ida e volta reais↔centavos sem erro de float (`0.1 + 0.2` case, `19.99`)
-- [ ] Gate check passes: `npx jest --selectProjects app src/lib`
+- [x] `src/lib/__tests__/money.test.ts`: `1234` → `R$ 12,34`; `150000` → `R$ 1.500,00`; `0` → `R$ 0,00`; letras ignoradas; limite de 12 dígitos; ida e volta reais↔centavos sem erro de float (`0.1 + 0.2` case, `19.99`)
+- [x] Gate check passes: `npx jest --selectProjects app src/lib`
 
+**Status**: ✅ Done
 **Tests**: unit
 **Gate**: quick
 

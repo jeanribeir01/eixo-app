@@ -148,7 +148,7 @@ O gestor financeiro não tem como lançar entradas e saídas no app: a tabela `m
 | --- | --- | --- | --- |
 | MOV-01 | P1: Lançar — campos e default (1, 12, 13) | Tasks | Pending |
 | MOV-02 | P1: Lançar — salvar e datas automáticas (2, 3, 14, 15) | Tasks | Pending |
-| MOV-03 | P1: Lançar — máscara de valor (4, 5) | Tasks | Pending |
+| MOV-03 | P1: Lançar — máscara de valor (4, 5) | Tasks | Implementing |
 | MOV-04 | P1: Lançar — validações de texto/seleção (6, 7) | Tasks | Pending |
 | MOV-05 | P1: Lançar — datas e pagamento condicional (8, 9, 10, 11) | Tasks | Pending |
 | MOV-06 | P1: Banco — valor > 0 e Pago exige data (1, 2) | Tasks | Implementing |
