@@ -347,9 +347,10 @@ T8 → T9 → T10 → T11 → T12
 
 **Done when**:
 
-- [ ] Rotas criadas e registradas no guard; typecheck aceita `router.push('/movimentacoes/nova')`
-- [ ] Gate check passes: `npm run typecheck && npm run lint && npm test`
+- [x] Rotas criadas e registradas no guard; typecheck aceita `router.push('/movimentacoes/nova')`
+- [x] Gate check passes: `npm run typecheck && npm run lint && npm test`
 
+**Status**: ✅ Done
 **Tests**: none
 **Gate**: build
 
