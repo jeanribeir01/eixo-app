@@ -9,7 +9,7 @@ Implement these tasks with the `tlc-spec-driven` skill: **activate it by name an
 ---
 
 **Design**: `.specs/features/eix33-movimentacoes/design.md`
-**Status**: Draft
+**Status**: In Progress
 **Linear**: EIX-33 · commits usam `Refs: EIX-33`
 
 ---
@@ -84,10 +84,11 @@ T8 → T9 → T10 → T11 → T12
 
 **Done when**:
 
-- [ ] `supabase/tests/movimentacao_regras.test.ts` prova: valor 0 rejeitado (23514) em insert e update; Pago sem data rejeitado (23514); Financeiro apaga avulsa (1 linha) e não apaga parcela (0 linhas); Motorista e Gestor de Frota não leem nem gravam
-- [ ] Suíte `supabase` inteira verde (rls.test.ts e financeiro.test.ts sem regressão)
-- [ ] Gate check passes: `npm test`
+- [x] `supabase/tests/movimentacao_regras.test.ts` prova: valor 0 rejeitado (23514) em insert e update; Pago sem data rejeitado (23514); Financeiro apaga avulsa (1 linha) e não apaga parcela (0 linhas); Motorista e Gestor de Frota não leem nem gravam
+- [x] Suíte `supabase` inteira verde (rls.test.ts e financeiro.test.ts sem regressão)
+- [x] Gate check passes: `npm test`
 
+**Status**: ✅ Done
 **Tests**: integration
 **Gate**: full
 
