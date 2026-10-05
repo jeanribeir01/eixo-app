@@ -8,6 +8,9 @@ const toneColors = {
   muted: colors.textMuted,
   accent: colors.accentEdge,
   onAccent: colors.onAccent,
+  // Só para valor de entrada/saída, sempre junto do sinal + / − (DESIGN_CYAN, cores semânticas).
+  success: colors.success,
+  danger: colors.danger,
 } as const;
 
 export type TextTone = keyof typeof toneColors;

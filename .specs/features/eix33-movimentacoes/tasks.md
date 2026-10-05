@@ -163,9 +163,10 @@ T8 → T9 → T10 → T11 → T12
 
 **Done when**:
 
-- [ ] Teste em `src/ui/__tests__/Text.test.tsx` confere a cor de cada tom novo e que os tons antigos não mudaram
-- [ ] Gate check passes: `npx jest --selectProjects app src/ui`
+- [x] Teste em `src/ui/__tests__/Text.test.tsx` confere a cor de cada tom novo e que os tons antigos não mudaram
+- [x] Gate check passes: `npx jest --selectProjects app src/ui`
 
+**Status**: ✅ Done
 **Tests**: unit
 **Gate**: quick
 
