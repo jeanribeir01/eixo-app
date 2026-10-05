@@ -10,14 +10,14 @@ import { STATUS_VEICULO, rotuloStatusVeiculo, type StatusVeiculo, type Veiculo }
 
 type Status = 'carregando' | 'pronto' | 'erro';
 
-// Chip colorido por status (critério da US06). O Badge só tem três tons; verde/vermelho seguem
-// a mesma lógica semântica do guia (pronto para uso × fora de operação), e o rótulo escrito
-// acompanha sempre — cor nunca é o único indicador (DESIGN_CYAN §1).
+// Chip por status (critério da US06). Vermelho/verde são reservados para entrada/saída
+// financeira (DESIGN_CYAN §1, CLAUDE.md §8), então "Em Manutenção" fica neutro; o rótulo
+// escrito acompanha sempre — cor nunca é o único indicador.
 // TODO(EIX-37): "Inativo" entra aqui quando a migration do enum existir.
 const tomStatus: Record<StatusVeiculo, BadgeTone> = {
   Disponivel: 'success',
   EmViagem: 'neutral',
-  EmManutencao: 'danger',
+  EmManutencao: 'neutral',
 };
 
 const TODOS = 'Todos';
