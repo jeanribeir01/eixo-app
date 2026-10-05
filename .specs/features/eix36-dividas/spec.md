@@ -6,9 +6,9 @@ O gestor financeiro não tem como registrar um financiamento: hoje cada parcela 
 
 ## Goals
 
-- [ ] `supabase.rpc('criar_divida', ...)` cria a dívida e as N parcelas `Pendente` numa única transação; qualquer falha não grava nada.
-- [ ] `supabase.rpc('excluir_divida', ...)` remove as parcelas pendentes, preserva as pagas e desativa a dívida (soft delete).
-- [ ] `src/features/dividas` expõe o schema Zod do formulário (mensagens em português), a Soma Total e o repositório (criar, listar, detalhar, excluir) para a EIX-50 usar sem escrever SQL.
+- [x] `supabase.rpc('criar_divida', ...)` cria a dívida e as N parcelas `Pendente` numa única transação; qualquer falha não grava nada.
+- [x] `supabase.rpc('excluir_divida', ...)` remove as parcelas pendentes, preserva as pagas e desativa a dívida (soft delete).
+- [x] `src/features/dividas` expõe o schema Zod do formulário (mensagens em português), a Soma Total e o repositório (criar, listar, detalhar, excluir) para a EIX-50 usar sem escrever SQL.
 
 ## Out of Scope
 
@@ -170,14 +170,14 @@ O gestor financeiro não tem como registrar um financiamento: hoje cada parcela 
 
 | Requirement ID | Story | Phase | Status |
 | --- | --- | --- | --- |
-| DIV-01 | P1: Criar dívida (AC 1–3, 6) | Execute | Implementing |
-| DIV-02 | P1: Criar dívida (AC 4–5) + edge cases de vencimento | Execute | Implementing |
-| DIV-03 | P1: Rollback | Execute | Implementing |
-| DIV-04 | P1: Validação no banco | Execute | Implementing |
-| DIV-05 | P1: Excluir dívida preservando pagas | Execute | Implementing |
-| DIV-06 | P1: Acesso restrito | Execute | Implementing |
-| DIV-07 | P1: Camada de dados (AC 1–6, schema) | Execute | Implementing |
-| DIV-08 | P1: Camada de dados (AC 7–11, repositório) + edge case de centavos | Execute | Implementing |
+| DIV-01 | P1: Criar dívida (AC 1–3, 6) | Execute | Verified |
+| DIV-02 | P1: Criar dívida (AC 4–5) + edge cases de vencimento | Execute | Verified |
+| DIV-03 | P1: Rollback | Execute | Verified |
+| DIV-04 | P1: Validação no banco | Execute | Verified |
+| DIV-05 | P1: Excluir dívida preservando pagas | Execute | Verified |
+| DIV-06 | P1: Acesso restrito | Execute | Verified |
+| DIV-07 | P1: Camada de dados (AC 1–6, schema) | Execute | Verified |
+| DIV-08 | P1: Camada de dados (AC 7–11, repositório) + edge case de centavos | Execute | Verified |
 
 **Coverage:** 8 total, 8 mapped to execute steps, 0 unmapped.
 
@@ -185,6 +185,6 @@ O gestor financeiro não tem como registrar um financiamento: hoje cada parcela 
 
 ## Success Criteria
 
-- [ ] `npm run test` verde com testes SQL (PGlite) cobrindo DIV-01 a DIV-06 e testes Jest cobrindo DIV-07 e DIV-08.
-- [ ] `npm run typecheck` e `npm run lint` verdes.
-- [ ] Migration aplicada na nuvem e `criar_divida`/`excluir_divida` presentes em `src/types/database.ts` gerado (após autorização).
+- [x] `npm run test` verde com testes SQL (PGlite) cobrindo DIV-01 a DIV-06 e testes Jest cobrindo DIV-07 e DIV-08.
+- [x] `npm run typecheck` e `npm run lint` verdes.
+- [x] Migration aplicada na nuvem e `criar_divida`/`excluir_divida` presentes em `src/types/database.ts` gerado (após autorização).

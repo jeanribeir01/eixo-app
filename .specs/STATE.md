@@ -68,11 +68,11 @@
 
 ## Handoff
 
-- **Feature**: `.specs/features/eix35-motor-saldo`
-- **Phase / Task**: Execute concluído (migration + testes, db push + tipos) + Verifier PASS (re-verificação 2)
-- **Completed**: RPC `resumo_caixa` (b2cd11e), tipos gerados (9819aa3), fixes do Verifier: referência/float/grant (f10142c), float em todos os campos + fuso estrutural (bdc8775); migration já aplicada na nuvem
+- **Feature**: `.specs/features/eix36-dividas`
+- **Phase / Task**: Execute concluído + Verifier PASS (iteração 2)
+- **Completed**: RPCs `criar_divida`/`excluir_divida` + soft delete (a907d8f), schema Zod (64adb89), tipos gerados (bb0c6ac), repositório (7b13638), fixes do Verifier: centavos inexatos, status no excluir, grants (6735364); migration aplicada na nuvem
 - **In-progress** (file:line): none
-- **Next step**: push da branch e PR (EIX-35); o Diogo troca o mock do PR #12 por `supabase.rpc('resumo_caixa')` e valida o retorno no `resumoCaixaSchema`
+- **Next step**: push da branch e PR (EIX-36, revisor Diogo); o Eduardo usa `dividaSchema`, `somaTotalCentavos` e `dividasRepository` na EIX-50 e adiciona o seletor de forma de pagamento
 - **Blockers**: none
-- **Uncommitted files**: `package-lock.json` (churn do npm 11 local, não commitar)
-- **Branch**: feat/eix-35-us05-motor-saldo
+- **Uncommitted files**: none
+- **Branch**: feat/eix-36-us04-dividas-rollback
