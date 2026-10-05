@@ -52,11 +52,11 @@
 
 ## Handoff
 
-- **Feature**: `.specs/features/eix30-perfis-rbac`
-- **Phase / Task**: Execute concluído (T1–T8) + Verifier PASS (reverificação iteração 1)
-- **Completed**: T1–T8, Fix 1 (guard da rota `usuarios`), Fix 2 (gaps menores), adaptação ao esquema da nuvem de 30/09 (`Ativo`, `P0001`) e `db push` do backfill (2026-10-02)
+- **Feature**: `.specs/features/eix33-movimentacoes`
+- **Phase / Task**: Execute concluído (T1–T12) + Verifier PASS (re-verificação 2)
+- **Completed**: T1–T12; fixes do Verifier: teste de fuso (629e905), rótulo "Valor (R$)" (60fc53f), globalSetup de fuso no Jest (9f39e93)
 - **In-progress** (file:line): none
-- **Next step**: teste manual no app como Admin; depois push da branch e PR (EIX-30)
+- **Next step**: teste manual no app (Admin/Financeiro); conferir `select count(*) from movimentacao where valor <= 0` = 0 na nuvem antes do `db push` de `20261004000100_movimentacao_regras.sql`; depois push da branch e PR (EIX-33)
 - **Blockers**: none
-- **Uncommitted files**: none
-- **Branch**: feat/eix-30-us16-perfis-rbac
+- **Uncommitted files**: `package-lock.json` (churn do npm 11 local, não commitar)
+- **Branch**: feat/eix-33-us03-movimentacoes
