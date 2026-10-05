@@ -189,9 +189,10 @@ T8 → T9 → T10 → T11 → T12
 
 **Done when**:
 
-- [ ] `src/ui/__tests__/Select.test.tsx`: mostra placeholder; abre a lista; escolher chama `onChange` e fecha; Cancelar fecha sem mudar; mostra `error`; lista vazia mostra `emptyMessage`; `value` fora das opções usa `fallbackLabel`; alvo de toque ≥ 44
-- [ ] Gate check passes: `npx jest --selectProjects app src/ui`
+- [x] `src/ui/__tests__/Select.test.tsx`: mostra placeholder; abre a lista; escolher chama `onChange` e fecha; Cancelar fecha sem mudar; mostra `error`; lista vazia mostra `emptyMessage`; `value` fora das opções usa `fallbackLabel`; alvo de toque ≥ 44
+- [x] Gate check passes: `npx jest --selectProjects app src/ui`
 
+**Status**: ✅ Done
 **Tests**: unit
 **Gate**: build
 
