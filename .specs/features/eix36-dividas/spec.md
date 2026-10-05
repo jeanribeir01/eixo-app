@@ -176,7 +176,7 @@ O gestor financeiro não tem como registrar um financiamento: hoje cada parcela 
 | DIV-04 | P1: Validação no banco | Execute | Implementing |
 | DIV-05 | P1: Excluir dívida preservando pagas | Execute | Implementing |
 | DIV-06 | P1: Acesso restrito | Execute | Implementing |
-| DIV-07 | P1: Camada de dados (AC 1–6, schema) | Execute | Pending |
+| DIV-07 | P1: Camada de dados (AC 1–6, schema) | Execute | Implementing |
 | DIV-08 | P1: Camada de dados (AC 7–11, repositório) + edge case de centavos | Execute | Pending |
 
 **Coverage:** 8 total, 8 mapped to execute steps, 0 unmapped.
