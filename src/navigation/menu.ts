@@ -58,6 +58,8 @@ export function useMenu() {
     abaInicial: abaInicial(usuario),
     // Telas internas (abertas por cima das abas) seguem o módulo a que pertencem.
     podeVerCategorias: canSeeFinanceiro(usuario),
+    // Cadastro/edição de veículo: os mesmos perfis que o RLS de `veiculo` deixa escrever.
+    podeVerFrota: canSeeFrota(usuario),
     podeVerUsuarios: isAdmin(usuario),
   };
 }
