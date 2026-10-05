@@ -5,6 +5,7 @@ export default function FinanceiroRoute() {
     <ModuloEmBreveView
       titulo="Financeiro"
       atalhos={[
+        { rotulo: 'Saldo e Projeção', href: '/caixa' },
         { rotulo: 'Categorias', href: '/categorias' },
         { rotulo: 'Formas de Pagamento', href: '/formas-pagamento' },
       ]}
