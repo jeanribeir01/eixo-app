@@ -43,6 +43,7 @@ export type Database = {
       }
       divida: {
         Row: {
+          ativa: boolean
           categoria_id: string
           data_atualizacao: string
           data_inclusao: string
@@ -51,8 +52,10 @@ export type Database = {
           id: string
           quantidade_parcelas: number
           valor_parcela: number
+          valor_quitacao_antecipada: number | null
         }
         Insert: {
+          ativa?: boolean
           categoria_id: string
           data_atualizacao?: string
           data_inclusao?: string
@@ -61,8 +64,10 @@ export type Database = {
           id?: string
           quantidade_parcelas: number
           valor_parcela: number
+          valor_quitacao_antecipada?: number | null
         }
         Update: {
+          ativa?: boolean
           categoria_id?: string
           data_atualizacao?: string
           data_inclusao?: string
@@ -71,6 +76,7 @@ export type Database = {
           id?: string
           quantidade_parcelas?: number
           valor_parcela?: number
+          valor_quitacao_antecipada?: number | null
         }
         Relationships: [
           {
@@ -427,6 +433,19 @@ export type Database = {
         Returns: Database["public"]["Enums"]["perfil_nome"]
       }
       auth_usuario_id: { Args: never; Returns: string }
+      criar_divida: {
+        Args: {
+          categoria_id: string
+          data_vencimento_primeira: string
+          descricao: string
+          forma_pagamento_id: string
+          quantidade_parcelas: number
+          valor_parcela: number
+          valor_quitacao_antecipada?: number
+        }
+        Returns: string
+      }
+      excluir_divida: { Args: { id: string }; Returns: Json }
       resumo_caixa: { Args: { referencia?: string }; Returns: Json }
     }
     Enums: {
