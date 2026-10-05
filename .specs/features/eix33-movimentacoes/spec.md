@@ -146,19 +146,19 @@ O gestor financeiro não tem como lançar entradas e saídas no app: a tabela `m
 
 | Requirement ID | Story | Phase | Status |
 | --- | --- | --- | --- |
-| MOV-01 | P1: Lançar — campos e default (1, 12, 13) | Tasks | Implementing |
-| MOV-02 | P1: Lançar — salvar e datas automáticas (2, 3, 14, 15) | Tasks | Implementing |
-| MOV-03 | P1: Lançar — máscara de valor (4, 5) | Tasks | Implementing |
-| MOV-04 | P1: Lançar — validações de texto/seleção (6, 7) | Tasks | Implementing |
-| MOV-05 | P1: Lançar — datas e pagamento condicional (8, 9, 10, 11) | Tasks | Implementing |
-| MOV-06 | P1: Banco — valor > 0 e Pago exige data (1, 2) | Tasks | Implementing |
-| MOV-07 | P1: Banco — parcela não excluível e RLS (3, 4) | Tasks | Implementing |
-| MOV-08 | P1: Listar — mês e filtros (1–4) | Tasks | Implementing |
-| MOV-09 | P1: Listar — linha e estados (5–7) | Tasks | Implementing |
-| MOV-10 | P1: Editar (1, 2, 7) | Tasks | Implementing |
-| MOV-11 | P1: Excluir com confirmação (3–6) | Tasks | Implementing |
+| MOV-01 | P1: Lançar — campos e default (1, 12, 13) | Tasks | Verified |
+| MOV-02 | P1: Lançar — salvar e datas automáticas (2, 3, 14, 15) | Tasks | Verified |
+| MOV-03 | P1: Lançar — máscara de valor (4, 5) | Tasks | Verified |
+| MOV-04 | P1: Lançar — validações de texto/seleção (6, 7) | Tasks | Verified |
+| MOV-05 | P1: Lançar — datas e pagamento condicional (8, 9, 10, 11) | Tasks | Verified |
+| MOV-06 | P1: Banco — valor > 0 e Pago exige data (1, 2) | Tasks | Verified |
+| MOV-07 | P1: Banco — parcela não excluível e RLS (3, 4) | Tasks | Verified |
+| MOV-08 | P1: Listar — mês e filtros (1–4) | Tasks | Verified |
+| MOV-09 | P1: Listar — linha e estados (5–7) | Tasks | Verified |
+| MOV-10 | P1: Editar (1, 2, 7) | Tasks | Verified |
+| MOV-11 | P1: Excluir com confirmação (3–6) | Tasks | Verified |
 
-**Coverage:** 11 total, 0 mapped to tasks, 11 unmapped ⚠️ (mapeados na fase Tasks)
+**Coverage:** 11 total, 11 mapped to tasks, 0 unmapped
 
 ---
 

@@ -9,7 +9,7 @@ Implement these tasks with the `tlc-spec-driven` skill: **activate it by name an
 ---
 
 **Design**: `.specs/features/eix33-movimentacoes/design.md`
-**Status**: In Progress
+**Status**: Done (Verifier PASS na re-verificação 2, 2026-10-04)
 **Linear**: EIX-33 · commits usam `Refs: EIX-33`
 
 ---

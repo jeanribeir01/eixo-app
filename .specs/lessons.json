@@ -1,0 +1,63 @@
+{
+  "schema": 1,
+  "promote_threshold": 2,
+  "window_days": 45,
+  "quarantine_threshold": 2,
+  "next_id": 4,
+  "lessons": [
+    {
+      "id": "L-001",
+      "key": "surviving_mutant::test utc to local date conversion with an instant near midnight and a pinned timezone so a utc shortcut fails the test",
+      "text": "Test UTC-to-local date conversion with an instant near midnight and a pinned timezone, so a UTC shortcut fails the test",
+      "signal": "surviving_mutant",
+      "scope": "src/lib datas, repositories",
+      "status": "candidate",
+      "features": [
+        "eix33-movimentacoes"
+      ],
+      "recurrence": 1,
+      "harmful": 0,
+      "evidence": [
+        "M11 src/features/movimentacoes/movimentacoesRepository.ts:66 (src/lib datas, repositories)"
+      ],
+      "created": "2026-10-05T00:26:13Z",
+      "last_seen": "2026-10-05T00:26:13Z"
+    },
+    {
+      "id": "L-002",
+      "key": "spec_precision_gap::assert field labels exactly as the spec writes them and fix the spec or the code when they differ",
+      "text": "Assert field labels exactly as the spec writes them, and fix the spec or the code when they differ",
+      "signal": "spec_precision_gap",
+      "scope": "forms",
+      "status": "candidate",
+      "features": [
+        "eix33-movimentacoes"
+      ],
+      "recurrence": 1,
+      "harmful": 0,
+      "evidence": [
+        "MOV-01 AC1 src/features/movimentacoes/camposMovimentacao.ts:18 (forms)"
+      ],
+      "created": "2026-10-05T00:26:14Z",
+      "last_seen": "2026-10-05T00:26:14Z"
+    },
+    {
+      "id": "L-003",
+      "key": "ac_gap::set tz before jest workers start never via process env tz inside a test file and prove the test with tz utc",
+      "text": "Set TZ before Jest workers start, never via process.env.TZ inside a test file, and prove the test with TZ=UTC",
+      "signal": "ac_gap",
+      "scope": "jest, datas",
+      "status": "candidate",
+      "features": [
+        "eix33-movimentacoes"
+      ],
+      "recurrence": 1,
+      "harmful": 0,
+      "evidence": [
+        "MOV-08 AC1 src/features/movimentacoes/__tests__/dataDeReferencia.test.ts:7 (jest, datas)"
+      ],
+      "created": "2026-10-05T00:31:12Z",
+      "last_seen": "2026-10-05T00:31:12Z"
+    }
+  ]
+}
