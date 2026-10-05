@@ -437,12 +437,34 @@ describe('migration divida', () => {
     it.each([
       ['AguardandoAprovacao', '36000000-0000-0000-0000-000000000021'],
       ['Bloqueado', '36000000-0000-0000-0000-000000000022'],
-    ] as const)('Financeiro com status %s recebe 42501', async (status, usuarioId) => {
-      const codigo = await codigoDoErro(
-        comoUsuario(db, { id: usuarioId, perfil: 'Financeiro', status }, (tx) => chamarCriar(tx)),
+    ] as const)('Financeiro com status %s recebe 42501 em criar_divida e excluir_divida', async (status, usuarioId) => {
+      const dividaId = await criarComo(FINANCEIRO);
+      const usuario = { id: usuarioId, perfil: 'Financeiro' as const, status };
+
+      const criar = await codigoDoErro(comoUsuario(db, usuario, (tx) => chamarCriar(tx)));
+      const excluir = await codigoDoErro(
+        comoUsuario(db, usuario, (tx) => tx.query('select excluir_divida(id => $1)', [dividaId])),
       );
 
-      expect(codigo).toBe('42501');
+      expect(criar).toBe('42501');
+      expect(excluir).toBe('42501');
+      expect(await parcelasDa(dividaId)).toHaveLength(12);
+    });
+
+    it('anon não tem permissão de execute nas duas RPCs; authenticated tem', async () => {
+      const privilegios = await db.query<{ anon: boolean; authenticated: boolean }>(
+        `select has_function_privilege('anon', f, 'execute') as anon,
+                has_function_privilege('authenticated', f, 'execute') as authenticated
+         from unnest(array[
+           'criar_divida(text, uuid, uuid, integer, numeric, date, numeric)',
+           'excluir_divida(uuid)'
+         ]) as f`,
+      );
+
+      expect(privilegios.rows).toEqual([
+        { anon: false, authenticated: true },
+        { anon: false, authenticated: true },
+      ]);
     });
 
     it('anon recebe 42501 nas duas RPCs', async () => {
