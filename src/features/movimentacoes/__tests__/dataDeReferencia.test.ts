@@ -1,5 +1,9 @@
 import { dataDeReferencia } from '../movimentacoesRepository';
 
+// dataDeReferencia é pura, mas o módulo importa o client real; no Node 20 do CI
+// (sem WebSocket nativo) o createClient quebra ao montar o Realtime.
+jest.mock('@/supabase/client', () => ({ supabase: {} }));
+
 // Roda no fuso de Brasília em qualquer máquina (jest.global-setup.js), inclusive no CI em UTC.
 describe('dataDeReferencia (MOV-08 AC1)', () => {
   it('usa o vencimento quando existe', () => {

@@ -20,6 +20,10 @@ jest.mock('expo-router', () => {
   };
 });
 
+// O requireActual abaixo carrega o client real; no Node 20 do CI (sem WebSocket nativo)
+// o createClient quebra ao montar o Realtime. Nenhum teste aqui fala com o banco.
+jest.mock('@/supabase/client', () => ({ supabase: {} }));
+
 jest.mock('../movimentacoesRepository', () => ({
   ...jest.requireActual('../movimentacoesRepository'),
   listarMovimentacoesDoMes: jest.fn(),
