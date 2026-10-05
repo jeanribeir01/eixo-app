@@ -7,8 +7,8 @@ O gestor financeiro lança movimentações (EIX-33), mas não enxerga quanto din
 ## Goals
 
 - [ ] Uma chamada `supabase.rpc('resumo_caixa')` devolve saldo atual, projeção mensal e pendências sem data, no formato do contrato Zod provisório da EIX-51 (`src/features/caixa/components/resumoCaixa.ts` no PR #12).
-- [ ] Só Admin e Financeiro obtêm o resumo; qualquer outro perfil ou anônimo recebe erro de permissão.
-- [ ] Todo o cálculo roda no Postgres; o app só exibe.
+- [x] Só Admin e Financeiro obtêm o resumo; qualquer outro perfil ou anônimo recebe erro de permissão.
+- [x] Todo o cálculo roda no Postgres; o app só exibe.
 
 ## Out of Scope
 
@@ -125,13 +125,13 @@ O gestor financeiro lança movimentações (EIX-33), mas não enxerga quanto din
 
 | Requirement ID | Story | Phase | Status |
 | --- | --- | --- | --- |
-| SALDO-01 | P1: Saldo atual (AC 1–2) | Execute | Implementing |
-| SALDO-02 | P1: Saldo atual (AC 3–4, base vazia e contagem) | Execute | Implementing |
-| SALDO-03 | P1: Projeção mensal (AC 1–3, 6) | Execute | Implementing |
-| SALDO-04 | P1: Projeção mensal (AC 4–5, atrasadas e referência) | Execute | Implementing |
-| SALDO-05 | P1: Pendentes sem vencimento | Execute | Implementing |
-| SALDO-06 | P1: Acesso restrito | Execute | Implementing |
-| SALDO-07 | Edge cases (centavos exatos, virada de ano) | Execute | Implementing |
+| SALDO-01 | P1: Saldo atual (AC 1–2) | Execute | Verified |
+| SALDO-02 | P1: Saldo atual (AC 3–4, base vazia e contagem) | Execute | Verified |
+| SALDO-03 | P1: Projeção mensal (AC 1–3, 6) | Execute | Verified |
+| SALDO-04 | P1: Projeção mensal (AC 4–5, atrasadas e referência; AC5 coberto de forma estrutural, AD-007) | Execute | Verified |
+| SALDO-05 | P1: Pendentes sem vencimento | Execute | Verified |
+| SALDO-06 | P1: Acesso restrito | Execute | Verified |
+| SALDO-07 | Edge cases (centavos exatos, virada de ano) | Execute | Verified |
 
 **Coverage:** 7 total, 7 mapped to execute steps, 0 unmapped.
 
@@ -139,6 +139,6 @@ O gestor financeiro lança movimentações (EIX-33), mas não enxerga quanto din
 
 ## Success Criteria
 
-- [ ] `npm run test` verde com testes SQL cobrindo SALDO-01 a SALDO-07 no PGlite.
-- [ ] `resumo_caixa` aplicada na nuvem e presente em `src/types/database.ts` gerado.
+- [x] `npm run test` verde com testes SQL cobrindo SALDO-01 a SALDO-07 no PGlite.
+- [x] `resumo_caixa` aplicada na nuvem e presente em `src/types/database.ts` gerado.
 - [ ] O retorno passa no `resumoCaixaSchema` do PR #12 sem adaptação.

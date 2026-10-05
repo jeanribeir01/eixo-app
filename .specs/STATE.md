@@ -60,11 +60,11 @@
 
 ## Handoff
 
-- **Feature**: `.specs/features/eix33-movimentacoes`
-- **Phase / Task**: Execute concluído (T1–T12) + Verifier PASS (re-verificação 2)
-- **Completed**: T1–T12; fixes do Verifier: teste de fuso (629e905), rótulo "Valor (R$)" (60fc53f), globalSetup de fuso no Jest (9f39e93)
+- **Feature**: `.specs/features/eix35-motor-saldo`
+- **Phase / Task**: Execute concluído (migration + testes, db push + tipos) + Verifier PASS (re-verificação 2)
+- **Completed**: RPC `resumo_caixa` (b2cd11e), tipos gerados (9819aa3), fixes do Verifier: referência/float/grant (f10142c), float em todos os campos + fuso estrutural (bdc8775); migration já aplicada na nuvem
 - **In-progress** (file:line): none
-- **Next step**: teste manual no app (Admin/Financeiro); conferir `select count(*) from movimentacao where valor <= 0` = 0 na nuvem antes do `db push` de `20261004000100_movimentacao_regras.sql`; depois push da branch e PR (EIX-33)
+- **Next step**: push da branch e PR (EIX-35); o Diogo troca o mock do PR #12 por `supabase.rpc('resumo_caixa')` e valida o retorno no `resumoCaixaSchema`
 - **Blockers**: none
 - **Uncommitted files**: `package-lock.json` (churn do npm 11 local, não commitar)
-- **Branch**: feat/eix-33-us03-movimentacoes
+- **Branch**: feat/eix-35-us05-motor-saldo

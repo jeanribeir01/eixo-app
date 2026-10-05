@@ -8,17 +8,15 @@
 
 Corroborated across multiple features. Safe to apply as guidance.
 
-_none_
+### L-001 - Test UTC-to-local date conversion with an instant near midnight and a pinned timezone, so a UTC shortcut fails the test
+- signal: `surviving_mutant` · recurrence: 2 feature(s) · scope: `src/lib datas, repositories` · harmful: 0
+- features: eix33-movimentacoes, eix35-motor-saldo
+- evidence: M11 src/features/movimentacoes/movimentacoesRepository.ts:66 (src/lib datas, repositories) (+1 more)
+- last seen: 2026-10-05T13:35:12Z
 
 ## Candidates (under observation - do NOT load as guidance yet)
 
 Seen once or not yet corroborated. Tracked, not trusted.
-
-### L-001 - Test UTC-to-local date conversion with an instant near midnight and a pinned timezone, so a UTC shortcut fails the test
-- signal: `surviving_mutant` · recurrence: 1 feature(s) · scope: `src/lib datas, repositories` · harmful: 0
-- features: eix33-movimentacoes
-- evidence: M11 src/features/movimentacoes/movimentacoesRepository.ts:66 (src/lib datas, repositories)
-- last seen: 2026-10-05T00:26:13Z
 
 ### L-002 - Assert field labels exactly as the spec writes them, and fix the spec or the code when they differ
 - signal: `spec_precision_gap` · recurrence: 1 feature(s) · scope: `forms` · harmful: 0
@@ -31,6 +29,30 @@ Seen once or not yet corroborated. Tracked, not trusted.
 - features: eix33-movimentacoes
 - evidence: MOV-08 AC1 src/features/movimentacoes/__tests__/dataDeReferencia.test.ts:7 (jest, datas)
 - last seen: 2026-10-05T00:31:12Z
+
+### L-004 - Use a reference date in a different period from today in at least one test, so code that ignores the date parameter fails
+- signal: `surviving_mutant` · recurrence: 1 feature(s) · scope: `datas, sql-rpc` · harmful: 0
+- features: eix35-motor-saldo
+- evidence: M15 supabase/migrations/20261005000100_resumo_caixa.sql:21 (datas, sql-rpc)
+- last seen: 2026-10-05T13:35:12Z
+
+### L-005 - Test cents conversion with amounts not exact in binary floating point such as 1.13, so a float cast fails the test
+- signal: `surviving_mutant` · recurrence: 1 feature(s) · scope: `dinheiro, sql-rpc` · harmful: 0
+- features: eix35-motor-saldo
+- evidence: M12/M21 supabase/migrations/20261005000100_resumo_caixa.sql:60,67 (dinheiro, sql-rpc)
+- last seen: 2026-10-05T13:35:12Z
+
+### L-006 - Assert grants and revokes directly with has_function_privilege, because a second authorization check masks a missing revoke
+- signal: `surviving_mutant` · recurrence: 1 feature(s) · scope: `supabase, rls, grants` · harmful: 0
+- features: eix35-motor-saldo
+- evidence: M10 supabase/migrations/20261005000100_resumo_caixa.sql:87 (supabase, rls, grants)
+- last seen: 2026-10-05T13:35:13Z
+
+### L-007 - Cover every money field with float-trap values and check that each computed sum, not only each input, is inexact in binary
+- signal: `surviving_mutant` · recurrence: 1 feature(s) · scope: `dinheiro, sql-rpc` · harmful: 0
+- features: eix35-motor-saldo
+- evidence: M21/M24/M25/M26 supabase/tests/resumo_caixa.test.ts:303-313 (dinheiro, sql-rpc)
+- last seen: 2026-10-05T13:42:06Z
 
 ## Quarantined (failed when applied - ignore)
 
