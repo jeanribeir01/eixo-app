@@ -31,8 +31,8 @@ O gestor financeiro não tem como registrar um financiamento: hoje cada parcela 
 | Forma de pagamento das parcelas | A RPC recebe `forma_pagamento_id`; todas as parcelas usam a mesma | Decidido com o usuário: `movimentacao.forma_pagamento_id` é NOT NULL; a EIX-50 ganha o seletor | y |
 | Exclusão com parcelas pagas | Soft delete: nova coluna `divida.ativa`; pendentes são apagadas, pagas continuam ligadas à dívida | Decidido com o usuário: a FK `divida_id` impede apagar a dívida; histórico fica intacto | y |
 | Quem escreve em `divida` | Só as RPCs (`security definer` com checagem de perfil Admin/Financeiro); policies de insert/update/delete de `divida` são removidas, select continua | Garante que a dívida nunca exista sem as parcelas e que nunca seja apagada fisicamente | y (decorre das decisões acima) |
-| Teto de parcelas | 1 a 120 (10 anos), validado no banco e no Zod | Sem teto, uma chamada pediria milhões de linhas; financiamento de caminhão fica bem abaixo de 120 meses | n |
-| Categoria aceita | Categoria existente, ativa e do tipo `Saida` | Dívida é saída de caixa; categoria de entrada inverteria o saldo da EIX-35 | n |
+| Teto de parcelas | 1 a 120 (10 anos), validado no banco e no Zod | Sem teto, uma chamada pediria milhões de linhas; financiamento de caminhão fica bem abaixo de 120 meses || y |
+| Categoria aceita | Categoria existente, ativa e do tipo `Saida` | Dívida é saída de caixa; categoria de entrada inverteria o saldo da EIX-35 || y |
 | Forma de pagamento aceita | Forma existente e ativa | Mesmo critério dos seletores da EIX-33 | n |
 | Vencimento das parcelas | Parcela *n* (0-based) vence em `data_vencimento_primeira + n meses`, sempre ancorada na 1ª | Ancorar na 1ª faz 31/01 → 28/02 → 31/03, e não 31/01 → 28/02 → 28/03 | n |
 | Descrição das parcelas | Igual à descrição da dívida, sem sufixo "1/12" | AC: "mesma descrição"; o número da parcela vem da ordem de vencimento no detalhe | n |
