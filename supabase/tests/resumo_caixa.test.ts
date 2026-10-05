@@ -211,6 +211,7 @@ describe('migration resumo_caixa', () => {
 
     // Limite conhecido (AD-007): este teste não distingue Brasília de UTC, que só divergem
     // entre 21h e 24h do último dia do mês, e o `now()` do banco não é controlável aqui.
+    // O teste seguinte cobre o fuso de forma estrutural.
     it('sem referência, o mês atual é o de hoje no fuso de Brasília', async () => {
       const hoje = await db.query<{ mes: string; vencida: string }>(
         `select to_char(now() at time zone 'America/Sao_Paulo', 'YYYY-MM') as mes,
@@ -220,6 +221,16 @@ describe('migration resumo_caixa', () => {
       await lancar({ tipo: 'Saida', valor: '1.00', status: 'Pendente', vencimento: vencida });
 
       expect((await resumo(null)).projecao.map((item) => item.mes)).toEqual([mes]);
+    });
+  });
+
+  describe('SALDO-04: fuso do mês atual', () => {
+    it('a função calcula "hoje" no fuso America/Sao_Paulo', async () => {
+      const definicao = await db.query<{ sql: string }>(
+        `select pg_get_functiondef('resumo_caixa(date)'::regprocedure) as sql`,
+      );
+
+      expect(definicao.rows[0]!.sql).toContain(`now() at time zone 'America/Sao_Paulo'`);
     });
   });
 
@@ -298,19 +309,23 @@ describe('migration resumo_caixa', () => {
       expect(r.projecao[0]!.saldoProjetadoCentavos).toBe(33);
     });
 
-    // 1,13 e 0,29 não são exatos em ponto flutuante (1.13 * 100 = 112.99999999999999):
-    // só a conta em numeric devolve os inteiros certos.
-    it('valores não exatos em float saem como centavos inteiros', async () => {
+    // Cada campo de dinheiro usa um valor que o ponto flutuante erra (1.13 * 100 = 112.99999999999999;
+    // a soma projetada 1,14 vira 113.99999999999999). Só a conta em numeric devolve os inteiros certos.
+    it('todos os campos de dinheiro saem como centavos inteiros exatos', async () => {
       await lancar(
         { tipo: 'Entrada', valor: '1.13', status: 'Pago' },
         { tipo: 'Entrada', valor: '0.29', status: 'Pendente', vencimento: '2026-10-20' },
+        { tipo: 'Saida', valor: '0.28', status: 'Pendente', vencimento: '2026-10-21' },
+        { tipo: 'Entrada', valor: '0.07', status: 'Pendente' },
+        { tipo: 'Saida', valor: '1.15', status: 'Pendente' },
       );
 
       const r = await resumo();
       expect(r.saldoAtualCentavos).toBe(113);
-      expect(r.projecao[0]!.entradasPendentesCentavos).toBe(29);
-      expect(r.projecao[0]!.saldoProjetadoCentavos).toBe(142);
-      expect(Number.isInteger(r.projecao[0]!.saldoProjetadoCentavos)).toBe(true);
+      expect(r.projecao).toEqual([
+        { mes: '2026-10', entradasPendentesCentavos: 29, saidasPendentesCentavos: 28, saldoProjetadoCentavos: 114 },
+      ]);
+      expect(r.semVencimento).toEqual({ quantidade: 2, entradasCentavos: 7, saidasCentavos: 115 });
     });
   });
 });

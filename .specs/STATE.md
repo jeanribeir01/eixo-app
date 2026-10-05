@@ -53,7 +53,7 @@
 ### AD-007
 - **Decision**: O fuso `America/Sao_Paulo` do "mês atual" da `resumo_caixa()` sem `referencia` fica sem teste discriminante; os testes passam `referencia` explícita.
 - **Reason**: São Paulo e UTC só divergem entre 21h e 24h do último dia do mês, e o `now()` do banco não é controlável no PGlite. Extrair um helper exigiria nova migration só para teste, com a RPC já aplicada na nuvem.
-- **Trade-off**: Uma troca do fuso por UTC na função passaria nos testes; a revisão do PR é a proteção.
+- **Trade-off**: O comportamento perto da meia-noite não é testado; um teste estrutural (`pg_get_functiondef` contém `America/Sao_Paulo`) barra a troca do fuso, mas não um erro de lógica em volta dele.
 - **Scope**: `supabase/migrations/20261005000100_resumo_caixa.sql`, EIX-35.
 - **Date**: 2026-10-05
 - **Status**: active
