@@ -64,7 +64,7 @@ function escolher(campo: string, opcao: string) {
 }
 
 async function preencherValido() {
-  fireEvent.changeText(screen.getByLabelText('Valor'), '150000');
+  fireEvent.changeText(screen.getByLabelText('Valor (R$)'), '150000');
   fireEvent.changeText(screen.getByLabelText('Descrição'), 'Frete Curitiba');
   escolher('Categoria', 'Frete');
   escolher('Forma de pagamento', 'Pix');
@@ -88,7 +88,7 @@ describe('MovimentacaoFormView — nova (MOV-01)', () => {
   it('mostra todos os campos e começa como Pendente, sem data de pagamento', async () => {
     await renderNova();
 
-    expect(screen.getByLabelText('Valor')).toBeOnTheScreen();
+    expect(screen.getByLabelText('Valor (R$)')).toBeOnTheScreen();
     expect(screen.getByLabelText('Descrição')).toBeOnTheScreen();
     expect(screen.getByRole('button', { name: 'Categoria' })).toBeOnTheScreen();
     expect(screen.getByRole('button', { name: 'Forma de pagamento' })).toBeOnTheScreen();
@@ -220,7 +220,7 @@ describe('MovimentacaoFormView — editar (MOV-10)', () => {
     render(<MovimentacaoFormView movimentacaoId="mov-1" />);
 
     await screen.findByText('Editar movimentação');
-    expect(screen.getByLabelText('Valor')).toHaveDisplayValue('R$ 80,00');
+    expect(screen.getByLabelText('Valor (R$)')).toHaveDisplayValue('R$ 80,00');
     expect(screen.getByLabelText('Descrição')).toHaveDisplayValue('Diesel');
     expect(screen.getByText('Categoria antiga')).toBeOnTheScreen();
     expect(screen.getByLabelText('Data de vencimento')).toHaveDisplayValue('10/10/2026');

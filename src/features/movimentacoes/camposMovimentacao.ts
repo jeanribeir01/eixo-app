@@ -15,7 +15,7 @@ export type CampoMovimentacao = {
 };
 
 export const camposMovimentacao: CampoMovimentacao[] = [
-  { nome: 'valorCentavos', tipo: 'moeda', rotulo: 'Valor' },
+  { nome: 'valorCentavos', tipo: 'moeda', rotulo: 'Valor (R$)' },
   { nome: 'descricao', tipo: 'texto', rotulo: 'Descrição', placeholder: 'Ex.: Frete São Paulo–Curitiba' },
   { nome: 'categoriaId', tipo: 'categoria', rotulo: 'Categoria' },
   { nome: 'formaPagamentoId', tipo: 'formaPagamento', rotulo: 'Forma de pagamento' },
