@@ -373,9 +373,10 @@ T8 → T9 → T10 → T11 → T12
 
 **Done when**:
 
-- [ ] Teste em `src/navigation/__tests__/ModuloEmBreveView.test.tsx` cobre o atalho de Movimentações levando a `/movimentacoes`
-- [ ] Gate check passes: `npm run typecheck && npm run lint && npm test`
+- [x] Teste em `src/navigation/__tests__/ModuloEmBreveView.test.tsx` cobre o atalho de Movimentações levando a `/movimentacoes`
+- [x] Gate check passes: `npm run typecheck && npm run lint && npm test`
 
+**Status**: ✅ Done
 **Tests**: unit
 **Gate**: build
 

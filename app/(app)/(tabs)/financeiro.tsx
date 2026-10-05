@@ -7,6 +7,7 @@ export default function FinanceiroRoute() {
       atalhos={[
         { rotulo: 'Categorias', href: '/categorias' },
         { rotulo: 'Formas de Pagamento', href: '/formas-pagamento' },
+        { rotulo: 'Movimentações', href: '/movimentacoes' },
       ]}
     />
   );
