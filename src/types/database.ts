@@ -427,6 +427,7 @@ export type Database = {
         Returns: Database["public"]["Enums"]["perfil_nome"]
       }
       auth_usuario_id: { Args: never; Returns: string }
+      resumo_caixa: { Args: { referencia?: string }; Returns: Json }
     }
     Enums: {
       perfil_nome: "Admin" | "Gestor de Frota" | "Financeiro" | "Motorista"
