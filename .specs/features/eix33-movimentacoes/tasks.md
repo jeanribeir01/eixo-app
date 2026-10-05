@@ -268,10 +268,11 @@ T8 → T9 → T10 → T11 → T12
 
 **Done when**:
 
-- [ ] `__tests__/CampoMoeda.test.tsx`: digitar `1234` mostra `R$ 12,34` e devolve 1234; mostra erro
-- [ ] `__tests__/CampoData.test.tsx`: digitar `05102026` mostra `05/10/2026`; "Hoje" preenche a data local (relógio falso)
-- [ ] Gate check passes: `npx jest --selectProjects app src/features/movimentacoes`
+- [x] `__tests__/CampoMoeda.test.tsx`: digitar `1234` mostra `R$ 12,34` e devolve 1234; mostra erro
+- [x] `__tests__/CampoData.test.tsx`: digitar `05102026` mostra `05/10/2026`; "Hoje" preenche a data local (relógio falso)
+- [x] Gate check passes: `npx jest --selectProjects app src/features/movimentacoes`
 
+**Status**: ✅ Done
 **Tests**: unit
 **Gate**: quick
 
