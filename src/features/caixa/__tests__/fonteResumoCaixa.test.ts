@@ -1,4 +1,4 @@
-import { resumoCaixaComDados, resumoCaixaVazio } from '../../__mocks__/resumoCaixaMock';
+import { resumoCaixaComDados, resumoCaixaVazio } from '../__mocks__/resumoCaixaMock';
 import { buscarResumoCaixa, validarResumoCaixa } from '../fonteResumoCaixa';
 
 type Resposta = { data: unknown; error: { code: string; message: string } | null };

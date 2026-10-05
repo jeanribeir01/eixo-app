@@ -1,6 +1,6 @@
 import { Card, Text } from '@/ui';
 
-import { formatarMoedaComSinal, tomDoValor } from './formatadores';
+import { formatarMoedaComSinal, tomDoValor } from '../formatadores';
 
 // Cartão de destaque do topo (um por tela): o número que o gestor abre o app para ver.
 export function SaldoAtualCard({ saldoAtualCentavos }: { saldoAtualCentavos: number }) {

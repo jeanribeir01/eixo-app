@@ -1,7 +1,7 @@
 import { Badge, Card, Column, ListItem, Text } from '@/ui';
 
-import { formatarMes, formatarMoedaComSinal, tomDoValor } from './formatadores';
-import type { MesProjetado } from './resumoCaixa';
+import { formatarMes, formatarMoedaComSinal, tomDoValor } from '../formatadores';
+import type { MesProjetado } from '../resumoCaixa';
 
 type ProjecaoMensalListaProps = {
   meses: MesProjetado[];

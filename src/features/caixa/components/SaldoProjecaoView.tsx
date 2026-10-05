@@ -4,10 +4,10 @@ import { RefreshControl, ScrollView, useWindowDimensions } from 'react-native';
 
 import { Column, EmptyState, Screen, Skeleton, Snackbar, Text, colors } from '@/ui';
 
-import { buscarResumoCaixa } from './fonteResumoCaixa';
+import { buscarResumoCaixa } from '../fonteResumoCaixa';
 import { PendentesSemDataCard } from './PendentesSemDataCard';
 import { ProjecaoMensalLista } from './ProjecaoMensalLista';
-import type { ResumoCaixa } from './resumoCaixa';
+import type { ResumoCaixa } from '../resumoCaixa';
 import { SaldoAtualCard } from './SaldoAtualCard';
 
 type Status = 'carregando' | 'pronto' | 'erro';

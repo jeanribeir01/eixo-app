@@ -1,4 +1,4 @@
-import type { ResumoCaixa } from '../components/resumoCaixa';
+import type { ResumoCaixa } from '../resumoCaixa';
 
 // Fixtures de teste no formato do RPC `resumo_caixa` (EIX-35). Os números já vêm "calculados",
 // como o banco devolve: a tela nunca soma nada.

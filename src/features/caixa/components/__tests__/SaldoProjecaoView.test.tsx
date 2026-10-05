@@ -4,8 +4,8 @@ import { RefreshControl } from 'react-native';
 import { colors } from '@/ui';
 
 import { resumoCaixaComDados, resumoCaixaVazio } from '../../__mocks__/resumoCaixaMock';
-import { buscarResumoCaixa } from '../fonteResumoCaixa';
-import type { ResumoCaixa } from '../resumoCaixa';
+import { buscarResumoCaixa } from '../../fonteResumoCaixa';
+import type { ResumoCaixa } from '../../resumoCaixa';
 import { SaldoProjecaoView } from '../SaldoProjecaoView';
 
 jest.setTimeout(15000);
@@ -30,7 +30,7 @@ async function focarDeNovo() {
   });
 }
 
-jest.mock('../fonteResumoCaixa', () => ({ buscarResumoCaixa: jest.fn() }));
+jest.mock('../../fonteResumoCaixa', () => ({ buscarResumoCaixa: jest.fn() }));
 
 function responder(data: ResumoCaixa) {
   (buscarResumoCaixa as jest.Mock).mockResolvedValue({ ok: true, data });

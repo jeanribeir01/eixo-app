@@ -1,7 +1,7 @@
 import { Card, Column, Text } from '@/ui';
 
-import { formatarMoedaComSinal, tomDoValor } from './formatadores';
-import type { PendentesSemVencimento } from './resumoCaixa';
+import { formatarMoedaComSinal, tomDoValor } from '../formatadores';
+import type { PendentesSemVencimento } from '../resumoCaixa';
 
 // Bloco separado de propósito: sem vencimento não há mês onde encaixar a pendência, então ela
 // fica fora da projeção mensal — mas o gestor precisa saber que esse dinheiro existe.
