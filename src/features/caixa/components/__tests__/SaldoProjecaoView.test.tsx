@@ -10,13 +10,25 @@ import { SaldoProjecaoView } from '../SaldoProjecaoView';
 
 jest.setTimeout(15000);
 
+// Guarda o callback do foco para o teste simular "voltei para esta tela".
+let mockAoFocar: (() => void) | null = null;
+
 jest.mock('expo-router', () => {
   // eslint-disable-next-line @typescript-eslint/no-require-imports
   const react = require('react');
   return {
-    useFocusEffect: (callback: () => void) => react.useEffect(callback, []),
+    useFocusEffect: (callback: () => void) => {
+      mockAoFocar = callback;
+      react.useEffect(callback, []);
+    },
   };
 });
+
+async function focarDeNovo() {
+  await act(async () => {
+    mockAoFocar?.();
+  });
+}
 
 jest.mock('../fonteResumoCaixa', () => ({ buscarResumoCaixa: jest.fn() }));
 
@@ -141,5 +153,43 @@ describe('SaldoProjecaoView', () => {
 
     expect(await screen.findByText('Não foi possível carregar o saldo. Tente novamente.')).toBeOnTheScreen();
     expect(screen.getByText('+ R$ 12.500,00')).toBeOnTheScreen();
+  });
+
+  it('voltar o foco com saldo na tela não mostra skeleton e troca o dado quando chega', async () => {
+    let entregarNovo: (valor: unknown) => void = () => undefined;
+    (buscarResumoCaixa as jest.Mock)
+      .mockResolvedValueOnce({ ok: true, data: resumoCaixaComDados })
+      .mockReturnValueOnce(new Promise((resolve) => (entregarNovo = resolve)));
+
+    render(<SaldoProjecaoView />);
+    await screen.findByText('+ R$ 12.500,00');
+
+    await focarDeNovo();
+
+    // Enquanto a recarga não volta, o saldo antigo continua e o skeleton não aparece.
+    expect(screen.queryByLabelText('Carregando saldo')).not.toBeOnTheScreen();
+    expect(screen.getByText('+ R$ 12.500,00')).toBeOnTheScreen();
+
+    await act(async () => {
+      entregarNovo({ ok: true, data: { ...resumoCaixaComDados, saldoAtualCentavos: 1_500_000 } });
+    });
+
+    expect(screen.getByText('+ R$ 15.000,00')).toBeOnTheScreen();
+    expect(buscarResumoCaixa).toHaveBeenCalledTimes(2);
+  });
+
+  it('recarga ao voltar o foco com erro mantém o saldo e avisa no Snackbar', async () => {
+    (buscarResumoCaixa as jest.Mock)
+      .mockResolvedValueOnce({ ok: true, data: resumoCaixaComDados })
+      .mockResolvedValueOnce({ ok: false, mensagem: 'Não foi possível carregar o saldo. Tente novamente.' });
+
+    render(<SaldoProjecaoView />);
+    await screen.findByText('+ R$ 12.500,00');
+
+    await focarDeNovo();
+
+    expect(screen.getByText('Não foi possível carregar o saldo. Tente novamente.')).toBeOnTheScreen();
+    expect(screen.getByText('+ R$ 12.500,00')).toBeOnTheScreen();
+    expect(screen.queryByRole('button', { name: 'Tentar novamente' })).not.toBeOnTheScreen();
   });
 });

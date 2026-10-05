@@ -1,4 +1,4 @@
-import { useCallback, useState } from 'react';
+import { useCallback, useRef, useState } from 'react';
 import { useFocusEffect } from 'expo-router';
 import { RefreshControl, ScrollView, useWindowDimensions } from 'react-native';
 
@@ -29,14 +29,28 @@ export function SaldoProjecaoView() {
   const [atualizando, setAtualizando] = useState(false);
   const [feedback, setFeedback] = useState<Feedback | null>(null);
 
+  // Já existe resumo na tela? Ref em vez de ler `resumo`: o callback abaixo não pode depender do
+  // state, senão o useFocusEffect rodaria de novo a cada carga.
+  const temResumo = useRef(false);
+
   const carregar = useCallback(async () => {
-    setStatus('carregando');
+    // Skeleton só quando ainda não há nada para mostrar. Ao voltar o foco com o saldo na tela, o
+    // dado novo só substitui o antigo, sem a tela piscar.
+    if (!temResumo.current) setStatus('carregando');
+
     const resultado = await buscarResumoCaixa();
     if (!resultado.ok) {
+      // Recarga em segundo plano que falha não apaga o saldo que o usuário já está vendo.
+      if (temResumo.current) {
+        setFeedback({ mensagem: resultado.mensagem, tone: 'error' });
+        return;
+      }
       setErro(resultado.mensagem);
       setStatus('erro');
       return;
     }
+
+    temResumo.current = true;
     setResumo(resultado.data);
     setStatus('pronto');
   }, []);
@@ -59,6 +73,7 @@ export function SaldoProjecaoView() {
       return;
     }
 
+    temResumo.current = true;
     setResumo(resultado.data);
     setStatus('pronto');
     setFeedback({ mensagem: 'Saldo atualizado.', tone: 'success' });
