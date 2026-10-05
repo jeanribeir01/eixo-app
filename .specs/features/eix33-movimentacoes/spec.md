@@ -153,8 +153,8 @@ O gestor financeiro não tem como lançar entradas e saídas no app: a tabela `m
 | MOV-05 | P1: Lançar — datas e pagamento condicional (8, 9, 10, 11) | Tasks | Implementing |
 | MOV-06 | P1: Banco — valor > 0 e Pago exige data (1, 2) | Tasks | Implementing |
 | MOV-07 | P1: Banco — parcela não excluível e RLS (3, 4) | Tasks | Implementing |
-| MOV-08 | P1: Listar — mês e filtros (1–4) | Tasks | Pending |
-| MOV-09 | P1: Listar — linha e estados (5–7) | Tasks | Pending |
+| MOV-08 | P1: Listar — mês e filtros (1–4) | Tasks | Implementing |
+| MOV-09 | P1: Listar — linha e estados (5–7) | Tasks | Implementing |
 | MOV-10 | P1: Editar (1, 2, 7) | Tasks | Implementing |
 | MOV-11 | P1: Excluir com confirmação (3–6) | Tasks | Implementing |
 

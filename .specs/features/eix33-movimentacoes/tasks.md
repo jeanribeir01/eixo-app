@@ -321,9 +321,10 @@ T8 → T9 → T10 → T11 → T12
 
 **Done when**:
 
-- [ ] `__tests__/MovimentacoesListView.test.tsx`: carregando → lista do mês atual; ‹ › trocam o mês e o título; abas de tipo e status filtram; linha mostra `+ R$`/`− R$` e rótulo de status; vazio com "Nova movimentação"; erro com "Tentar novamente"; Excluir abre `Alert` e só apaga ao confirmar (Snackbar "Movimentação excluída."); parcela sem Excluir e com "Parcela de dívida"; resposta antiga de mês não sobrescreve a nova
-- [ ] Gate check passes: `npx jest --selectProjects app src/features/movimentacoes`
+- [x] `__tests__/MovimentacoesListView.test.tsx`: carregando → lista do mês atual; ‹ › trocam o mês e o título; abas de tipo e status filtram; linha mostra `+ R$`/`− R$` e rótulo de status; vazio com "Nova movimentação"; erro com "Tentar novamente"; Excluir abre `Alert` e só apaga ao confirmar (Snackbar "Movimentação excluída."); parcela sem Excluir e com "Parcela de dívida"; resposta antiga de mês não sobrescreve a nova
+- [x] Gate check passes: `npx jest --selectProjects app src/features/movimentacoes`
 
+**Status**: ✅ Done
 **Tests**: unit
 **Gate**: quick
 
