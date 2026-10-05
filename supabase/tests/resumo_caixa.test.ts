@@ -196,6 +196,21 @@ describe('migration resumo_caixa', () => {
       ]);
     });
 
+    // Referência longe de hoje: prova que a função usa o parâmetro, não a data atual.
+    it('com referência em outro período, o mês atual é o da referência', async () => {
+      await lancar(
+        { tipo: 'Saida', valor: '10.00', status: 'Pendente', vencimento: '2025-02-10' },
+        { tipo: 'Entrada', valor: '30.00', status: 'Pendente', vencimento: '2025-04-05' },
+      );
+
+      expect((await resumo('2025-03-15')).projecao).toEqual([
+        { mes: '2025-03', entradasPendentesCentavos: 0, saidasPendentesCentavos: 1000, saldoProjetadoCentavos: -1000 },
+        { mes: '2025-04', entradasPendentesCentavos: 3000, saidasPendentesCentavos: 0, saldoProjetadoCentavos: 2000 },
+      ]);
+    });
+
+    // Limite conhecido (AD-007): este teste não distingue Brasília de UTC, que só divergem
+    // entre 21h e 24h do último dia do mês, e o `now()` do banco não é controlável aqui.
     it('sem referência, o mês atual é o de hoje no fuso de Brasília', async () => {
       const hoje = await db.query<{ mes: string; vencida: string }>(
         `select to_char(now() at time zone 'America/Sao_Paulo', 'YYYY-MM') as mes,
@@ -252,6 +267,15 @@ describe('migration resumo_caixa', () => {
       expect(codigo).toBe('42501');
     });
 
+    it('anon não tem permissão de execute; authenticated tem', async () => {
+      const privilegios = await db.query<{ anon: boolean; authenticated: boolean }>(
+        `select has_function_privilege('anon', 'resumo_caixa(date)', 'execute') as anon,
+                has_function_privilege('authenticated', 'resumo_caixa(date)', 'execute') as authenticated`,
+      );
+
+      expect(privilegios.rows).toEqual([{ anon: false, authenticated: true }]);
+    });
+
     it('roda como security invoker, para o RLS valer nas linhas lidas', async () => {
       const funcao = await db.query<{ prosecdef: boolean }>(`select prosecdef from pg_proc where proname = 'resumo_caixa'`);
 
@@ -272,6 +296,21 @@ describe('migration resumo_caixa', () => {
       expect(r.saldoAtualCentavos).toBe(3);
       expect(r.projecao[0]!.entradasPendentesCentavos).toBe(30);
       expect(r.projecao[0]!.saldoProjetadoCentavos).toBe(33);
+    });
+
+    // 1,13 e 0,29 não são exatos em ponto flutuante (1.13 * 100 = 112.99999999999999):
+    // só a conta em numeric devolve os inteiros certos.
+    it('valores não exatos em float saem como centavos inteiros', async () => {
+      await lancar(
+        { tipo: 'Entrada', valor: '1.13', status: 'Pago' },
+        { tipo: 'Entrada', valor: '0.29', status: 'Pendente', vencimento: '2026-10-20' },
+      );
+
+      const r = await resumo();
+      expect(r.saldoAtualCentavos).toBe(113);
+      expect(r.projecao[0]!.entradasPendentesCentavos).toBe(29);
+      expect(r.projecao[0]!.saldoProjetadoCentavos).toBe(142);
+      expect(Number.isInteger(r.projecao[0]!.saldoProjetadoCentavos)).toBe(true);
     });
   });
 });
