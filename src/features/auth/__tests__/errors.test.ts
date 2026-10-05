@@ -16,4 +16,8 @@ describe('authErrorMessage', () => {
   it('erro do Supabase ou qualquer outro (AUTH-07)', () => {
     expect(authErrorMessage('unknown')).toBe('Não foi possível entrar. Tente novamente.');
   });
+
+  it('e-mail ou senha incorretos no login de teste', () => {
+    expect(authErrorMessage('invalid_credentials')).toBe('E-mail ou senha incorretos.');
+  });
 });
