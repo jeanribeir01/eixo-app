@@ -215,10 +215,11 @@ T8 → T9 → T10 → T11 → T12
 
 **Done when**:
 
-- [ ] `__tests__/schema.test.ts`: cada mensagem da spec (valor 0, descrição vazia, sem categoria, sem forma, Pago sem data, data inválida); Pendente grava `data_pagamento: null`; descrição com 121 caracteres rejeitada; saída em ISO
-- [ ] `rotuloStatus('Pago','Entrada')` = "Recebido", `('Pago','Saida')` = "Pago"
-- [ ] Gate check passes: `npx jest --selectProjects app src/features/movimentacoes`
+- [x] `__tests__/schema.test.ts`: cada mensagem da spec (valor 0, descrição vazia, sem categoria, sem forma, Pago sem data, data inválida); Pendente grava `data_pagamento: null`; descrição com 121 caracteres rejeitada; saída em ISO
+- [x] `rotuloStatus('Pago','Entrada')` = "Recebido", `('Pago','Saida')` = "Pago"
+- [x] Gate check passes: `npx jest --selectProjects app src/features/movimentacoes`
 
+**Status**: ✅ Done
 **Tests**: unit
 **Gate**: quick
 
