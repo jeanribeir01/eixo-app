@@ -36,7 +36,7 @@ O app funciona, mas parece um protótipo. As telas internas não têm header nem
 | Dependências novas | `expo-symbols`, `expo-haptics`, `@react-native-community/datetimepicker` | Autorizadas pelo Jean em 06/10 | y |
 | Prioridade | P1⭐ desta spec = P0 do vídeo (até 09/10); P2 = pós-entrega | Decidido com o Jean | y |
 | Alterar `src/ui/` | Autorizado nas tasks deste épico | AGENTS.md §4 pede autorização explícita; dada pelo Jean em 06/10 | y |
-| `react-native-reanimated` no Snackbar | Declarar no `package.json` a versão já instalada (peer obrigatório do expo-router) | Não baixa nada novo, mas é uma linha nova no `package.json` | n |
+| `react-native-reanimated` no Snackbar | Declarar no `package.json` a versão já instalada (peer obrigatório do expo-router), junto com `react-native-worklets` | Não baixa nada novo, mas é uma linha nova no `package.json`; autorizado pelo Jean em 06/10 | y |
 | Precedência entre skills e guia | `DESIGN_CYAN.md` vence as skills `expo-*` em cor, tipografia, espaçamento, borda e forma | As skills sugerem cores semânticas do iOS, fonte do sistema e `@expo/ui`; o guia é a fonte única de verdade visual | y |
 | Nome da aba de conta | Continua "Configurações" | Já aparece nos slides da EIX-54; renomear não muda o vídeo | n |
 | Confirmação ao sair | Sem confirmação; "Sair" encerra a sessão direto | Logout é reversível (basta entrar de novo); a skill `expo-design-system` (tell #10) desaconselha alerta em ação rotineira e o vídeo faz logout duas vezes | n |

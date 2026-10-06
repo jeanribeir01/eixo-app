@@ -482,7 +482,7 @@ T49
 
 #### T13: Declarar Reanimated e Worklets
 
-**What**: Declarar `react-native-reanimated` (`4.6.0`) e `react-native-worklets` (`0.12.2`), as versões que o expo-router já instala, com npm 10. **Só com o OK do Jean** (premissa não confirmada na spec).
+**What**: Declarar `react-native-reanimated` (`4.6.0`) e `react-native-worklets` (`0.12.2`), as versões que o expo-router já instala, com npm 10. Autorizado pelo Jean em 06/10.
 **Where**: `package.json`
 **Depends on**: None
 **Reuses**: versões já presentes no `node_modules`

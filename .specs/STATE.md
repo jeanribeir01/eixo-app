@@ -80,7 +80,7 @@
 - **Phase / Task**: Tasks aprovadas para criação no Linear; fase 1 (EIX-59: T1, T2) concluída
 - **Completed**: 5 skills de design instaladas; spec, design e tasks validados (`validate_spec` 0/0, `validate_tasks` 0 erros); AD-009; issues EIX-58 a EIX-72 criadas e EIX-11 reescrita
 - **In-progress** (file:line): none
-- **Next step**: `npm ci` (node_modules local incompleto) → `git checkout main && git pull` → branch `feat/eix-60-design-fundacao-navegacao` → executar T3–T12; antes, mergear o PR #7 (EIX-37) para evitar conflito em `app/(app)/_layout.tsx`
-- **Blockers**: OK do Jean para declarar `react-native-reanimated`/`react-native-worklets` (T13, EIX-61)
+- **Next step**: `git checkout main && git pull` → branch `feat/eix-60-design-fundacao-navegacao` → executar T3–T12; antes, mergear o PR #7 (EIX-37) para evitar conflito em `app/(app)/_layout.tsx`
+- **Blockers**: none (`npm ci` feito e OK do Jean para Reanimated/Worklets, ambos em 06/10)
 - **Uncommitted files**: none
-- **Branch**: chore/eix-59-skills-design-expo (não enviada ao remoto)
+- **Branch**: chore/eix-59-skills-design-expo (PR #17, aguardando revisão)
