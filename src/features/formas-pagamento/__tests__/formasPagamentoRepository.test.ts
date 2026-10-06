@@ -120,6 +120,15 @@ describe('formasPagamentoRepository', () => {
       });
       expect(mockFrom).toHaveBeenCalledTimes(1);
     });
+
+    it('traduz o erro 42501 (RLS) para acesso negado (RLS-16)', async () => {
+      responder(ok([pix]), erro('42501'));
+
+      expect(await criarFormaPagamento({ nome: 'Dinheiro' })).toEqual({
+        ok: false,
+        mensagem: 'Acesso negado. Seu perfil não tem permissão para esta ação.',
+      });
+    });
   });
 
   describe('atualizarFormaPagamento', () => {

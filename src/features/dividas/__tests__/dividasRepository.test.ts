@@ -104,7 +104,7 @@ describe('criarDivida', () => {
   });
 
   it.each([
-    ['42501', 'Você não tem permissão para gerenciar dívidas.'],
+    ['42501', 'Acesso negado. Seu perfil não tem permissão para esta ação.'],
     ['22023', 'Categoria ou forma de pagamento inválida. Escolha outra.'],
     ['23514', 'Confira a quantidade de parcelas, o valor e a quitação.'],
     ['XX000', 'Não foi possível registrar a dívida. Tente novamente.'],

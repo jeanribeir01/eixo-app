@@ -39,12 +39,12 @@ describe('fonteResumoCaixa', () => {
     });
   });
 
-  it('perfil sem permissão (42501) recebe mensagem própria', async () => {
+  it('perfil sem permissão (42501) recebe acesso negado (RLS-16)', async () => {
     mockRpc.mockResolvedValueOnce(erro('42501'));
 
     await expect(buscarResumoCaixa()).resolves.toEqual({
       ok: false,
-      mensagem: 'Você não tem permissão para ver o saldo.',
+      mensagem: 'Acesso negado. Seu perfil não tem permissão para esta ação.',
     });
   });
 

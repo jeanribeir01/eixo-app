@@ -68,11 +68,11 @@
 
 ## Handoff
 
-- **Feature**: `.specs/features/eix36-dividas`
-- **Phase / Task**: Execute concluído + Verifier PASS (iteração 2)
-- **Completed**: RPCs `criar_divida`/`excluir_divida` + soft delete (a907d8f), schema Zod (64adb89), tipos gerados (bb0c6ac), repositório (7b13638), fixes do Verifier: centavos inexatos, status no excluir, grants (6735364); migration aplicada na nuvem
+- **Feature**: `.specs/features/eix32-rls`
+- **Phase / Task**: Execute concluído + Verifier PASS (iteração 1)
+- **Completed**: migration `perfil_select` só a própria linha para não aprovado (336ea34), matriz de RLS por perfil (fc161b4), `src/lib/errors.ts` com "Acesso negado" (543fa75), repositórios usando errors.ts (debf143)
 - **In-progress** (file:line): none
-- **Next step**: push da branch e PR (EIX-36, revisor Diogo); o Eduardo usa `dividaSchema`, `somaTotalCentavos` e `dividasRepository` na EIX-50 e adiciona o seletor de forma de pagamento
+- **Next step**: aplicar `20261006000100_perfil_select_aprovado.sql` na nuvem (`supabase db push`), push da branch e PR (EIX-32, revisor Eduardo)
 - **Blockers**: none
 - **Uncommitted files**: none
-- **Branch**: feat/eix-36-us04-dividas-rollback
+- **Branch**: feat/eix-32-us18-rls

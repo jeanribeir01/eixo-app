@@ -1,5 +1,6 @@
 import { z } from 'zod';
 
+import { ehAcessoNegado, MENSAGEM_ACESSO_NEGADO } from '@/lib/errors';
 import { centavosParaReais, reaisParaCentavos } from '@/lib/money';
 import { supabase } from '@/supabase/client';
 
@@ -45,7 +46,7 @@ type ErroSupabase = { code: string };
 // Os códigos vêm das RPCs e checks da migration 20261005000200_divida.sql. O texto do
 // banco nunca chega ao usuário.
 function traduzirErro(error: ErroSupabase, mensagemPadrao: string): string {
-  if (error.code === '42501') return 'Você não tem permissão para gerenciar dívidas.';
+  if (ehAcessoNegado(error)) return MENSAGEM_ACESSO_NEGADO;
   if (error.code === '22023') return 'Categoria ou forma de pagamento inválida. Escolha outra.';
   // 23514 = check do banco. O form já barra; chegar aqui é algo que passou pelo app.
   if (error.code === '23514') return 'Confira a quantidade de parcelas, o valor e a quitação.';
