@@ -134,8 +134,8 @@ A US17 esconde telas por perfil, mas o app fala direto com o PostgREST: quem cha
 | RLS-11 | P1: Não aprovado | Execute | Implementing |
 | RLS-12 | P1: Não aprovado | Execute | Implementing |
 | RLS-13 | P1: Não aprovado | Execute | Implementing |
-| RLS-14 | P1: Acesso negado no app | Execute | Pending |
-| RLS-15 | P1: Acesso negado no app | Execute | Pending |
+| RLS-14 | P1: Acesso negado no app | Execute | Implementing |
+| RLS-15 | P1: Acesso negado no app | Execute | Implementing |
 | RLS-16 | P1: Acesso negado no app | Execute | Pending |
 
 **Coverage:** 16 total, 0 mapped to tasks, 16 unmapped ⚠️ (mapeados na fase Tasks)
