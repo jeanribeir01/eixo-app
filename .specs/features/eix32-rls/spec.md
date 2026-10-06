@@ -121,17 +121,17 @@ A US17 esconde telas por perfil, mas o app fala direto com o PostgREST: quem cha
 
 | Requirement ID | Story | Phase | Status |
 | --- | --- | --- | --- |
-| RLS-01 | P1: Banco recusa acesso | Execute | Pending |
+| RLS-01 | P1: Banco recusa acesso | Execute | Implementing |
 | RLS-02 | P1: Banco recusa acesso | Execute | Pending |
 | RLS-03 | P1: Banco recusa acesso | Execute | Pending |
-| RLS-04 | P1: Banco recusa acesso | Execute | Pending |
-| RLS-05 | P1: Banco recusa acesso | Execute | Pending |
-| RLS-06 | P1: Banco recusa acesso | Execute | Pending |
-| RLS-07 | P1: Banco recusa acesso | Execute | Pending |
+| RLS-04 | P1: Banco recusa acesso | Execute | Implementing |
+| RLS-05 | P1: Banco recusa acesso | Execute | Implementing |
+| RLS-06 | P1: Banco recusa acesso | Execute | Implementing |
+| RLS-07 | P1: Banco recusa acesso | Execute | Implementing |
 | RLS-08 | P1: Banco recusa acesso | Execute | Pending |
-| RLS-09 | P1: Banco recusa acesso | Execute | Pending |
-| RLS-10 | P1: Não aprovado | Execute | Pending |
-| RLS-11 | P1: Não aprovado | Execute | Pending |
+| RLS-09 | P1: Banco recusa acesso | Execute | Implementing |
+| RLS-10 | P1: Não aprovado | Execute | Implementing |
+| RLS-11 | P1: Não aprovado | Execute | Implementing |
 | RLS-12 | P1: Não aprovado | Execute | Implementing |
 | RLS-13 | P1: Não aprovado | Execute | Implementing |
 | RLS-14 | P1: Acesso negado no app | Execute | Pending |
