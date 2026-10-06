@@ -3,7 +3,7 @@
   "promote_threshold": 2,
   "window_days": 45,
   "quarantine_threshold": 2,
-  "next_id": 8,
+  "next_id": 9,
   "lessons": [
     {
       "id": "L-001",
@@ -85,17 +85,19 @@
       "text": "Test cents conversion with amounts not exact in binary floating point such as 1.13, so a float cast fails the test",
       "signal": "surviving_mutant",
       "scope": "dinheiro, sql-rpc",
-      "status": "candidate",
+      "status": "confirmed",
       "features": [
-        "eix35-motor-saldo"
+        "eix35-motor-saldo",
+        "eix36-dividas"
       ],
-      "recurrence": 1,
+      "recurrence": 2,
       "harmful": 0,
       "evidence": [
-        "M12/M21 supabase/migrations/20261005000100_resumo_caixa.sql:60,67 (dinheiro, sql-rpc)"
+        "M12/M21 supabase/migrations/20261005000100_resumo_caixa.sql:60,67 (dinheiro, sql-rpc)",
+        "A10 src/features/dividas/dividasRepository.ts:57 (dinheiro, repositories)"
       ],
       "created": "2026-10-05T13:35:12Z",
-      "last_seen": "2026-10-05T13:35:12Z"
+      "last_seen": "2026-10-05T17:46:38Z"
     },
     {
       "id": "L-006",
@@ -103,17 +105,19 @@
       "text": "Assert grants and revokes directly with has_function_privilege, because a second authorization check masks a missing revoke",
       "signal": "surviving_mutant",
       "scope": "supabase, rls, grants",
-      "status": "candidate",
+      "status": "confirmed",
       "features": [
-        "eix35-motor-saldo"
+        "eix35-motor-saldo",
+        "eix36-dividas"
       ],
-      "recurrence": 1,
+      "recurrence": 2,
       "harmful": 0,
       "evidence": [
-        "M10 supabase/migrations/20261005000100_resumo_caixa.sql:87 (supabase, rls, grants)"
+        "M10 supabase/migrations/20261005000100_resumo_caixa.sql:87 (supabase, rls, grants)",
+        "S11/S19 supabase/migrations/20261005000200_divida.sql:139,141 (supabase, rls, grants)"
       ],
       "created": "2026-10-05T13:35:13Z",
-      "last_seen": "2026-10-05T13:35:13Z"
+      "last_seen": "2026-10-05T17:46:38Z"
     },
     {
       "id": "L-007",
@@ -132,6 +136,24 @@
       ],
       "created": "2026-10-05T13:42:06Z",
       "last_seen": "2026-10-05T13:42:06Z"
+    },
+    {
+      "id": "L-008",
+      "key": "surviving_mutant::when an access ac lists several rpcs test every denied profile and status against each listed rpc not only the first",
+      "text": "When an access AC lists several RPCs, test every denied profile and status against each listed RPC, not only the first",
+      "signal": "surviving_mutant",
+      "scope": "supabase, rls, sql-rpc",
+      "status": "candidate",
+      "features": [
+        "eix36-dividas"
+      ],
+      "recurrence": 1,
+      "harmful": 0,
+      "evidence": [
+        "S18 supabase/migrations/20261005000200_divida.sql:116 (DIV-06 AC1) (supabase, rls, sql-rpc)"
+      ],
+      "created": "2026-10-05T17:46:38Z",
+      "last_seen": "2026-10-05T17:46:38Z"
     }
   ]
 }

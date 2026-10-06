@@ -68,7 +68,7 @@ uma consequência central que atravessa todo o projeto:
 |---|---|
 | CRUD simples (categorias, formas de pagamento, veículos, rotas) | Tabelas + RLS, acesso direto via `supabase-js` |
 | Autorização por perfil (US18) | **RLS policies**, deny-by-default em todas as tabelas |
-| Operações atômicas (rollback de parcelas — US04) | **Edge Function em TS** com transação via `postgres.js` |
+| Operações atômicas (rollback de parcelas — US04, manutenção + despesa — US06-b) | **RPC em plpgsql** (`supabase.rpc()`): cada chamada é uma transação — ver AD-008 |
 | Invariantes de dados (hodômetro não regride, valor não negativo) | **Constraints e triggers SQL** — a única camada que ninguém contorna |
 | Regra de negócio do hodômetro (US08) | **Edge Function em TS**, apoiada na constraint acima |
 | Motor de saldo e previsão (US05) | **View** SQL agregando no banco |
@@ -111,23 +111,23 @@ aplicado via Supabase CLI. O schema local do SQLite (Drizzle) **espelha** esse s
 > Risco conhecido: duas definições de schema (Postgres e SQLite) podem divergir. Toda
 > migration de nuvem exige a migration local correspondente **no mesmo PR**. Sem exceção.
 
-### Paridade de tipos ponta a ponta — TypeScript dos dois lados
+### Paridade de tipos ponta a ponta
 
 A justificativa original do .NET MAUI era compartilhar modelos de domínio entre front e
-back. **Esta stack recupera isso**, e com validação de tipo mais forte do que o projeto
-original tinha. Esse é um argumento de defesa da troca de stack, não só uma explicação.
-
-Três camadas de tipo, cada uma com uma origem única:
+back. Esta stack chega perto disso por outro caminho: o banco é a fonte dos tipos.
 
 | Camada | Origem | Quem consome |
 |---|---|---|
-| **Tipos de tabela** | Gerados de `supabase gen types` → `src/types/database.ts` | App e Edge Functions |
-| **Schemas de domínio** | Escritos à mão em `packages/domain/` com Zod | App (formulário) e Edge Function (payload) |
-| **Contratos de Edge Function** | `z.infer` dos schemas de domínio | App e Edge Function |
+| **Tipos de tabela e de RPC** | Gerados de `supabase gen types` → `src/types/database.ts` | App (repositórios) |
+| **Schemas de formulário** | Escritos à mão com Zod em `src/features/<feature>/schema.ts` | App (formulário e validação da resposta) |
+| **Regras de integridade** | Constraints, triggers e checagens dentro das RPCs, em `supabase/migrations/` | Banco — vale para qualquer chamada |
 
-O ganho concreto: adicionar um campo obrigatório ao schema de domínio quebra a compilação
-no formulário **e** na Edge Function no mesmo `npm run typecheck`. Nenhum dos dois lados
-pode divergir em silêncio.
+O ganho concreto: mudar a assinatura de uma RPC ou uma coluna e regerar os tipos quebra o
+repositório no mesmo `npm run typecheck`. O app não diverge do banco em silêncio.
+
+O preço, assumido conscientemente (AD-008): a regra de validação existe duas vezes — no
+schema Zod (para mensagem imediata no formulário) e no banco (para garantia). Os dois lados
+usam os **mesmos limites** e o comentário do schema aponta para a migration correspondente.
 
 #### O que NÃO migra para TypeScript
 
@@ -136,33 +136,39 @@ Seja honesto sobre o limite — a banca pode perguntar:
 - **Migrations continuam em SQL** (`supabase/migrations/`). Não existe atalho.
 - **Invariantes continuam em constraint/trigger.** Regra que protege integridade mora no
   banco, porque é a única camada que vale mesmo quando alguém chama a API por fora.
-- **Agregação de dashboard continua em view.** Fazer isso em TS quebraria o RNF06.
+- **Agregação de dashboard continua em view/RPC.** Fazer isso em TS quebraria o RNF06.
 
-Edge Function é para **orquestrar lógica de negócio**, não para substituir o banco.
-
-#### Por que Edge Function e não `rpc()` + plpgsql
+#### Por que RPC plpgsql e não Edge Function para operações atômicas
 
 `supabase-js` **não faz transação multi-statement**. Para a US04 — criar uma dívida e suas
-N parcelas de forma atômica — existem exatamente duas saídas: uma Postgres function em
-`plpgsql`, ou uma Edge Function abrindo conexão direta ao Postgres. Escolhemos a segunda
-para manter a paridade de linguagem e reaproveitar os schemas Zod.
+N parcelas de forma atômica — existem duas saídas: uma Postgres function em `plpgsql`,
+chamada via `supabase.rpc()`, ou uma Edge Function abrindo conexão direta ao Postgres.
+**Escolhemos a RPC** (AD-008 em `.specs/STATE.md`):
 
-Armadilhas dessa escolha, todas já resolvidas no exemplo de referência:
+- O PostgREST roda cada chamada de RPC numa transação: um erro em qualquer parcela desfaz
+  tudo, sem código de rollback.
+- Sem cold start, sem deploy separado e sem segredo de conexão para gerenciar.
+- Testável no Jest com PGlite, junto com as outras migrations (AD-006).
 
-- Conexão via **Supavisor em transaction mode** exige `prepare: false` no `postgres.js`.
-  Sem isso, falha com erro de prepared statement.
-- **Feche a conexão** ao fim de cada invocação (`await sql.end()`), ou o pool vaza entre
-  cold starts.
-- **Cold start** de Edge Function custa algumas centenas de ms. Irrelevante para escrita
-  pontual, inaceitável para listagem — por isso leitura continua indo direto via PostgREST.
-- Edge Function valida JWT por padrão, mas **verificar o perfil é trabalho seu**: pegue o
-  usuário do token e confira o perfil antes de escrever.
+Regras de uma RPC que escreve:
+
+- **`security definer` + checagem de perfil no início** (`auth_perfil()`), lançando
+  `42501`. Sem a checagem, a função ignora o RLS e qualquer autenticado escreveria.
+- `set search_path = public` e `revoke execute ... from public, anon` +
+  `grant execute ... to authenticated` logo após criar a função.
+- Erros de regra com SQLSTATE próprio (`22023`, `23514`, `P0002`), que o repositório
+  traduz para mensagem em português. O texto do banco nunca chega ao usuário.
+- Se a tabela só pode ser escrita pela RPC, **remova as policies de escrita direta** dela.
+
+Edge Function fica para o que o banco não faz: lógica que precisa de segredo ou de serviço
+externo.
 
 #### Referência
 
-`docs/exemplos/us04-divida/` contém a implementação completa do padrão: schema de domínio,
-Edge Function com transação e rollback, e o client tipado no app. **Use como molde** para
-qualquer outra operação atômica.
+`supabase/migrations/20261005000200_divida.sql` (RPCs `criar_divida` e `excluir_divida`),
+`supabase/tests/divida.test.ts` (rollback provado com falha na 7ª parcela) e
+`src/features/dividas/dividasRepository.ts` (chamada tipada e tradução de erros).
+**Use como molde** para qualquer outra operação atômica (ex.: `registrar_manutencao`, US06-b).
 
 ### Limite importante do Supabase
 
@@ -226,8 +232,9 @@ obrigatórias.
 
 ### Regras de dados não negociáveis
 
-- **Soft delete sempre.** Categorias, formas de pagamento e usuários nunca são removidos
-  fisicamente — use a flag `ativa`/`ativo`. Itens inativos somem dos seletores mas
+- **Soft delete sempre.** Categorias, formas de pagamento, usuários e dívidas nunca são
+  removidos fisicamente — use a flag `ativa`/`ativo` (dívida: `excluir_divida` apaga só as
+  parcelas pendentes e desativa a dívida). Itens inativos somem dos seletores mas
   continuam visíveis em lançamentos históricos.
 - **IDs gerados no cliente (UUID v7).** Indispensável para criar registros offline sem
   colisão. Não dependa de sequência do Postgres.
@@ -302,18 +309,10 @@ src/
     database.ts             # tipos GERADOS — nunca editados à mão
   ui/                       # primitivos + tokens + tema
   lib/                      # utils, formatadores, money, datas
-packages/
-  domain/                   # schemas Zod + tipos — COMPARTILHADO app ↔ Edge Functions
-    mod.ts                  # barrel de exportação
-    divida.ts
-    viagem.ts
-    movimentacao.ts
 supabase/
-  migrations/               # fonte de verdade do schema em nuvem (SQL)
-  functions/
-    deno.json               # import map: @eixo/domain → ../../packages/domain/mod.ts
-    _shared/                # helpers de auth e conexão
-    criar-divida/
+  migrations/               # fonte de verdade do schema em nuvem (SQL), incluindo as RPCs
+  tests/                    # testes das migrations no PGlite (AD-006)
+  functions/                # Edge Functions — só para segredo ou serviço externo (nenhuma ainda)
 docs/
   DESIGN-CYAN.md            # design system — NORMATIVO, fonte de verdade visual
   exemplos/                 # implementações de referência
@@ -577,8 +576,7 @@ supabase migration new <nome>       # nova migration de nuvem
 supabase db push                    # aplicar migrations
 npx supabase gen types typescript --linked --schema public > src/types/database.ts
 
-supabase functions serve            # Edge Functions localmente
-supabase functions deploy criar-divida
+supabase functions serve            # Edge Functions localmente (quando existirem)
 
 npx drizzle-kit generate            # migration do SQLite local
 npm run lint && npm run typecheck
@@ -600,17 +598,18 @@ npm test
   normativo. Não invente tratamento visual que não esteja nele.
 - Use os tokens e primitivos da seção 8. Nunca hardcode hex de cor, spacing ou radius em tela.
 - Valide entrada com Zod nos limites (formulário e resposta do Supabase).
-- **Schema de domínio mora em `packages/domain/` e é importado pelos dois lados.** Nunca
-  duplique uma validação entre app e Edge Function — se duplicou, elas vão divergir.
-- Operação que escreve em mais de uma tabela vira Edge Function com transação. Escrita
-  simples continua indo direto via `supabase-js`.
+- **Schema Zod mora em `src/features/<feature>/schema.ts`** e usa os **mesmos limites** da
+  constraint/RPC do banco, com um comentário apontando a migration. Mudou um, mude o outro.
+- Operação que escreve em mais de uma tabela vira **RPC plpgsql** (`security definer` +
+  checagem de perfil), no molde de `criar_divida` (seção 3). Escrita simples continua indo
+  direto via `supabase-js`.
 - Comente o **porquê**, não o quê. A equipe é iniciante — explicar decisão vale mais que
   descrever sintaxe.
 
 **Nunca:**
 - Nunca coloque a chave `service_role` no app, em `.env` público ou em qualquer arquivo versionado.
 - Nunca guarde sessão ou dado sensível em `AsyncStorage` — use `expo-secure-store`.
-- Nunca faça `DELETE` físico em Categoria, Forma de Pagamento ou Usuário — soft delete.
+- Nunca faça `DELETE` físico em Categoria, Forma de Pagamento, Usuário ou Dívida — soft delete.
 - Nunca use `float` para dinheiro.
 - Nunca confie no cliente para autorização — a policy no banco é a autoridade (US18).
 - Nunca escreva tipos de tabela à mão — gere com `supabase gen types`.

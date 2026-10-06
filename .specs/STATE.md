@@ -58,13 +58,21 @@
 - **Date**: 2026-10-05
 - **Status**: active
 
+### AD-008
+- **Decision**: A transação da US04 (dívida + N parcelas) é uma RPC plpgsql `criar_divida`, não uma Edge Function com `postgres.js`. `divida` só é escrita por RPCs `security definer` (`criar_divida`, `excluir_divida`) com checagem de perfil; exclusão é soft delete (`divida.ativa`).
+- **Reason**: Decidido com o usuário: a EIX-36 e a EIX-50 já nomeiam a RPC; uma chamada de RPC é uma transação no PostgREST (rollback automático); roda no harness PGlite (AD-006); sem cold start; não existe nenhuma Edge Function no repo nem o exemplo `docs/exemplos/us04-divida`.
+- **Trade-off**: Diverge do `.claude/CLAUDE.md` §3 (Edge Function para operação atômica); a validação Zod não é compartilhada com o banco — as regras ficam duplicadas no schema do app e nas checks/RPC.
+- **Scope**: `supabase/migrations/20261005000200_divida.sql`, `src/features/dividas`, EIX-36, EIX-50; serve de molde para a US06-b (`registrar_manutencao`).
+- **Date**: 2026-10-05
+- **Status**: active
+
 ## Handoff
 
-- **Feature**: `.specs/features/eix35-motor-saldo`
-- **Phase / Task**: Execute concluído (migration + testes, db push + tipos) + Verifier PASS (re-verificação 2)
-- **Completed**: RPC `resumo_caixa` (b2cd11e), tipos gerados (9819aa3), fixes do Verifier: referência/float/grant (f10142c), float em todos os campos + fuso estrutural (bdc8775); migration já aplicada na nuvem
+- **Feature**: `.specs/features/eix36-dividas`
+- **Phase / Task**: Execute concluído + Verifier PASS (iteração 2)
+- **Completed**: RPCs `criar_divida`/`excluir_divida` + soft delete (a907d8f), schema Zod (64adb89), tipos gerados (bb0c6ac), repositório (7b13638), fixes do Verifier: centavos inexatos, status no excluir, grants (6735364); migration aplicada na nuvem
 - **In-progress** (file:line): none
-- **Next step**: push da branch e PR (EIX-35); o Diogo troca o mock do PR #12 por `supabase.rpc('resumo_caixa')` e valida o retorno no `resumoCaixaSchema`
+- **Next step**: push da branch e PR (EIX-36, revisor Diogo); o Eduardo usa `dividaSchema`, `somaTotalCentavos` e `dividasRepository` na EIX-50 e adiciona o seletor de forma de pagamento
 - **Blockers**: none
-- **Uncommitted files**: `package-lock.json` (churn do npm 11 local, não commitar)
-- **Branch**: feat/eix-35-us05-motor-saldo
+- **Uncommitted files**: none
+- **Branch**: feat/eix-36-us04-dividas-rollback
