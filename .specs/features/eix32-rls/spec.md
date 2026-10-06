@@ -122,13 +122,13 @@ A US17 esconde telas por perfil, mas o app fala direto com o PostgREST: quem cha
 | Requirement ID | Story | Phase | Status |
 | --- | --- | --- | --- |
 | RLS-01 | P1: Banco recusa acesso | Execute | Implementing |
-| RLS-02 | P1: Banco recusa acesso | Execute | Pending |
-| RLS-03 | P1: Banco recusa acesso | Execute | Pending |
+| RLS-02 | P1: Banco recusa acesso | Execute | Implementing |
+| RLS-03 | P1: Banco recusa acesso | Execute | Implementing |
 | RLS-04 | P1: Banco recusa acesso | Execute | Implementing |
 | RLS-05 | P1: Banco recusa acesso | Execute | Implementing |
 | RLS-06 | P1: Banco recusa acesso | Execute | Implementing |
 | RLS-07 | P1: Banco recusa acesso | Execute | Implementing |
-| RLS-08 | P1: Banco recusa acesso | Execute | Pending |
+| RLS-08 | P1: Banco recusa acesso | Execute | Implementing |
 | RLS-09 | P1: Banco recusa acesso | Execute | Implementing |
 | RLS-10 | P1: Não aprovado | Execute | Implementing |
 | RLS-11 | P1: Não aprovado | Execute | Implementing |
@@ -136,9 +136,9 @@ A US17 esconde telas por perfil, mas o app fala direto com o PostgREST: quem cha
 | RLS-13 | P1: Não aprovado | Execute | Implementing |
 | RLS-14 | P1: Acesso negado no app | Execute | Implementing |
 | RLS-15 | P1: Acesso negado no app | Execute | Implementing |
-| RLS-16 | P1: Acesso negado no app | Execute | Pending |
+| RLS-16 | P1: Acesso negado no app | Execute | Implementing |
 
-**Coverage:** 16 total, 0 mapped to tasks, 16 unmapped ⚠️ (mapeados na fase Tasks)
+**Coverage:** 16 total, 16 implementados (RLS-02, RLS-03 e RLS-08 já tinham prova em rls.test.ts, divida.test.ts e resumo_caixa.test.ts)
 
 ---
 
