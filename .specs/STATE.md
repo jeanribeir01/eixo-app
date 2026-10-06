@@ -66,13 +66,21 @@
 - **Date**: 2026-10-05
 - **Status**: active
 
+### AD-009
+- **Decision**: Em cor, tipografia, espaçamento, borda e forma, o `DESIGN_CYAN.md` vence as skills `expo-*` instaladas na EIX-59 (`expo-router`, `expo-native-ui`, `expo-design-system`, `expo-animation`) e a `vercel-react-native-skills`. As skills mandam em navegação, comportamento nativo, motion, acessibilidade e performance.
+- **Reason**: As skills da Expo pedem cores semânticas do iOS, fonte do sistema, `@expo/ui` e evitam bordas de 1px; o guia do projeto escolhe Inter, paleta stone + um cyan e a hairline como estrutura. AGENTS.md §0 faz do guia a fonte única de verdade visual.
+- **Trade-off**: Algumas "native slop tells" da skill (#6 Inter Everywhere, #9 Wireframe Borders, #18 Dark-Mode Amnesia) ficam aceitas de propósito; a auditoria da EIX-72 não as conta como defeito.
+- **Scope**: Todas as telas e primitivos; EIX-58 e sub-tasks.
+- **Date**: 2026-10-06
+- **Status**: active
+
 ## Handoff
 
-- **Feature**: `.specs/features/eix36-dividas`
-- **Phase / Task**: Execute concluído + Verifier PASS (iteração 2)
-- **Completed**: RPCs `criar_divida`/`excluir_divida` + soft delete (a907d8f), schema Zod (64adb89), tipos gerados (bb0c6ac), repositório (7b13638), fixes do Verifier: centavos inexatos, status no excluir, grants (6735364); migration aplicada na nuvem
+- **Feature**: `.specs/features/eix58-design-app` (épico EIX-58, sub-issues EIX-59 a EIX-72 + EIX-11)
+- **Phase / Task**: Tasks aprovadas para criação no Linear; fase 1 (EIX-59: T1, T2) concluída
+- **Completed**: 5 skills de design instaladas; spec, design e tasks validados (`validate_spec` 0/0, `validate_tasks` 0 erros); AD-009; issues EIX-58 a EIX-72 criadas e EIX-11 reescrita
 - **In-progress** (file:line): none
-- **Next step**: push da branch e PR (EIX-36, revisor Diogo); o Eduardo usa `dividaSchema`, `somaTotalCentavos` e `dividasRepository` na EIX-50 e adiciona o seletor de forma de pagamento
-- **Blockers**: none
+- **Next step**: `npm ci` (node_modules local incompleto) → `git checkout main && git pull` → branch `feat/eix-60-design-fundacao-navegacao` → executar T3–T12; antes, mergear o PR #7 (EIX-37) para evitar conflito em `app/(app)/_layout.tsx`
+- **Blockers**: OK do Jean para declarar `react-native-reanimated`/`react-native-worklets` (T13, EIX-61)
 - **Uncommitted files**: none
-- **Branch**: feat/eix-36-us04-dividas-rollback
+- **Branch**: chore/eix-59-skills-design-expo (não enviada ao remoto)
