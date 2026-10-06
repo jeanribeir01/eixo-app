@@ -50,6 +50,7 @@ const existente: Movimentacao = {
   data_pagamento: null,
   data_inclusao: '2026-10-01T12:00:00+00:00',
   status_pagamento: 'Pendente',
+  comprovante_url: null,
   categoria: { titulo: 'Categoria antiga', tipo: 'Saida', ativa: false },
   formaPagamento: { nome: 'Pix', ativa: true },
 };

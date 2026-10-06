@@ -171,6 +171,7 @@ export type Database = {
           status_pagamento: Database["public"]["Enums"]["status_pagamento"]
           valor: number
           viagem_id: string | null
+          comprovante_url: string | null
         }
         Insert: {
           categoria_id: string
@@ -185,6 +186,7 @@ export type Database = {
           status_pagamento?: Database["public"]["Enums"]["status_pagamento"]
           valor: number
           viagem_id?: string | null
+          comprovante_url?: string | null
         }
         Update: {
           categoria_id?: string
@@ -199,6 +201,7 @@ export type Database = {
           status_pagamento?: Database["public"]["Enums"]["status_pagamento"]
           valor?: number
           viagem_id?: string | null
+          comprovante_url?: string | null
         }
         Relationships: [
           {

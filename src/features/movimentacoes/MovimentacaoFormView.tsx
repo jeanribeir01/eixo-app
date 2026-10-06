@@ -9,6 +9,7 @@ import { Button, Column, EmptyState, Input, Screen, Select, Snackbar, Tabs, Text
 
 import { camposMovimentacao, type CampoMovimentacao } from './camposMovimentacao';
 import { CampoData } from './components/CampoData';
+import { AnexoComprovante } from './components/AnexoComprovante';
 import { CampoMoeda } from './components/CampoMoeda';
 import {
   atualizarMovimentacao,
@@ -31,6 +32,7 @@ const VALORES_INICIAIS: MovimentacaoFormValues = {
   formaPagamentoId: null,
   dataVencimento: '',
   status: 'Pendente',
+  comprovanteUrl: null,
   dataPagamento: '',
 };
 
@@ -42,6 +44,7 @@ function valoresDe(movimentacao: Movimentacao): MovimentacaoFormValues {
     formaPagamentoId: movimentacao.forma_pagamento_id,
     dataVencimento: movimentacao.data_vencimento ? isoParaDataBR(movimentacao.data_vencimento) : '',
     status: movimentacao.status_pagamento,
+    comprovanteUrl: movimentacao.comprovante_url ?? null,
     dataPagamento: movimentacao.data_pagamento ? isoParaDataBR(movimentacao.data_pagamento) : '',
   };
 }
@@ -227,6 +230,15 @@ export function MovimentacaoFormView({ movimentacaoId }: MovimentacaoFormViewPro
               onChange={(opcao) => alterar('status', opcao as StatusPagamento)}
             />
           </Column>
+        );
+      case 'anexo':
+        return (
+          <AnexoComprovante
+            key={campo.nome}
+            value={valores.comprovanteUrl ?? null}
+            onChange={(url) => alterar('comprovanteUrl', url)}
+            error={erro}
+          />
         );
     }
   }

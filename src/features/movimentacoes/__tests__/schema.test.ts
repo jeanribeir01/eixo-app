@@ -10,6 +10,7 @@ const valido: MovimentacaoFormValues = {
   formaPagamentoId: 'fp-1',
   dataVencimento: '',
   status: 'Pendente',
+      comprovanteUrl: null,
   dataPagamento: '',
 };
 
@@ -28,6 +29,7 @@ describe('movimentacaoSchema', () => {
       formaPagamentoId: 'fp-1',
       dataVencimento: null,
       status: 'Pendente',
+      comprovanteUrl: null,
       dataPagamento: null,
     });
   });
@@ -37,6 +39,7 @@ describe('movimentacaoSchema', () => {
       ...valido,
       dataVencimento: '10/11/2026',
       status: 'Pago',
+      comprovanteUrl: null,
       dataPagamento: '05/10/2026',
     });
 
@@ -72,7 +75,8 @@ describe('movimentacaoSchema', () => {
   });
 
   it('Pago sem data de pagamento → "Informe a data de pagamento." (MOV-05)', () => {
-    expect(errosDe({ ...valido, status: 'Pago', dataPagamento: '' }).dataPagamento).toEqual([
+    expect(errosDe({ ...valido, status: 'Pago',
+      comprovanteUrl: null, dataPagamento: '' }).dataPagamento).toEqual([
       'Informe a data de pagamento.',
     ]);
   });
@@ -81,7 +85,8 @@ describe('movimentacaoSchema', () => {
     expect(errosDe({ ...valido, dataVencimento: '31/02/2026' }).dataVencimento).toEqual([
       'Data inválida. Use DD/MM/AAAA.',
     ]);
-    expect(errosDe({ ...valido, status: 'Pago', dataPagamento: '05/10' }).dataPagamento).toEqual([
+    expect(errosDe({ ...valido, status: 'Pago',
+      comprovanteUrl: null, dataPagamento: '05/10' }).dataPagamento).toEqual([
       'Data inválida. Use DD/MM/AAAA.',
     ]);
   });

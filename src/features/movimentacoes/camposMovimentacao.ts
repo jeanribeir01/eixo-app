@@ -3,7 +3,7 @@ import type { MovimentacaoFormValues } from './schema';
 // O formulário é montado a partir desta lista (pedido da EIX-33): a US09 (vincular viagem) e
 // a US03-b (anexo) acrescentam itens aqui e um `case` no MovimentacaoFormView, sem reescrever
 // a tela. A ordem da lista é a ordem na tela.
-export type TipoCampo = 'moeda' | 'texto' | 'categoria' | 'formaPagamento' | 'data' | 'status';
+export type TipoCampo = 'moeda' | 'texto' | 'categoria' | 'formaPagamento' | 'data' | 'status' | 'anexo';
 
 export type CampoMovimentacao = {
   nome: keyof MovimentacaoFormValues;
@@ -23,4 +23,5 @@ export const camposMovimentacao: CampoMovimentacao[] = [
   { nome: 'status', tipo: 'status', rotulo: 'Status' },
   // O rótulo final ("pagamento" ou "recebimento") depende do tipo da categoria; ver a tela.
   { nome: 'dataPagamento', tipo: 'data', rotulo: 'Data de pagamento', visivel: (valores) => valores.status === 'Pago' },
+  { nome: 'comprovanteUrl', tipo: 'anexo', rotulo: 'Comprovante' },
 ];
