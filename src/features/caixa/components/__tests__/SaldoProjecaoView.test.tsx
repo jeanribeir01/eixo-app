@@ -61,8 +61,8 @@ describe('SaldoProjecaoView', () => {
     for (const mes of ['Outubro de 2026', 'Novembro de 2026', 'Dezembro de 2026', 'Janeiro de 2027']) {
       expect(screen.getByText(mes)).toBeOnTheScreen();
     }
-    expect(screen.getAllByText('Entradas pendentes:')).toHaveLength(4);
-    expect(screen.getAllByText('Saídas pendentes:')).toHaveLength(4);
+    expect(screen.getAllByText('Entradas')).toHaveLength(4);
+    expect(screen.getAllByText('Saídas')).toHaveLength(4);
     expect(screen.getByText('− R$ 16.000,00')).toBeOnTheScreen();
 
     expect(screen.getByText('Pendentes sem data de vencimento')).toBeOnTheScreen();
