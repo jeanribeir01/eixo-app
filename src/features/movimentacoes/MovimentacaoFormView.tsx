@@ -5,11 +5,12 @@ import { z } from 'zod';
 
 import { rotuloTipoCategoria, type TipoCategoria } from '@/features/categorias/types';
 import { isoParaDataBR } from '@/lib/datas';
+import { removerComprovante } from '@/lib/storage';
 import { Button, Column, EmptyState, Input, Screen, Select, Snackbar, Tabs, Text, colors } from '@/ui';
 
 import { camposMovimentacao, type CampoMovimentacao } from './camposMovimentacao';
-import { CampoData } from './components/CampoData';
 import { AnexoComprovante } from './components/AnexoComprovante';
+import { CampoData } from './components/CampoData';
 import { CampoMoeda } from './components/CampoMoeda';
 import {
   atualizarMovimentacao,
@@ -32,7 +33,7 @@ const VALORES_INICIAIS: MovimentacaoFormValues = {
   formaPagamentoId: null,
   dataVencimento: '',
   status: 'Pendente',
-  comprovanteUrl: null,
+  caminhoComprovante: null,
   dataPagamento: '',
 };
 
@@ -44,7 +45,7 @@ function valoresDe(movimentacao: Movimentacao): MovimentacaoFormValues {
     formaPagamentoId: movimentacao.forma_pagamento_id,
     dataVencimento: movimentacao.data_vencimento ? isoParaDataBR(movimentacao.data_vencimento) : '',
     status: movimentacao.status_pagamento,
-    comprovanteUrl: movimentacao.comprovante_url ?? null,
+    caminhoComprovante: movimentacao.caminho_comprovante,
     dataPagamento: movimentacao.data_pagamento ? isoParaDataBR(movimentacao.data_pagamento) : '',
   };
 }
@@ -103,6 +104,15 @@ export function MovimentacaoFormView({ movimentacaoId }: MovimentacaoFormViewPro
     setValores((atuais) => ({ ...atuais, [nome]: valor }));
   }
 
+  // Um anexo enviado nesta tela e trocado ou removido antes de salvar não está em nenhuma
+  // movimentação: apaga já, para não sobrar arquivo no bucket. O anexo que já estava gravado só
+  // é apagado depois que a movimentação for salva sem ele (ver handleSalvar).
+  function trocarComprovante(caminho: string | null) {
+    const anterior = valores.caminhoComprovante;
+    if (anterior && anterior !== original?.caminho_comprovante) removerComprovante(anterior);
+    alterar('caminhoComprovante', caminho);
+  }
+
   // Tipo da categoria escolhida decide "Pago" x "Recebido". Sem categoria, vale o de saída.
   const tipoAtual: TipoCategoria =
     opcoes.categorias.find((categoria) => categoria.id === valores.categoriaId)?.tipo ??
@@ -127,12 +137,19 @@ export function MovimentacaoFormView({ movimentacaoId }: MovimentacaoFormViewPro
     const resposta = movimentacaoId
       ? await atualizarMovimentacao(movimentacaoId, resultado.data)
       : await criarMovimentacao(resultado.data);
-    setSalvando(false);
 
     if (!resposta.ok) {
+      setSalvando(false);
       setFeedback({ mensagem: resposta.mensagem, tone: 'error' });
       return;
     }
+
+    // A movimentação já não aponta para o anexo antigo, então o arquivo pode sair do bucket (AC:
+    // remover apaga do Storage). Se falhar, sobra um arquivo sem uso, mas o lançamento está salvo
+    // e certo: não vale mostrar erro para isso.
+    const anexoAntigo = original?.caminho_comprovante;
+    if (anexoAntigo && anexoAntigo !== resultado.data.caminhoComprovante) await removerComprovante(anexoAntigo);
+    setSalvando(false);
 
     setFeedback({ mensagem: modoEdicao ? 'Movimentação atualizada.' : 'Movimentação registrada.', tone: 'success' });
   }
@@ -235,8 +252,10 @@ export function MovimentacaoFormView({ movimentacaoId }: MovimentacaoFormViewPro
         return (
           <AnexoComprovante
             key={campo.nome}
-            value={valores.comprovanteUrl ?? null}
-            onChange={(url) => alterar('comprovanteUrl', url)}
+            label={campo.rotulo}
+            value={valores.caminhoComprovante}
+            onChange={trocarComprovante}
+            onErro={(mensagem) => setFeedback({ mensagem, tone: 'error' })}
             error={erro}
           />
         );

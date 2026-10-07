@@ -17,7 +17,7 @@ export type Resultado<T> = { ok: true; data: T } | { ok: false; mensagem: string
 // Joins pelo nome da tabela: o PostgREST resolve pela FK e devolve um objeto em cada linha.
 const COLUNAS =
   'id, valor, descricao, categoria_id, forma_pagamento_id, divida_id, data_vencimento, data_pagamento, ' +
-  'data_inclusao, status_pagamento, comprovante_url, categoria(titulo, tipo, ativa), forma_pagamento(nome, ativa)';
+  'data_inclusao, status_pagamento, caminho_comprovante, categoria(titulo, tipo, ativa), forma_pagamento(nome, ativa)';
 // Um mês de lançamentos de uma transportadora pequena fica bem abaixo disso.
 const LIMITE_LISTA = 500;
 
@@ -35,7 +35,7 @@ const linhaSchema = z.object({
   data_pagamento: z.string().nullable(),
   data_inclusao: z.string(),
   status_pagamento: z.enum(['Pendente', 'Pago']),
-  comprovante_url: z.string().nullable(),
+  caminho_comprovante: z.string().nullable(),
   categoria: z.object({ titulo: z.string(), tipo: z.enum(['Entrada', 'Saida']), ativa: z.boolean() }),
   forma_pagamento: z.object({ nome: z.string(), ativa: z.boolean() }),
 });
@@ -78,6 +78,7 @@ function paraLinhaDoBanco(input: MovimentacaoInput) {
     data_vencimento: input.dataVencimento,
     data_pagamento: input.dataPagamento,
     status_pagamento: input.status,
+    caminho_comprovante: input.caminhoComprovante,
   };
 }
 

@@ -23,5 +23,5 @@ export const camposMovimentacao: CampoMovimentacao[] = [
   { nome: 'status', tipo: 'status', rotulo: 'Status' },
   // O rótulo final ("pagamento" ou "recebimento") depende do tipo da categoria; ver a tela.
   { nome: 'dataPagamento', tipo: 'data', rotulo: 'Data de pagamento', visivel: (valores) => valores.status === 'Pago' },
-  { nome: 'comprovanteUrl', tipo: 'anexo', rotulo: 'Comprovante' },
+  { nome: 'caminhoComprovante', tipo: 'anexo', rotulo: 'Comprovante (opcional)' },
 ];

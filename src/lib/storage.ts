@@ -1,62 +1,45 @@
+import { File } from 'expo-file-system';
+
 import { supabase } from '@/supabase/client';
-import * as FileSystem from 'expo-file-system';
-import { decode } from 'base64-arraybuffer';
 
-export type ResultadoUpload = { ok: true; url: string } | { ok: false; mensagem: string };
+// Comprovantes de movimentação (US03-b) no bucket privado `comprovantes`. Só Admin e Financeiro
+// leem e escrevem nele: as policies estão em 20260924000600_storage_comprovantes.sql.
+const BUCKET = 'comprovantes';
 
-export async function uploadComprovante(uri: string): Promise<ResultadoUpload> {
+// A signed URL só precisa durar o tempo de a imagem carregar na tela. Como o bucket é privado,
+// quem tiver o link consegue abrir o arquivo até ele expirar; por isso a validade é curta.
+const VALIDADE_URL_SEGUNDOS = 60;
+
+export type ResultadoStorage<T> = { ok: true; data: T } | { ok: false; mensagem: string };
+
+// Envia a imagem (já comprimida) e devolve o caminho dentro do bucket, que é o que a movimentação
+// guarda. A URL não é guardada porque expira.
+export async function uploadComprovante(uri: string): Promise<ResultadoStorage<string>> {
   try {
-    const fileName = `comprovante_${Date.now()}_${Math.random().toString(36).substring(2, 9)}.jpg`;
-    
-    // Ler o arquivo em base64
-    const base64 = await FileSystem.readAsStringAsync(uri, {
-      encoding: FileSystem.EncodingType.Base64,
-    });
-    
-    const arrayBuffer = decode(base64);
+    // O `readAsStringAsync` de 'expo-file-system' lança erro desde o SDK 54; a API nova lê o
+    // arquivo direto como bytes, sem passar por base64.
+    const bytes = await new File(uri).arrayBuffer();
+    const caminho = `${Date.now()}-${Math.random().toString(36).slice(2, 10)}.jpg`;
 
-    const { data, error } = await supabase.storage
-      .from('comprovantes')
-      .upload(fileName, arrayBuffer, {
-        contentType: 'image/jpeg',
-      });
+    const { data, error } = await supabase.storage.from(BUCKET).upload(caminho, bytes, { contentType: 'image/jpeg' });
+    if (error) return { ok: false, mensagem: 'Não foi possível enviar o comprovante. Tente novamente.' };
 
-    if (error) {
-      console.error('Erro no upload (storage):', error);
-      return { ok: false, mensagem: 'Não foi possível enviar a imagem. Tente novamente.' };
-    }
-
-    const { data: publicUrlData } = supabase.storage
-      .from('comprovantes')
-      .getPublicUrl(data.path);
-
-    return { ok: true, url: publicUrlData.publicUrl };
-  } catch (err) {
-    console.error('Erro no upload (local):', err);
-    return { ok: false, mensagem: 'Erro ao processar a imagem.' };
+    return { ok: true, data: data.path };
+  } catch {
+    return { ok: false, mensagem: 'Não foi possível ler a imagem. Tente novamente.' };
   }
 }
 
-export async function removerComprovante(url: string): Promise<{ ok: boolean; mensagem?: string }> {
-  try {
-    // A URL pública é do formato: https://[PROJETO].supabase.co/storage/v1/object/public/comprovantes/[NOME_ARQUIVO]
-    const partes = url.split('/comprovantes/');
-    if (partes.length < 2) return { ok: false, mensagem: 'URL de comprovante inválida.' };
-    
-    const caminho = partes[1];
-    
-    const { error } = await supabase.storage
-      .from('comprovantes')
-      .remove([caminho]);
+export async function urlDoComprovante(caminho: string): Promise<ResultadoStorage<string>> {
+  const { data, error } = await supabase.storage.from(BUCKET).createSignedUrl(caminho, VALIDADE_URL_SEGUNDOS);
+  if (error || !data) return { ok: false, mensagem: 'Não foi possível abrir o comprovante.' };
 
-    if (error) {
-      console.error('Erro ao remover (storage):', error);
-      return { ok: false, mensagem: 'Não foi possível remover a imagem.' };
-    }
+  return { ok: true, data: data.signedUrl };
+}
 
-    return { ok: true };
-  } catch (err) {
-    console.error('Erro ao remover (local):', err);
-    return { ok: false, mensagem: 'Erro ao processar a remoção.' };
-  }
+export async function removerComprovante(caminho: string): Promise<ResultadoStorage<null>> {
+  const { error } = await supabase.storage.from(BUCKET).remove([caminho]);
+  if (error) return { ok: false, mensagem: 'Não foi possível apagar o comprovante.' };
+
+  return { ok: true, data: null };
 }
