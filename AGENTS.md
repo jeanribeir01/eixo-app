@@ -55,15 +55,19 @@ Módulos: Caixa (movimentações, dívidas, saldo), Frota (veículos, manutenç�
 ### 2.3 Estrutura de pastas
 
 ```
+app/            # rotas do expo-router — na raiz, fora de src/
 src/
-  app/          # rotas do expo-router
   features/     # um diretório por módulo (categorias, movimentacoes, viagens...)
   ui/           # primitivos e tokens — área compartilhada, mexer com cuidado
-  lib/          # supabase, storage, offline, helpers
+  navigation/   # menu por perfil e opções do header e da tab bar
+  supabase/     # client único do Supabase
+  lib/          # helpers: datas, dinheiro, erros, storage, env
   types/        # tipos gerados
+supabase/       # migrations e testes do banco (PGlite)
 ```
 
-Cada feature é autocontida: componentes, hooks, queries e testes dentro da própria pasta.
+- **Rota fica em `app/`, na raiz.** O expo-router só lê essa pasta: um arquivo em `src/app/` não vira rota, e quem navega para ele cai na tela de rota não encontrada, sem erro no build nem no teste. A rota só importa e renderiza a View da feature, e o título dela é declarado em `app/(app)/_layout.tsx`, junto do guard de perfil.
+- Cada feature é autocontida: componentes, hooks, queries e testes dentro da própria pasta.
 
 ### 2.4 Dados e segurança
 
