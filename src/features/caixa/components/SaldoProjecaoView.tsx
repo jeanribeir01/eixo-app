@@ -1,12 +1,12 @@
 import { useCallback, useRef, useState } from 'react';
 import { useFocusEffect } from 'expo-router';
-import { RefreshControl, ScrollView, useWindowDimensions } from 'react-native';
+import { RefreshControl, ScrollView } from 'react-native';
 
 import { Column, EmptyState, Screen, Skeleton, Snackbar, colors } from '@/ui';
 
 import { buscarResumoCaixa } from '../fonteResumoCaixa';
 import { PendentesSemDataCard } from './PendentesSemDataCard';
-import { ProjecaoMensalLista } from './ProjecaoMensalLista';
+import { ProjecaoCaixa } from './ProjecaoCaixa';
 import type { ResumoCaixa } from '../resumoCaixa';
 import { SaldoAtualCard } from './SaldoAtualCard';
 
@@ -14,15 +14,9 @@ type Status = 'carregando' | 'pronto' | 'erro';
 
 type Feedback = { mensagem: string; tone: 'success' | 'error' };
 
-// A partir desta largura (tablet) a projeção vira uma linha por mês, como tabela (RNF02).
-const LARGURA_TABLET = 768;
-
 // Tela de saldo e projeção (US05 / EIX-51). Só exibe o que o motor de saldo devolve: nenhuma soma
 // acontece no app.
 export function SaldoProjecaoView() {
-  const { width } = useWindowDimensions();
-  const largo = width >= LARGURA_TABLET;
-
   const [status, setStatus] = useState<Status>('carregando');
   const [resumo, setResumo] = useState<ResumoCaixa | null>(null);
   const [erro, setErro] = useState<string | null>(null);
@@ -127,7 +121,7 @@ export function SaldoProjecaoView() {
           {status === 'pronto' && resumo !== null && !vazio && (
             <>
               <SaldoAtualCard saldoAtualCentavos={resumo.saldoAtualCentavos} />
-              <ProjecaoMensalLista meses={resumo.projecao} largo={largo} />
+              <ProjecaoCaixa mesReferencia={resumo.mesReferencia} meses={resumo.projecao} anos={resumo.projecaoAnual} />
               <PendentesSemDataCard semVencimento={resumo.semVencimento} />
             </>
           )}

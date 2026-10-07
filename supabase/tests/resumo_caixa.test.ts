@@ -1,5 +1,6 @@
 /** @jest-environment node */
-// Testes da migration 20261005000100_resumo_caixa.sql — spec EIX-35 (SALDO-01 a SALDO-07).
+// Testes da migration 20261005000100_resumo_caixa.sql — spec EIX-35 (SALDO-01 a SALDO-07) — e da
+// 20261007000200_resumo_caixa_projecao_anual.sql (EIX-74: mês de referência e projeção por ano).
 // Cada teste limpa `movimentacao` e monta só os dados do cenário: a RPC soma a tabela inteira.
 
 import { criarBanco, comoAnonimo, comoSuperuser, comoUsuario, type Banco, type PerfilNome } from './helpers/db';
@@ -17,6 +18,14 @@ type Resumo = {
     saldoProjetadoCentavos: number;
   }[];
   semVencimento: { quantidade: number; entradasCentavos: number; saidasCentavos: number };
+  mesReferencia: string;
+  projecaoAnual: {
+    ano: number;
+    entradasPendentesCentavos: number;
+    saidasPendentesCentavos: number;
+    saldoFimDoAnoCentavos: number;
+    menorSaldoCentavos: number;
+  }[];
 };
 
 type Lancamento = {
@@ -125,7 +134,9 @@ describe('migration resumo_caixa', () => {
       expect(await resumo()).toEqual({
         quantidadeMovimentacoes: 0,
         saldoAtualCentavos: 0,
+        mesReferencia: '2026-10',
         projecao: [],
+        projecaoAnual: [],
         semVencimento: { quantidade: 0, entradasCentavos: 0, saidasCentavos: 0 },
       });
     });
@@ -294,6 +305,74 @@ describe('migration resumo_caixa', () => {
     });
   });
 
+  describe('EIX-74: projeção por ano', () => {
+    it('devolve o mês de referência usado no cálculo', async () => {
+      expect((await resumo('2025-03-15')).mesReferencia).toBe('2025-03');
+    });
+
+    it('soma entradas e saídas por ano; o saldo do fim do ano é o do último mês com pendência', async () => {
+      await lancar(
+        { tipo: 'Entrada', valor: '1000.00', status: 'Pago' },
+        { tipo: 'Saida', valor: '100.00', status: 'Pendente', vencimento: '2026-11-10' },
+        { tipo: 'Entrada', valor: '50.00', status: 'Pendente', vencimento: '2026-12-10' },
+        { tipo: 'Saida', valor: '300.00', status: 'Pendente', vencimento: '2027-02-10' },
+        { tipo: 'Saida', valor: '300.00', status: 'Pendente', vencimento: '2027-06-10' },
+        { tipo: 'Entrada', valor: '20.00', status: 'Pendente', vencimento: '2028-01-10' },
+      );
+
+      // Mensal: 2026-11 → 900; 2026-12 → 950; 2027-02 → 650; 2027-06 → 350; 2028-01 → 370.
+      expect((await resumo('2026-10-15')).projecaoAnual).toEqual([
+        { ano: 2026, entradasPendentesCentavos: 5000, saidasPendentesCentavos: 10000, saldoFimDoAnoCentavos: 95000, menorSaldoCentavos: 90000 },
+        { ano: 2027, entradasPendentesCentavos: 0, saidasPendentesCentavos: 60000, saldoFimDoAnoCentavos: 35000, menorSaldoCentavos: 35000 },
+        { ano: 2028, entradasPendentesCentavos: 2000, saidasPendentesCentavos: 0, saldoFimDoAnoCentavos: 37000, menorSaldoCentavos: 37000 },
+      ]);
+    });
+
+    it('o menor saldo do ano mostra o mês negativo, mesmo que o ano termine positivo', async () => {
+      await lancar(
+        { tipo: 'Saida', valor: '500.00', status: 'Pendente', vencimento: '2027-03-10' },
+        { tipo: 'Entrada', valor: '800.00', status: 'Pendente', vencimento: '2027-09-10' },
+      );
+
+      const [ano] = (await resumo('2026-10-15')).projecaoAnual;
+      expect(ano).toMatchObject({ ano: 2027, saldoFimDoAnoCentavos: 30000, menorSaldoCentavos: -50000 });
+    });
+
+    it('atrasadas entram no ano do mês de referência, como na projeção mensal', async () => {
+      await lancar(
+        { tipo: 'Saida', valor: '40.00', status: 'Pendente', vencimento: '2025-11-01' },
+        { tipo: 'Saida', valor: '10.00', status: 'Pendente', vencimento: '2026-02-01' },
+      );
+
+      expect((await resumo('2026-01-15')).projecaoAnual).toEqual([
+        { ano: 2026, entradasPendentesCentavos: 0, saidasPendentesCentavos: 5000, saldoFimDoAnoCentavos: -5000, menorSaldoCentavos: -5000 },
+      ]);
+    });
+
+    it('80 parcelas mensais viram 8 anos (2026 a 2033), com as parcelas somadas em cada um', async () => {
+      // Financiamento de 80 parcelas de R$ 1.500, a primeira em novembro de 2026.
+      const parcelas: Lancamento[] = Array.from({ length: 80 }, (_, i) => {
+        const data = new Date(Date.UTC(2026, 10 + i, 10));
+        return { tipo: 'Saida', valor: '1500.00', status: 'Pendente', vencimento: data.toISOString().slice(0, 10) };
+      });
+      await lancar(...parcelas);
+
+      const r = await resumo('2026-10-15');
+      expect(r.projecao).toHaveLength(80);
+      expect(r.projecaoAnual.map((ano) => [ano.ano, ano.saidasPendentesCentavos])).toEqual([
+        [2026, 300000],
+        [2027, 1800000],
+        [2028, 1800000],
+        [2029, 1800000],
+        [2030, 1800000],
+        [2031, 1800000],
+        [2032, 1800000],
+        [2033, 900000],
+      ]);
+      expect(r.projecaoAnual.at(-1)!.saldoFimDoAnoCentavos).toBe(-12000000);
+    });
+  });
+
   describe('SALDO-07: centavos exatos', () => {
     it('0,01 + 0,02 dá exatamente 3 centavos inteiros', async () => {
       await lancar(
@@ -326,6 +405,9 @@ describe('migration resumo_caixa', () => {
         { mes: '2026-10', entradasPendentesCentavos: 29, saidasPendentesCentavos: 28, saldoProjetadoCentavos: 114 },
       ]);
       expect(r.semVencimento).toEqual({ quantidade: 2, entradasCentavos: 7, saidasCentavos: 115 });
+      expect(r.projecaoAnual).toEqual([
+        { ano: 2026, entradasPendentesCentavos: 29, saidasPendentesCentavos: 28, saldoFimDoAnoCentavos: 114, menorSaldoCentavos: 114 },
+      ]);
     });
   });
 });

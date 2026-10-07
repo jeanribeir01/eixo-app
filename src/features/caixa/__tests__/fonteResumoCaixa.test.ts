@@ -63,6 +63,18 @@ describe('fonteResumoCaixa', () => {
     expect(resultado).toEqual({ ok: false, mensagem: 'Os dados recebidos são inválidos. Tente novamente.' });
   });
 
+  it('recusa resposta sem a projeção por ano (banco sem a migration da EIX-74)', () => {
+    const { projecaoAnual: _projecaoAnual, ...semAnual } = resumoCaixaComDados;
+
+    expect(validarResumoCaixa(semAnual).ok).toBe(false);
+  });
+
+  it('recusa ano com saldo em ponto flutuante', () => {
+    const projecaoAnual = [{ ...resumoCaixaComDados.projecaoAnual[0], saldoFimDoAnoCentavos: 0.5 }];
+
+    expect(validarResumoCaixa({ ...resumoCaixaComDados, projecaoAnual }).ok).toBe(false);
+  });
+
   it('recusa mês fora do formato AAAA-MM', () => {
     const projecao = [{ ...resumoCaixaComDados.projecao[0], mes: '2026-13' }];
 
