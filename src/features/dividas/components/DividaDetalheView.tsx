@@ -4,7 +4,7 @@ import { useRouter } from 'expo-router';
 
 import { formatarMoeda } from '@/lib/money';
 import { isoParaDataBR } from '@/lib/datas';
-import { Button, Column, EmptyState, Screen, Text, colors, spacing } from '@/ui';
+import { Button, Column, Screen, Text, colors, spacing } from '@/ui';
 
 import { buscarDivida } from '../dividasRepository';
 import type { DividaDetalhe } from '../types';

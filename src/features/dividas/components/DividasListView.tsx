@@ -1,8 +1,6 @@
 import { useCallback, useState } from 'react';
 import { useFocusEffect, useRouter } from 'expo-router';
-import { ActivityIndicator, FlatList } from 'react-native';
-
-import { View } from 'react-native';
+import { ActivityIndicator, FlatList, View } from 'react-native';
 
 import { Button, Column, EmptyState, ListItem, Screen, Snackbar, Text, colors, spacing } from '@/ui';
 import { formatarMoeda } from '@/lib/money';
