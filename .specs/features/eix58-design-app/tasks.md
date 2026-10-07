@@ -282,10 +282,10 @@ T49
 
 **Done when**:
 
-- [ ] Teste: renderiza o nome Android do mapa no tamanho do token pedido
-- [ ] Teste: sem `accessibilityLabel` fica escondido do leitor de tela; com rótulo é anunciado
-- [ ] Teste: `tone="body"` usa `colors.textBody`
-- [ ] Gate check passes: `npx jest --selectProjects app src/ui/__tests__/Icon.test.tsx`
+- [x] Teste: renderiza o nome Android do mapa no tamanho do token pedido
+- [x] Teste: sem `accessibilityLabel` fica escondido do leitor de tela; com rótulo é anunciado
+- [x] Teste: `tone="body"` usa `colors.textBody`
+- [x] Gate check passes: `npx jest --selectProjects app src/ui/__tests__/Icon.test.tsx`
 
 **Tests**: unit
 **Gate**: quick
