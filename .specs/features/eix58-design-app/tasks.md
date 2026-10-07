@@ -937,11 +937,11 @@ T49
 
 **Done when**:
 
-- [ ] Teste: mostra nome, e-mail e perfil; sem "Login confirmado"
-- [ ] Teste: linha Usuários só para Admin
-- [ ] Teste: Versão igual a `expoConfig.version`
-- [ ] Teste: Sair chama `signOut` direto
-- [ ] Gate check passes: `npx jest --selectProjects app src/features/auth`
+- [x] Teste: mostra nome, e-mail e perfil; sem "Login confirmado"
+- [x] Teste: linha Usuários só para Admin
+- [x] Teste: Versão igual a `expoConfig.version`
+- [x] Teste: Sair chama `signOut` direto
+- [x] Gate check passes: `npx jest --selectProjects app src/features/auth`
 
 **Tests**: unit
 **Gate**: quick
