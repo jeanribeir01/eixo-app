@@ -3,6 +3,7 @@ import { HeaderHeightContext } from 'expo-router/react-navigation';
 import { KeyboardAvoidingView, ScrollView, StyleSheet, View } from 'react-native';
 import { SafeAreaView, type Edge } from 'react-native-safe-area-context';
 
+import { FAB_ALTURA_RESERVADA } from './FAB';
 import { colors, spacing } from './tokens';
 
 type ScreenProps = {
@@ -13,15 +14,17 @@ type ScreenProps = {
   underHeader?: boolean;
   // Conteúdo que pode passar da altura da tela (formulário, detalhe): rola e sobe com o teclado.
   scroll?: boolean;
-  // O que flutua sobre o conteúdo e não rola com ele: Snackbar e FAB.
+  // O que flutua sobre o conteúdo e não rola com ele, como o Snackbar.
   overlay?: ReactNode;
+  // Botão flutuante da ação principal. Fica no rodapé à direita, sempre abaixo do overlay.
+  fab?: ReactNode;
 };
 
 const TODAS_AS_BORDAS: Edge[] = ['top', 'right', 'bottom', 'left'];
 const SEM_O_TOPO: Edge[] = ['right', 'bottom', 'left'];
 
 // Fundo canvas + padding lateral de 16: sem largura fixa, o conteúdo flui em celular e tablet (RNF02).
-export function Screen({ children, align = 'top', underHeader = false, scroll = false, overlay }: ScreenProps) {
+export function Screen({ children, align = 'top', underHeader = false, scroll = false, overlay, fab }: ScreenProps) {
   // O KeyboardAvoidingView calcula a sobreposição do teclado a partir da posição dele dentro da tela.
   // Sob um header nativo essa posição começa abaixo do header, então a altura dele entra como desconto;
   // sem isso o campo focado fica escondido atrás do teclado. Fora de um navegador o contexto vem vazio.
@@ -37,7 +40,7 @@ export function Screen({ children, align = 'top', underHeader = false, scroll = 
         >
           <ScrollView
             style={styles.flex}
-            contentContainerStyle={[styles.content, align === 'center' && styles.centerScroll]}
+            contentContainerStyle={[styles.content, align === 'center' && styles.centerScroll, !!fab && styles.espacoDoFab]}
             keyboardShouldPersistTaps="handled"
           >
             {children}
@@ -46,9 +49,11 @@ export function Screen({ children, align = 'top', underHeader = false, scroll = 
       ) : (
         <View style={[styles.flex, styles.content, align === 'center' && styles.center]}>{children}</View>
       )}
-      {overlay && (
+      {(overlay || fab) && (
+        // Snackbar antes do FAB: empilhados no rodapé, a mensagem aparece sempre acima do botão.
         <View style={[StyleSheet.absoluteFill, styles.overlay]} pointerEvents="box-none">
           {overlay}
+          {fab}
         </View>
       )}
     </SafeAreaView>
@@ -75,6 +80,11 @@ const styles = StyleSheet.create({
   overlay: {
     justifyContent: 'flex-end',
     padding: spacing.base,
+    gap: spacing.md,
+  },
+  // No fim da rolagem, espaço para o FAB não cobrir a última linha.
+  espacoDoFab: {
+    paddingBottom: FAB_ALTURA_RESERVADA,
   },
   // No ScrollView o centro só funciona se o conteúdo puder crescer até a altura da tela.
   centerScroll: {

@@ -496,7 +496,7 @@ T49
 
 #### T13: Declarar Reanimated e Worklets
 
-**What**: Declarar `react-native-reanimated` (`4.6.0`) e `react-native-worklets` (`0.12.2`), as versões que o expo-router já instala, com npm 10. Autorizado pelo Jean em 06/10.
+**What**: ~~Declarar `react-native-reanimated` (`4.6.0`) e `react-native-worklets` (`0.12.2`) com npm 10.~~ **Cancelada (07/10):** declarar as duas fez o npm aninhar um segundo `react-native-worklets` (0.10.4) dentro de `expo/`. O Snackbar usa o `Animated` do React Native (T17). Declarar o Reanimated passa para a EIX-68.
 **Where**: `package.json`
 **Depends on**: None
 **Reuses**: versões já presentes no `node_modules`
@@ -509,8 +509,8 @@ T49
 
 **Done when**:
 
-- [ ] As duas dependências declaradas sem mudar a versão instalada
-- [ ] `npx -y npm@10 ci --dry-run --ignore-scripts` passa
+- [x] Cancelada: nenhuma dependência muda; `package.json` e lockfile iguais à `main`
+- [x] `npx -y npm@10 ci --dry-run --ignore-scripts` passa
 - [ ] Gate check passes: `npm run typecheck && npm run lint && npm run test`
 
 **Tests**: none
@@ -535,11 +535,11 @@ T49
 
 **Done when**:
 
-- [ ] Teste: título, subtítulo e ícone aparecem
-- [ ] Teste: chevron só com `onPress` e sem `trailing`
-- [ ] Teste: `android_ripple` com `colors.border`
-- [ ] Teste: uso com `children` continua igual
-- [ ] Gate check passes: `npx jest --selectProjects app src/ui/__tests__/ListItem.test.tsx`
+- [x] Teste: título, subtítulo e ícone aparecem
+- [x] Teste: chevron só com `onPress` e sem `trailing`
+- [x] Teste: `android_ripple` com `colors.border`
+- [x] Teste: uso com `children` continua igual
+- [x] Gate check passes: `npx jest --selectProjects app src/ui/__tests__/ListItem.test.tsx`
 
 **Tests**: unit
 **Gate**: quick
@@ -563,9 +563,9 @@ T49
 
 **Done when**:
 
-- [ ] Teste: rótulo renderiza quando passado
-- [ ] Teste: N filhos geram N−1 separadores
-- [ ] Gate check passes: `npx jest --selectProjects app src/ui/__tests__/ListSection.test.tsx`
+- [x] Teste: rótulo renderiza quando passado
+- [x] Teste: N filhos geram N−1 separadores
+- [x] Gate check passes: `npx jest --selectProjects app src/ui/__tests__/ListSection.test.tsx`
 
 **Tests**: unit
 **Gate**: quick
@@ -589,9 +589,9 @@ T49
 
 **Done when**:
 
-- [ ] Teste: `accessibilityRole="button"` com o rótulo e `onPress` chamado
-- [ ] Teste: fundo `accent`, borda `accentEdge`, `minHeight` 44
-- [ ] Gate check passes: `npx jest --selectProjects app src/ui/__tests__/FAB.test.tsx`
+- [x] Teste: `accessibilityRole="button"` com o rótulo e `onPress` chamado
+- [x] Teste: fundo `accent`, borda `accentEdge`, `minHeight` 44
+- [x] Gate check passes: `npx jest --selectProjects app src/ui/__tests__/FAB.test.tsx`
 
 **Tests**: unit
 **Gate**: quick
@@ -602,7 +602,7 @@ T49
 
 #### T17: Snackbar flutuante
 
-**What**: Tornar o `Snackbar` absoluto no rodapé (acima do FAB com `aboveFab`), com `FadeInDown` 200 ms e `FadeOut` 150 ms do Reanimated; adicionar `setUpTests()` do Reanimated no `jest.setup.ts`.
+**What**: Animar a entrada do `Snackbar` com o `Animated` do React Native (driver nativo): fade e deslize de 8pt em 200 ms, sem deslize quando o sistema pede menos animação. A posição vem do `overlay` do `Screen`, que empilha Snackbar e FAB no rodapé; por isso a prop `aboveFab` sai do design.
 **Where**: `src/ui/Snackbar.tsx`
 **Depends on**: T13, T16
 **Reuses**: `Snackbar` atual (props mantidas)
@@ -615,9 +615,10 @@ T49
 
 **Done when**:
 
-- [ ] Teste: continua anunciando com `accessibilityRole="alert"` e some após `duration`
-- [ ] Teste: `aboveFab` desloca o `bottom` em `FAB_ALTURA_RESERVADA`
-- [ ] Gate check passes: `npx jest --selectProjects app src/ui/__tests__/Snackbar.test.tsx`
+- [x] Teste: continua anunciando com `accessibilityRole="alert"` e some após `duration`
+- [x] Teste: com "remover animações" ligado, entra sem deslize
+- [x] Teste: dentro do `overlay` com FAB, o Snackbar fica acima do FAB
+- [x] Gate check passes: `npx jest --selectProjects app src/ui/__tests__/Snackbar.test.tsx`
 
 **Tests**: unit
 **Gate**: quick
@@ -641,9 +642,9 @@ T49
 
 **Done when**:
 
-- [ ] Teste: `feature` usa `radius.feature`
-- [ ] Teste: com `onPress` tem `accessibilityRole="button"` e dispara o toque
-- [ ] Gate check passes: `npx jest --selectProjects app src/ui/__tests__/Card.test.tsx`
+- [x] Teste: `feature` usa `radius.feature`
+- [x] Teste: com `onPress` tem `accessibilityRole="button"` e dispara o toque
+- [x] Gate check passes: `npx jest --selectProjects app src/ui/__tests__/Card.test.tsx`
 
 **Tests**: unit
 **Gate**: quick
@@ -667,8 +668,8 @@ T49
 
 **Done when**:
 
-- [ ] Teste: ícone aparece só quando passado
-- [ ] Gate check passes: `npx jest --selectProjects app src/ui/__tests__/EmptyState.test.tsx`
+- [x] Teste: ícone aparece só quando passado
+- [x] Gate check passes: `npx jest --selectProjects app src/ui/__tests__/EmptyState.test.tsx`
 
 **Tests**: unit
 **Gate**: quick
@@ -692,8 +693,8 @@ T49
 
 **Done when**:
 
-- [ ] Cada primitivo novo tem anatomia, tokens usados e quando usar
-- [ ] Gate check passes: `npm run typecheck && npm run lint && npm run test`
+- [x] Cada primitivo novo tem anatomia, tokens usados e quando usar
+- [x] Gate check passes: `npm run typecheck && npm run lint && npm run test`
 
 **Tests**: none
 **Gate**: build
