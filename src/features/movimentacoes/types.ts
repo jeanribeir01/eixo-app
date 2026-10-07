@@ -18,6 +18,7 @@ export type Movimentacao = Pick<
   | 'data_pagamento'
   | 'data_inclusao'
   | 'status_pagamento'
+  | 'caminho_comprovante'
 > & {
   valorCentavos: number;
   categoria: Pick<Categoria, 'titulo' | 'tipo' | 'ativa'>;

@@ -165,6 +165,7 @@ export type Database = {
       }
       movimentacao: {
         Row: {
+          caminho_comprovante: string | null
           categoria_id: string
           data_atualizacao: string
           data_inclusao: string
@@ -179,6 +180,7 @@ export type Database = {
           viagem_id: string | null
         }
         Insert: {
+          caminho_comprovante?: string | null
           categoria_id: string
           data_atualizacao?: string
           data_inclusao?: string
@@ -193,6 +195,7 @@ export type Database = {
           viagem_id?: string | null
         }
         Update: {
+          caminho_comprovante?: string | null
           categoria_id?: string
           data_atualizacao?: string
           data_inclusao?: string
