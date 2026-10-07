@@ -825,11 +825,11 @@ T49
 
 **Done when**:
 
-- [ ] Teste: primeira carga `carregando` → `pronto`
-- [ ] Teste: recarga com dado na tela mantém `pronto` e os dados antigos até chegar o novo
-- [ ] Teste: falha em recarga preenche `feedbackErro` e mantém os dados
-- [ ] Teste: resposta de um pedido antigo que chega depois é descartada
-- [ ] Gate check passes: `npx jest --selectProjects app src/lib/__tests__/useDadosDaTela.test.ts`
+- [x] Teste: primeira carga `carregando` → `pronto`
+- [x] Teste: recarga com dado na tela mantém `pronto` e os dados antigos até chegar o novo
+- [x] Teste: falha em recarga preenche `feedbackErro` e mantém os dados
+- [x] Teste: resposta de um pedido antigo que chega depois é descartada
+- [x] Gate check passes: `npx jest --selectProjects app src/lib/__tests__/useDadosDaTela.test.ts`
 
 **Tests**: unit
 **Gate**: quick
