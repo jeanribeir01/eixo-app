@@ -4,7 +4,7 @@ import { KeyboardAvoidingView, ScrollView, StyleSheet, Text } from 'react-native
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { Screen } from '../Screen';
-import { colors } from '../tokens';
+import { colors, spacing } from '../tokens';
 
 // Lado da tela que o SafeAreaView protege (o header nativo já protege o topo das telas internas).
 function bordasProtegidas() {
@@ -82,5 +82,16 @@ describe('Screen (NAV-04)', () => {
     const rolagem = screen.UNSAFE_getByType(ScrollView);
     expect(rolagem.findAll((no) => no.props.children === 'Flutuante')).toHaveLength(0);
     expect(screen.getByText('Flutuante')).toBeOnTheScreen();
+  });
+
+  it('overlay assenta no rodapé com o respiro lateral da tela', () => {
+    render(
+      <Screen overlay={<Text>Flutuante</Text>}>
+        <Text>Campo</Text>
+      </Screen>,
+    );
+
+    const camada = screen.getByText('Flutuante').parent?.parent;
+    expect(camada).toHaveStyle({ position: 'absolute', justifyContent: 'flex-end', padding: spacing.base });
   });
 });

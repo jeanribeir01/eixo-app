@@ -49,7 +49,8 @@ describe('VeiculoFormView', () => {
   it('modo criar: renderiza só os campos que existem no banco e os 3 status', () => {
     render(<VeiculoFormView />);
 
-    expect(screen.getByText('Novo veículo')).toBeOnTheScreen();
+    expect(screen.queryByText('Novo veículo')).not.toBeOnTheScreen();
+    expect(screen.queryByText('Eixo Certo')).not.toBeOnTheScreen();
     expect(screen.getByLabelText('Placa')).toBeOnTheScreen();
     expect(screen.getByLabelText('Marca')).toBeOnTheScreen();
     expect(screen.getByLabelText('Modelo')).toBeOnTheScreen();
@@ -145,7 +146,8 @@ describe('VeiculoFormView', () => {
     render(<VeiculoFormView veiculoId="9" />);
 
     expect(screen.getByLabelText('Carregando veículo')).toBeOnTheScreen();
-    expect(await screen.findByText('Editar veículo')).toBeOnTheScreen();
+    expect(await screen.findByLabelText('Placa')).toBeOnTheScreen();
+    expect(screen.queryByText('Editar veículo')).not.toBeOnTheScreen();
     expect(screen.getByLabelText('Placa').props.value).toBe('ABC-1234');
     expect(screen.getByLabelText('Capacidade de carga (toneladas)').props.value).toBe('12,5');
     expect(screen.getByRole('tab', { name: 'Em Manutenção' })).toHaveProp('accessibilityState', { selected: true });
@@ -156,7 +158,7 @@ describe('VeiculoFormView', () => {
     (atualizarVeiculo as jest.Mock).mockResolvedValue({ ok: true, data: { ...volvo, modelo: 'FH 460' } });
 
     render(<VeiculoFormView veiculoId="9" />);
-    await screen.findByText('Editar veículo');
+    await screen.findByLabelText('Placa');
 
     fireEvent.changeText(screen.getByLabelText('Modelo'), 'FH 460');
     await salvar();

@@ -428,8 +428,8 @@ T49
 
 #### T11: Formulários e detalhe sem título duplicado
 
-**What**: Nos formulários de categoria, forma de pagamento e movimentação e no detalhe de usuário, tirar o sobretítulo e o título do conteúdo, usar `Screen underHeader scroll` (o formulário de movimentação larga o próprio `ScrollView`) e mover o Snackbar para `overlay`. É a mesma edição mecânica em 4 arquivos.
-**Where**: `src/features/categorias/CategoriaFormView.tsx`, `src/features/formas-pagamento/FormaPagamentoFormView.tsx`, `src/features/movimentacoes/MovimentacaoFormView.tsx`, `src/features/usuarios/UsuarioDetalheView.tsx`
+**What**: Nos formulários de categoria, forma de pagamento, movimentação e veículo e no detalhe de usuário, tirar o sobretítulo e o título do conteúdo, usar `Screen underHeader scroll` (o formulário de movimentação larga o próprio `ScrollView`) e mover o Snackbar para `overlay`, que passa a assentar no rodapé. É a mesma edição mecânica em 5 arquivos (o de veículo entrou com o PR #7). No detalhe de usuário o nome continua: é dado, não título repetido.
+**Where**: `src/features/categorias/CategoriaFormView.tsx`, `src/features/formas-pagamento/FormaPagamentoFormView.tsx`, `src/features/movimentacoes/MovimentacaoFormView.tsx`, `src/features/veiculos/VeiculoFormView.tsx`, `src/features/usuarios/UsuarioDetalheView.tsx`
 **Depends on**: T9, T10
 **Reuses**: views atuais
 **Requirement**: NAV-02, NAV-04
@@ -441,9 +441,9 @@ T49
 
 **Done when**:
 
-- [ ] Testes das 4 telas: não existe "Eixo Certo" nem título no conteúdo; validações e salvamento seguem passando
-- [ ] Teclado testado no emulador em Nova movimentação (campo Descrição e botão Salvar visíveis)
-- [ ] Gate check passes: `npm run test`
+- [x] Testes das 5 telas: não existe "Eixo Certo" nem título no conteúdo; validações e salvamento seguem passando
+- [ ] Teclado testado no emulador em Nova movimentação (campo Descrição e botão Salvar visíveis) — **pendente: conferência manual do Jean no emulador**; o desconto do header está coberto em `Screen.test.tsx`
+- [x] Gate check passes: `npm run test`
 
 **Tests**: unit
 **Gate**: full

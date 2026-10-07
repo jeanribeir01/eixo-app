@@ -33,10 +33,11 @@ describe('CategoriaFormView', () => {
     jest.useRealTimers();
   });
 
-  it('modo criar: renderiza título da tela, campo Título e as opções de tipo', () => {
+  it('modo criar: renderiza o campo Título e as opções de tipo; o título da tela fica no header (NAV-02)', () => {
     render(<CategoriaFormView />);
 
-    expect(screen.getByText('Nova categoria')).toBeOnTheScreen();
+    expect(screen.queryByText('Nova categoria')).not.toBeOnTheScreen();
+    expect(screen.queryByText('Eixo Certo')).not.toBeOnTheScreen();
     expect(screen.getByLabelText('Título')).toBeOnTheScreen();
     expect(screen.getByRole('tab', { name: 'Entrada' })).toBeOnTheScreen();
     expect(screen.getByRole('tab', { name: 'Saída' })).toBeOnTheScreen();
@@ -102,7 +103,8 @@ describe('CategoriaFormView', () => {
 
     render(<CategoriaFormView categoriaId="9" />);
 
-    expect(await screen.findByText('Editar categoria')).toBeOnTheScreen();
+    expect(await screen.findByLabelText('Título')).toBeOnTheScreen();
+    expect(screen.queryByText('Editar categoria')).not.toBeOnTheScreen();
     expect(screen.getByLabelText('Título').props.value).toBe('Manutenção');
     expect(screen.getByRole('tab', { name: 'Saída' })).toHaveStyle({ backgroundColor: '#1c1917' });
   });
@@ -118,7 +120,7 @@ describe('CategoriaFormView', () => {
     });
 
     render(<CategoriaFormView categoriaId="9" />);
-    await screen.findByText('Editar categoria');
+    await screen.findByLabelText('Título');
 
     fireEvent.changeText(screen.getByLabelText('Título'), 'Manutenção preventiva');
 

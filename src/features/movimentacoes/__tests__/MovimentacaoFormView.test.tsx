@@ -72,7 +72,7 @@ async function preencherValido() {
 
 async function renderNova() {
   render(<MovimentacaoFormView />);
-  await screen.findByText('Nova movimentação');
+  await screen.findByLabelText('Descrição');
 }
 
 beforeEach(() => {
@@ -219,7 +219,8 @@ describe('MovimentacaoFormView — editar (MOV-10)', () => {
     mockAtualizar.mockResolvedValue({ ok: true, data: existente });
     render(<MovimentacaoFormView movimentacaoId="mov-1" />);
 
-    await screen.findByText('Editar movimentação');
+    await screen.findByLabelText('Descrição');
+    expect(screen.queryByText('Editar movimentação')).not.toBeOnTheScreen();
     expect(screen.getByLabelText('Valor (R$)')).toHaveDisplayValue('R$ 80,00');
     expect(screen.getByLabelText('Descrição')).toHaveDisplayValue('Diesel');
     expect(screen.getByText('Categoria antiga')).toBeOnTheScreen();

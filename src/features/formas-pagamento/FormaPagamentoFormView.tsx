@@ -92,7 +92,7 @@ export function FormaPagamentoFormView({ formaPagamentoId }: FormaPagamentoFormV
 
   if (status === 'carregando') {
     return (
-      <Screen align="center">
+      <Screen align="center" underHeader>
         <ActivityIndicator size="small" color={colors.accent} accessibilityLabel="Carregando forma de pagamento" />
       </Screen>
     );
@@ -100,7 +100,7 @@ export function FormaPagamentoFormView({ formaPagamentoId }: FormaPagamentoFormV
 
   if (status === 'erro') {
     return (
-      <Screen align="center">
+      <Screen align="center" underHeader>
         <EmptyState title="Não foi possível carregar a forma de pagamento" description={erroCarga ?? undefined} actionLabel="Voltar" onAction={() => router.back()} />
       </Screen>
     );
@@ -109,14 +109,11 @@ export function FormaPagamentoFormView({ formaPagamentoId }: FormaPagamentoFormV
   const isFixo = isFormaFixa(nomeOriginal);
 
   return (
-    <Screen>
-      <Column gap="xs">
-        <Text variant="bodySm" weight="medium">
-          Eixo Certo
-        </Text>
-        <Text variant="heading">{modoEdicao ? 'Editar forma de pagamento' : 'Nova forma de pagamento'}</Text>
-      </Column>
-
+    <Screen
+      underHeader
+      scroll
+      overlay={feedback && <Snackbar message={feedback.mensagem} tone={feedback.tone} duration={1200} onDismiss={handleFeedbackDismiss} />}
+    >
       <Column gap="md">
         <Input 
           label="Nome" 
@@ -136,7 +133,6 @@ export function FormaPagamentoFormView({ formaPagamentoId }: FormaPagamentoFormV
       {!isFixo && <Button label="Salvar" onPress={handleSalvar} loading={salvando} />}
       <Button label={isFixo ? 'Voltar' : 'Cancelar'} variant="ghost" onPress={() => router.back()} />
 
-      {feedback && <Snackbar message={feedback.mensagem} tone={feedback.tone} duration={1200} onDismiss={handleFeedbackDismiss} />}
     </Screen>
   );
 }

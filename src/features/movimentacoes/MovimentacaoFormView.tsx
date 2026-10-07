@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useRouter } from 'expo-router';
-import { ActivityIndicator, ScrollView } from 'react-native';
+import { ActivityIndicator } from 'react-native';
 import { z } from 'zod';
 
 import { rotuloTipoCategoria, type TipoCategoria } from '@/features/categorias/types';
@@ -233,7 +233,7 @@ export function MovimentacaoFormView({ movimentacaoId }: MovimentacaoFormViewPro
 
   if (status === 'carregando') {
     return (
-      <Screen align="center">
+      <Screen align="center" underHeader>
         <ActivityIndicator size="small" color={colors.accent} accessibilityLabel="Carregando formulário" />
       </Screen>
     );
@@ -241,38 +241,31 @@ export function MovimentacaoFormView({ movimentacaoId }: MovimentacaoFormViewPro
 
   if (status === 'erro') {
     return (
-      <Screen align="center">
+      <Screen align="center" underHeader>
         <EmptyState title={erroCarga ?? 'Não foi possível carregar.'} actionLabel="Voltar" onAction={() => router.back()} />
       </Screen>
     );
   }
 
   return (
-    <Screen>
-      {/* Formulário longo: precisa rolar em celular pequeno (RNF02). */}
-      <ScrollView keyboardShouldPersistTaps="handled">
-        <Column gap="lg">
-          <Column gap="xs">
-            <Text variant="bodySm" weight="medium">
-              Eixo Certo
-            </Text>
-            <Text variant="heading">{modoEdicao ? 'Editar movimentação' : 'Nova movimentação'}</Text>
-          </Column>
+    // Formulário longo: o Screen rola em celular pequeno (RNF02) e sobe com o teclado.
+    <Screen
+      underHeader
+      scroll
+      overlay={
+        feedback && (
+          <Snackbar message={feedback.mensagem} tone={feedback.tone} duration={1200} onDismiss={handleFeedbackDismiss} />
+        )
+      }
+    >
+      <Column gap="md">
+        {camposMovimentacao
+          .filter((campo) => !campo.visivel || campo.visivel(valores))
+          .map(renderizarCampo)}
+      </Column>
 
-          <Column gap="md">
-            {camposMovimentacao
-              .filter((campo) => !campo.visivel || campo.visivel(valores))
-              .map(renderizarCampo)}
-          </Column>
-
-          <Button label="Salvar" onPress={handleSalvar} loading={salvando} />
-          <Button label="Cancelar" variant="ghost" onPress={() => router.back()} />
-        </Column>
-      </ScrollView>
-
-      {feedback && (
-        <Snackbar message={feedback.mensagem} tone={feedback.tone} duration={1200} onDismiss={handleFeedbackDismiss} />
-      )}
+      <Button label="Salvar" onPress={handleSalvar} loading={salvando} />
+      <Button label="Cancelar" variant="ghost" onPress={() => router.back()} />
     </Screen>
   );
 }

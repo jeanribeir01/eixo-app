@@ -28,9 +28,10 @@ describe('FormaPagamentoFormView', () => {
     (criarFormaPagamento as jest.Mock).mockReset();
   });
 
-  it('renderiza o formulário para criar nova forma', () => {
+  it('renderiza o formulário para criar nova forma; o título da tela fica no header (NAV-02)', () => {
     render(<FormaPagamentoFormView />);
-    expect(screen.getByText('Nova forma de pagamento')).toBeOnTheScreen();
+    expect(screen.queryByText('Nova forma de pagamento')).not.toBeOnTheScreen();
+    expect(screen.queryByText('Eixo Certo')).not.toBeOnTheScreen();
     expect(screen.getByPlaceholderText('Ex.: Dinheiro')).toBeOnTheScreen();
   });
 

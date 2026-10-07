@@ -100,7 +100,7 @@ export function UsuarioDetalheView() {
 
   if (status === 'carregando') {
     return (
-      <Screen align="center">
+      <Screen align="center" underHeader>
         <Column align="center">
           <ActivityIndicator size="small" color={colors.accent} accessibilityLabel="Carregando usuário" />
         </Column>
@@ -110,7 +110,7 @@ export function UsuarioDetalheView() {
 
   if (status === 'erro' || !usuario) {
     return (
-      <Screen align="center">
+      <Screen align="center" underHeader>
         <EmptyState
           title="Não foi possível carregar"
           description={erro ?? undefined}
@@ -124,7 +124,11 @@ export function UsuarioDetalheView() {
   const perfilMudou = perfilSelecionadoId !== usuario.perfil.id;
 
   return (
-    <Screen>
+    <Screen
+      underHeader
+      scroll
+      overlay={feedback && <Snackbar message={feedback.mensagem} tone={feedback.tone} onDismiss={() => setFeedback(null)} />}
+    >
       <Column gap="xs" align="start">
         <Text variant="heading">{usuario.nome}</Text>
         <Text tone="body">{usuario.email}</Text>
@@ -185,7 +189,6 @@ export function UsuarioDetalheView() {
         )}
       </Column>
 
-      {feedback && <Snackbar message={feedback.mensagem} tone={feedback.tone} onDismiss={() => setFeedback(null)} />}
     </Screen>
   );
 }

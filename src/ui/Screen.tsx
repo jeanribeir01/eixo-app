@@ -47,7 +47,7 @@ export function Screen({ children, align = 'top', underHeader = false, scroll = 
         <View style={[styles.flex, styles.content, align === 'center' && styles.center]}>{children}</View>
       )}
       {overlay && (
-        <View style={StyleSheet.absoluteFill} pointerEvents="box-none">
+        <View style={[StyleSheet.absoluteFill, styles.overlay]} pointerEvents="box-none">
           {overlay}
         </View>
       )}
@@ -70,6 +70,11 @@ const styles = StyleSheet.create({
   },
   center: {
     justifyContent: 'center',
+  },
+  // Camada que flutua sobre a tela: o Snackbar assenta no rodapé, com o respiro lateral da tela.
+  overlay: {
+    justifyContent: 'flex-end',
+    padding: spacing.base,
   },
   // No ScrollView o centro só funciona se o conteúdo puder crescer até a altura da tela.
   centerScroll: {
