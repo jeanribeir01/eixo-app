@@ -745,8 +745,8 @@ T49
 
 **Done when**:
 
-- [ ] Teste: mostra ícone, nome do módulo e a frase; não mostra "Este módulo ainda está em construção."
-- [ ] Gate check passes: `npx jest --selectProjects app src/navigation/__tests__/ModuloEmBreveView.test.tsx`
+- [x] Teste: mostra ícone, nome do módulo e a frase; não mostra "Este módulo ainda está em construção."
+- [x] Gate check passes: `npx jest --selectProjects app src/navigation/__tests__/ModuloEmBreveView.test.tsx`
 
 **Tests**: unit
 **Gate**: quick
