@@ -589,9 +589,9 @@ T49
 
 **Done when**:
 
-- [ ] Teste: `accessibilityRole="button"` com o rótulo e `onPress` chamado
-- [ ] Teste: fundo `accent`, borda `accentEdge`, `minHeight` 44
-- [ ] Gate check passes: `npx jest --selectProjects app src/ui/__tests__/FAB.test.tsx`
+- [x] Teste: `accessibilityRole="button"` com o rótulo e `onPress` chamado
+- [x] Teste: fundo `accent`, borda `accentEdge`, `minHeight` 44
+- [x] Gate check passes: `npx jest --selectProjects app src/ui/__tests__/FAB.test.tsx`
 
 **Tests**: unit
 **Gate**: quick

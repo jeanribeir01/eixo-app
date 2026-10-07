@@ -3,6 +3,7 @@ import { HeaderHeightContext } from 'expo-router/react-navigation';
 import { KeyboardAvoidingView, ScrollView, StyleSheet, Text } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
+import { FAB_ALTURA_RESERVADA } from '../FAB';
 import { Screen } from '../Screen';
 import { colors, spacing } from '../tokens';
 
@@ -103,5 +104,32 @@ describe('Screen (NAV-04)', () => {
     );
 
     expect(screen.getByText('Flutuante').parent?.parent?.props.pointerEvents).toBe('box-none');
+  });
+
+  it('fab: o Snackbar do overlay fica acima do FAB, os dois na camada flutuante (UIP-04, AC 7)', () => {
+    render(
+      <Screen overlay={<Text>Mensagem</Text>} fab={<Text>Botão flutuante</Text>}>
+        <Text>Conteúdo</Text>
+      </Screen>,
+    );
+
+    const camada = screen.getByText('Mensagem').parent?.parent;
+    const filhos = camada
+      ?.findAll((no) => typeof no.type === 'string' && typeof no.props.children === 'string')
+      .map((no) => no.props.children);
+    expect(filhos).toEqual(['Mensagem', 'Botão flutuante']);
+    expect(camada).toHaveStyle({ justifyContent: 'flex-end', gap: spacing.md });
+  });
+
+  it('fab com scroll: o fim do conteúdo ganha espaço para o FAB não cobrir a última linha (LST, AC 13)', () => {
+    render(
+      <Screen scroll fab={<Text>Botão flutuante</Text>}>
+        <Text>Última linha</Text>
+      </Screen>,
+    );
+
+    expect(StyleSheet.flatten(screen.UNSAFE_getByType(ScrollView).props.contentContainerStyle)).toMatchObject({
+      paddingBottom: FAB_ALTURA_RESERVADA,
+    });
   });
 });

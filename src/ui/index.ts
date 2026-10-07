@@ -4,6 +4,7 @@ export { Button, type ButtonProps, type ButtonVariant } from './Button';
 export { Card } from './Card';
 export { Column } from './Column';
 export { EmptyState, type EmptyStateProps } from './EmptyState';
+export { FAB, FAB_ALTURA_RESERVADA } from './FAB';
 export { fontAssets } from './fonts';
 export { GoogleLogo } from './GoogleLogo';
 export { Icon } from './Icon';
