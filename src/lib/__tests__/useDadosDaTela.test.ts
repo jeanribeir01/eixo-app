@@ -30,6 +30,8 @@ function pendente<T>() {
 }
 
 const ok = <T,>(data: T): Resultado<T> => ({ ok: true, data });
+
+type Buscar = () => Promise<Resultado<string[]>>;
 const falha = (mensagem: string): Resultado<never> => ({ ok: false, mensagem });
 
 describe('useDadosDaTela (LST-03)', () => {
@@ -99,10 +101,10 @@ describe('useDadosDaTela (LST-03)', () => {
   });
 
   it('consulta nova (outro mês): volta ao skeleton em vez de mostrar os dados da anterior', async () => {
-    const outubro = jest.fn().mockResolvedValue(ok(['outubro']));
+    const outubro: Buscar = jest.fn().mockResolvedValue(ok(['outubro']));
     const novembro = pendente<string[]>();
-    const buscarNovembro = jest.fn().mockReturnValue(novembro.promessa);
-    const { result, rerender } = renderHook(({ buscar }) => useDadosDaTela(buscar), {
+    const buscarNovembro: Buscar = jest.fn().mockReturnValue(novembro.promessa);
+    const { result, rerender } = renderHook((props: { buscar: Buscar }) => useDadosDaTela(props.buscar), {
       initialProps: { buscar: outubro },
     });
     await waitFor(() => expect(result.current.dados).toEqual(['outubro']));
