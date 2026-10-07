@@ -361,8 +361,8 @@ T49
 
 **Done when**:
 
-- [ ] Teste afirma cada opção contra o token correspondente
-- [ ] Gate check passes: `npx jest --selectProjects app src/navigation/__tests__/stackOptions.test.ts`
+- [x] Teste afirma cada opção contra o token correspondente
+- [x] Gate check passes: `npx jest --selectProjects app src/navigation/__tests__/stackOptions.test.ts`
 
 **Tests**: unit
 **Gate**: quick
