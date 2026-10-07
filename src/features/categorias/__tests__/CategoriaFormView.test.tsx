@@ -1,4 +1,6 @@
 import { act, fireEvent, render, screen } from '@testing-library/react-native';
+import { KeyboardAvoidingView, ScrollView } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { CategoriaFormView } from '../CategoriaFormView';
 import { atualizarCategoria, buscarCategoriaPorId, criarCategoria } from '../categoriasRepository';
@@ -33,11 +35,16 @@ describe('CategoriaFormView', () => {
     jest.useRealTimers();
   });
 
-  it('modo criar: renderiza título da tela, campo Título e as opções de tipo', () => {
+  it('modo criar: renderiza o campo Título e as opções de tipo; o título da tela fica no header (NAV-02)', () => {
     render(<CategoriaFormView />);
 
-    expect(screen.getByText('Nova categoria')).toBeOnTheScreen();
+    expect(screen.queryByText('Nova categoria')).not.toBeOnTheScreen();
+    expect(screen.queryByText('Eixo Certo')).not.toBeOnTheScreen();
     expect(screen.getByLabelText('Título')).toBeOnTheScreen();
+    // Tela interna: o header nativo protege o topo, o Screen não repete o inset (NAV-04, AC 11).
+    expect(screen.UNSAFE_getByType(SafeAreaView).props.edges).not.toContain('top');
+    // Formulário rola e sobe com o teclado (NAV-04, AC 9 e 10).
+    expect(screen.UNSAFE_getByType(KeyboardAvoidingView).findByType(ScrollView).props.keyboardShouldPersistTaps).toBe('handled');
     expect(screen.getByRole('tab', { name: 'Entrada' })).toBeOnTheScreen();
     expect(screen.getByRole('tab', { name: 'Saída' })).toBeOnTheScreen();
   });
@@ -102,7 +109,8 @@ describe('CategoriaFormView', () => {
 
     render(<CategoriaFormView categoriaId="9" />);
 
-    expect(await screen.findByText('Editar categoria')).toBeOnTheScreen();
+    expect(await screen.findByLabelText('Título')).toBeOnTheScreen();
+    expect(screen.queryByText('Editar categoria')).not.toBeOnTheScreen();
     expect(screen.getByLabelText('Título').props.value).toBe('Manutenção');
     expect(screen.getByRole('tab', { name: 'Saída' })).toHaveStyle({ backgroundColor: '#1c1917' });
   });
@@ -118,7 +126,7 @@ describe('CategoriaFormView', () => {
     });
 
     render(<CategoriaFormView categoriaId="9" />);
-    await screen.findByText('Editar categoria');
+    await screen.findByLabelText('Título');
 
     fireEvent.changeText(screen.getByLabelText('Título'), 'Manutenção preventiva');
 
@@ -149,5 +157,24 @@ describe('CategoriaFormView', () => {
 
     expect(mockBack).toHaveBeenCalledTimes(1);
     expect(criarCategoria).not.toHaveBeenCalled();
+  });
+});
+
+// Carregando e erro de carga também abrem sob o header nativo: sem inset de topo duplicado (NAV-04, AC 11).
+describe('CategoriaFormView — estados de carga sob o header (NAV-04)', () => {
+  it('carregando: sem o inset de topo', () => {
+    (buscarCategoriaPorId as jest.Mock).mockReturnValue(new Promise(() => {}));
+    render(<CategoriaFormView categoriaId="9" />);
+
+    expect(screen.getByLabelText('Carregando categoria')).toBeOnTheScreen();
+    expect(screen.UNSAFE_getByType(SafeAreaView).props.edges).not.toContain('top');
+  });
+
+  it('erro ao carregar: sem o inset de topo', async () => {
+    (buscarCategoriaPorId as jest.Mock).mockResolvedValue({ ok: false, mensagem: 'Categoria não encontrada.' });
+    render(<CategoriaFormView categoriaId="9" />);
+
+    expect(await screen.findByText('Não foi possível carregar a categoria')).toBeOnTheScreen();
+    expect(screen.UNSAFE_getByType(SafeAreaView).props.edges).not.toContain('top');
   });
 });

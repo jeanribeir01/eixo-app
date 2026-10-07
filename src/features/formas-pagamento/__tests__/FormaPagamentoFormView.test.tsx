@@ -1,4 +1,6 @@
 import { fireEvent, render, screen, waitFor } from '@testing-library/react-native';
+import { KeyboardAvoidingView, ScrollView } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { FormaPagamentoFormView } from '../FormaPagamentoFormView';
 import { atualizarFormaPagamento, buscarFormaPagamentoPorId, criarFormaPagamento } from '../formasPagamentoRepository';
@@ -28,9 +30,14 @@ describe('FormaPagamentoFormView', () => {
     (criarFormaPagamento as jest.Mock).mockReset();
   });
 
-  it('renderiza o formulário para criar nova forma', () => {
+  it('renderiza o formulário para criar nova forma; o título da tela fica no header (NAV-02)', () => {
     render(<FormaPagamentoFormView />);
-    expect(screen.getByText('Nova forma de pagamento')).toBeOnTheScreen();
+    expect(screen.queryByText('Nova forma de pagamento')).not.toBeOnTheScreen();
+    expect(screen.queryByText('Eixo Certo')).not.toBeOnTheScreen();
+    // Tela interna: o header nativo protege o topo, o Screen não repete o inset (NAV-04, AC 11).
+    expect(screen.UNSAFE_getByType(SafeAreaView).props.edges).not.toContain('top');
+    // Formulário rola e sobe com o teclado (NAV-04, AC 9 e 10).
+    expect(screen.UNSAFE_getByType(KeyboardAvoidingView).findByType(ScrollView).props.keyboardShouldPersistTaps).toBe('handled');
     expect(screen.getByPlaceholderText('Ex.: Dinheiro')).toBeOnTheScreen();
   });
 
@@ -110,5 +117,24 @@ describe('FormaPagamentoFormView', () => {
       expect(screen.getByText('Informe o nome da forma de pagamento.')).toBeOnTheScreen();
     });
     expect(criarFormaPagamento).not.toHaveBeenCalled();
+  });
+});
+
+// Carregando e erro de carga também abrem sob o header nativo: sem inset de topo duplicado (NAV-04, AC 11).
+describe('FormaPagamentoFormView — estados de carga sob o header (NAV-04)', () => {
+  it('carregando: sem o inset de topo', () => {
+    (buscarFormaPagamentoPorId as jest.Mock).mockReturnValue(new Promise(() => {}));
+    render(<FormaPagamentoFormView formaPagamentoId="2" />);
+
+    expect(screen.getByLabelText('Carregando forma de pagamento')).toBeOnTheScreen();
+    expect(screen.UNSAFE_getByType(SafeAreaView).props.edges).not.toContain('top');
+  });
+
+  it('erro ao carregar: sem o inset de topo', async () => {
+    (buscarFormaPagamentoPorId as jest.Mock).mockResolvedValue({ ok: false, mensagem: 'Forma de pagamento não encontrada.' });
+    render(<FormaPagamentoFormView formaPagamentoId="2" />);
+
+    expect(await screen.findByText('Não foi possível carregar a forma de pagamento')).toBeOnTheScreen();
+    expect(screen.UNSAFE_getByType(SafeAreaView).props.edges).not.toContain('top');
   });
 });

@@ -3,7 +3,7 @@
   "promote_threshold": 2,
   "window_days": 45,
   "quarantine_threshold": 2,
-  "next_id": 8,
+  "next_id": 19,
   "lessons": [
     {
       "id": "L-001",
@@ -85,17 +85,19 @@
       "text": "Test cents conversion with amounts not exact in binary floating point such as 1.13, so a float cast fails the test",
       "signal": "surviving_mutant",
       "scope": "dinheiro, sql-rpc",
-      "status": "candidate",
+      "status": "confirmed",
       "features": [
-        "eix35-motor-saldo"
+        "eix35-motor-saldo",
+        "eix36-dividas"
       ],
-      "recurrence": 1,
+      "recurrence": 2,
       "harmful": 0,
       "evidence": [
-        "M12/M21 supabase/migrations/20261005000100_resumo_caixa.sql:60,67 (dinheiro, sql-rpc)"
+        "M12/M21 supabase/migrations/20261005000100_resumo_caixa.sql:60,67 (dinheiro, sql-rpc)",
+        "A10 src/features/dividas/dividasRepository.ts:57 (dinheiro, repositories)"
       ],
       "created": "2026-10-05T13:35:12Z",
-      "last_seen": "2026-10-05T13:35:12Z"
+      "last_seen": "2026-10-05T17:46:38Z"
     },
     {
       "id": "L-006",
@@ -103,17 +105,19 @@
       "text": "Assert grants and revokes directly with has_function_privilege, because a second authorization check masks a missing revoke",
       "signal": "surviving_mutant",
       "scope": "supabase, rls, grants",
-      "status": "candidate",
+      "status": "confirmed",
       "features": [
-        "eix35-motor-saldo"
+        "eix35-motor-saldo",
+        "eix36-dividas"
       ],
-      "recurrence": 1,
+      "recurrence": 2,
       "harmful": 0,
       "evidence": [
-        "M10 supabase/migrations/20261005000100_resumo_caixa.sql:87 (supabase, rls, grants)"
+        "M10 supabase/migrations/20261005000100_resumo_caixa.sql:87 (supabase, rls, grants)",
+        "S11/S19 supabase/migrations/20261005000200_divida.sql:139,141 (supabase, rls, grants)"
       ],
       "created": "2026-10-05T13:35:13Z",
-      "last_seen": "2026-10-05T13:35:13Z"
+      "last_seen": "2026-10-05T17:46:38Z"
     },
     {
       "id": "L-007",
@@ -132,6 +136,204 @@
       ],
       "created": "2026-10-05T13:42:06Z",
       "last_seen": "2026-10-05T13:42:06Z"
+    },
+    {
+      "id": "L-008",
+      "key": "surviving_mutant::when an access ac lists several rpcs test every denied profile and status against each listed rpc not only the first",
+      "text": "When an access AC lists several RPCs, test every denied profile and status against each listed RPC, not only the first",
+      "signal": "surviving_mutant",
+      "scope": "supabase, rls, sql-rpc",
+      "status": "candidate",
+      "features": [
+        "eix36-dividas"
+      ],
+      "recurrence": 1,
+      "harmful": 0,
+      "evidence": [
+        "S18 supabase/migrations/20261005000200_divida.sql:116 (DIV-06 AC1) (supabase, rls, sql-rpc)"
+      ],
+      "created": "2026-10-05T17:46:38Z",
+      "last_seen": "2026-10-05T17:46:38Z"
+    },
+    {
+      "id": "L-009",
+      "key": "surviving_mutant::assert navigator options on the rendered header or tab bar not only on the exported options object so dropping the wiring fails a test",
+      "text": "Assert navigator options on the rendered header or tab bar, not only on the exported options object, so dropping the wiring fails a test",
+      "signal": "surviving_mutant",
+      "scope": "navigation, expo-router",
+      "status": "candidate",
+      "features": [
+        "eix58-design-app"
+      ],
+      "recurrence": 1,
+      "harmful": 0,
+      "evidence": [
+        "validation.md M13 (app/(app)/_layout.tsx:16) (navigation, expo-router)"
+      ],
+      "created": "2026-10-07T02:09:15Z",
+      "last_seen": "2026-10-07T02:09:15Z"
+    },
+    {
+      "id": "L-010",
+      "key": "surviving_mutant::when a criterion styles both a tab icon and its label assert each one because different props drive them",
+      "text": "When a criterion styles both a tab icon and its label, assert each one, because different props drive them",
+      "signal": "surviving_mutant",
+      "scope": "navigation, expo-router",
+      "status": "candidate",
+      "features": [
+        "eix58-design-app"
+      ],
+      "recurrence": 1,
+      "harmful": 0,
+      "evidence": [
+        "validation.md M14 (src/navigation/tabBarOptions.ts:16) (navigation, expo-router)"
+      ],
+      "created": "2026-10-07T02:09:15Z",
+      "last_seen": "2026-10-07T02:09:15Z"
+    },
+    {
+      "id": "L-011",
+      "key": "surviving_mutant::assert each platform accessibility prop directly because testing library treats either one as hidden and masks a missing android prop",
+      "text": "Assert each platform accessibility prop directly, because Testing Library treats either one as hidden and masks a missing Android prop",
+      "signal": "surviving_mutant",
+      "scope": "ui, acessibilidade",
+      "status": "candidate",
+      "features": [
+        "eix58-design-app"
+      ],
+      "recurrence": 1,
+      "harmful": 0,
+      "evidence": [
+        "validation.md M7+M8 (src/ui/Icon.tsx:26-27) (ui, acessibilidade)"
+      ],
+      "created": "2026-10-07T02:09:16Z",
+      "last_seen": "2026-10-07T02:09:16Z"
+    },
+    {
+      "id": "L-012",
+      "key": "surviving_mutant::when a primitive behavior is an opt in prop assert in each screen test that the screen passes the prop",
+      "text": "When a primitive behavior is an opt-in prop, assert in each screen test that the screen passes the prop",
+      "signal": "surviving_mutant",
+      "scope": "ui, telas",
+      "status": "candidate",
+      "features": [
+        "eix58-design-app"
+      ],
+      "recurrence": 1,
+      "harmful": 0,
+      "evidence": [
+        "validation.md M15+M16 (CategoriasListView.tsx:70, MovimentacaoFormView.tsx:254) (ui, telas)"
+      ],
+      "created": "2026-10-07T02:09:16Z",
+      "last_seen": "2026-10-07T02:09:16Z"
+    },
+    {
+      "id": "L-013",
+      "key": "surviving_mutant::write absence assertions with the exact text the spec defines not the old text the change removed",
+      "text": "Write absence assertions with the exact text the spec defines, not the old text the change removed",
+      "signal": "surviving_mutant",
+      "scope": "telas",
+      "status": "candidate",
+      "features": [
+        "eix58-design-app"
+      ],
+      "recurrence": 1,
+      "harmful": 0,
+      "evidence": [
+        "validation.md M17 (FormasPagamentoListView.test.tsx:58) (telas)"
+      ],
+      "created": "2026-10-07T02:09:16Z",
+      "last_seen": "2026-10-07T02:09:16Z"
+    },
+    {
+      "id": "L-014",
+      "key": "ac_gap::assert numberoflines on header titles and tab labels when the spec requires truncation at large font scale",
+      "text": "Assert numberOfLines on header titles and tab labels when the spec requires truncation at large font scale",
+      "signal": "ac_gap",
+      "scope": "navigation, acessibilidade",
+      "status": "candidate",
+      "features": [
+        "eix58-design-app"
+      ],
+      "recurrence": 1,
+      "harmful": 0,
+      "evidence": [
+        "validation.md Edge case font scale 1.3 (NAV-03, no evidence) (navigation, acessibilidade)"
+      ],
+      "created": "2026-10-07T02:09:17Z",
+      "last_seen": "2026-10-07T02:09:17Z"
+    },
+    {
+      "id": "L-015",
+      "key": "spec_precision_gap::set tabbarlabelposition explicitly when the spec fixes icon and label layout because the default changes at 768 wide",
+      "text": "Set tabBarLabelPosition explicitly when the spec fixes icon and label layout, because the default changes at 768 wide",
+      "signal": "spec_precision_gap",
+      "scope": "navigation, tablet",
+      "status": "candidate",
+      "features": [
+        "eix58-design-app"
+      ],
+      "recurrence": 1,
+      "harmful": 0,
+      "evidence": [
+        "validation.md AC 1 position (BottomTabBar.js:63) (navigation, tablet)"
+      ],
+      "created": "2026-10-07T02:09:17Z",
+      "last_seen": "2026-10-07T02:09:17Z"
+    },
+    {
+      "id": "L-016",
+      "key": "spec_precision_gap::for native only behavior such as the header back arrow or the keyboard assert the configuration props in jest and record a device check in the task",
+      "text": "For native-only behavior such as the header back arrow or the keyboard, assert the configuration props in Jest and record a device check in the task",
+      "signal": "spec_precision_gap",
+      "scope": "navigation, ui",
+      "status": "candidate",
+      "features": [
+        "eix58-design-app"
+      ],
+      "recurrence": 1,
+      "harmful": 0,
+      "evidence": [
+        "validation.md AC 3/AC 5 native back arrow; AC 10 keyboard (navigation, ui)"
+      ],
+      "created": "2026-10-07T02:09:17Z",
+      "last_seen": "2026-10-07T02:09:17Z"
+    },
+    {
+      "id": "L-017",
+      "key": "surviving_mutant::assert screen layout props in the loading and error branches too not only in the success render",
+      "text": "Assert screen layout props in the loading and error branches too, not only in the success render",
+      "signal": "surviving_mutant",
+      "scope": "ui, telas",
+      "status": "candidate",
+      "features": [
+        "eix58-design-app"
+      ],
+      "recurrence": 1,
+      "harmful": 0,
+      "evidence": [
+        "validation.md N7 (src/features/categorias/CategoriaFormView.tsx:102) (ui, telas)"
+      ],
+      "created": "2026-10-07T02:27:17Z",
+      "last_seen": "2026-10-07T02:27:17Z"
+    },
+    {
+      "id": "L-018",
+      "key": "surviving_mutant::assert pointerevents box none on full screen overlay layers because fireevent ignores sibling overlays that would block taps on a device",
+      "text": "Assert pointerEvents box-none on full-screen overlay layers, because fireEvent ignores sibling overlays that would block taps on a device",
+      "signal": "surviving_mutant",
+      "scope": "ui, overlay",
+      "status": "candidate",
+      "features": [
+        "eix58-design-app"
+      ],
+      "recurrence": 1,
+      "harmful": 0,
+      "evidence": [
+        "validation.md N6 (src/ui/Screen.tsx:50; design.md:89) (ui, overlay)"
+      ],
+      "created": "2026-10-07T02:27:17Z",
+      "last_seen": "2026-10-07T02:27:17Z"
     }
   ]
 }

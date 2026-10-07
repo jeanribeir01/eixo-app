@@ -1,4 +1,5 @@
 import { fireEvent, render, screen } from '@testing-library/react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { UsuariosListView } from '../UsuariosListView';
 import { listarUsuarios } from '../usuariosRepository';
@@ -57,6 +58,18 @@ describe('UsuariosListView', () => {
     expect(screen.getByText('Operador/Motorista')).toBeOnTheScreen();
     expect(screen.getByText('Aguardando aprovação')).toBeOnTheScreen();
     expect(screen.queryByLabelText('Carregando usuários')).not.toBeOnTheScreen();
+  });
+
+  it('o título da tela fica no header nativo, não no conteúdo (NAV-02)', async () => {
+    (listarUsuarios as jest.Mock).mockResolvedValue({ ok: true, data: usuarios });
+
+    render(<UsuariosListView />);
+    await screen.findByText('Ana Souza');
+
+    expect(screen.queryByText('Eixo Certo')).not.toBeOnTheScreen();
+    expect(screen.queryByText('Usuários')).not.toBeOnTheScreen();
+    // Tela interna: o header nativo protege o topo, o Screen não repete o inset (NAV-04, AC 11).
+    expect(screen.UNSAFE_getByType(SafeAreaView).props.edges).not.toContain('top');
   });
 
   it('tocar em um usuário abre o detalhe dele', async () => {

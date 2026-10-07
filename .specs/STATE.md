@@ -58,13 +58,29 @@
 - **Date**: 2026-10-05
 - **Status**: active
 
+### AD-008
+- **Decision**: A transação da US04 (dívida + N parcelas) é uma RPC plpgsql `criar_divida`, não uma Edge Function com `postgres.js`. `divida` só é escrita por RPCs `security definer` (`criar_divida`, `excluir_divida`) com checagem de perfil; exclusão é soft delete (`divida.ativa`).
+- **Reason**: Decidido com o usuário: a EIX-36 e a EIX-50 já nomeiam a RPC; uma chamada de RPC é uma transação no PostgREST (rollback automático); roda no harness PGlite (AD-006); sem cold start; não existe nenhuma Edge Function no repo nem o exemplo `docs/exemplos/us04-divida`.
+- **Trade-off**: Diverge do `.claude/CLAUDE.md` §3 (Edge Function para operação atômica); a validação Zod não é compartilhada com o banco — as regras ficam duplicadas no schema do app e nas checks/RPC.
+- **Scope**: `supabase/migrations/20261005000200_divida.sql`, `src/features/dividas`, EIX-36, EIX-50; serve de molde para a US06-b (`registrar_manutencao`).
+- **Date**: 2026-10-05
+- **Status**: active
+
+### AD-009
+- **Decision**: Em cor, tipografia, espaçamento, borda e forma, o `DESIGN_CYAN.md` vence as skills `expo-*` instaladas na EIX-59 (`expo-router`, `expo-native-ui`, `expo-design-system`, `expo-animation`) e a `vercel-react-native-skills`. As skills mandam em navegação, comportamento nativo, motion, acessibilidade e performance.
+- **Reason**: As skills da Expo pedem cores semânticas do iOS, fonte do sistema, `@expo/ui` e evitam bordas de 1px; o guia do projeto escolhe Inter, paleta stone + um cyan e a hairline como estrutura. AGENTS.md §0 faz do guia a fonte única de verdade visual.
+- **Trade-off**: Algumas "native slop tells" da skill (#6 Inter Everywhere, #9 Wireframe Borders, #18 Dark-Mode Amnesia) ficam aceitas de propósito; a auditoria da EIX-72 não as conta como defeito.
+- **Scope**: Todas as telas e primitivos; EIX-58 e sub-tasks.
+- **Date**: 2026-10-06
+- **Status**: active
+
 ## Handoff
 
-- **Feature**: `.specs/features/eix35-motor-saldo`
-- **Phase / Task**: Execute concluído (migration + testes, db push + tipos) + Verifier PASS (re-verificação 2)
-- **Completed**: RPC `resumo_caixa` (b2cd11e), tipos gerados (9819aa3), fixes do Verifier: referência/float/grant (f10142c), float em todos os campos + fuso estrutural (bdc8775); migration já aplicada na nuvem
+- **Feature**: `.specs/features/eix58-design-app` (épico EIX-58, sub-issues EIX-59 a EIX-72 + EIX-11)
+- **Phase / Task**: EIX-60 (fases 2 e 3, T3–T12) concluída localmente; Verifier PASS na iteração 3 (`validation.md`)
+- **Completed**: T3–T12 (236f7b6..d7210ed); ajustes do Verifier (0415cb0, edab078, 3247c01); 611 testes do app e 163 do Supabase verdes
 - **In-progress** (file:line): none
-- **Next step**: push da branch e PR (EIX-35); o Diogo troca o mock do PR #12 por `supabase.rpc('resumo_caixa')` e valida o retorno no `resumoCaixaSchema`
-- **Blockers**: none
-- **Uncommitted files**: `package-lock.json` (churn do npm 11 local, não commitar)
-- **Branch**: feat/eix-35-us05-motor-saldo
+- **Next step**: Jean confere no emulador a lista "Manual Verification" do `validation.md` e confirma as 3 edições da spec (AC 3, 11 e 12 de NAV) → push + PR da EIX-60 (depende do PR #17) → EIX-61 (T13–T20)
+- **Blockers**: ok do Jean para push/PR
+- **Uncommitted files**: none
+- **Branch**: feat/eix-60-design-fundacao-navegacao (local, com merge da chore/eix-59)

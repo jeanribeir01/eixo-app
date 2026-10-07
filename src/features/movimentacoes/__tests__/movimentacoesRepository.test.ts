@@ -200,7 +200,7 @@ describe('criarMovimentacao (MOV-02)', () => {
   });
 
   it.each([
-    ['42501', 'Você não tem permissão para registrar movimentações.'],
+    ['42501', 'Acesso negado. Seu perfil não tem permissão para esta ação.'],
     ['23514', 'Valor ou data de pagamento inválidos.'],
     ['23503', 'Categoria ou forma de pagamento não encontrada.'],
     ['XX000', 'Não foi possível registrar a movimentação. Tente novamente.'],
@@ -235,12 +235,12 @@ describe('atualizarMovimentacao (MOV-10)', () => {
     expect(await atualizarMovimentacao('x', input)).toEqual({ ok: false, mensagem: 'Movimentação não encontrada.' });
   });
 
-  it('erro 42501 vira mensagem de permissão', async () => {
+  it('erro 42501 vira acesso negado (RLS-16)', async () => {
     responder(erro('42501'));
 
     expect(await atualizarMovimentacao('mov-1', input)).toEqual({
       ok: false,
-      mensagem: 'Você não tem permissão para registrar movimentações.',
+      mensagem: 'Acesso negado. Seu perfil não tem permissão para esta ação.',
     });
   });
 });

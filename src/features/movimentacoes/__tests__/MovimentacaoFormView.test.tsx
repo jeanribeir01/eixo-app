@@ -1,4 +1,6 @@
 import { act, fireEvent, render, screen, waitFor } from '@testing-library/react-native';
+import { KeyboardAvoidingView, ScrollView } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { MovimentacaoFormView } from '../MovimentacaoFormView';
 import {
@@ -73,7 +75,7 @@ async function preencherValido() {
 
 async function renderNova() {
   render(<MovimentacaoFormView />);
-  await screen.findByText('Nova movimentação');
+  await screen.findByLabelText('Descrição');
 }
 
 beforeEach(() => {
@@ -86,6 +88,17 @@ beforeEach(() => {
 });
 
 describe('MovimentacaoFormView — nova (MOV-01)', () => {
+  it('o título da tela fica no header nativo; o formulário rola e sobe com o teclado (NAV-02, NAV-04)', async () => {
+    await renderNova();
+
+    expect(screen.queryByText('Nova movimentação')).not.toBeOnTheScreen();
+    expect(screen.queryByText('Eixo Certo')).not.toBeOnTheScreen();
+    // Tela interna: o header nativo protege o topo, o Screen não repete o inset (NAV-04, AC 11).
+    expect(screen.UNSAFE_getByType(SafeAreaView).props.edges).not.toContain('top');
+    // Formulário rola e sobe com o teclado (NAV-04, AC 9 e 10).
+    expect(screen.UNSAFE_getByType(KeyboardAvoidingView).findByType(ScrollView).props.keyboardShouldPersistTaps).toBe('handled');
+  });
+
   it('mostra todos os campos e começa como Pendente, sem data de pagamento', async () => {
     await renderNova();
 
@@ -220,7 +233,8 @@ describe('MovimentacaoFormView — editar (MOV-10)', () => {
     mockAtualizar.mockResolvedValue({ ok: true, data: existente });
     render(<MovimentacaoFormView movimentacaoId="mov-1" />);
 
-    await screen.findByText('Editar movimentação');
+    await screen.findByLabelText('Descrição');
+    expect(screen.queryByText('Editar movimentação')).not.toBeOnTheScreen();
     expect(screen.getByLabelText('Valor (R$)')).toHaveDisplayValue('R$ 80,00');
     expect(screen.getByLabelText('Descrição')).toHaveDisplayValue('Diesel');
     expect(screen.getByText('Categoria antiga')).toBeOnTheScreen();
@@ -258,5 +272,25 @@ describe('MovimentacaoFormView — opções (edge case)', () => {
     fireEvent.press(screen.getByRole('button', { name: 'Categoria' }));
 
     expect(screen.getByText('Nenhuma opção cadastrada.')).toBeOnTheScreen();
+  });
+});
+
+// Carregando e erro de carga também abrem sob o header nativo: sem inset de topo duplicado (NAV-04, AC 11).
+describe('MovimentacaoFormView — estados de carga sob o header (NAV-04)', () => {
+  it('carregando: sem o inset de topo', () => {
+    mockOpcoes.mockReturnValue(new Promise(() => {}));
+    render(<MovimentacaoFormView movimentacaoId="x" />);
+
+    expect(screen.getByLabelText('Carregando formulário')).toBeOnTheScreen();
+    expect(screen.UNSAFE_getByType(SafeAreaView).props.edges).not.toContain('top');
+  });
+
+  it('erro ao carregar: sem o inset de topo', async () => {
+    mockOpcoes.mockResolvedValue({ ok: true, data: { categorias: [], formasPagamento: [] } });
+    mockBuscar.mockResolvedValue({ ok: false, mensagem: 'Movimentação não encontrada.' });
+    render(<MovimentacaoFormView movimentacaoId="x" />);
+
+    expect(await screen.findByText('Movimentação não encontrada.')).toBeOnTheScreen();
+    expect(screen.UNSAFE_getByType(SafeAreaView).props.edges).not.toContain('top');
   });
 });

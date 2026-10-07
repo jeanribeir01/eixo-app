@@ -9,7 +9,7 @@ Instruções obrigatórias para qualquer agente de IA (Claude Code, Cursor, Copi
 Antes de escrever qualquer linha de código, nesta ordem:
 
 1. Leia `DESIGN_CYAN.md` na raiz. É a fonte única de verdade visual do projeto.
-2. Liste e carregue as skills relevantes em `.claude/skills/`.
+2. Liste e carregue as skills relevantes em `.claude/skills/`. Para tela, navegação e motion: `expo-router`, `expo-native-ui`, `expo-design-system`, `expo-animation` e `vercel-react-native-skills`. Em cor, tipografia, espaçamento, borda e forma, **o `DESIGN_CYAN.md` vence essas skills** (AD-009 em `.specs/STATE.md`).
 3. Leia a task do Linear que o usuário indicou (identificador `EIX-XX`) e trate os critérios de aceite como especificação.
 4. Só então planeje e escreva.
 

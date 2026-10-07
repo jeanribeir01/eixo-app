@@ -2,7 +2,7 @@ import { useCallback, useRef, useState } from 'react';
 import { useFocusEffect } from 'expo-router';
 import { RefreshControl, ScrollView, useWindowDimensions } from 'react-native';
 
-import { Column, EmptyState, Screen, Skeleton, Snackbar, Text, colors } from '@/ui';
+import { Column, EmptyState, Screen, Skeleton, Snackbar, colors } from '@/ui';
 
 import { buscarResumoCaixa } from '../fonteResumoCaixa';
 import { PendentesSemDataCard } from './PendentesSemDataCard';
@@ -82,14 +82,10 @@ export function SaldoProjecaoView() {
   const vazio = status === 'pronto' && resumo !== null && resumo.quantidadeMovimentacoes === 0;
 
   return (
-    <Screen>
-      <Column gap="xs">
-        <Text variant="bodySm" weight="medium">
-          Financeiro
-        </Text>
-        <Text variant="heading">Saldo e projeção</Text>
-      </Column>
-
+    <Screen
+      underHeader
+      overlay={feedback && <Snackbar message={feedback.mensagem} tone={feedback.tone} onDismiss={() => setFeedback(null)} />}
+    >
       <ScrollView
         style={{ flex: 1 }}
         refreshControl={
@@ -138,9 +134,6 @@ export function SaldoProjecaoView() {
         </Column>
       </ScrollView>
 
-      {feedback && (
-        <Snackbar message={feedback.mensagem} tone={feedback.tone} onDismiss={() => setFeedback(null)} />
-      )}
     </Screen>
   );
 }

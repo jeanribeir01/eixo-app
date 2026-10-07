@@ -110,14 +110,10 @@ export function MovimentacoesListView() {
   const comFiltro = filtroTipo !== 'todas' || filtroStatus !== 'todos';
 
   return (
-    <Screen>
-      <Column gap="xs">
-        <Text variant="bodySm" weight="medium">
-          Eixo Certo
-        </Text>
-        <Text variant="heading">Movimentações</Text>
-      </Column>
-
+    <Screen
+      underHeader
+      overlay={feedback && <Snackbar message={feedback.mensagem} tone={feedback.tone} onDismiss={() => setFeedback(null)} />}
+    >
       <Button label="Nova movimentação" onPress={() => router.push('/movimentacoes/nova')} />
 
       <Column direction="row" align="center" gap="sm">
@@ -201,7 +197,6 @@ export function MovimentacoesListView() {
         />
       )}
 
-      {feedback && <Snackbar message={feedback.mensagem} tone={feedback.tone} onDismiss={() => setFeedback(null)} />}
     </Screen>
   );
 }

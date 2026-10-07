@@ -1,4 +1,6 @@
 import { fireEvent, render, screen } from '@testing-library/react-native';
+import { KeyboardAvoidingView, ScrollView } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { useProfileStore } from '@/features/auth/profileStore';
 
@@ -55,6 +57,16 @@ beforeEach(() => {
 });
 
 describe('UsuarioDetalheView', () => {
+  it('fica sob o header nativo e rola com o teclado (NAV-04)', async () => {
+    render(<UsuarioDetalheView />);
+    await screen.findByText('Bruno Lima');
+
+    // Tela interna: o header nativo protege o topo, o Screen não repete o inset (NAV-04, AC 11).
+    expect(screen.UNSAFE_getByType(SafeAreaView).props.edges).not.toContain('top');
+    // Detalhe longo rola e sobe com o teclado (NAV-04, AC 9).
+    expect(screen.UNSAFE_getByType(KeyboardAvoidingView).findByType(ScrollView).props.keyboardShouldPersistTaps).toBe('handled');
+  });
+
   it('mostra carregando e depois nome, e-mail, status e os 4 perfis com rótulo', async () => {
     render(<UsuarioDetalheView />);
 
@@ -172,5 +184,24 @@ describe('UsuarioDetalheView', () => {
     fireEvent.press(screen.getByRole('button', { name: 'Tentar novamente' }));
 
     expect(await screen.findByText('Bruno Lima')).toBeOnTheScreen();
+  });
+});
+
+// Carregando e erro de carga também abrem sob o header nativo: sem inset de topo duplicado (NAV-04, AC 11).
+describe('UsuarioDetalheView — estados de carga sob o header (NAV-04)', () => {
+  it('carregando: sem o inset de topo', () => {
+    (buscarUsuarioPorId as jest.Mock).mockReturnValue(new Promise(() => {}));
+    render(<UsuarioDetalheView />);
+
+    expect(screen.getByLabelText('Carregando usuário')).toBeOnTheScreen();
+    expect(screen.UNSAFE_getByType(SafeAreaView).props.edges).not.toContain('top');
+  });
+
+  it('erro ao carregar: sem o inset de topo', async () => {
+    (buscarUsuarioPorId as jest.Mock).mockResolvedValue({ ok: false, mensagem: 'Usuário não encontrado.' });
+    render(<UsuarioDetalheView />);
+
+    expect(await screen.findByText('Usuário não encontrado.')).toBeOnTheScreen();
+    expect(screen.UNSAFE_getByType(SafeAreaView).props.edges).not.toContain('top');
   });
 });

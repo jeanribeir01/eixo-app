@@ -1,5 +1,5 @@
-import { ModuloEmBreveView } from '@/navigation/ModuloEmBreveView';
+import { VeiculosListView } from '@/features/veiculos/VeiculosListView';
 
 export default function FrotaRoute() {
-  return <ModuloEmBreveView titulo="Frota" />;
+  return <VeiculosListView />;
 }

@@ -1,3 +1,4 @@
+import { ehAcessoNegado, MENSAGEM_ACESSO_NEGADO } from '@/lib/errors';
 import { supabase } from '@/supabase/client';
 
 import { resumoCaixaSchema, type ResumoCaixa } from './resumoCaixa';
@@ -21,9 +22,9 @@ export async function buscarResumoCaixa(): Promise<Resultado<ResumoCaixa>> {
   const { data, error } = await supabase.rpc('resumo_caixa');
 
   if (error) {
-    // 42501 = o RPC recusou o perfil (só Admin e Financeiro). Mensagem própria para a tela não
+    // O RPC recusou o perfil (só Admin e Financeiro). Mensagem própria para a tela não
     // sugerir "tente novamente" quando tentar de novo não vai resolver.
-    if (error.code === '42501') return { ok: false, mensagem: 'Você não tem permissão para ver o saldo.' };
+    if (ehAcessoNegado(error)) return { ok: false, mensagem: MENSAGEM_ACESSO_NEGADO };
     // Nunca exibe `error.message`: é detalhe técnico do Postgres.
     return { ok: false, mensagem: 'Não foi possível carregar o saldo. Tente novamente.' };
   }

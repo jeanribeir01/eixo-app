@@ -2,7 +2,8 @@ import { Text as RNText, type TextProps as RNTextProps } from 'react-native';
 
 import { colors, fontFamily, typography, type TypographyVariant } from './tokens';
 
-const toneColors = {
+// Exportada para o Icon usar a mesma tabela: ícone e texto do mesmo tom têm sempre a mesma cor.
+export const toneColors = {
   primary: colors.textPrimary,
   body: colors.textBody,
   muted: colors.textMuted,
