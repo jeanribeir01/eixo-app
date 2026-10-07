@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { View, Image, Modal, Alert, StyleSheet, TouchableOpacity, ActivityIndicator } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
 import * as ImageManipulator from 'expo-image-manipulator';
-import { Button, Card, Column, Text } from '@/ui';
+import { Button, Card, Column, Text, Snackbar } from '@/ui';
 import { colors } from '@/ui/tokens';
 import { uploadComprovante, removerComprovante } from '@/lib/storage';
 
@@ -15,6 +15,11 @@ type AnexoComprovanteProps = {
 export function AnexoComprovante({ value, onChange, error }: AnexoComprovanteProps) {
   const [loading, setLoading] = useState(false);
   const [modalVisible, setModalVisible] = useState(false);
+  const [snackbarMessage, setSnackbarMessage] = useState<string | null>(null);
+
+  function showError(msg: string) {
+    setSnackbarMessage(msg);
+  }
 
   async function processarEEnviar(uri: string) {
     try {
@@ -31,11 +36,11 @@ export function AnexoComprovante({ value, onChange, error }: AnexoComprovantePro
       if (resultado.ok) {
         onChange(resultado.url);
       } else {
-        Alert.alert('Erro', resultado.mensagem);
+        showError(resultado.mensagem ?? 'Erro ao fazer upload.');
       }
     } catch (err) {
       console.error(err);
-      Alert.alert('Erro', 'Não foi possível processar a imagem.');
+      showError('Não foi possível processar a imagem.');
     } finally {
       setLoading(false);
     }
@@ -44,7 +49,7 @@ export function AnexoComprovante({ value, onChange, error }: AnexoComprovantePro
   async function handleTirarFoto() {
     const { status } = await ImagePicker.requestCameraPermissionsAsync();
     if (status !== 'granted') {
-      Alert.alert('Permissão negada', 'Precisamos de acesso à câmera para tirar a foto do comprovante.');
+      showError('Precisamos de acesso à câmera para tirar a foto do comprovante.');
       return;
     }
 
@@ -62,7 +67,7 @@ export function AnexoComprovante({ value, onChange, error }: AnexoComprovantePro
   async function handleEscolherGaleria() {
     const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
     if (status !== 'granted') {
-      Alert.alert('Permissão negada', 'Precisamos de acesso à galeria para escolher o comprovante.');
+      showError('Precisamos de acesso à galeria para escolher o comprovante.');
       return;
     }
 
@@ -101,7 +106,7 @@ export function AnexoComprovante({ value, onChange, error }: AnexoComprovantePro
           if (res.ok) {
             onChange(null);
           } else {
-            Alert.alert('Erro', res.mensagem ?? 'Erro ao remover.');
+            showError(res.mensagem ?? 'Erro ao remover.');
           }
         }
       }
@@ -147,6 +152,16 @@ export function AnexoComprovante({ value, onChange, error }: AnexoComprovantePro
       )}
       
       {error && <Text variant="caption" tone="danger">{error}</Text>}
+      
+      {snackbarMessage && (
+        <View style={{ marginTop: 8 }}>
+          <Snackbar 
+            message={snackbarMessage} 
+            tone="error" 
+            onDismiss={() => setSnackbarMessage(null)} 
+          />
+        </View>
+      )}
     </Column>
   );
 }
