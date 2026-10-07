@@ -309,8 +309,8 @@ T49
 
 **Done when**:
 
-- [ ] Teste do `menu.test.ts` afirma o ícone de cada uma das 5 abas
-- [ ] Gate check passes: `npx jest --selectProjects app src/navigation/__tests__/menu.test.ts`
+- [x] Teste do `menu.test.ts` afirma o ícone de cada uma das 5 abas
+- [x] Gate check passes: `npx jest --selectProjects app src/navigation/__tests__/menu.test.ts`
 
 **Tests**: unit
 **Gate**: quick
