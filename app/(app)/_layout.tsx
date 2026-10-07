@@ -3,9 +3,10 @@ import { Stack } from 'expo-router';
 import { useMenu } from '@/navigation/menu';
 
 // Área de usuário autenticado e aprovado. As abas (menu por perfil, US17) ficam em (tabs);
-// telas internas como Categorias, Formas de Pagamento, Movimentações e Usuários abrem por cima delas, nesta pilha.
+// telas internas como Categorias, Formas de Pagamento, Movimentações, cadastro de veículo e Usuários
+// abrem por cima delas, nesta pilha.
 export default function AppLayout() {
-  const { podeVerCategorias, podeVerUsuarios } = useMenu();
+  const { podeVerCategorias, podeVerFrota, podeVerUsuarios } = useMenu();
 
   // Rota fora do perfil nem existe na árvore: digitar a URL cai de volta nas abas, que abrem
   // na tela inicial do perfil. O RLS é quem garante de fato — esconder rota é usabilidade.
@@ -25,6 +26,10 @@ export default function AppLayout() {
         <Stack.Screen name="movimentacoes/[id]/editar" />
         {/* Saldo e projeção (US05) é do módulo Financeiro: mesmo guard, Admin e Financeiro. */}
         <Stack.Screen name="caixa/index" />
+      </Stack.Protected>
+      <Stack.Protected guard={podeVerFrota}>
+        <Stack.Screen name="frota/novo" />
+        <Stack.Screen name="frota/[id]/editar" />
       </Stack.Protected>
       <Stack.Protected guard={podeVerUsuarios}>
         <Stack.Screen name="usuarios/index" />
