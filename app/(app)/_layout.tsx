@@ -29,6 +29,10 @@ export default function AppLayout() {
         <Stack.Screen name="movimentacoes/[id]/editar" options={{ title: 'Editar movimentação' }} />
         {/* Saldo e projeção (US05) é do módulo Financeiro: mesmo guard, Admin e Financeiro. */}
         <Stack.Screen name="caixa/index" options={{ title: 'Saldo e projeção' }} />
+        {/* Dívidas e parcelamentos (US04) também: o RLS de `divida` só libera Admin e Financeiro. */}
+        <Stack.Screen name="dividas/index" options={{ title: 'Dívidas' }} />
+        <Stack.Screen name="dividas/nova" options={{ title: 'Nova dívida' }} />
+        <Stack.Screen name="dividas/[id]" options={{ title: 'Dívida' }} />
       </Stack.Protected>
       <Stack.Protected guard={podeVerFrota}>
         <Stack.Screen name="frota/novo" options={{ title: 'Novo veículo' }} />

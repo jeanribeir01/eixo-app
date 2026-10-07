@@ -9,6 +9,7 @@ export default function FinanceiroRoute() {
         { rotulo: 'Categorias', href: '/categorias' },
         { rotulo: 'Formas de Pagamento', href: '/formas-pagamento' },
         { rotulo: 'Movimentações', href: '/movimentacoes' },
+        { rotulo: 'Dívidas', href: '/dividas' },
       ]}
     />
   );
