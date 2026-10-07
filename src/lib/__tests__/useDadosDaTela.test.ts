@@ -36,7 +36,7 @@ const falha = (mensagem: string): Resultado<never> => ({ ok: false, mensagem });
 
 describe('useDadosDaTela (LST-03)', () => {
   it('primeira carga: carregando e depois pronto com os dados', async () => {
-    const buscar = jest.fn().mockResolvedValue(ok(['a', 'b']));
+    const buscar: Buscar = jest.fn().mockResolvedValue(ok(['a', 'b']));
     const { result } = renderHook(() => useDadosDaTela(buscar));
 
     expect(result.current.status).toBe('carregando');
@@ -45,7 +45,7 @@ describe('useDadosDaTela (LST-03)', () => {
   });
 
   it('primeira carga com erro: status erro com a mensagem; "Tentar novamente" carrega de novo', async () => {
-    const buscar = jest.fn().mockResolvedValueOnce(falha('Sem conexão.')).mockResolvedValueOnce(ok(['a']));
+    const buscar: Buscar = jest.fn().mockResolvedValueOnce(falha('Sem conexão.')).mockResolvedValueOnce(ok(['a']));
     const { result } = renderHook(() => useDadosDaTela(buscar));
 
     await waitFor(() => expect(result.current.status).toBe('erro'));
@@ -60,7 +60,7 @@ describe('useDadosDaTela (LST-03)', () => {
 
   it('recarga ao voltar o foco: os dados antigos ficam na tela, sem skeleton, até o novo chegar', async () => {
     const segunda = pendente<string[]>();
-    const buscar = jest.fn().mockResolvedValueOnce(ok(['antigo'])).mockReturnValueOnce(segunda.promessa);
+    const buscar: Buscar = jest.fn().mockResolvedValueOnce(ok(['antigo'])).mockReturnValueOnce(segunda.promessa);
     const { result } = renderHook(() => useDadosDaTela(buscar));
     await waitFor(() => expect(result.current.status).toBe('pronto'));
 
@@ -73,7 +73,7 @@ describe('useDadosDaTela (LST-03)', () => {
   });
 
   it('falha numa recarga com dados na tela vira feedbackErro e mantém a lista', async () => {
-    const buscar = jest.fn().mockResolvedValueOnce(ok(['a'])).mockResolvedValueOnce(falha('Não foi possível carregar.'));
+    const buscar: Buscar = jest.fn().mockResolvedValueOnce(ok(['a'])).mockResolvedValueOnce(falha('Não foi possível carregar.'));
     const { result } = renderHook(() => useDadosDaTela(buscar));
     await waitFor(() => expect(result.current.status).toBe('pronto'));
 
@@ -90,7 +90,7 @@ describe('useDadosDaTela (LST-03)', () => {
   it('resposta de um pedido antigo que chega depois é descartada', async () => {
     const primeira = pendente<string[]>();
     const segunda = pendente<string[]>();
-    const buscar = jest.fn().mockReturnValueOnce(primeira.promessa).mockReturnValueOnce(segunda.promessa);
+    const buscar: Buscar = jest.fn().mockReturnValueOnce(primeira.promessa).mockReturnValueOnce(segunda.promessa);
     const { result } = renderHook(() => useDadosDaTela(buscar));
 
     await focarDeNovo();
@@ -119,7 +119,7 @@ describe('useDadosDaTela (LST-03)', () => {
 
   it('pull-to-refresh: atualizando enquanto busca, e os dados novos no fim', async () => {
     const segunda = pendente<string[]>();
-    const buscar = jest.fn().mockResolvedValueOnce(ok(['a'])).mockReturnValueOnce(segunda.promessa);
+    const buscar: Buscar = jest.fn().mockResolvedValueOnce(ok(['a'])).mockReturnValueOnce(segunda.promessa);
     const { result } = renderHook(() => useDadosDaTela(buscar));
     await waitFor(() => expect(result.current.status).toBe('pronto'));
 
@@ -139,7 +139,7 @@ describe('useDadosDaTela (LST-03)', () => {
   });
 
   it('atualizarDados ajusta a lista na tela depois de uma ação que deu certo', async () => {
-    const buscar = jest.fn().mockResolvedValue(ok(['a', 'b']));
+    const buscar: Buscar = jest.fn().mockResolvedValue(ok(['a', 'b']));
     const { result } = renderHook(() => useDadosDaTela(buscar));
     await waitFor(() => expect(result.current.status).toBe('pronto'));
 
