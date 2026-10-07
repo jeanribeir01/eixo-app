@@ -693,8 +693,8 @@ T49
 
 **Done when**:
 
-- [ ] Cada primitivo novo tem anatomia, tokens usados e quando usar
-- [ ] Gate check passes: `npm run typecheck && npm run lint && npm run test`
+- [x] Cada primitivo novo tem anatomia, tokens usados e quando usar
+- [x] Gate check passes: `npm run typecheck && npm run lint && npm run test`
 
 **Tests**: none
 **Gate**: build
