@@ -16,6 +16,9 @@ export const tabBarOptions: BottomTabNavigationOptions = {
   tabBarActiveTintColor: colors.textPrimary,
   tabBarInactiveTintColor: colors.textBody,
   tabBarLabelStyle: { ...typography.caption, fontFamily: fontFamily.medium },
+  // Ícone em cima e rótulo embaixo em qualquer largura; sem isso, a partir de 768 (tablet) o rótulo
+  // vai para o lado do ícone.
+  tabBarLabelPosition: 'below-icon',
   // Alvo de toque mínimo de 44pt mesmo com o rótulo pequeno.
   tabBarItemStyle: { minHeight: touchTarget, justifyContent: 'center' },
 };
