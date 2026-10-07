@@ -1,7 +1,8 @@
-import { fireEvent, render, screen } from '@testing-library/react-native';
+import { fireEvent, render, screen, within } from '@testing-library/react-native';
 import { Text } from 'react-native';
 
 import { ListItem } from '../ListItem';
+import { Switch } from '../Switch';
 import { colors } from '../tokens';
 
 describe('ListItem', () => {
@@ -92,5 +93,34 @@ describe('ListItem — linha padrão (UIP-01)', () => {
     );
 
     expect(screen.queryByTestId('simbolo-chevron_right', { includeHiddenElements: true })).toBeNull();
+  });
+
+  it('control: tocar na linha abre o item e o switch fica fora do botão da linha (LST-01)', () => {
+    const onPress = jest.fn();
+    const onValueChange = jest.fn();
+    render(
+      <ListItem
+        title="Combustível"
+        onPress={onPress}
+        control={<Switch label="Ativa" accessibilityLabel="Ativa: Combustível" value onValueChange={onValueChange} />}
+      />,
+    );
+
+    const linha = screen.getByRole('button', { name: 'Combustível' });
+    // Fora do botão da linha, o leitor de tela alcança o switch como elemento próprio.
+    expect(within(linha).queryByRole('switch')).not.toBeOnTheScreen();
+
+    fireEvent(screen.getByRole('switch', { name: 'Ativa: Combustível' }), 'valueChange', false);
+    expect(onValueChange).toHaveBeenCalledWith(false);
+    expect(onPress).not.toHaveBeenCalled();
+
+    fireEvent.press(linha);
+    expect(onPress).toHaveBeenCalledTimes(1);
+  });
+
+  it('control: com o controle à direita, a linha não mostra o chevron', () => {
+    render(<ListItem title="Combustível" onPress={jest.fn()} control={<Switch label="Ativa" value onValueChange={jest.fn()} />} />);
+
+    expect(screen.queryByTestId('simbolo-chevron_right', { includeHiddenElements: true })).not.toBeOnTheScreen();
   });
 });
