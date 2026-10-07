@@ -92,4 +92,17 @@ describe('Button', () => {
 
     expect(screen.getByRole('button', { name: 'Continuar' })).toHaveStyle({ minHeight: 44 });
   });
+
+  it('icon: só o ícone, com o rótulo como nome acessível e alvo de 44×44 sem borda (LST-02)', () => {
+    const onPress = jest.fn();
+    render(<Button variant="icon" icon="voltarMes" label="Mês anterior" onPress={onPress} />);
+
+    const botao = screen.getByRole('button', { name: 'Mês anterior' });
+    expect(screen.queryByText('Mês anterior')).not.toBeOnTheScreen();
+    expect(screen.getByTestId('simbolo-chevron_left', { includeHiddenElements: true })).toBeOnTheScreen();
+    expect(botao).toHaveStyle({ minHeight: 44, minWidth: 44, backgroundColor: 'transparent', borderColor: 'transparent' });
+
+    fireEvent.press(botao);
+    expect(onPress).toHaveBeenCalledTimes(1);
+  });
 });
