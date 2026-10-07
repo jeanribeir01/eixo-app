@@ -642,9 +642,9 @@ T49
 
 **Done when**:
 
-- [ ] Teste: `feature` usa `radius.feature`
-- [ ] Teste: com `onPress` tem `accessibilityRole="button"` e dispara o toque
-- [ ] Gate check passes: `npx jest --selectProjects app src/ui/__tests__/Card.test.tsx`
+- [x] Teste: `feature` usa `radius.feature`
+- [x] Teste: com `onPress` tem `accessibilityRole="button"` e dispara o toque
+- [x] Gate check passes: `npx jest --selectProjects app src/ui/__tests__/Card.test.tsx`
 
 **Tests**: unit
 **Gate**: quick
