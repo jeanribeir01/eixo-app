@@ -63,7 +63,7 @@ O app funciona, mas parece um protótipo. As telas internas não têm header nem
 
 1. The system SHALL render each visible tab with a Material Symbols icon above its label: Dashboards `dashboard`, Financeiro `account_balance_wallet`, Frota `local_shipping`, Viagens `route`, Configurações `settings`.
 2. WHILE a tab is active the system SHALL draw its icon and label in `colors.textPrimary`, and the inactive tabs in `colors.textBody`.
-3. WHEN an internal screen opens THEN the system SHALL show a native header with a back button and a title in Portuguese: Saldo e projeção, Categorias, Nova categoria, Editar categoria, Formas de pagamento, Nova forma de pagamento, Editar forma de pagamento, Movimentações, Nova movimentação, Editar movimentação, Usuários, Usuário.
+3. WHEN an internal screen opens THEN the system SHALL show a native header with a back button and a title in Portuguese: Saldo e projeção, Categorias, Nova categoria, Editar categoria, Formas de pagamento, Nova forma de pagamento, Editar forma de pagamento, Movimentações, Nova movimentação, Editar movimentação, Novo veículo, Editar veículo, Usuários, Usuário.
 4. The system SHALL style the header with `colors.canvas` background, no shadow or elevation, title in `typography.subheading` with `fontFamily.regular` and tint `colors.textPrimary`.
 5. WHEN the user taps the header back button THEN the system SHALL return to the previous screen.
 6. The system SHALL NOT render the "Eixo Certo" overline or a second in-content title on internal screens that have a header.

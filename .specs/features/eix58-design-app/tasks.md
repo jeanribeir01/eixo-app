@@ -373,7 +373,7 @@ T49
 
 #### T9: Header e títulos na pilha do app
 
-**What**: Usar `screenOptions={stackOptions}` na pilha de `(app)`, manter `headerShown: false` só em `(tabs)` e dar o título em português a cada uma das 12 telas internas.
+**What**: Usar `screenOptions={stackOptions}` na pilha de `(app)`, manter `headerShown: false` só em `(tabs)` e dar o título em português a cada uma das 14 telas internas (as 12 originais + Novo veículo e Editar veículo, que entraram com o PR #7).
 **Where**: `app/(app)/_layout.tsx`
 **Depends on**: T8
 **Reuses**: guards existentes do `Stack.Protected`
@@ -386,10 +386,10 @@ T49
 
 **Done when**:
 
-- [ ] Teste com `renderRouter`: `/categorias` mostra o header "Categorias" e o botão voltar; voltar retorna à aba
-- [ ] Teste: a aba Financeiro não tem header nativo
-- [ ] Mergeado depois do PR #7 (EIX-37) ou conflito resolvido junto com o Diogo
-- [ ] Gate check passes: `npm run test`
+- [x] Teste com `renderRouter`: `/categorias` mostra o header "Categorias" e o botão voltar; voltar retorna à aba
+- [x] Teste: a aba Financeiro não tem header nativo
+- [x] PR #7 (EIX-37) mergeado antes desta task (06/10)
+- [x] Gate check passes: `npm run test`
 
 **Tests**: unit
 **Gate**: full

@@ -43,6 +43,12 @@ const routes = {
   '(app)/frota/novo': () => <Text>Tela Novo Veiculo</Text>,
   '(app)/frota/[id]/editar': () => <Text>Tela Editar Veiculo</Text>,
   '(app)/caixa/index': () => <Text>Tela Caixa</Text>,
+  '(app)/formas-pagamento/index': () => <Text>Tela Formas</Text>,
+  '(app)/formas-pagamento/nova': () => <Text>Tela Nova Forma</Text>,
+  '(app)/formas-pagamento/[id]/editar': () => <Text>Tela Editar Forma</Text>,
+  '(app)/movimentacoes/index': () => <Text>Tela Movimentacoes</Text>,
+  '(app)/movimentacoes/nova': () => <Text>Tela Nova Movimentacao</Text>,
+  '(app)/movimentacoes/[id]/editar': () => <Text>Tela Editar Movimentacao</Text>,
   '(app)/usuarios/index': () => <Text>Tela Usuarios</Text>,
   '(app)/usuarios/[id]': () => <Text>Tela Usuario</Text>,
   '(auth)/_layout': AuthLayout,
@@ -269,5 +275,62 @@ describe('tab bar com ícones (NAV-01)', () => {
       expect(visiveis).toHaveLength(1);
       expect(visiveis[0]).toHaveStyle({ color: aba === 'Financeiro' ? colors.textPrimary : colors.textBody });
     }
+  });
+});
+
+// O header do Stack nativo é configurado pelo react-native-screens: no Jest ele aparece como o elemento
+// RNSScreenStackHeaderConfig, com o título e as flags nas props (a seta em si é desenhada pelo sistema).
+function headersVisiveis() {
+  return screen.root
+    .findAll((no) => (no.type as unknown) === 'RNSScreenStackHeaderConfig')
+    .filter((header) => header.props.hidden === false);
+}
+
+describe('header nativo nas telas internas (NAV-02)', () => {
+  it.each([
+    ['/caixa', 'Tela Caixa', 'Saldo e projeção'],
+    ['/categorias', 'Tela Categorias', 'Categorias'],
+    ['/categorias/nova', 'Tela Nova Categoria', 'Nova categoria'],
+    ['/categorias/c1/editar', 'Tela Editar Categoria', 'Editar categoria'],
+    ['/formas-pagamento', 'Tela Formas', 'Formas de pagamento'],
+    ['/formas-pagamento/nova', 'Tela Nova Forma', 'Nova forma de pagamento'],
+    ['/formas-pagamento/f1/editar', 'Tela Editar Forma', 'Editar forma de pagamento'],
+    ['/movimentacoes', 'Tela Movimentacoes', 'Movimentações'],
+    ['/movimentacoes/nova', 'Tela Nova Movimentacao', 'Nova movimentação'],
+    ['/movimentacoes/m1/editar', 'Tela Editar Movimentacao', 'Editar movimentação'],
+    ['/frota/novo', 'Tela Novo Veiculo', 'Novo veículo'],
+    ['/frota/v1/editar', 'Tela Editar Veiculo', 'Editar veículo'],
+    ['/usuarios', 'Tela Usuarios', 'Usuários'],
+    ['/usuarios/u1', 'Tela Usuario', 'Usuário'],
+  ] as const)('%s mostra o header "%s" com o botão voltar', async (rota, tela, titulo) => {
+    await entrarComo('Admin');
+
+    act(() => navegador.push(rota as Href));
+    await screen.findByText(tela);
+
+    const header = headersVisiveis().find((h) => h.props.title === titulo);
+    expect(header).toBeDefined();
+    expect(header?.props.hideBackButton).toBe(false);
+  });
+
+  it('as abas não têm header nativo: o título delas fica no conteúdo', async () => {
+    await entrarComo('Admin');
+    act(() => navegador.push('/financeiro'));
+    await screen.findByText('Tela Financeiro');
+
+    expect(headersVisiveis()).toHaveLength(0);
+  });
+
+  it('voltar de uma tela interna retorna para a aba de onde ela foi aberta', async () => {
+    const router = await entrarComo('Admin');
+    act(() => navegador.push('/financeiro'));
+    await screen.findByText('Tela Financeiro');
+    act(() => navegador.push('/categorias'));
+    await screen.findByText('Tela Categorias');
+
+    act(() => navegador.back());
+
+    expect(await screen.findByText('Tela Financeiro')).toBeOnTheScreen();
+    expect(router.getPathname()).toBe('/financeiro');
   });
 });
