@@ -230,9 +230,9 @@ T49
 
 **Done when**:
 
-- [ ] `"expo-symbols": "~57.0.3"` em `dependencies`
-- [ ] `npx -y npm@10 ci --dry-run --ignore-scripts` passa
-- [ ] Gate check passes: `npm run typecheck && npm run lint && npm run test`
+- [x] `"expo-symbols": "~57.0.3"` em `dependencies`
+- [x] `npx -y npm@10 ci --dry-run --ignore-scripts` passa
+- [x] Gate check passes: `npm run typecheck && npm run lint && npm run test`
 
 **Tests**: none
 **Gate**: build
