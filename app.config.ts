@@ -35,6 +35,16 @@ const config: ExpoConfig = {
         backgroundColor: '#fafaf9', // tokens.colors.canvas
       },
     ],
+    // Comprovantes (US03-b): textos que o sistema mostra ao pedir a permissão. O comprovante é só
+    // foto, então o microfone fica de fora (sem ele o Android não declara RECORD_AUDIO).
+    [
+      'expo-image-picker',
+      {
+        cameraPermission: 'O Eixo Certo usa a câmera para fotografar comprovantes de pagamento.',
+        photosPermission: 'O Eixo Certo acessa suas fotos para anexar comprovantes de pagamento.',
+        microphonePermission: false,
+      },
+    ],
     // O plugin '@react-native-google-signin/google-signin' NÃO entra aqui de propósito:
     // sem opções ele configura o Firebase (exige google-services.json) e com opções só mexe no iOS.
     // No Android sem Firebase, o autolinking já instala o módulo nativo. Ao adicionar iOS, inclua:
