@@ -77,10 +77,10 @@
 ## Handoff
 
 - **Feature**: `.specs/features/eix58-design-app` (épico EIX-58, sub-issues EIX-59 a EIX-72 + EIX-11)
-- **Phase / Task**: Execute da EIX-60 (fases 2 e 3, T3–T12) em andamento
-- **Completed**: EIX-59 (T1, T2) no PR #17; `npm ci` feito; PR #7 (Frota) mergeado
-- **In-progress** (file:line): T3
-- **Next step**: T3 → T12 com um commit por task; Verifier no fim da EIX-60
-- **Blockers**: none
+- **Phase / Task**: EIX-60 (fases 2 e 3, T3–T12) concluída localmente; Verifier PASS na iteração 3 (`validation.md`)
+- **Completed**: T3–T12 (236f7b6..d7210ed); ajustes do Verifier (0415cb0, edab078, 3247c01); 611 testes do app e 163 do Supabase verdes
+- **In-progress** (file:line): none
+- **Next step**: Jean confere no emulador a lista "Manual Verification" do `validation.md` e confirma as 3 edições da spec (AC 3, 11 e 12 de NAV) → push + PR da EIX-60 (depende do PR #17) → EIX-61 (T13–T20)
+- **Blockers**: ok do Jean para push/PR
 - **Uncommitted files**: none
-- **Branch**: feat/eix-60-design-fundacao-navegacao (com merge da chore/eix-59 até o PR #17 entrar na main)
+- **Branch**: feat/eix-60-design-fundacao-navegacao (local, com merge da chore/eix-59)
