@@ -478,6 +478,15 @@ T49
 
 ---
 
+**Ajustes do Verifier (EIX-60, iteração 1 → 2).** O Verifier deu FAIL por lacunas de teste: 7 de 18 mutantes sobreviveram. Correções:
+
+- [x] AC 4: estilo do header renderizado afirmado no `RNSScreenStackHeaderConfig` (`__tests__/routes/navegacaoPorPerfil.test.tsx`)
+- [x] AC 9–11: as 10 telas internas afirmam `underHeader`, e os 5 formulários afirmam o `ScrollView` dentro do `KeyboardAvoidingView`
+- [x] AC 8: `Icon` afirma as duas props de esconder, a do iOS e a do Android
+- [x] AC 2: a cor do rótulo da aba também é afirmada; o rótulo fica numa linha só (edge case de fonte 1.3)
+- [x] AC 6: Formas de pagamento busca o título sem depender de maiúscula; Nova movimentação ganhou a checagem
+- [x] AC 1: `tabBarLabelPosition: 'below-icon'` fixa o rótulo abaixo do ícone também no tablet
+
 ### Phase 4: Primitivos de lista e feedback — EIX-61
 
 #### T13: Declarar Reanimated e Worklets

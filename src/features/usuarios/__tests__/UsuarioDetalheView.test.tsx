@@ -1,4 +1,6 @@
 import { fireEvent, render, screen } from '@testing-library/react-native';
+import { KeyboardAvoidingView, ScrollView } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { useProfileStore } from '@/features/auth/profileStore';
 
@@ -55,6 +57,16 @@ beforeEach(() => {
 });
 
 describe('UsuarioDetalheView', () => {
+  it('fica sob o header nativo e rola com o teclado (NAV-04)', async () => {
+    render(<UsuarioDetalheView />);
+    await screen.findByText('Bruno Lima');
+
+    // Tela interna: o header nativo protege o topo, o Screen não repete o inset (NAV-04, AC 11).
+    expect(screen.UNSAFE_getByType(SafeAreaView).props.edges).not.toContain('top');
+    // Detalhe longo rola e sobe com o teclado (NAV-04, AC 9).
+    expect(screen.UNSAFE_getByType(KeyboardAvoidingView).findByType(ScrollView).props.keyboardShouldPersistTaps).toBe('handled');
+  });
+
   it('mostra carregando e depois nome, e-mail, status e os 4 perfis com rótulo', async () => {
     render(<UsuarioDetalheView />);
 

@@ -1,4 +1,6 @@
 import { act, fireEvent, render, screen } from '@testing-library/react-native';
+import { KeyboardAvoidingView, ScrollView } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { CategoriaFormView } from '../CategoriaFormView';
 import { atualizarCategoria, buscarCategoriaPorId, criarCategoria } from '../categoriasRepository';
@@ -39,6 +41,10 @@ describe('CategoriaFormView', () => {
     expect(screen.queryByText('Nova categoria')).not.toBeOnTheScreen();
     expect(screen.queryByText('Eixo Certo')).not.toBeOnTheScreen();
     expect(screen.getByLabelText('Título')).toBeOnTheScreen();
+    // Tela interna: o header nativo protege o topo, o Screen não repete o inset (NAV-04, AC 11).
+    expect(screen.UNSAFE_getByType(SafeAreaView).props.edges).not.toContain('top');
+    // Formulário rola e sobe com o teclado (NAV-04, AC 9 e 10).
+    expect(screen.UNSAFE_getByType(KeyboardAvoidingView).findByType(ScrollView).props.keyboardShouldPersistTaps).toBe('handled');
     expect(screen.getByRole('tab', { name: 'Entrada' })).toBeOnTheScreen();
     expect(screen.getByRole('tab', { name: 'Saída' })).toBeOnTheScreen();
   });

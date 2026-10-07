@@ -1,4 +1,6 @@
 import { fireEvent, render, screen, waitFor } from '@testing-library/react-native';
+import { KeyboardAvoidingView, ScrollView } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { FormaPagamentoFormView } from '../FormaPagamentoFormView';
 import { atualizarFormaPagamento, buscarFormaPagamentoPorId, criarFormaPagamento } from '../formasPagamentoRepository';
@@ -32,6 +34,10 @@ describe('FormaPagamentoFormView', () => {
     render(<FormaPagamentoFormView />);
     expect(screen.queryByText('Nova forma de pagamento')).not.toBeOnTheScreen();
     expect(screen.queryByText('Eixo Certo')).not.toBeOnTheScreen();
+    // Tela interna: o header nativo protege o topo, o Screen não repete o inset (NAV-04, AC 11).
+    expect(screen.UNSAFE_getByType(SafeAreaView).props.edges).not.toContain('top');
+    // Formulário rola e sobe com o teclado (NAV-04, AC 9 e 10).
+    expect(screen.UNSAFE_getByType(KeyboardAvoidingView).findByType(ScrollView).props.keyboardShouldPersistTaps).toBe('handled');
     expect(screen.getByPlaceholderText('Ex.: Dinheiro')).toBeOnTheScreen();
   });
 

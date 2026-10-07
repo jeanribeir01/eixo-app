@@ -6,7 +6,7 @@ import { StyleSheet, Text } from 'react-native';
 import { limparPerfil } from '@/features/auth/profileStore';
 import { useSessionStore } from '@/features/auth/sessionStore';
 import type { PerfilNome } from '@/features/auth/permissions';
-import { colors } from '@/ui';
+import { colors, fontFamily, typography } from '@/ui';
 
 import InicioRoute from '../../app/(app)/(tabs)/index';
 import TabsLayout from '../../app/(app)/(tabs)/_layout';
@@ -276,6 +276,24 @@ describe('tab bar com ícones (NAV-01)', () => {
       expect(visiveis[0]).toHaveStyle({ color: aba === 'Financeiro' ? colors.textPrimary : colors.textBody });
     }
   });
+
+  it('rótulo da aba ativa em textPrimary; os outros em textBody (AC 2)', async () => {
+    await entrarComo('Admin');
+    act(() => navegador.push('/financeiro'));
+    await screen.findByText('Tela Financeiro');
+
+    for (const aba of todasAsAbas) {
+      expect(screen.getByText(aba)).toHaveStyle({ color: aba === 'Financeiro' ? colors.textPrimary : colors.textBody });
+    }
+  });
+
+  it('rótulo da aba fica numa linha só: com fonte grande, corta com reticências em vez de quebrar', async () => {
+    await entrarComo('Admin');
+
+    for (const aba of todasAsAbas) {
+      expect(screen.getByText(aba).props.numberOfLines).toBe(1);
+    }
+  });
 });
 
 // O header do Stack nativo é configurado pelo react-native-screens: no Jest ele aparece como o elemento
@@ -311,6 +329,15 @@ describe('header nativo nas telas internas (NAV-02)', () => {
     const header = headersVisiveis().find((h) => h.props.title === titulo);
     expect(header).toBeDefined();
     expect(header?.props.hideBackButton).toBe(false);
+    // Estilo do header como o usuário vê (AC 4): fundo canvas, sem sombra, título subheading regular.
+    expect(header?.props).toMatchObject({
+      backgroundColor: colors.canvas,
+      hideShadow: true,
+      titleFontFamily: fontFamily.regular,
+      titleFontSize: typography.subheading.fontSize,
+      titleColor: colors.textPrimary,
+      color: colors.textPrimary,
+    });
   });
 
   it('as abas não têm header nativo: o título delas fica no conteúdo', async () => {

@@ -1,5 +1,6 @@
 import { act, fireEvent, render, screen } from '@testing-library/react-native';
 import { RefreshControl } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { colors } from '@/ui';
 
@@ -77,6 +78,8 @@ describe('SaldoProjecaoView', () => {
 
     expect(screen.queryByText('Financeiro')).not.toBeOnTheScreen();
     expect(screen.queryByText('Saldo e projeção')).not.toBeOnTheScreen();
+    // Tela interna: o header nativo protege o topo, o Screen não repete o inset (NAV-04, AC 11).
+    expect(screen.UNSAFE_getByType(SafeAreaView).props.edges).not.toContain('top');
   });
 
   it('mês com saldo projetado negativo: valor em vermelho com sinal e alerta', async () => {

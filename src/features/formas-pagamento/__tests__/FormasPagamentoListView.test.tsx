@@ -1,4 +1,5 @@
 import { fireEvent, render, screen } from '@testing-library/react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { FormasPagamentoListView } from '../FormasPagamentoListView';
 import { definirAtivaFormaPagamento, listarFormasPagamento } from '../formasPagamentoRepository';
@@ -55,7 +56,9 @@ describe('FormasPagamentoListView', () => {
     await screen.findByText('Pix');
 
     expect(screen.queryByText('Eixo Certo')).not.toBeOnTheScreen();
-    expect(screen.queryByText('Formas de Pagamento')).not.toBeOnTheScreen();
+    expect(screen.queryByText(/^formas de pagamento$/i)).not.toBeOnTheScreen();
+    // Tela interna: o header nativo protege o topo, o Screen não repete o inset (NAV-04, AC 11).
+    expect(screen.UNSAFE_getByType(SafeAreaView).props.edges).not.toContain('top');
   });
 
   it('bloqueia edição e desativação das formas fixas (Pix, Boleto, TED, Cartão Corporativo)', async () => {

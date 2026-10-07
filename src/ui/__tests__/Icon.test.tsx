@@ -33,6 +33,16 @@ describe('Icon (NAV-03)', () => {
     expect(screen.getByTestId('simbolo-add', { includeHiddenElements: true })).toBeTruthy();
   });
 
+  it('sem accessibilityLabel esconde nas duas plataformas: iOS e Android (TalkBack)', () => {
+    render(<Icon name="adicionar" />);
+
+    // Sobe do símbolo até a View do Icon, que é quem carrega as props de acessibilidade.
+    let envoltorio = screen.getByTestId('simbolo-add', { includeHiddenElements: true }).parent;
+    while (envoltorio && envoltorio.props.importantForAccessibility === undefined) envoltorio = envoltorio.parent;
+    expect(envoltorio?.props.accessibilityElementsHidden).toBe(true);
+    expect(envoltorio?.props.importantForAccessibility).toBe('no-hide-descendants');
+  });
+
   it('com accessibilityLabel é anunciado como imagem com o rótulo', () => {
     render(<Icon name="alerta" accessibilityLabel="Saldo negativo" />);
 

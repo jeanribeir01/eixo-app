@@ -1,4 +1,5 @@
 import { fireEvent, render, screen } from '@testing-library/react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { UsuariosListView } from '../UsuariosListView';
 import { listarUsuarios } from '../usuariosRepository';
@@ -67,6 +68,8 @@ describe('UsuariosListView', () => {
 
     expect(screen.queryByText('Eixo Certo')).not.toBeOnTheScreen();
     expect(screen.queryByText('Usuários')).not.toBeOnTheScreen();
+    // Tela interna: o header nativo protege o topo, o Screen não repete o inset (NAV-04, AC 11).
+    expect(screen.UNSAFE_getByType(SafeAreaView).props.edges).not.toContain('top');
   });
 
   it('tocar em um usuário abre o detalhe dele', async () => {
