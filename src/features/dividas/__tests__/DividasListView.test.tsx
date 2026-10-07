@@ -1,104 +1,126 @@
-import { fireEvent, render, screen, waitFor } from '@testing-library/react-native';
-import { useRouter } from 'expo-router';
+import { act, fireEvent, render, screen } from '@testing-library/react-native';
+import { FlatList, StyleSheet } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
+
+import { FAB_ALTURA_RESERVADA } from '@/ui';
 
 import { DividasListView } from '../components/DividasListView';
 import { listarDividas } from '../dividasRepository';
 import type { Divida } from '../types';
 
-jest.mock('expo-router', () => ({
-  useRouter: jest.fn(),
-  useFocusEffect: (cb: any) => {
-    require('react').useEffect(() => {
-      const cleanup = cb();
-      return typeof cleanup === 'function' ? cleanup : undefined;
-    }, [cb]);
-  },
-}));
-
-jest.mock('../dividasRepository', () => ({
-  listarDividas: jest.fn(),
-}));
+jest.setTimeout(15000);
 
 const mockPush = jest.fn();
-(useRouter as jest.Mock).mockReturnValue({ push: mockPush });
+
+jest.mock('expo-router', () => {
+  // eslint-disable-next-line @typescript-eslint/no-require-imports
+  const react = require('react');
+  return {
+    useRouter: () => ({ push: mockPush }),
+    useFocusEffect: (callback: () => void) => react.useEffect(callback, [callback]),
+  };
+});
+
+jest.mock('../dividasRepository', () => ({ listarDividas: jest.fn() }));
+
 const mockListar = listarDividas as jest.MockedFunction<typeof listarDividas>;
 
+function divida(sobrescrever: Partial<Divida> = {}): Divida {
+  return {
+    id: 'div-1',
+    descricao: 'Financiamento do caminhão',
+    categoria: { titulo: 'Financiamento' },
+    quantidadeParcelas: 48,
+    valorParcelaCentavos: 150000,
+    somaTotalCentavos: 7200000,
+    valorQuitacaoCentavos: null,
+    dataVencimentoPrimeira: '2026-01-15',
+    parcelasPagas: 2,
+    ativa: true,
+    ...sobrescrever,
+  };
+}
+
 beforeEach(() => {
-  mockPush.mockClear();
+  mockPush.mockReset();
   mockListar.mockReset();
 });
 
-const dividaMock: Divida = {
-  id: 'divida-123',
-  descricao: 'Financiamento do Caminhão',
-  categoria: { titulo: 'Financiamento' },
-  quantidadeParcelas: 48,
-  valorParcelaCentavos: 150000,
-  somaTotalCentavos: 72000000, // 48 * 150000
-  valorQuitacaoCentavos: null,
-  dataVencimentoPrimeira: '2026-01-15',
-  parcelasPagas: 2,
-  ativa: true,
-};
-
-describe('DividasListView', () => {
-  it('exibe tela de carregamento inicialmente', async () => {
-    // Pendura a promise para verificar o loading
-    mockListar.mockImplementation(() => new Promise(() => {}));
-    
+describe('DividasListView (EIX-50)', () => {
+  it('carregando: indicador enquanto a lista não chega', () => {
+    mockListar.mockReturnValue(new Promise(() => {}));
     render(<DividasListView />);
+
     expect(screen.getByLabelText('Carregando dívidas')).toBeOnTheScreen();
   });
 
-  it('exibe empty state quando não há dívidas', async () => {
-    mockListar.mockResolvedValue({ ok: true, data: [] });
-    
+  it('mostra descrição, total e parcelas pagas de cada dívida', async () => {
+    mockListar.mockResolvedValue({ ok: true, data: [divida()] });
     render(<DividasListView />);
-    
-    await waitFor(() => {
-      expect(screen.getByText('Nenhuma dívida encontrada')).toBeOnTheScreen();
-    });
-  });
 
-  it('exibe lista de dívidas e navega para detalhes', async () => {
-    mockListar.mockResolvedValue({ ok: true, data: [dividaMock] });
-    
-    render(<DividasListView />);
-    
-    await waitFor(() => {
-      expect(screen.getByText('Financiamento do Caminhão')).toBeOnTheScreen();
-    });
-
-    expect(screen.getByText('R$ 720.000,00')).toBeOnTheScreen();
+    expect(await screen.findByText('Financiamento do caminhão')).toBeOnTheScreen();
+    expect(screen.getByText('R$ 72.000,00')).toBeOnTheScreen();
     expect(screen.getByText('2 de 48 parcelas pagas')).toBeOnTheScreen();
-
-    // Testa navegação para detalhes
-    fireEvent.press(screen.getByLabelText('Dívida Financiamento do Caminhão'));
-    expect(mockPush).toHaveBeenCalledWith('/dividas/divida-123');
   });
 
-  it('navega para nova dívida ao pressionar o botão', async () => {
-    mockListar.mockResolvedValue({ ok: true, data: [] });
-    
+  it('título no header nativo: a tela não repete "Dívidas" nem "Eixo Certo" (NAV-02)', async () => {
+    mockListar.mockResolvedValue({ ok: true, data: [divida()] });
     render(<DividasListView />);
-    
-    await waitFor(() => {
-      expect(screen.getByText('Nova Dívida')).toBeOnTheScreen();
-    });
+    await screen.findByText('Financiamento do caminhão');
 
-    fireEvent.press(screen.getByText('Nova Dívida'));
+    expect(screen.queryByText('Dívidas')).not.toBeOnTheScreen();
+    expect(screen.queryByText('Eixo Certo')).not.toBeOnTheScreen();
+    expect(screen.UNSAFE_getByType(SafeAreaView).props.edges).not.toContain('top');
+  });
+
+  it('tocar na dívida abre o detalhe dela', async () => {
+    mockListar.mockResolvedValue({ ok: true, data: [divida()] });
+    render(<DividasListView />);
+
+    fireEvent.press(
+      await screen.findByRole('button', { name: 'Financiamento do caminhão, total R$ 72.000,00, 2 de 48 parcelas pagas' }),
+    );
+
+    expect(mockPush).toHaveBeenCalledWith('/dividas/div-1');
+  });
+
+  it('o FAB "Nova dívida" abre o cadastro', async () => {
+    mockListar.mockResolvedValue({ ok: true, data: [divida()] });
+    render(<DividasListView />);
+
+    fireEvent.press(await screen.findByRole('button', { name: 'Nova dívida' }));
+
     expect(mockPush).toHaveBeenCalledWith('/dividas/nova');
   });
 
-  it('exibe mensagem de erro se a busca falhar', async () => {
-    mockListar.mockResolvedValue({ ok: false, mensagem: 'Erro ao buscar dados do servidor.' });
-    
+  it('a lista reserva o espaço do FAB no fim, para ele não cobrir a última dívida', async () => {
+    mockListar.mockResolvedValue({ ok: true, data: [divida()] });
     render(<DividasListView />);
-    
-    await waitFor(() => {
-      expect(screen.getByText('Não foi possível carregar')).toBeOnTheScreen();
+    await screen.findByText('Financiamento do caminhão');
+
+    expect(StyleSheet.flatten(screen.UNSAFE_getByType(FlatList).props.contentContainerStyle)).toMatchObject({
+      paddingBottom: FAB_ALTURA_RESERVADA,
     });
-    
-    expect(screen.getByText('Erro ao buscar dados do servidor.')).toBeOnTheScreen();
+  });
+
+  it('vazio: explica o que fazer, e o FAB continua na tela', async () => {
+    mockListar.mockResolvedValue({ ok: true, data: [] });
+    render(<DividasListView />);
+
+    expect(await screen.findByText('Nenhuma dívida cadastrada')).toBeOnTheScreen();
+    expect(screen.getByRole('button', { name: 'Nova dívida' })).toBeOnTheScreen();
+  });
+
+  it('erro: mostra a mensagem e "Tentar novamente" carrega de novo', async () => {
+    mockListar
+      .mockResolvedValueOnce({ ok: false, mensagem: 'Não foi possível carregar as dívidas. Tente novamente.' })
+      .mockResolvedValueOnce({ ok: true, data: [divida()] });
+    render(<DividasListView />);
+
+    expect(await screen.findByText('Não foi possível carregar as dívidas. Tente novamente.')).toBeOnTheScreen();
+    await act(async () => fireEvent.press(screen.getByRole('button', { name: 'Tentar novamente' })));
+
+    expect(mockListar).toHaveBeenCalledTimes(2);
+    expect(screen.getByText('Financiamento do caminhão')).toBeOnTheScreen();
   });
 });

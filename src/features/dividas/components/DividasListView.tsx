@@ -1,26 +1,33 @@
-import { useCallback, useState } from 'react';
+import { useCallback, useRef, useState } from 'react';
 import { useFocusEffect, useRouter } from 'expo-router';
-import { ActivityIndicator, FlatList, View } from 'react-native';
+import { ActivityIndicator, FlatList, StyleSheet } from 'react-native';
 
-import { Button, Column, EmptyState, ListItem, Screen, Snackbar, Text, colors, spacing } from '@/ui';
 import { formatarMoeda } from '@/lib/money';
+import { Column, EmptyState, FAB, FAB_ALTURA_RESERVADA, ListItem, Screen, Text, colors } from '@/ui';
 
 import { listarDividas } from '../dividasRepository';
 import type { Divida } from '../types';
 
 type Status = 'carregando' | 'pronto' | 'erro';
-type Feedback = { mensagem: string; tone: 'success' | 'error' };
+
+// "3 de 12 parcelas pagas": o progresso da dívida numa linha só, abaixo da descrição.
+function rotuloParcelasPagas(divida: Pick<Divida, 'parcelasPagas' | 'quantidadeParcelas'>): string {
+  return `${divida.parcelasPagas} de ${divida.quantidadeParcelas} parcelas pagas`;
+}
 
 export function DividasListView() {
   const router = useRouter();
   const [status, setStatus] = useState<Status>('carregando');
   const [dividas, setDividas] = useState<Divida[]>([]);
   const [erro, setErro] = useState<string | null>(null);
-  const [feedback, setFeedback] = useState<Feedback | null>(null);
+  // Cada carga ganha um número; só a mais recente pode escrever na tela (mesmo padrão de Movimentações).
+  const ultimoPedido = useRef(0);
 
   const carregar = useCallback(async () => {
+    const pedido = ++ultimoPedido.current;
     setStatus('carregando');
     const resultado = await listarDividas();
+    if (pedido !== ultimoPedido.current) return;
 
     if (!resultado.ok) {
       setErro(resultado.mensagem);
@@ -31,76 +38,62 @@ export function DividasListView() {
     setStatus('pronto');
   }, []);
 
+  // Recarrega ao voltar do cadastro: a dívida nova já aparece na lista.
   useFocusEffect(
     useCallback(() => {
       carregar();
-    }, [carregar])
+    }, [carregar]),
   );
 
   return (
-    <Screen>
-      <View style={{ paddingHorizontal: spacing.base, paddingTop: spacing.base }}>
-        <Column gap="xs">
-          <Text variant="bodySm" weight="medium">
-            Eixo Certo
-          </Text>
-          <Text variant="heading">Dívidas e Financiamentos</Text>
-        </Column>
-      </View>
-
-      <View style={{ padding: spacing.base }}>
-        <Button label="Nova Dívida" variant="primary" onPress={() => router.push('/dividas/nova')} />
-      </View>
-
+    // O FAB é a ação de criar e o único cyan da tela (DESIGN_CYAN §7).
+    <Screen underHeader fab={<FAB label="Nova dívida" onPress={() => router.push('/dividas/nova')} />}>
       {status === 'carregando' && (
-        <View style={{ padding: spacing.xl, alignItems: 'center' }}>
+        <Column align="center">
           <ActivityIndicator size="small" color={colors.accent} accessibilityLabel="Carregando dívidas" />
-        </View>
+        </Column>
       )}
 
       {status === 'erro' && (
         <EmptyState
           title="Não foi possível carregar"
-          description={erro ?? 'Erro desconhecido'}
+          description={erro ?? undefined}
           actionLabel="Tentar novamente"
           onAction={carregar}
         />
       )}
 
+      {/* Sem ação no estado vazio: o FAB "Nova dívida" já está na tela. */}
       {status === 'pronto' && dividas.length === 0 && (
         <EmptyState
-          title="Nenhuma dívida encontrada"
-          description="Você ainda não registrou nenhuma dívida ou financiamento."
+          title="Nenhuma dívida cadastrada"
+          description="Cadastre um financiamento para gerar as parcelas no caixa."
         />
       )}
 
       {status === 'pronto' && dividas.length > 0 && (
         <FlatList
           data={dividas}
-          keyExtractor={(item) => item.id}
+          keyExtractor={(divida) => divida.id}
+          contentContainerStyle={styles.espacoDoFab}
           renderItem={({ item }) => (
-            <ListItem onPress={() => router.push(`/dividas/${item.id}`)} accessibilityLabel={`Dívida ${item.descricao}`}>
-              <Column gap="xs">
-                <Text variant="body" weight="medium" tone="primary">{item.descricao}</Text>
-                <Column direction="row" gap="md">
-                  <Text variant="bodySm" tone="body">{formatarMoeda(item.somaTotalCentavos)}</Text>
-                  <Text variant="bodySm" tone="muted">
-                    {item.parcelasPagas} de {item.quantidadeParcelas} parcelas pagas
-                  </Text>
-                </Column>
-              </Column>
-            </ListItem>
+            <ListItem
+              title={item.descricao}
+              subtitle={rotuloParcelasPagas(item)}
+              trailing={<Text weight="medium">{formatarMoeda(item.somaTotalCentavos)}</Text>}
+              onPress={() => router.push(`/dividas/${item.id}`)}
+              accessibilityLabel={`${item.descricao}, total ${formatarMoeda(item.somaTotalCentavos)}, ${rotuloParcelasPagas(item)}`}
+            />
           )}
-        />
-      )}
-
-      {feedback && (
-        <Snackbar
-          message={feedback.mensagem}
-          tone={feedback.tone}
-          onDismiss={() => setFeedback(null)}
         />
       )}
     </Screen>
   );
 }
+
+const styles = StyleSheet.create({
+  // O Screen só reserva o espaço do FAB quando ele mesmo rola; aqui quem rola é a FlatList.
+  espacoDoFab: {
+    paddingBottom: FAB_ALTURA_RESERVADA,
+  },
+});

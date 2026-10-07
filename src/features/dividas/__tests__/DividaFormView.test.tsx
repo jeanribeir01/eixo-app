@@ -1,104 +1,225 @@
-import { fireEvent, render, screen, waitFor } from '@testing-library/react-native';
+import { act, fireEvent, render, screen, waitFor } from '@testing-library/react-native';
+import { KeyboardAvoidingView, ScrollView } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
+
+import { listarOpcoesMovimentacao, type OpcoesMovimentacao } from '@/features/movimentacoes/movimentacoesRepository';
 
 import { DividaFormView } from '../components/DividaFormView';
 import { criarDivida } from '../dividasRepository';
-import { listarOpcoesMovimentacao } from '@/features/movimentacoes/movimentacoesRepository';
 
+// O runner do GitHub Actions é mais lento que a máquina local.
 jest.setTimeout(15000);
 
 const mockBack = jest.fn();
-const mockReplace = jest.fn();
 
 jest.mock('expo-router', () => ({
-  useRouter: () => ({ back: mockBack, replace: mockReplace, canGoBack: () => true }),
+  useRouter: () => ({ back: mockBack }),
 }));
 
-jest.mock('../dividasRepository', () => ({
-  criarDivida: jest.fn(),
-}));
-
-jest.mock('@/features/movimentacoes/movimentacoesRepository', () => ({
-  listarOpcoesMovimentacao: jest.fn(),
-}));
+jest.mock('../dividasRepository', () => ({ criarDivida: jest.fn() }));
+jest.mock('@/features/movimentacoes/movimentacoesRepository', () => ({ listarOpcoesMovimentacao: jest.fn() }));
 
 const mockCriar = criarDivida as jest.MockedFunction<typeof criarDivida>;
 const mockOpcoes = listarOpcoesMovimentacao as jest.MockedFunction<typeof listarOpcoesMovimentacao>;
 
+// Já vêm só as ativas (listarOpcoesMovimentacao filtra); a tela ainda filtra as de Saída.
+const opcoes: OpcoesMovimentacao = {
+  categorias: [
+    { id: 'cat-fin', titulo: 'Financiamento', tipo: 'Saida', ativa: true },
+    { id: 'cat-comb', titulo: 'Combustível', tipo: 'Saida', ativa: true },
+    { id: 'cat-frete', titulo: 'Frete', tipo: 'Entrada', ativa: true },
+  ],
+  formasPagamento: [
+    { id: 'fp-pix', nome: 'Pix', ativa: true },
+    { id: 'fp-bol', nome: 'Boleto', ativa: true },
+  ],
+};
+
 beforeEach(() => {
   mockBack.mockReset();
-  mockReplace.mockReset();
   mockCriar.mockReset();
   mockOpcoes.mockReset();
-
-  mockOpcoes.mockResolvedValue({
-    ok: true,
-    data: {
-      categorias: [{ id: 'cat-fin', titulo: 'Financiamento', tipo: 'Saida', ativa: true }],
-      formasPagamento: [{ id: 'fp-bol', nome: 'Boleto', ativa: true }],
-    },
-  });
+  mockOpcoes.mockResolvedValue({ ok: true, data: opcoes });
 });
-
-function salvar() {
-  fireEvent.press(screen.getByText('Salvar'));
-}
 
 async function renderForm() {
   render(<DividaFormView />);
-  // Esperar o carregamento sair (tem o botão Salvar)
-  await screen.findByText('Salvar');
+  await screen.findByLabelText('Descrição');
 }
 
-describe('DividaFormView', () => {
-  it('mostra mensagens de erro sob os campos quando os dados são inválidos', async () => {
+function salvar() {
+  fireEvent.press(screen.getByRole('button', { name: 'Salvar' }));
+}
+
+function preencherValido() {
+  fireEvent.changeText(screen.getByLabelText('Descrição'), 'Financiamento do caminhão');
+  fireEvent.changeText(screen.getByLabelText('Quantidade de parcelas'), '12');
+  fireEvent.changeText(screen.getByLabelText('Valor da parcela (R$)'), '350000');
+  fireEvent.changeText(screen.getByLabelText('Vencimento da 1ª parcela'), '15012027');
+}
+
+describe('DividaFormView — campos (EIX-50)', () => {
+  it('título no header nativo; o formulário rola e sobe com o teclado (NAV-02, NAV-04)', async () => {
     await renderForm();
 
-    // Limpar valores pré-preenchidos ou forçar estado inválido
-    fireEvent.changeText(screen.getByLabelText('Descrição'), '   ');
-    fireEvent.changeText(screen.getByLabelText('Quantidade de Parcelas'), '0');
-    fireEvent.changeText(screen.getByLabelText('Valor da Parcela'), ''); // Zera o valor (CampoMoeda)
-    
+    expect(screen.queryByText('Nova dívida')).not.toBeOnTheScreen();
+    expect(screen.UNSAFE_getByType(SafeAreaView).props.edges).not.toContain('top');
+    expect(screen.UNSAFE_getByType(KeyboardAvoidingView).findByType(ScrollView)).toBeDefined();
+  });
+
+  it('pré-seleciona a categoria "Financiamento" e a forma "Boleto"', async () => {
+    await renderForm();
+
+    expect(screen.getByText('Financiamento')).toBeOnTheScreen();
+    expect(screen.getByText('Boleto')).toBeOnTheScreen();
+  });
+
+  it('o seletor de categoria oferece só as de Saída', async () => {
+    await renderForm();
+
+    fireEvent.press(screen.getByRole('button', { name: 'Categoria' }));
+
+    expect(screen.getByRole('button', { name: 'Combustível' })).toBeOnTheScreen();
+    expect(screen.queryByRole('button', { name: 'Frete' })).not.toBeOnTheScreen();
+  });
+
+  it('Soma total é somente leitura e acompanha quantidade × valor da parcela', async () => {
+    await renderForm();
+    const soma = screen.getByLabelText('Soma total');
+    expect(soma).toHaveProp('editable', false);
+
+    fireEvent.changeText(screen.getByLabelText('Quantidade de parcelas'), '12');
+    fireEvent.changeText(screen.getByLabelText('Valor da parcela (R$)'), '350000');
+
+    expect(screen.getByLabelText('Soma total')).toHaveDisplayValue('R$ 42.000,00');
+
+    fireEvent.changeText(screen.getByLabelText('Quantidade de parcelas'), '24');
+    expect(screen.getByLabelText('Soma total')).toHaveDisplayValue('R$ 84.000,00');
+  });
+});
+
+describe('DividaFormView — validação (EIX-50)', () => {
+  it('campos vazios mostram as mensagens embaixo de cada um e não chamam a RPC', async () => {
+    await renderForm();
+    fireEvent.changeText(screen.getByLabelText('Quantidade de parcelas'), '');
+
     salvar();
 
-    await waitFor(() => {
-      expect(screen.getByText('Informe a descrição.')).toBeOnTheScreen();
-      expect(screen.getByText('Informe ao menos 1 parcela.')).toBeOnTheScreen();
-      expect(screen.getByText('Informe um valor maior que zero.')).toBeOnTheScreen();
-      expect(screen.getByText('Data inválida. Use DD/MM/AAAA.')).toBeOnTheScreen();
-    });
-    
+    expect(screen.getByText('Informe a descrição.')).toBeOnTheScreen();
+    expect(screen.getByText('Informe ao menos 1 parcela.')).toBeOnTheScreen();
+    expect(screen.getByText('Informe um valor maior que zero.')).toBeOnTheScreen();
+    expect(screen.getByText('Data inválida. Use DD/MM/AAAA.')).toBeOnTheScreen();
     expect(mockCriar).not.toHaveBeenCalled();
   });
 
-  it('atualiza o campo Soma Total em tempo real conforme a quantidade e valor da parcela', async () => {
+  it('mais de 120 parcelas → "O máximo é 120 parcelas."', async () => {
     await renderForm();
+    preencherValido();
+    fireEvent.changeText(screen.getByLabelText('Quantidade de parcelas'), '121');
 
-    fireEvent.changeText(screen.getByLabelText('Quantidade de Parcelas'), '12');
-    fireEvent.changeText(screen.getByLabelText('Valor da Parcela'), '350000'); // CampoMoeda lida com string como dígitos
-    
-    // 12 * 3500.00 = 42000.00
-    // O CampoMoeda transforma 350000 -> 3500.00 na tela e passa 350000 para o onChange (se usar digitosParaCentavos)
-    await waitFor(() => {
-      expect(screen.getByText('R$ 42.000,00')).toBeOnTheScreen();
-    });
-  });
-
-  it('exibe Snackbar de erro quando a quitação antecipada é maior que a soma total', async () => {
-    await renderForm();
-
-    fireEvent.changeText(screen.getByLabelText('Descrição'), 'Financiamento do Caminhão');
-    fireEvent.changeText(screen.getByLabelText('Quantidade de Parcelas'), '10');
-    fireEvent.changeText(screen.getByLabelText('Valor da Parcela'), '10000'); // 100 reais
-    fireEvent.changeText(screen.getByLabelText('Data de Vencimento da 1ª Parcela'), '15/01/2026');
-    
-    // Soma total é 1000 reais = 100000 centavos
-    // Quitação = 1500 reais = 150000 centavos
-    fireEvent.changeText(screen.getByLabelText('Valor de Quitação Antecipada (opcional)'), '150000');
-    
     salvar();
 
-    await waitFor(() => {
-      expect(screen.getByText('A quitação não pode passar da soma total.')).toBeOnTheScreen();
+    expect(screen.getByText('O máximo é 120 parcelas.')).toBeOnTheScreen();
+    expect(mockCriar).not.toHaveBeenCalled();
+  });
+
+  it('quitação maior que a soma total → "A quitação não pode passar da soma total."', async () => {
+    await renderForm();
+    preencherValido();
+    // Soma: 12 × R$ 3.500,00 = R$ 42.000,00. Quitação: R$ 50.000,00.
+    fireEvent.changeText(screen.getByLabelText('Valor de quitação antecipada (opcional)'), '5000000');
+
+    salvar();
+
+    expect(screen.getByText('A quitação não pode passar da soma total.')).toBeOnTheScreen();
+    expect(mockCriar).not.toHaveBeenCalled();
+  });
+
+  it('sem forma de pagamento → "Escolha a forma de pagamento."', async () => {
+    mockOpcoes.mockResolvedValue({ ok: true, data: { ...opcoes, formasPagamento: [{ id: 'fp-pix', nome: 'Pix', ativa: true }] } });
+    await renderForm();
+    preencherValido();
+
+    salvar();
+
+    expect(screen.getByText('Escolha a forma de pagamento.')).toBeOnTheScreen();
+    expect(mockCriar).not.toHaveBeenCalled();
+  });
+});
+
+describe('DividaFormView — salvar (EIX-50)', () => {
+  it('chama a RPC com centavos e data ISO, mostra "12 parcelas geradas." e volta para a lista', async () => {
+    mockCriar.mockResolvedValue({ ok: true, data: { id: 'div-1', quantidadeParcelas: 12 } });
+    await renderForm();
+    preencherValido();
+
+    await act(async () => salvar());
+
+    expect(mockCriar).toHaveBeenCalledWith({
+      descricao: 'Financiamento do caminhão',
+      categoriaId: 'cat-fin',
+      formaPagamentoId: 'fp-bol',
+      quantidadeParcelas: 12,
+      valorParcelaCentavos: 350000,
+      dataVencimentoPrimeira: '2027-01-15',
+      valorQuitacaoCentavos: null,
     });
+    expect(screen.getByRole('alert')).toHaveTextContent('12 parcelas geradas.');
+    await waitFor(() => expect(mockBack).toHaveBeenCalled(), { timeout: 3000 });
+  });
+
+  it('uma parcela só: "1 parcela gerada."', async () => {
+    mockCriar.mockResolvedValue({ ok: true, data: { id: 'div-1', quantidadeParcelas: 1 } });
+    await renderForm();
+    preencherValido();
+    fireEvent.changeText(screen.getByLabelText('Quantidade de parcelas'), '1');
+
+    await act(async () => salvar());
+
+    expect(screen.getByRole('alert')).toHaveTextContent('1 parcela gerada.');
+  });
+
+  it('depois do sucesso o botão continua em loading: um segundo toque não cria a dívida de novo', async () => {
+    mockCriar.mockResolvedValue({ ok: true, data: { id: 'div-1', quantidadeParcelas: 12 } });
+    await renderForm();
+    preencherValido();
+
+    await act(async () => salvar());
+    salvar();
+
+    expect(screen.getByRole('button', { name: 'Salvar' })).toBeBusy();
+    expect(mockCriar).toHaveBeenCalledTimes(1);
+  });
+
+  it('erro da RPC: Snackbar com a mensagem em português, form preenchido e botão livre', async () => {
+    mockCriar.mockResolvedValue({ ok: false, mensagem: 'Categoria ou forma de pagamento inválida. Escolha outra.' });
+    await renderForm();
+    preencherValido();
+
+    await act(async () => salvar());
+
+    expect(screen.getByRole('alert')).toHaveTextContent('Categoria ou forma de pagamento inválida. Escolha outra.');
+    expect(screen.getByLabelText('Descrição')).toHaveDisplayValue('Financiamento do caminhão');
+    expect(screen.getByRole('button', { name: 'Salvar' })).toBeEnabled();
+    expect(mockBack).not.toHaveBeenCalled();
+  });
+});
+
+describe('DividaFormView — carga das opções (EIX-50)', () => {
+  it('carregando: indicador sob o header', () => {
+    mockOpcoes.mockReturnValue(new Promise(() => {}));
+    render(<DividaFormView />);
+
+    expect(screen.getByLabelText('Carregando formulário')).toBeOnTheScreen();
+    expect(screen.UNSAFE_getByType(SafeAreaView).props.edges).not.toContain('top');
+  });
+
+  it('erro: mostra a mensagem e o botão Voltar', async () => {
+    mockOpcoes.mockResolvedValue({ ok: false, mensagem: 'Não foi possível carregar as categorias. Tente novamente.' });
+    render(<DividaFormView />);
+
+    expect(await screen.findByText('Não foi possível carregar as categorias. Tente novamente.')).toBeOnTheScreen();
+    fireEvent.press(screen.getByRole('button', { name: 'Voltar' }));
+    expect(mockBack).toHaveBeenCalled();
   });
 });

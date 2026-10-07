@@ -1,19 +1,24 @@
 import { useEffect, useState } from 'react';
 import { useRouter } from 'expo-router';
-import { ActivityIndicator, ScrollView, View } from 'react-native';
+import { ActivityIndicator } from 'react-native';
+import { z } from 'zod';
 
 import { CampoData } from '@/features/movimentacoes/components/CampoData';
 import { CampoMoeda } from '@/features/movimentacoes/components/CampoMoeda';
 import { listarOpcoesMovimentacao, type OpcoesMovimentacao } from '@/features/movimentacoes/movimentacoesRepository';
-import { Button, Column, Input, Screen, Select, Snackbar, Text, colors, radius, spacing } from '@/ui';
 import { formatarMoeda } from '@/lib/money';
+import { Button, Column, EmptyState, Input, Screen, Select, Snackbar, colors } from '@/ui';
 
 import { criarDivida } from '../dividasRepository';
-import { dividaSchema, somaTotalCentavos, type DividaFormValues } from '../schema';
+import { MAXIMO_PARCELAS, dividaSchema, somaTotalCentavos, type DividaFormValues } from '../schema';
 
 type Erros = Partial<Record<keyof DividaFormValues, string>>;
 type Feedback = { mensagem: string; tone: 'success' | 'error' };
 type StatusCarga = 'carregando' | 'pronto' | 'erro';
+
+// Sugestões da task (EIX-50): quem financia um caminhão quase sempre paga em boleto.
+const CATEGORIA_SUGERIDA = 'Financiamento';
+const FORMA_SUGERIDA = 'Boleto';
 
 const VALORES_INICIAIS: DividaFormValues = {
   descricao: '',
@@ -25,13 +30,26 @@ const VALORES_INICIAIS: DividaFormValues = {
   valorQuitacaoCentavos: null,
 };
 
+const CAMPOS: (keyof DividaFormValues)[] = [
+  'descricao',
+  'quantidadeParcelas',
+  'valorParcelaCentavos',
+  'dataVencimentoPrimeira',
+  'categoriaId',
+  'formaPagamentoId',
+  'valorQuitacaoCentavos',
+];
+
+function mensagemDeSucesso(quantidadeParcelas: number): string {
+  return quantidadeParcelas === 1 ? '1 parcela gerada.' : `${quantidadeParcelas} parcelas geradas.`;
+}
+
 export function DividaFormView() {
   const router = useRouter();
 
   const [status, setStatus] = useState<StatusCarga>('carregando');
   const [erroCarga, setErroCarga] = useState<string | null>(null);
   const [opcoes, setOpcoes] = useState<OpcoesMovimentacao>({ categorias: [], formasPagamento: [] });
-
   const [valores, setValores] = useState<DividaFormValues>(VALORES_INICIAIS);
   const [erros, setErros] = useState<Erros>({});
   const [salvando, setSalvando] = useState(false);
@@ -40,179 +58,161 @@ export function DividaFormView() {
   useEffect(() => {
     let cancelado = false;
 
-    async function carregar() {
-      const resultado = await listarOpcoesMovimentacao();
+    listarOpcoesMovimentacao().then((resultado) => {
       if (cancelado) return;
-
       if (!resultado.ok) {
         setErroCarga(resultado.mensagem);
         setStatus('erro');
         return;
       }
 
-      const categorias = resultado.data.categorias.filter((c) => c.ativa && c.tipo === 'Saida');
-      const formasPagamento = resultado.data.formasPagamento.filter((f) => f.ativa);
-
-      const financiamento = categorias.find((c) => c.titulo === 'Financiamento');
-      const boleto = formasPagamento.find((f) => f.nome === 'Boleto');
-
+      // Parcela de dívida é sempre saída do caixa: só categorias de Saída (as inativas já vêm fora).
+      const categorias = resultado.data.categorias.filter((categoria) => categoria.tipo === 'Saida');
+      const { formasPagamento } = resultado.data;
       setOpcoes({ categorias, formasPagamento });
-      setValores((v) => ({
-        ...v,
-        categoriaId: financiamento?.id ?? null,
-        formaPagamentoId: boleto?.id ?? null,
+      setValores((atuais) => ({
+        ...atuais,
+        categoriaId: categorias.find((categoria) => categoria.titulo === CATEGORIA_SUGERIDA)?.id ?? null,
+        formaPagamentoId: formasPagamento.find((forma) => forma.nome === FORMA_SUGERIDA)?.id ?? null,
       }));
       setStatus('pronto');
+    });
+
+    return () => {
+      cancelado = true;
+    };
+  }, []);
+
+  function alterar<K extends keyof DividaFormValues>(nome: K, valor: DividaFormValues[K]) {
+    setValores((atuais) => ({ ...atuais, [nome]: valor }));
+  }
+
+  async function handleSalvar() {
+    if (salvando) return;
+
+    const resultado = dividaSchema.safeParse(valores);
+    if (!resultado.success) {
+      const fieldErrors = z.flattenError(resultado.error).fieldErrors;
+      const novosErros: Erros = {};
+      for (const campo of CAMPOS) {
+        novosErros[campo] = fieldErrors[campo]?.[0];
+      }
+      setErros(novosErros);
+      return;
+    }
+    setErros({});
+
+    setSalvando(true);
+    const resposta = await criarDivida(resultado.data);
+
+    if (!resposta.ok) {
+      setSalvando(false);
+      setFeedback({ mensagem: resposta.mensagem, tone: 'error' });
+      return;
     }
 
-    carregar();
-    return () => { cancelado = true; };
-  }, []);
+    // O botão continua em loading até a tela fechar: um segundo toque criaria a dívida de novo,
+    // com todas as parcelas em dobro no caixa.
+    setFeedback({ mensagem: mensagemDeSucesso(resposta.data.quantidadeParcelas), tone: 'success' });
+  }
+
+  function handleFeedbackDismiss() {
+    const eraSucesso = feedback?.tone === 'success';
+    setFeedback(null);
+    if (eraSucesso) router.back();
+  }
 
   if (status === 'carregando') {
     return (
-      <Screen>
-        <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', padding: spacing.xl }}>
-          <ActivityIndicator color={colors.accent} size="large" />
-        </View>
+      <Screen align="center" underHeader>
+        <ActivityIndicator size="small" color={colors.accent} accessibilityLabel="Carregando formulário" />
       </Screen>
     );
   }
 
   if (status === 'erro') {
     return (
-      <Screen>
-        <View style={{ flex: 1, justifyContent: 'center', padding: spacing.xl }}>
-          <Column align="center" gap="lg">
-            <Text variant="subheading" tone="primary" style={{ textAlign: 'center' }}>Não foi possível carregar</Text>
-            <Text variant="body" tone="body" style={{ textAlign: 'center' }}>{erroCarga}</Text>
-            <Button label="Voltar" variant="ghost" onPress={() => router.back()} />
-          </Column>
-        </View>
+      <Screen align="center" underHeader>
+        <EmptyState title={erroCarga ?? 'Não foi possível carregar.'} actionLabel="Voltar" onAction={() => router.back()} />
       </Screen>
     );
   }
 
-  async function salvar() {
-    setErros({});
-    setFeedback(null);
-
-    const parsed = dividaSchema.safeParse(valores);
-    if (!parsed.success) {
-      const novosErros: Erros = {};
-      for (const erro of parsed.error.issues) {
-        const path = erro.path[0] as keyof DividaFormValues;
-        if (!novosErros[path]) novosErros[path] = erro.message;
-      }
-      setErros(novosErros);
-      return;
-    }
-
-    setSalvando(true);
-    const resultado = await criarDivida(parsed.data);
-    setSalvando(false);
-
-    if (resultado.ok) {
-      setFeedback({ mensagem: `${resultado.data.quantidadeParcelas} parcelas geradas`, tone: 'success' });
-      setTimeout(() => {
-        if (router.canGoBack()) router.back();
-        else router.replace('/dividas');
-      }, 1500);
-    } else {
-      setFeedback({ mensagem: resultado.mensagem, tone: 'error' });
-    }
-  }
-
-  const opcoesCategoria = opcoes.categorias.map((c) => ({ label: c.titulo, value: c.id }));
-  const opcoesForma = opcoes.formasPagamento.map((f) => ({ label: f.nome, value: f.id }));
-  const totalSoma = somaTotalCentavos(valores.quantidadeParcelas, valores.valorParcelaCentavos);
+  const somaTotal = somaTotalCentavos(valores.quantidadeParcelas, valores.valorParcelaCentavos);
 
   return (
-    <Screen>
-      <ScrollView contentContainerStyle={{ padding: spacing.base, paddingBottom: 100 }}>
-        <Column gap="lg">
-          <Input
-            label="Descrição"
-            value={valores.descricao}
-            placeholder="Ex: Financiamento do Caminhão"
-            onChangeText={(texto) => setValores({ ...valores, descricao: texto })}
-            error={erros.descricao}
-          />
-
-          <Input
-            label="Quantidade de Parcelas"
-            value={valores.quantidadeParcelas ? String(valores.quantidadeParcelas) : ''}
-            keyboardType="number-pad"
-            placeholder="Ex: 48"
-            onChangeText={(texto) => {
-              const num = parseInt(texto.replace(/\D/g, ''), 10);
-              setValores({ ...valores, quantidadeParcelas: isNaN(num) ? 0 : num });
-            }}
-            error={erros.quantidadeParcelas}
-          />
-
-          <CampoMoeda
-            label="Valor da Parcela"
-            valorCentavos={valores.valorParcelaCentavos}
-            onChange={(val) => setValores({ ...valores, valorParcelaCentavos: val })}
-            error={erros.valorParcelaCentavos}
-          />
-
-          <CampoData
-            label="Data de Vencimento da 1ª Parcela"
-            value={valores.dataVencimentoPrimeira}
-            onChange={(texto) => setValores({ ...valores, dataVencimentoPrimeira: texto })}
-            error={erros.dataVencimentoPrimeira}
-          />
-
-          <Select
-            label="Categoria"
-            options={opcoesCategoria}
-            value={valores.categoriaId}
-            onChange={(val) => setValores({ ...valores, categoriaId: val })}
-            error={erros.categoriaId}
-            placeholder="Selecione uma categoria"
-          />
-
-          <Select
-            label="Forma de Pagamento"
-            options={opcoesForma}
-            value={valores.formaPagamentoId}
-            onChange={(val) => setValores({ ...valores, formaPagamentoId: val })}
-            error={erros.formaPagamentoId}
-            placeholder="Selecione uma forma de pagamento"
-          />
-
-          <View style={{ backgroundColor: colors.surface, borderColor: colors.border, borderWidth: 1, borderRadius: radius.input, padding: spacing.md }}>
-            <Column gap="xs">
-              <Text variant="caption" tone="body" weight="medium">Soma Total</Text>
-              <Text variant="body" tone="primary" weight="medium">{formatarMoeda(totalSoma)}</Text>
-            </Column>
-          </View>
-
-          <CampoMoeda
-            label="Valor de Quitação Antecipada (opcional)"
-            valorCentavos={valores.valorQuitacaoCentavos ?? 0}
-            onChange={(val) => setValores({ ...valores, valorQuitacaoCentavos: val === 0 ? null : val })}
-            error={erros.valorQuitacaoCentavos}
-          />
-
-          <Button
-            label="Salvar"
-            variant="primary"
-            onPress={salvar}
-            loading={salvando}
-          />
-        </Column>
-      </ScrollView>
-
-      {feedback && (
-        <Snackbar
-          message={feedback.mensagem}
-          tone={feedback.tone}
-          onDismiss={() => setFeedback(null)}
+    // Formulário longo: o Screen rola em celular pequeno (RNF02) e sobe com o teclado.
+    <Screen
+      underHeader
+      scroll
+      overlay={
+        feedback && (
+          <Snackbar message={feedback.mensagem} tone={feedback.tone} duration={1200} onDismiss={handleFeedbackDismiss} />
+        )
+      }
+    >
+      <Column gap="md">
+        <Input
+          label="Descrição"
+          placeholder="Ex.: Financiamento do caminhão"
+          value={valores.descricao}
+          onChangeText={(texto) => alterar('descricao', texto)}
+          maxLength={120}
+          error={erros.descricao}
         />
-      )}
+        <Input
+          label="Quantidade de parcelas"
+          placeholder={`De 1 a ${MAXIMO_PARCELAS}`}
+          keyboardType="number-pad"
+          // Só dígitos: campo vazio vira 0, e o schema avisa "Informe ao menos 1 parcela."
+          value={valores.quantidadeParcelas === 0 ? '' : String(valores.quantidadeParcelas)}
+          onChangeText={(texto) => alterar('quantidadeParcelas', Number(texto.replace(/\D/g, '')))}
+          maxLength={3}
+          error={erros.quantidadeParcelas}
+        />
+        <CampoMoeda
+          label="Valor da parcela (R$)"
+          valorCentavos={valores.valorParcelaCentavos}
+          onChange={(centavos) => alterar('valorParcelaCentavos', centavos)}
+          error={erros.valorParcelaCentavos}
+        />
+        {/* Somente leitura (AC): quantidade × valor da parcela, atualizado enquanto o usuário digita. */}
+        <Input label="Soma total" value={formatarMoeda(somaTotal)} editable={false} />
+        <CampoData
+          label="Vencimento da 1ª parcela"
+          value={valores.dataVencimentoPrimeira}
+          onChange={(texto) => alterar('dataVencimentoPrimeira', texto)}
+          error={erros.dataVencimentoPrimeira}
+        />
+        <Select
+          label="Categoria"
+          value={valores.categoriaId}
+          options={opcoes.categorias.map((categoria) => ({ value: categoria.id, label: categoria.titulo }))}
+          onChange={(id) => alterar('categoriaId', id)}
+          placeholder="Escolha a categoria"
+          emptyMessage="Nenhuma categoria de saída ativa."
+          error={erros.categoriaId}
+        />
+        <Select
+          label="Forma de pagamento"
+          value={valores.formaPagamentoId}
+          options={opcoes.formasPagamento.map((forma) => ({ value: forma.id, label: forma.nome }))}
+          onChange={(id) => alterar('formaPagamentoId', id)}
+          placeholder="Escolha a forma de pagamento"
+          emptyMessage="Nenhuma forma de pagamento ativa."
+          error={erros.formaPagamentoId}
+        />
+        <CampoMoeda
+          label="Valor de quitação antecipada (opcional)"
+          valorCentavos={valores.valorQuitacaoCentavos ?? 0}
+          // Campo vazio = sem quitação (null), não quitação de R$ 0,00.
+          onChange={(centavos) => alterar('valorQuitacaoCentavos', centavos === 0 ? null : centavos)}
+          error={erros.valorQuitacaoCentavos}
+        />
+      </Column>
+
+      <Button label="Salvar" onPress={handleSalvar} loading={salvando} />
+      <Button label="Cancelar" variant="ghost" onPress={() => router.back()} />
     </Screen>
   );
 }

@@ -1,104 +1,105 @@
-import { fireEvent, render, screen, waitFor } from '@testing-library/react-native';
-import { useRouter } from 'expo-router';
+import { act, fireEvent, render, screen } from '@testing-library/react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { DividaDetalheView } from '../components/DividaDetalheView';
 import { buscarDivida } from '../dividasRepository';
 import type { DividaDetalhe } from '../types';
 
-jest.mock('expo-router', () => ({
-  useRouter: jest.fn(),
-}));
+jest.setTimeout(15000);
 
-jest.mock('../dividasRepository', () => ({
-  buscarDivida: jest.fn(),
-}));
+jest.mock('../dividasRepository', () => ({ buscarDivida: jest.fn() }));
 
-const mockBack = jest.fn();
-(useRouter as jest.Mock).mockReturnValue({ back: mockBack });
 const mockBuscar = buscarDivida as jest.MockedFunction<typeof buscarDivida>;
 
-beforeEach(() => {
-  mockBack.mockClear();
-  mockBuscar.mockReset();
-});
-
-const dividaDetalheMock: DividaDetalhe = {
-  id: 'divida-123',
-  descricao: 'Financiamento do Caminhão',
+const detalhe: DividaDetalhe = {
+  id: 'div-1',
+  descricao: 'Financiamento do caminhão',
   categoria: { titulo: 'Financiamento' },
-  quantidadeParcelas: 2,
-  valorParcelaCentavos: 150000, // 1500 reais
-  somaTotalCentavos: 300000,
+  quantidadeParcelas: 3,
+  valorParcelaCentavos: 150000,
+  somaTotalCentavos: 450000,
   valorQuitacaoCentavos: null,
   dataVencimentoPrimeira: '2026-01-15',
   parcelasPagas: 1,
   ativa: true,
+  // O repositório já devolve as parcelas ordenadas e numeradas.
   parcelas: [
-    {
-      id: 'parc-1',
-      numero: 1,
-      dataVencimento: '2026-01-15',
-      valorCentavos: 150000,
-      status: 'Pago',
-      dataPagamento: '2026-01-10',
-    },
-    {
-      id: 'parc-2',
-      numero: 2,
-      dataVencimento: '2026-02-15',
-      valorCentavos: 150000,
-      status: 'Pendente',
-      dataPagamento: null,
-    },
+    { id: 'p1', numero: 1, dataVencimento: '2026-01-15', valorCentavos: 150000, status: 'Pago', dataPagamento: '2026-01-14' },
+    { id: 'p2', numero: 2, dataVencimento: '2026-02-15', valorCentavos: 150000, status: 'Pendente', dataPagamento: null },
+    { id: 'p3', numero: 3, dataVencimento: '2026-03-15', valorCentavos: 150000, status: 'Pendente', dataPagamento: null },
   ],
 };
 
-describe('DividaDetalheView', () => {
-  it('exibe tela de carregamento inicialmente', async () => {
-    mockBuscar.mockImplementation(() => new Promise(() => {}));
-    
-    render(<DividaDetalheView id="divida-123" />);
-    // O ActivityIndicator não tem label específico configurado, mas podemos checar se renderiza.
-    // Usaremos a ausência de textos como prova inicial.
-    expect(screen.queryByText('Financiamento do Caminhão')).toBeNull();
+beforeEach(() => {
+  mockBuscar.mockReset();
+});
+
+describe('DividaDetalheView (EIX-50)', () => {
+  it('busca a dívida pelo id da rota', async () => {
+    mockBuscar.mockResolvedValue({ ok: true, data: detalhe });
+    render(<DividaDetalheView id="div-1" />);
+
+    await screen.findByText('Financiamento do caminhão');
+    expect(mockBuscar).toHaveBeenCalledWith('div-1');
   });
 
-  it('exibe os detalhes da dívida e a lista de parcelas', async () => {
-    mockBuscar.mockResolvedValue({ ok: true, data: dividaDetalheMock });
-    
-    render(<DividaDetalheView id="divida-123" />);
-    
-    await waitFor(() => {
-      expect(screen.getByText('Financiamento do Caminhão')).toBeOnTheScreen();
-    });
+  it('carregando: indicador sob o header', () => {
+    mockBuscar.mockReturnValue(new Promise(() => {}));
+    render(<DividaDetalheView id="div-1" />);
 
+    expect(screen.getByLabelText('Carregando dívida')).toBeOnTheScreen();
+    expect(screen.UNSAFE_getByType(SafeAreaView).props.edges).not.toContain('top');
+  });
+
+  it('resumo: categoria, descrição, soma total, parcelas pagas e valor da parcela', async () => {
+    mockBuscar.mockResolvedValue({ ok: true, data: detalhe });
+    render(<DividaDetalheView id="div-1" />);
+
+    expect(await screen.findByText('Financiamento do caminhão')).toBeOnTheScreen();
     expect(screen.getByText('Financiamento')).toBeOnTheScreen();
-    expect(screen.getByText('R$ 3.000,00')).toBeOnTheScreen(); // Soma Total
-    expect(screen.getByText('1 de 2')).toBeOnTheScreen(); // Parcelas Pagas
-    expect(screen.getAllByText('R$ 1.500,00').length).toBeGreaterThan(0); // Valor Parcela e itens
-
-    // Detalhes das parcelas na FlatList
-    expect(screen.getByText('Parcela 1')).toBeOnTheScreen();
-    expect(screen.getByText('Venc: 15/01/2026')).toBeOnTheScreen();
-    expect(screen.getByText('Pago')).toBeOnTheScreen();
-
-    expect(screen.getByText('Parcela 2')).toBeOnTheScreen();
-    expect(screen.getByText('Venc: 15/02/2026')).toBeOnTheScreen();
-    expect(screen.getByText('Pendente')).toBeOnTheScreen();
+    expect(screen.getByText('R$ 4.500,00')).toBeOnTheScreen();
+    expect(screen.getByText('1 de 3')).toBeOnTheScreen();
+    expect(screen.getAllByText('R$ 1.500,00').length).toBeGreaterThan(0);
+    expect(screen.queryByText('Quitação antecipada')).not.toBeOnTheScreen();
   });
 
-  it('exibe mensagem de erro se a busca falhar e permite voltar', async () => {
-    mockBuscar.mockResolvedValue({ ok: false, mensagem: 'Dívida não encontrada.' });
-    
-    render(<DividaDetalheView id="divida-123" />);
-    
-    await waitFor(() => {
-      expect(screen.getByText('Não foi possível carregar')).toBeOnTheScreen();
-    });
-    
-    expect(screen.getByText('Dívida não encontrada.')).toBeOnTheScreen();
-    
-    fireEvent.press(screen.getByText('Voltar'));
-    expect(mockBack).toHaveBeenCalled();
+  it('com quitação antecipada, mostra o valor dela', async () => {
+    mockBuscar.mockResolvedValue({ ok: true, data: { ...detalhe, valorQuitacaoCentavos: 400000 } });
+    render(<DividaDetalheView id="div-1" />);
+
+    expect(await screen.findByText('Quitação antecipada')).toBeOnTheScreen();
+    expect(screen.getByText('R$ 4.000,00')).toBeOnTheScreen();
+  });
+
+  it('lista as parcelas geradas com número, vencimento, status e valor (prova do vídeo)', async () => {
+    mockBuscar.mockResolvedValue({ ok: true, data: detalhe });
+    render(<DividaDetalheView id="div-1" />);
+
+    expect(await screen.findByText('Parcela 1')).toBeOnTheScreen();
+    expect(screen.getByText('Vencimento 15/01/2026 · Pago')).toBeOnTheScreen();
+    expect(screen.getByText('Parcela 3')).toBeOnTheScreen();
+    expect(screen.getByText('Vencimento 15/03/2026 · Pendente')).toBeOnTheScreen();
+  });
+
+  it('o título "Dívida" fica no header; a tela não o repete', async () => {
+    mockBuscar.mockResolvedValue({ ok: true, data: detalhe });
+    render(<DividaDetalheView id="div-1" />);
+    await screen.findByText('Financiamento do caminhão');
+
+    expect(screen.queryByText('Dívida')).not.toBeOnTheScreen();
+    expect(screen.UNSAFE_getByType(SafeAreaView).props.edges).not.toContain('top');
+  });
+
+  it('erro: mostra a mensagem e "Tentar novamente" busca de novo', async () => {
+    mockBuscar
+      .mockResolvedValueOnce({ ok: false, mensagem: 'Dívida não encontrada ou já excluída.' })
+      .mockResolvedValueOnce({ ok: true, data: detalhe });
+    render(<DividaDetalheView id="div-1" />);
+
+    expect(await screen.findByText('Dívida não encontrada ou já excluída.')).toBeOnTheScreen();
+    await act(async () => fireEvent.press(screen.getByRole('button', { name: 'Tentar novamente' })));
+
+    expect(mockBuscar).toHaveBeenCalledTimes(2);
+    expect(screen.getByText('Financiamento do caminhão')).toBeOnTheScreen();
   });
 });

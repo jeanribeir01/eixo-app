@@ -1,30 +1,44 @@
 import { useEffect, useState } from 'react';
-import { ActivityIndicator, FlatList, View } from 'react-native';
-import { useRouter } from 'expo-router';
+import { ActivityIndicator, FlatList, StyleSheet } from 'react-native';
 
-import { formatarMoeda } from '@/lib/money';
+import { rotuloStatus } from '@/features/movimentacoes/types';
 import { isoParaDataBR } from '@/lib/datas';
-import { Button, Column, Screen, Text, colors, spacing } from '@/ui';
+import { formatarMoeda } from '@/lib/money';
+import { Card, Column, EmptyState, ListItem, Screen, Text, colors, spacing } from '@/ui';
 
 import { buscarDivida } from '../dividasRepository';
-import type { DividaDetalhe } from '../types';
+import type { DividaDetalhe, Parcela } from '../types';
 
 type Status = 'carregando' | 'pronto' | 'erro';
 
+function Resumo({ rotulo, valor }: { rotulo: string; valor: string }) {
+  return (
+    <Column gap="xs">
+      <Text variant="caption" tone="body">
+        {rotulo}
+      </Text>
+      <Text weight="medium">{valor}</Text>
+    </Column>
+  );
+}
+
+// Parcela é sempre uma saída do caixa: "Pago", nunca "Recebido". Status em texto, sem cor sozinha.
+function rotuloParcela(parcela: Parcela): string {
+  return `Vencimento ${isoParaDataBR(parcela.dataVencimento)} · ${rotuloStatus(parcela.status, 'Saida')}`;
+}
+
 export function DividaDetalheView({ id }: { id: string }) {
-  const router = useRouter();
   const [status, setStatus] = useState<Status>('carregando');
   const [divida, setDivida] = useState<DividaDetalhe | null>(null);
   const [erro, setErro] = useState<string | null>(null);
+  // Mudar a tentativa dispara a carga de novo ("Tentar novamente").
+  const [tentativa, setTentativa] = useState(0);
 
   useEffect(() => {
     let cancelado = false;
 
-    async function carregar() {
-      setStatus('carregando');
-      const resultado = await buscarDivida(id);
+    buscarDivida(id).then((resultado) => {
       if (cancelado) return;
-
       if (!resultado.ok) {
         setErro(resultado.mensagem);
         setStatus('erro');
@@ -32,88 +46,83 @@ export function DividaDetalheView({ id }: { id: string }) {
       }
       setDivida(resultado.data);
       setStatus('pronto');
-    }
+    });
 
-    carregar();
     return () => {
       cancelado = true;
     };
-  }, [id]);
+  }, [id, tentativa]);
+
+  function tentarDeNovo() {
+    setStatus('carregando');
+    setTentativa((atual) => atual + 1);
+  }
 
   if (status === 'carregando') {
     return (
-      <Screen>
-        <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', padding: spacing.xl }}>
-          <ActivityIndicator color={colors.accent} size="large" />
-        </View>
+      <Screen align="center" underHeader>
+        <ActivityIndicator size="small" color={colors.accent} accessibilityLabel="Carregando dívida" />
       </Screen>
     );
   }
 
   if (status === 'erro' || !divida) {
     return (
-      <Screen>
-        <View style={{ flex: 1, justifyContent: 'center', padding: spacing.xl }}>
-          <Column align="center" gap="lg">
-            <Text variant="subheading" tone="primary" style={{ textAlign: 'center' }}>Não foi possível carregar</Text>
-            <Text variant="body" tone="body" style={{ textAlign: 'center' }}>{erro}</Text>
-            <Button label="Voltar" variant="ghost" onPress={() => router.back()} />
-          </Column>
-        </View>
+      <Screen align="center" underHeader>
+        <EmptyState
+          title="Não foi possível carregar"
+          description={erro ?? undefined}
+          actionLabel="Tentar novamente"
+          onAction={tentarDeNovo}
+        />
       </Screen>
     );
   }
 
   return (
-    <Screen>
+    // O título "Dívida" fica no header; a descrição aparece no cartão porque é dado, não título.
+    <Screen underHeader>
       <FlatList
         data={divida.parcelas}
-        keyExtractor={(p) => p.id}
-        contentContainerStyle={{ paddingBottom: spacing.xxl }}
+        keyExtractor={(parcela) => parcela.id}
+        ListHeaderComponentStyle={styles.cabecalho}
         ListHeaderComponent={
-          <View style={{ padding: spacing.base, paddingBottom: spacing.lg }}>
-            <Column gap="md">
+          <Column gap="lg">
+            <Card variant="feature">
               <Column gap="xs">
-                <Text variant="bodySm" weight="medium" tone="muted">{divida.categoria.titulo}</Text>
-                <Text variant="heading" tone="primary">{divida.descricao}</Text>
+                <Text variant="caption" tone="body">
+                  {divida.categoria.titulo}
+                </Text>
+                <Text variant="subheading">{divida.descricao}</Text>
               </Column>
-              <View style={{ backgroundColor: colors.surface, borderColor: colors.border, borderWidth: 1, borderRadius: spacing.sm, padding: spacing.lg }}>
-                <Column gap="md">
-                  <Column gap="xs">
-                    <Text variant="caption" tone="body">Soma Total</Text>
-                    <Text variant="body" weight="medium" tone="primary">{formatarMoeda(divida.somaTotalCentavos)}</Text>
-                  </Column>
-                  <Column direction="row" gap="lg">
-                    <Column gap="xs">
-                      <Text variant="caption" tone="body">Parcelas Pagas</Text>
-                      <Text variant="body" weight="medium" tone="primary">{divida.parcelasPagas} de {divida.quantidadeParcelas}</Text>
-                    </Column>
-                    <Column gap="xs">
-                      <Text variant="caption" tone="body">Valor Parcela</Text>
-                      <Text variant="body" weight="medium" tone="primary">{formatarMoeda(divida.valorParcelaCentavos)}</Text>
-                    </Column>
-                  </Column>
-                </Column>
-              </View>
-              <Text variant="subheading" tone="primary" style={{ marginTop: spacing.md }}>Parcelas Geradas</Text>
-            </Column>
-          </View>
+              <Resumo rotulo="Soma total" valor={formatarMoeda(divida.somaTotalCentavos)} />
+              <Column direction="row" gap="lg" wrap>
+                <Resumo rotulo="Parcelas pagas" valor={`${divida.parcelasPagas} de ${divida.quantidadeParcelas}`} />
+                <Resumo rotulo="Valor da parcela" valor={formatarMoeda(divida.valorParcelaCentavos)} />
+                {divida.valorQuitacaoCentavos !== null && (
+                  <Resumo rotulo="Quitação antecipada" valor={formatarMoeda(divida.valorQuitacaoCentavos)} />
+                )}
+              </Column>
+            </Card>
+            <Text variant="caption" tone="body" weight="medium">
+              Parcelas geradas
+            </Text>
+          </Column>
         }
         renderItem={({ item }) => (
-          <View style={{ paddingHorizontal: spacing.base, paddingVertical: spacing.md, borderBottomWidth: 1, borderBottomColor: colors.border }}>
-            <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
-              <Column gap="xs">
-                <Text variant="body" weight="medium" tone="primary">Parcela {item.numero}</Text>
-                <Text variant="bodySm" tone="body">Venc: {isoParaDataBR(item.dataVencimento)}</Text>
-              </Column>
-              <View style={{ alignItems: 'flex-end', gap: spacing.xs }}>
-                <Text variant="body" weight="medium" tone="primary">{formatarMoeda(item.valorCentavos)}</Text>
-                <Text variant="caption" tone={item.status === 'Pago' ? 'success' : 'muted'} weight="medium">{item.status}</Text>
-              </View>
-            </View>
-          </View>
+          <ListItem
+            title={`Parcela ${item.numero}`}
+            subtitle={rotuloParcela(item)}
+            trailing={<Text weight="medium">{formatarMoeda(item.valorCentavos)}</Text>}
+          />
         )}
       />
     </Screen>
   );
 }
+
+const styles = StyleSheet.create({
+  cabecalho: {
+    paddingBottom: spacing.sm,
+  },
+});
