@@ -563,9 +563,9 @@ T49
 
 **Done when**:
 
-- [ ] Teste: rótulo renderiza quando passado
-- [ ] Teste: N filhos geram N−1 separadores
-- [ ] Gate check passes: `npx jest --selectProjects app src/ui/__tests__/ListSection.test.tsx`
+- [x] Teste: rótulo renderiza quando passado
+- [x] Teste: N filhos geram N−1 separadores
+- [x] Gate check passes: `npx jest --selectProjects app src/ui/__tests__/ListSection.test.tsx`
 
 **Tests**: unit
 **Gate**: quick

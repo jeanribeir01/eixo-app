@@ -1,8 +1,9 @@
-import type { ReactNode } from 'react';
+import { useContext, type ReactNode } from 'react';
 import { Platform, Pressable, StyleSheet, View } from 'react-native';
 
 import { Icon } from './Icon';
 import type { IconName } from './icons';
+import { ListSectionContext } from './ListSection';
 import { Text } from './Text';
 import { colors, spacing, touchTarget } from './tokens';
 
@@ -22,6 +23,9 @@ export type ListItemProps = {
 // Linha de lista: borda hairline como separador, sem sombra (DESIGN_CYAN §5). Ao tocar, a linha inteira
 // reage com o ripple do Android na cor da hairline; o opacity 0.6 fica para os botões.
 export function ListItem({ title, subtitle, icon, trailing, onPress, accessibilityLabel, children }: ListItemProps) {
+  const dentroDeSecao = useContext(ListSectionContext);
+  const estiloItem = [styles.item, dentroDeSecao && styles.itemEmSecao];
+
   const conteudo =
     title !== undefined ? (
       <View style={styles.linha}>
@@ -41,7 +45,7 @@ export function ListItem({ title, subtitle, icon, trailing, onPress, accessibili
     );
 
   if (!onPress) {
-    return <View style={styles.item}>{conteudo}</View>;
+    return <View style={estiloItem}>{conteudo}</View>;
   }
 
   return (
@@ -51,7 +55,7 @@ export function ListItem({ title, subtitle, icon, trailing, onPress, accessibili
       onPress={onPress}
       android_ripple={{ color: colors.border }}
       // No Android o ripple já é o feedback; no iOS, que não tem ripple, a linha escurece de leve.
-      style={({ pressed }) => [styles.item, pressed && Platform.OS === 'ios' && styles.pressedIos]}
+      style={({ pressed }) => [...estiloItem, pressed && Platform.OS === 'ios' && styles.pressedIos]}
     >
       {conteudo}
     </Pressable>
@@ -65,6 +69,11 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
     borderBottomColor: colors.border,
     justifyContent: 'center',
+  },
+  // Dentro de um ListSection, o grupo desenha os separadores e a linha ganha o respiro lateral.
+  itemEmSecao: {
+    borderBottomWidth: 0,
+    paddingHorizontal: spacing.base,
   },
   linha: {
     flexDirection: 'row',
