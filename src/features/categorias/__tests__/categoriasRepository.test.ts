@@ -166,12 +166,12 @@ describe('categoriasRepository', () => {
       });
     });
 
-    it('traduz o erro 42501 (RLS) para falta de permissão', async () => {
+    it('traduz o erro 42501 (RLS) para acesso negado (RLS-16)', async () => {
       responder(ok([]), erro('42501'));
 
       expect(await criarCategoria({ titulo: 'Pneus', tipo: 'Saida' })).toEqual({
         ok: false,
-        mensagem: 'Você não tem permissão para alterar categorias.',
+        mensagem: 'Acesso negado. Seu perfil não tem permissão para esta ação.',
       });
     });
 

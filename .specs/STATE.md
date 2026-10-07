@@ -50,13 +50,29 @@
 - **Date**: 2026-09-24
 - **Status**: active
 
+### AD-007
+- **Decision**: O fuso `America/Sao_Paulo` do "mês atual" da `resumo_caixa()` sem `referencia` fica sem teste discriminante; os testes passam `referencia` explícita.
+- **Reason**: São Paulo e UTC só divergem entre 21h e 24h do último dia do mês, e o `now()` do banco não é controlável no PGlite. Extrair um helper exigiria nova migration só para teste, com a RPC já aplicada na nuvem.
+- **Trade-off**: O comportamento perto da meia-noite não é testado; um teste estrutural (`pg_get_functiondef` contém `America/Sao_Paulo`) barra a troca do fuso, mas não um erro de lógica em volta dele.
+- **Scope**: `supabase/migrations/20261005000100_resumo_caixa.sql`, EIX-35.
+- **Date**: 2026-10-05
+- **Status**: active
+
+### AD-008
+- **Decision**: A transação da US04 (dívida + N parcelas) é uma RPC plpgsql `criar_divida`, não uma Edge Function com `postgres.js`. `divida` só é escrita por RPCs `security definer` (`criar_divida`, `excluir_divida`) com checagem de perfil; exclusão é soft delete (`divida.ativa`).
+- **Reason**: Decidido com o usuário: a EIX-36 e a EIX-50 já nomeiam a RPC; uma chamada de RPC é uma transação no PostgREST (rollback automático); roda no harness PGlite (AD-006); sem cold start; não existe nenhuma Edge Function no repo nem o exemplo `docs/exemplos/us04-divida`.
+- **Trade-off**: Diverge do `.claude/CLAUDE.md` §3 (Edge Function para operação atômica); a validação Zod não é compartilhada com o banco — as regras ficam duplicadas no schema do app e nas checks/RPC.
+- **Scope**: `supabase/migrations/20261005000200_divida.sql`, `src/features/dividas`, EIX-36, EIX-50; serve de molde para a US06-b (`registrar_manutencao`).
+- **Date**: 2026-10-05
+- **Status**: active
+
 ## Handoff
 
-- **Feature**: `.specs/features/eix30-perfis-rbac`
-- **Phase / Task**: Execute concluído (T1–T8) + Verifier PASS (reverificação iteração 1)
-- **Completed**: T1–T8, Fix 1 (guard da rota `usuarios`), Fix 2 (gaps menores), adaptação ao esquema da nuvem de 30/09 (`Ativo`, `P0001`) e `db push` do backfill (2026-10-02)
+- **Feature**: `.specs/features/eix32-rls`
+- **Phase / Task**: Execute concluído + Verifier PASS (iteração 1)
+- **Completed**: migration `perfil_select` só a própria linha para não aprovado (336ea34), matriz de RLS por perfil (fc161b4), `src/lib/errors.ts` com "Acesso negado" (543fa75), repositórios usando errors.ts (debf143)
 - **In-progress** (file:line): none
-- **Next step**: teste manual no app como Admin; depois push da branch e PR (EIX-30)
+- **Next step**: aplicar `20261006000100_perfil_select_aprovado.sql` na nuvem (`supabase db push`), push da branch e PR (EIX-32, revisor Eduardo)
 - **Blockers**: none
 - **Uncommitted files**: none
-- **Branch**: feat/eix-30-us16-perfis-rbac
+- **Branch**: feat/eix-32-us18-rls

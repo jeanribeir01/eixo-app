@@ -1,5 +1,6 @@
 import { z } from 'zod';
 
+import { ehAcessoNegado, MENSAGEM_ACESSO_NEGADO } from '@/lib/errors';
 import { supabase } from '@/supabase/client';
 import { Constants } from '@/types/database';
 
@@ -36,8 +37,7 @@ function traduzirErro(error: ErroSupabase, mensagemPadrao: string): string {
   // 23505 = unique_violation na constraint (titulo, tipo). Cobre a corrida entre a checagem
   // de duplicada abaixo e o insert/update, e devolve o mesmo erro de domínio para o campo.
   if (error.code === '23505') return MENSAGEM_DUPLICADA;
-  // 42501 = insufficient_privilege: a policy de RLS recusou a escrita para este perfil.
-  if (error.code === '42501') return 'Você não tem permissão para alterar categorias.';
+  if (ehAcessoNegado(error)) return MENSAGEM_ACESSO_NEGADO;
   return mensagemPadrao;
 }
 

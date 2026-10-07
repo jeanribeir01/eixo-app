@@ -1,5 +1,6 @@
 import { z } from 'zod';
 
+import { ehAcessoNegado, MENSAGEM_ACESSO_NEGADO } from '@/lib/errors';
 import { supabase } from '@/supabase/client';
 
 import type { FormaPagamento } from './types';
@@ -23,7 +24,7 @@ type ErroSupabase = { code: string };
 
 function traduzirErro(error: ErroSupabase, mensagemPadrao: string): string {
   if (error.code === '23505') return MENSAGEM_DUPLICADA;
-  if (error.code === '42501') return 'Você não tem permissão para alterar formas de pagamento.';
+  if (ehAcessoNegado(error)) return MENSAGEM_ACESSO_NEGADO;
   return mensagemPadrao;
 }
 

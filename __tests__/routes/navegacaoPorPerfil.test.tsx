@@ -41,6 +41,7 @@ const routes = {
   '(app)/categorias/[id]/editar': () => <Text>Tela Editar Categoria</Text>,
   '(app)/frota/novo': () => <Text>Tela Novo Veiculo</Text>,
   '(app)/frota/[id]/editar': () => <Text>Tela Editar Veiculo</Text>,
+  '(app)/caixa/index': () => <Text>Tela Caixa</Text>,
   '(app)/usuarios/index': () => <Text>Tela Usuarios</Text>,
   '(app)/usuarios/[id]': () => <Text>Tela Usuario</Text>,
   '(auth)/_layout': AuthLayout,
@@ -181,6 +182,27 @@ describe('telas internas seguem o módulo (EIX-31)', () => {
     act(() => navegador.push('/frota/novo'));
 
     expect(await screen.findByText('Tela Novo Veiculo')).toBeOnTheScreen();
+  });
+
+  // Saldo e projeção (EIX-51): só Financeiro e Admin. O RLS de `movimentacao` é quem garante.
+  it.each(['Gestor de Frota', 'Motorista'] as const)('%s digitando /caixa volta para a home do perfil', async (perfil) => {
+    const { telaInicial, rotaInicial } = cenarios.find((c) => c.perfil === perfil)!;
+    const router = await entrarComo(perfil);
+    await screen.findByText(telaInicial);
+
+    act(() => navegador.push('/caixa'));
+
+    expect(await screen.findByText(telaInicial)).toBeOnTheScreen();
+    expect(screen.queryByText('Tela Caixa')).not.toBeOnTheScreen();
+    expect(router.getPathname()).toBe(rotaInicial);
+  });
+
+  it.each(['Admin', 'Financeiro'] as const)('%s abre /caixa', async (perfil) => {
+    await entrarComo(perfil);
+
+    act(() => navegador.push('/caixa'));
+
+    expect(await screen.findByText('Tela Caixa')).toBeOnTheScreen();
   });
 
   it('Motorista que abre o app já numa URL financeira cai em Viagens', async () => {
