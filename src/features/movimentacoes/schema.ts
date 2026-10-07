@@ -27,6 +27,8 @@ export const movimentacaoSchema = z
     dataVencimento: z.string().refine((texto) => texto === '' || dataBRParaISO(texto) !== null, DATA_INVALIDA),
     status: z.enum(['Pendente', 'Pago'], { error: 'Escolha o status.' }),
     dataPagamento: z.string(),
+    // Caminho no bucket `comprovantes` (opcional). O arquivo já subiu quando o form é salvo.
+    caminhoComprovante: z.string().nullable(),
   })
   // A data de pagamento só é obrigatória quando o status é Pago — regra que depende de dois
   // campos, por isso fica no objeto. O banco tem a mesma regra (check da EIX-27).
@@ -47,6 +49,7 @@ export const movimentacaoSchema = z
     status: valores.status,
     // Pendente nunca grava data de pagamento, mesmo que algo tenha sido digitado antes.
     dataPagamento: valores.status === 'Pago' ? dataBRParaISO(valores.dataPagamento) : null,
+    caminhoComprovante: valores.caminhoComprovante,
   }));
 
 // O que a tela guarda enquanto o usuário digita (a seleção pode estar vazia).
