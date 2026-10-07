@@ -668,8 +668,8 @@ T49
 
 **Done when**:
 
-- [ ] Teste: ícone aparece só quando passado
-- [ ] Gate check passes: `npx jest --selectProjects app src/ui/__tests__/EmptyState.test.tsx`
+- [x] Teste: ícone aparece só quando passado
+- [x] Gate check passes: `npx jest --selectProjects app src/ui/__tests__/EmptyState.test.tsx`
 
 **Tests**: unit
 **Gate**: quick
