@@ -39,6 +39,8 @@ const routes = {
   '(app)/categorias/index': () => <Text>Tela Categorias</Text>,
   '(app)/categorias/nova': () => <Text>Tela Nova Categoria</Text>,
   '(app)/categorias/[id]/editar': () => <Text>Tela Editar Categoria</Text>,
+  '(app)/frota/novo': () => <Text>Tela Novo Veiculo</Text>,
+  '(app)/frota/[id]/editar': () => <Text>Tela Editar Veiculo</Text>,
   '(app)/caixa/index': () => <Text>Tela Caixa</Text>,
   '(app)/usuarios/index': () => <Text>Tela Usuarios</Text>,
   '(app)/usuarios/[id]': () => <Text>Tela Usuario</Text>,
@@ -160,6 +162,26 @@ describe('telas internas seguem o módulo (EIX-31)', () => {
     act(() => navegador.push('/categorias'));
 
     expect(await screen.findByText('Tela Categorias')).toBeOnTheScreen();
+  });
+
+  it.each(['Financeiro', 'Motorista'] as const)('%s digitando /frota/novo volta para a home do perfil', async (perfil) => {
+    const { telaInicial, rotaInicial } = cenarios.find((c) => c.perfil === perfil)!;
+    const router = await entrarComo(perfil);
+    await screen.findByText(telaInicial);
+
+    act(() => navegador.push('/frota/novo'));
+
+    expect(await screen.findByText(telaInicial)).toBeOnTheScreen();
+    expect(screen.queryByText('Tela Novo Veiculo')).not.toBeOnTheScreen();
+    expect(router.getPathname()).toBe(rotaInicial);
+  });
+
+  it('Gestor de Frota abre /frota/novo', async () => {
+    await entrarComo('Gestor de Frota');
+
+    act(() => navegador.push('/frota/novo'));
+
+    expect(await screen.findByText('Tela Novo Veiculo')).toBeOnTheScreen();
   });
 
   // Saldo e projeção (EIX-51): só Financeiro e Admin. O RLS de `movimentacao` é quem garante.

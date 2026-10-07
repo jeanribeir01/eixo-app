@@ -5,6 +5,7 @@ import type { Categoria } from '@/features/categorias/types';
 import { listarFormasPagamento } from '@/features/formas-pagamento/formasPagamentoRepository';
 import type { FormaPagamento } from '@/features/formas-pagamento/types';
 import { dataLocalISO, intervaloDoMes } from '@/lib/datas';
+import { ehAcessoNegado, MENSAGEM_ACESSO_NEGADO } from '@/lib/errors';
 import { centavosParaReais, reaisParaCentavos } from '@/lib/money';
 import { supabase } from '@/supabase/client';
 
@@ -41,7 +42,7 @@ const linhaSchema = z.object({
 type ErroSupabase = { code: string };
 
 function traduzirErro(error: ErroSupabase, mensagemPadrao: string): string {
-  if (error.code === '42501') return 'Você não tem permissão para registrar movimentações.';
+  if (ehAcessoNegado(error)) return MENSAGEM_ACESSO_NEGADO;
   // 23514 = check do banco (valor > 0, Pago com data). O form já barra; chegar aqui
   // significa que a regra do banco segurou algo que passou pelo app.
   if (error.code === '23514') return 'Valor ou data de pagamento inválidos.';

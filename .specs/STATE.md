@@ -76,11 +76,11 @@
 
 ## Handoff
 
-- **Feature**: `.specs/features/eix58-design-app` (épico EIX-58, sub-issues EIX-59 a EIX-72 + EIX-11)
-- **Phase / Task**: Tasks aprovadas para criação no Linear; fase 1 (EIX-59: T1, T2) concluída
-- **Completed**: 5 skills de design instaladas; spec, design e tasks validados (`validate_spec` 0/0, `validate_tasks` 0 erros); AD-009; issues EIX-58 a EIX-72 criadas e EIX-11 reescrita
+- **Feature**: `.specs/features/eix32-rls`
+- **Phase / Task**: Execute concluído + Verifier PASS (iteração 1)
+- **Completed**: migration `perfil_select` só a própria linha para não aprovado (336ea34), matriz de RLS por perfil (fc161b4), `src/lib/errors.ts` com "Acesso negado" (543fa75), repositórios usando errors.ts (debf143)
 - **In-progress** (file:line): none
-- **Next step**: `git checkout main && git pull` → branch `feat/eix-60-design-fundacao-navegacao` → executar T3–T12; antes, mergear o PR #7 (EIX-37) para evitar conflito em `app/(app)/_layout.tsx`
-- **Blockers**: none (`npm ci` feito e OK do Jean para Reanimated/Worklets, ambos em 06/10)
+- **Next step**: aplicar `20261006000100_perfil_select_aprovado.sql` na nuvem (`supabase db push`), push da branch e PR (EIX-32, revisor Eduardo)
+- **Blockers**: none
 - **Uncommitted files**: none
-- **Branch**: chore/eix-59-skills-design-expo (PR #17, aguardando revisão)
+- **Branch**: feat/eix-32-us18-rls
