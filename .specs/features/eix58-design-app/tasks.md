@@ -615,10 +615,10 @@ T49
 
 **Done when**:
 
-- [ ] Teste: continua anunciando com `accessibilityRole="alert"` e some após `duration`
-- [ ] Teste: com "remover animações" ligado, entra sem deslize
-- [ ] Teste: dentro do `overlay` com FAB, o Snackbar fica acima do FAB
-- [ ] Gate check passes: `npx jest --selectProjects app src/ui/__tests__/Snackbar.test.tsx`
+- [x] Teste: continua anunciando com `accessibilityRole="alert"` e some após `duration`
+- [x] Teste: com "remover animações" ligado, entra sem deslize
+- [x] Teste: dentro do `overlay` com FAB, o Snackbar fica acima do FAB
+- [x] Gate check passes: `npx jest --selectProjects app src/ui/__tests__/Snackbar.test.tsx`
 
 **Tests**: unit
 **Gate**: quick

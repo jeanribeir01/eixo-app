@@ -62,7 +62,7 @@ graph TD
 | expo-router `Stack` | `screenOptions={stackOptions}` + `headerShown: false` só na tela `(tabs)` |
 | expo-router `Tabs` | `tabBarIcon: ({ focused }) => <Icon name={aba.icone} tone={focused ? 'primary' : 'body'} />` |
 | `expo-symbols` | `SymbolView` com `name={{ android, ios }}`; no Android desenha Material Symbols por fonte (`@expo-google-fonts/material-symbols`) |
-| `react-native-reanimated` | `FadeInDown`/`FadeOut` no Snackbar; layout animations respeitam o reduced motion do sistema (`ReduceMotion.System`) |
+| `Animated` (React Native) | Entrada do Snackbar com driver nativo; `AccessibilityInfo.isReduceMotionEnabled()` tira o deslize. O Reanimated entra na EIX-68 |
 | `@react-native-community/datetimepicker` | `DateTimePickerAndroid.open()` imperativo dentro do `CampoData` |
 | `expo-constants` | `Constants.expoConfig?.version` na linha "Versão" |
 
@@ -109,9 +109,10 @@ graph TD
 
 ### Snackbar (`src/ui/Snackbar.tsx`, alterado)
 
-- **Interfaces**: `Snackbar({ message, tone, onDismiss, duration?, aboveFab?: boolean })` — props atuais intactas.
-- `Animated.View` do Reanimated com `entering={FadeInDown.duration(200)}` e `exiting={FadeOut.duration(150)}`; `position: 'absolute'`, `left/right: spacing.base`, `bottom: spacing.base` (+ `FAB_ALTURA_RESERVADA` quando `aboveFab`).
-- `ReduceMotion.System` (padrão do Reanimated 4) tira o deslocamento quando o sistema pede menos movimento.
+- **Interfaces**: `Snackbar({ message, tone, onDismiss, duration? })` — props atuais intactas.
+- `Animated.View` do React Native (driver nativo): `opacity` 0→1 e `translateY` 8pt→0 em 200 ms, `Easing.bezier(0.23, 1, 0.32, 1)`. Só a entrada anima; a saída é a tela desmontando, para não atrasar o `onDismiss`. O Reanimated fica para a EIX-68 (decisão em `spec.md`).
+- `AccessibilityInfo.isReduceMotionEnabled()` decide o deslize antes de a animação começar: com "remover animações" ligado, fica só o fade.
+- A posição não é do Snackbar: o `overlay` do `Screen` o ancora no rodapé (`padding: spacing.base`) e, com a prop `fab`, o empilha acima do FAB (`gap: spacing.md`). Por isso a prop `aboveFab` saiu.
 
 ### Card, EmptyState, Select (alterados, compatíveis)
 
