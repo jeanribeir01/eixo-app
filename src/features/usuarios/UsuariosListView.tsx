@@ -38,14 +38,8 @@ export function UsuariosListView() {
   );
 
   return (
-    <Screen>
-      <Column gap="xs">
-        <Text variant="bodySm" weight="medium">
-          Eixo Certo
-        </Text>
-        <Text variant="heading">Usuários</Text>
-        <Text tone="body">Toque em um usuário para alterar o perfil, aprovar ou bloquear.</Text>
-      </Column>
+    <Screen underHeader>
+      <Text tone="body">Toque em um usuário para alterar o perfil, aprovar ou bloquear.</Text>
 
       {status === 'carregando' && (
         <Column align="center">

@@ -165,6 +165,7 @@ export type Database = {
       }
       movimentacao: {
         Row: {
+          caminho_comprovante: string | null
           categoria_id: string
           data_atualizacao: string
           data_inclusao: string
@@ -177,9 +178,9 @@ export type Database = {
           status_pagamento: Database["public"]["Enums"]["status_pagamento"]
           valor: number
           viagem_id: string | null
-          comprovante_url: string | null
         }
         Insert: {
+          caminho_comprovante?: string | null
           categoria_id: string
           data_atualizacao?: string
           data_inclusao?: string
@@ -192,9 +193,9 @@ export type Database = {
           status_pagamento?: Database["public"]["Enums"]["status_pagamento"]
           valor: number
           viagem_id?: string | null
-          comprovante_url?: string | null
         }
         Update: {
+          caminho_comprovante?: string | null
           categoria_id?: string
           data_atualizacao?: string
           data_inclusao?: string
@@ -207,7 +208,6 @@ export type Database = {
           status_pagamento?: Database["public"]["Enums"]["status_pagamento"]
           valor?: number
           viagem_id?: string | null
-          comprovante_url?: string | null
         }
         Relationships: [
           {

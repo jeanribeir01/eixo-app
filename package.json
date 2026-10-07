@@ -14,7 +14,6 @@
     "@expo-google-fonts/inter": "^0.4.2",
     "@react-native-google-signin/google-signin": "^16.1.5",
     "@supabase/supabase-js": "^2.116.0",
-    "base64-arraybuffer": "^1.0.2",
     "expo": "~57.0.22",
     "expo-asset": "~57.0.17",
     "expo-constants": "~57.0.18",
@@ -28,6 +27,7 @@
     "expo-secure-store": "~57.0.4",
     "expo-splash-screen": "~57.0.9",
     "expo-status-bar": "~57.0.1",
+    "expo-symbols": "~57.0.3",
     "expo-system-ui": "~57.0.4",
     "react": "19.2.3",
     "react-dom": "19.2.3",
@@ -63,9 +63,7 @@
         "moduleNameMapper": {
           "^@/(.*)$": "<rootDir>/src/$1"
         },
-        "testPathIgnorePatterns": [
-          "<rootDir>/supabase/"
-        ],
+        "testPathIgnorePatterns": ["<rootDir>/supabase/"],
         "transformIgnorePatterns": [
           "node_modules/(?!((jest-)?react-native|@react-native(-community)?)|expo(nent)?|@expo(nent)?/.*|@expo-google-fonts/.*|react-navigation|@react-navigation/.*|@supabase/.*|standard-navigation)"
         ]
@@ -73,18 +71,9 @@
       {
         "displayName": "supabase",
         "preset": "jest-expo/node",
-        "testMatch": [
-          "<rootDir>/supabase/tests/**/*.test.ts"
-        ],
+        "testMatch": ["<rootDir>/supabase/tests/**/*.test.ts"],
         "transform": {
-          "\\.[jt]sx?$": [
-            "babel-jest",
-            {
-              "presets": [
-                "expo/internal/babel-preset"
-              ]
-            }
-          ]
+          "\\.[jt]sx?$": ["babel-jest", { "presets": ["expo/internal/babel-preset"] }]
         }
       }
     ]

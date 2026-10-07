@@ -69,7 +69,7 @@ function linha(sobrescrever: Record<string, unknown> = {}) {
     data_pagamento: null,
     data_inclusao: '2026-10-01T12:00:00+00:00',
     status_pagamento: 'Pendente',
-    comprovante_url: null,
+    caminho_comprovante: null,
     categoria: { titulo: 'Pedágio', tipo: 'Saida', ativa: true },
     forma_pagamento: { nome: 'Pix', ativa: true },
     ...sobrescrever,
@@ -84,7 +84,7 @@ const input: MovimentacaoInput = {
   dataVencimento: '2026-10-20',
   status: 'Pago',
   dataPagamento: '2026-10-05',
-  comprovanteUrl: null,
+  caminhoComprovante: '1759800000000-abc123.jpg',
 };
 
 beforeEach(() => {
@@ -126,7 +126,7 @@ describe('listarMovimentacoesDoMes (MOV-08)', () => {
           data_pagamento: null,
           data_inclusao: '2026-10-01T12:00:00+00:00',
           status_pagamento: 'Pendente',
-          comprovante_url: null,
+          caminho_comprovante: null,
           categoria: { titulo: 'Pedágio', tipo: 'Saida', ativa: true },
           formaPagamento: { nome: 'Pix', ativa: true },
         },
@@ -185,7 +185,7 @@ describe('buscarMovimentacaoPorId (MOV-10)', () => {
 });
 
 describe('criarMovimentacao (MOV-02)', () => {
-  it('grava em reais e sem as datas automáticas do banco', async () => {
+  it('grava em reais, com o caminho do comprovante (EIX-34 AC 4), e sem as datas automáticas do banco', async () => {
     const query = responder(ok(linha({ valor: 1500 })));
 
     const resultado = await criarMovimentacao(input);
@@ -198,12 +198,13 @@ describe('criarMovimentacao (MOV-02)', () => {
       data_vencimento: '2026-10-20',
       data_pagamento: '2026-10-05',
       status_pagamento: 'Pago',
+      caminho_comprovante: '1759800000000-abc123.jpg',
     });
     expect(resultado.ok && resultado.data.valorCentavos).toBe(150000);
   });
 
   it.each([
-    ['42501', 'Você não tem permissão para registrar movimentações.'],
+    ['42501', 'Acesso negado. Seu perfil não tem permissão para esta ação.'],
     ['23514', 'Valor ou data de pagamento inválidos.'],
     ['23503', 'Categoria ou forma de pagamento não encontrada.'],
     ['XX000', 'Não foi possível registrar a movimentação. Tente novamente.'],
@@ -215,7 +216,7 @@ describe('criarMovimentacao (MOV-02)', () => {
 });
 
 describe('atualizarMovimentacao (MOV-10)', () => {
-  it('atualiza o registro pelo id com os mesmos campos da criação', async () => {
+  it('atualiza o registro pelo id com os mesmos campos da criação, inclusive o comprovante', async () => {
     const query = responder(ok(linha({ valor: 1500 })));
 
     await atualizarMovimentacao('mov-1', input);
@@ -228,6 +229,7 @@ describe('atualizarMovimentacao (MOV-10)', () => {
       data_vencimento: '2026-10-20',
       data_pagamento: '2026-10-05',
       status_pagamento: 'Pago',
+      caminho_comprovante: '1759800000000-abc123.jpg',
     });
     expect(query.eq).toHaveBeenCalledWith('id', 'mov-1');
   });
@@ -238,12 +240,12 @@ describe('atualizarMovimentacao (MOV-10)', () => {
     expect(await atualizarMovimentacao('x', input)).toEqual({ ok: false, mensagem: 'Movimentação não encontrada.' });
   });
 
-  it('erro 42501 vira mensagem de permissão', async () => {
+  it('erro 42501 vira acesso negado (RLS-16)', async () => {
     responder(erro('42501'));
 
     expect(await atualizarMovimentacao('mov-1', input)).toEqual({
       ok: false,
-      mensagem: 'Você não tem permissão para registrar movimentações.',
+      mensagem: 'Acesso negado. Seu perfil não tem permissão para esta ação.',
     });
   });
 });

@@ -30,7 +30,7 @@ Fonte única de verdade visual do app. Todo agente de IA e todo dev lê este arq
 ### Regras de cor
 
 - Neutros stone + **um** cyan. Não introduza outra cor de acento.
-- **Um único elemento preenchido de cyan por tela** — a ação primária.
+- **Um único elemento preenchido de cyan por tela** — a ação primária. Numa lista, essa ação é o FAB: com FAB na tela, nenhum `Button` primário aparece junto.
 - Sem gradiente, glassmorphism ou decoração com cor.
 - **Exceção semântica (financeiro):** verde/vermelho discretos aparecem só no **valor** e no ícone de entrada/saída. Nunca no cartão, borda ou fundo inteiro. Nunca cor como único indicador: acompanhe sempre de sinal (`+` / `−`) ou rótulo — cor sozinha falha para daltônicos e sob sol forte na cabine.
 
@@ -147,7 +147,50 @@ Todo botão tem `accessibilityRole="button"` e `accessibilityLabel`. Toda ação
 ### Cartão (`Card`) — o componente mais usado
 - Fundo `surface`, borda 1px `border`, `radius.card`, padding `spacing.lg`, gap interno `spacing.md`.
 - Use para saldo, veículo, viagem, lançamento.
-- Cartão de destaque do topo da Home: `radius.feature`, **uma vez por tela**.
+- **Destaque** (`variant="feature"`): `radius.feature`, mesma borda e mesmo fundo. É o cartão do topo (ex.: saldo no hub Financeiro), **uma vez por tela**.
+- **Tocável** (`onPress`): o cartão inteiro vira um botão (`accessibilityRole="button"`), com `accessibilityLabel` dizendo o destino ("Ver saldo e projeção"). Ao tocar: ripple `border` no Android, cortado nos cantos, e fundo `border` no iOS. Prefira o cartão tocável a um link pequeno escondido dentro dele.
+
+### Ícone (`Icon`)
+- Material Symbols no Android e SF Symbols no iOS (`expo-symbols`). A tela pede pelo **nome semântico** do mapa `src/ui/icons.ts` (`"financeiro"`, `"adicionar"`), nunca pelo nome do símbolo. Ícone novo entra no mapa primeiro.
+- Tamanhos `iconSize`: `sm` 16 (junto de texto pequeno), `md` 20 (linha de lista, aba), `lg` 24 (estado vazio).
+- Cor pela prop `tone`, com os mesmos tons do `Text` (`primary`, `body`, `muted`, `onAccent`…). Nunca cor solta.
+- **Sem `accessibilityLabel` o ícone é decorativo** e o leitor de tela o ignora, porque o texto ao lado já diz o que é. Com rótulo, vira imagem anunciada: use quando o ícone aparece sozinho.
+
+### Tela (`Screen`) e header nativo
+- Toda tela começa com `Screen`: fundo `canvas`, padding lateral `spacing.base`, área segura.
+- **Telas internas** (abertas por cima das abas) usam o header nativo: fundo `canvas`, sem sombra, título em `subheading` peso 400 `textPrimary`, voltar só com a seta. O título de cada tela é declarado em `app/(app)/_layout.tsx`, junto do guard de perfil. **A tela nunca repete o título no conteúdo** e usa `<Screen underHeader>`, para não somar o inset de topo duas vezes.
+- `scroll`: o conteúdo rola e sobe com o teclado. Use em formulário e detalhe.
+- `overlay`: camada que flutua sobre o conteúdo e não rola com ele, ancorada no rodapé com respiro `spacing.base`. É onde mora o `Snackbar`. Fora dos elementos dela, a tela continua respondendo ao toque.
+- `fab`: o botão flutuante da tela (ver FAB). Fica no rodapé, à direita, sempre abaixo do Snackbar.
+
+### Linha de lista (`ListItem`)
+- **Anatomia:** ícone `md` em `textBody` (opcional) · título em `body` · subtítulo em `bodySm` `textBody`, uma linha com reticências (opcional) · à direita, o `trailing` (valor, `Switch`, `Badge`) ou, se a linha abre algo, o chevron `avancar` em `textMuted`.
+- `minHeight` 44, padding vertical `spacing.md`, gap `spacing.md`. Solta na tela, a linha separa-se da próxima com hairline `border` embaixo.
+- Ao tocar: ripple `border` no Android e fundo `border` no iOS. A linha não usa o `opacity 0.6` dos botões.
+- O `accessibilityLabel` padrão é o título. Passe outro quando o título sozinho não basta ("Gerenciar Bruno Lima").
+- Conteúdo que não cabe na linha padrão vai em `children` (modo livre).
+
+### Grupo de linhas (`ListSection`)
+- Rótulo opcional em `caption` peso 500 `textBody` acima do grupo, com gap `spacing.sm`.
+- Bloco `surface` com borda 1px `border` e `radius.card`. Separadores hairline **só entre** as linhas, e as linhas ganham padding lateral `spacing.base`.
+- Use para menus e ajustes (hub Financeiro, Conta). Agrupa por borda e fundo: **não** faça um cartão por linha.
+
+### Botão flutuante (`FAB`)
+- Pílula `accent` com borda 1px `accentEdge`, ícone (padrão `adicionar`) e rótulo em `onAccent` peso 500. `minHeight` 44, padding `spacing.sm` × `spacing.base`, sombra `subtle`, a única do app fora do botão do Google.
+- **Sempre com rótulo** ("Nova categoria"): o rótulo é o nome anunciado pelo leitor de tela.
+- Vai na prop `fab` do `Screen`, nunca solto no conteúdo. Com `scroll`, o `Screen` reserva `FAB_ALTURA_RESERVADA` no fim da rolagem, para a última linha não ficar atrás do botão.
+- **O FAB conta como o único cyan preenchido da tela**: tela com FAB não tem `Button` primário.
+- Use na ação de criar de uma lista. Formulário não tem FAB: lá a ação é o `Button` primário "Salvar".
+
+### Snackbar
+- Fundo `inverted`, `radius.card`, padding `spacing.md` × `spacing.base`. Um ponto `spacing.xs` em `success` ou `danger` acompanha o texto em `onAccent` peso 500, porque cor nunca é o único indicador.
+- **Posição:** sempre no `overlay` do `Screen`, ancorado no rodapé. Com FAB, fica acima dele, separado por `spacing.md`, nunca por cima.
+- **Entrada:** fade e deslize de 8pt para cima em 200 ms. Com "remover animações" ligado no aparelho, só o fade. Some sozinho depois de `duration` (padrão 3 s).
+- Anuncia com `accessibilityRole="alert"`. É o retorno obrigatório de toda ação: "Categoria salva.", "Não foi possível salvar."
+
+### Estado vazio (`EmptyState`)
+- Ícone `lg` em `textMuted` (opcional, decorativo) · título em `subheading` · descrição em `body` `textBody` · ação em `Button` ghost. Tudo centralizado, gap `spacing.md`, respiro vertical `spacing.xl`.
+- Use o ícone do assunto da tela (`"categorias"` em Categorias). Também serve para erro de carga, com a ação "Tentar novamente".
 
 ### Campo de texto (Input)
 - Fundo `surface`, `radius.input`, borda 1px `borderMuted`, padding vertical 4 / horizontal `spacing.md`, `minHeight` 44.
@@ -160,6 +203,8 @@ Todo botão tem `accessibilityRole="button"` e `accessibilityLabel`. Toda ação
 
 ### Navegação
 - Bottom tab bar. Não existe top nav em mobile.
+- Tab bar: fundo `surface` com hairline `border` no topo, ícone `md` em cima e rótulo em `caption` peso 500 embaixo, inclusive no tablet. Aba ativa em `textPrimary`, inativas em `textBody`. **Sem cyan no menu**: o cyan da tela é a ação primária dela.
+- Telas internas abrem por cima das abas, com o header nativo descrito em "Tela (`Screen`) e header nativo".
 - A árvore de rotas depende do perfil (RBAC), não só a visibilidade dos botões.
 
 ### Logo
@@ -184,7 +229,7 @@ Todo botão tem `accessibilityRole="button"` e `accessibilityLabel`. Toda ação
 - Fundo `canvas`, cartões `surface`. Nunca o inverso.
 - Borda hairline como separador estrutural.
 - Botões em pílula, padding 8/16.
-- Um cyan preenchido por tela.
+- Um cyan preenchido por tela: o `Button` primário ou, numa lista, o FAB.
 - Montar telas **só** com primitivos de `src/ui/`. Se o primitivo não existe, crie-o antes da tela (com autorização, ver `AGENTS.md` §4).
 
 **Não faça**

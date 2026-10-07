@@ -1,5 +1,6 @@
 import { act, fireEvent, render, screen, within } from '@testing-library/react-native';
 import { Alert } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { colors } from '@/ui';
 
@@ -45,7 +46,7 @@ function mov(sobrescrever: Partial<Movimentacao>): Movimentacao {
     data_pagamento: null,
     data_inclusao: '2026-10-01T12:00:00+00:00',
     status_pagamento: 'Pendente',
-  comprovante_url: null,
+  caminho_comprovante: null,
     categoria: { titulo: 'Combustível', tipo: 'Saida', ativa: true },
     formaPagamento: { nome: 'Pix', ativa: true },
     ...sobrescrever,
@@ -57,7 +58,7 @@ const frete = mov({
   descricao: 'Frete Curitiba',
   valorCentavos: 150000,
   status_pagamento: 'Pago',
-  comprovante_url: null,
+  caminho_comprovante: null,
   data_pagamento: '2026-10-05',
   data_vencimento: '2026-10-05',
   categoria: { titulo: 'Frete', tipo: 'Entrada', ativa: true },
@@ -97,6 +98,16 @@ describe('MovimentacoesListView — mês (MOV-08)', () => {
     expect(await screen.findByText('Frete Curitiba')).toBeOnTheScreen();
     expect(screen.getByText('Outubro 2026')).toBeOnTheScreen();
     expect(mockListar).toHaveBeenCalledWith(2026, 10);
+  });
+
+  it('o título da tela fica no header nativo, não no conteúdo (NAV-02)', async () => {
+    render(<MovimentacoesListView />);
+    await screen.findByText('Frete Curitiba');
+
+    expect(screen.queryByText('Eixo Certo')).not.toBeOnTheScreen();
+    expect(screen.queryByText('Movimentações')).not.toBeOnTheScreen();
+    // Tela interna: o header nativo protege o topo, o Screen não repete o inset (NAV-04, AC 11).
+    expect(screen.UNSAFE_getByType(SafeAreaView).props.edges).not.toContain('top');
   });
 
   it('‹ e › carregam o mês anterior e o seguinte', async () => {

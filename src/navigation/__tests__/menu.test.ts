@@ -44,6 +44,16 @@ describe('menu por perfil (US17)', () => {
     expect(abaInicial(usuario(perfil))).toBe(esperada);
   });
 
+  it.each([
+    ['dashboards', 'dashboards'],
+    ['financeiro', 'financeiro'],
+    ['frota', 'frota'],
+    ['viagens', 'viagens'],
+    ['configuracoes', 'configuracoes'],
+  ] as const)('aba %s usa o ícone %s do mapa (NAV-01)', (id, icone) => {
+    expect(abas.find((aba) => aba.id === id)?.icone).toBe(icone);
+  });
+
   it('a aba inicial de cada perfil está entre as abas que ele pode ver', () => {
     for (const perfil of ['Admin', 'Gestor de Frota', 'Financeiro', 'Motorista'] as const) {
       expect(abasVisiveis(usuario(perfil))).toContain(abaInicial(usuario(perfil)));
