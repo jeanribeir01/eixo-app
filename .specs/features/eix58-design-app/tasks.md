@@ -853,11 +853,11 @@ T49
 
 **Done when**:
 
-- [ ] Teste: tocar na linha abre `/categorias/:id/editar`
-- [ ] Teste: switch desativa, mostra "Categoria desativada." e fica desabilitado enquanto salva
-- [ ] Teste: FAB abre `/categorias/nova`
-- [ ] Teste: não existe botão "Editar" nem "Desativar" na linha
-- [ ] Gate check passes: `npx jest --selectProjects app src/features/categorias`
+- [x] Teste: tocar na linha abre `/categorias/:id/editar`
+- [x] Teste: switch desativa, mostra "Categoria desativada." e fica desabilitado enquanto salva
+- [x] Teste: FAB abre `/categorias/nova`
+- [x] Teste: não existe botão "Editar" nem "Desativar" na linha
+- [x] Gate check passes: `npx jest --selectProjects app src/features/categorias`
 
 **Tests**: unit
 **Gate**: quick
