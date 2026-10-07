@@ -413,11 +413,11 @@ T49
 
 **Done when**:
 
-- [ ] Teste: sem props, renderiza como hoje
-- [ ] Teste: `scroll` cria `ScrollView` com `keyboardShouldPersistTaps="handled"`
-- [ ] Teste: `overlay` fica fora do `ScrollView`
-- [ ] Teste: `underHeader` tira o `top` das `edges`
-- [ ] Gate check passes: `npx jest --selectProjects app src/ui/__tests__/Screen.test.tsx`
+- [x] Teste: sem props, renderiza como hoje
+- [x] Teste: `scroll` cria `ScrollView` com `keyboardShouldPersistTaps="handled"`
+- [x] Teste: `overlay` fica fora do `ScrollView`
+- [x] Teste: `underHeader` tira o `top` das `edges`
+- [x] Gate check passes: `npx jest --selectProjects app src/ui/__tests__/Screen.test.tsx`
 
 **Tests**: unit
 **Gate**: quick
