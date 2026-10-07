@@ -907,11 +907,11 @@ T49
 
 **Done when**:
 
-- [ ] Teste: toque na linha abre `/movimentacoes/:id/editar`
-- [ ] Teste: "Mais opções" abre "Excluir movimentação?"; parcela não tem a opção
-- [ ] Teste: botões "Mês anterior" e "Próximo mês" trocam o mês
-- [ ] Teste: valor com `+`/`−` e tom semântico
-- [ ] Gate check passes: `npm run typecheck && npm run lint && npm run test`
+- [x] Teste: toque na linha abre `/movimentacoes/:id/editar`
+- [x] Teste: "Mais opções" abre "Excluir movimentação?"; parcela não tem a opção
+- [x] Teste: botões "Mês anterior" e "Próximo mês" trocam o mês
+- [x] Teste: valor com `+`/`−` e tom semântico
+- [x] Gate check passes: `npm run typecheck && npm run lint && npm run test`
 
 **Tests**: unit
 **Gate**: build
