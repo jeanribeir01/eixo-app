@@ -23,7 +23,7 @@ Implement these tasks with the `tlc-spec-driven` skill: **activate it by name an
 | ---------- | ------------------ | -------------------- | ---------------- | ----------- |
 | Primitivos (`src/ui`) | unit (Testing Library) | Toda prop e estado citado nos ACs; `accessibilityRole`/`accessibilityLabel`; valores vindos de token | `src/ui/__tests__/*.test.tsx` | `npx jest --selectProjects app src/ui` |
 | Navegação (`src/navigation`: menu, options, views) | unit | 1:1 com os ACs (ícone por aba, aba inicial por perfil, opções do header, hub, placeholders) | `src/navigation/__tests__/*.test.ts(x)` | `npx jest --selectProjects app src/navigation` |
-| Layouts de rota (`app/**/_layout.tsx`) | unit com `renderRouter` (`expo-router/testing-library`) | Header com título e voltar; ícones da tab bar; voltar retorna à tela anterior | `src/navigation/__tests__/*Layout.test.tsx` | `npx jest --selectProjects app src/navigation` |
+| Layouts de rota (`app/**/_layout.tsx`) | unit com `renderRouter` (`expo-router/testing-library`) | Header com título e voltar; ícones da tab bar; voltar retorna à tela anterior | `__tests__/routes/*.test.tsx` (padrão do projeto, skill `teste-componente`) | `npx jest routes --selectProjects app` |
 | Telas de feature (`src/features/*/*View.tsx`) | unit (Testing Library) | Caminho feliz + cada AC + carregando, vazio e erro | `src/features/*/__tests__/*View.test.tsx` | `npx jest --selectProjects app src/features` |
 | Hooks (`src/lib`) | unit | Todos os ramos: primeira carga, recarga sem piscar, falha em recarga, resposta antiga descartada, pull-to-refresh | `src/lib/__tests__/*.test.ts` | `npx jest --selectProjects app src/lib` |
 | Arquivo de rota fino (`app/**` que só renderiza uma View) | none | build gate | - | build gate only |
@@ -334,8 +334,8 @@ T49
 
 **Done when**:
 
-- [ ] Teste com `renderRouter` (perfil Admin): 5 abas com ícone; ativa em `textPrimary`, inativas em `textBody`
-- [ ] Gate check passes: `npm run test`
+- [x] Teste com `renderRouter` (perfil Admin): 5 abas com ícone; ativa em `textPrimary`, inativas em `textBody`
+- [x] Gate check passes: `npm run test`
 
 **Tests**: unit
 **Gate**: full

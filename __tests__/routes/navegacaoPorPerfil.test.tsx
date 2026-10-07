@@ -1,11 +1,12 @@
 import type { Session } from '@supabase/supabase-js';
 import { router as navegador, type Href } from 'expo-router';
 import { act, renderRouter, screen } from 'expo-router/testing-library';
-import { Text } from 'react-native';
+import { StyleSheet, Text } from 'react-native';
 
 import { limparPerfil } from '@/features/auth/profileStore';
 import { useSessionStore } from '@/features/auth/sessionStore';
 import type { PerfilNome } from '@/features/auth/permissions';
+import { colors } from '@/ui';
 
 import InicioRoute from '../../app/(app)/(tabs)/index';
 import TabsLayout from '../../app/(app)/(tabs)/_layout';
@@ -211,5 +212,62 @@ describe('telas internas seguem o módulo (EIX-31)', () => {
     expect(await screen.findByText('Tela Viagens')).toBeOnTheScreen();
     expect(screen.queryByText('Tela Financeiro')).not.toBeOnTheScreen();
     expect(router.getPathname()).toBe('/viagens');
+  });
+});
+
+// Ícone Material Symbols de cada aba, direto do critério de aceite NAV-01.
+const simboloDaAba: Record<string, string> = {
+  Dashboards: 'dashboard',
+  Financeiro: 'account_balance_wallet',
+  Frota: 'local_shipping',
+  Viagens: 'route',
+  Configurações: 'settings',
+};
+
+// O ícone é decorativo (o rótulo da aba já diz o que é), por isso as buscas incluem elementos escondidos
+// do leitor de tela.
+function simbolos(nome: string) {
+  return screen.getAllByTestId(`simbolo-${nome}`, { includeHiddenElements: true });
+}
+
+// A tab bar desenha duas cópias de cada ícone (ativa e inativa) e alterna pela opacidade. Só vale a
+// cópia que o usuário vê: opacidade efetiva, somando os ancestrais, maior que zero.
+type NoDaArvore = ReturnType<typeof simbolos>[number];
+function opacidadeEfetiva(no: NoDaArvore | null): number {
+  let opacidade = 1;
+  for (let atual = no; atual; atual = atual.parent) {
+    const estilo = StyleSheet.flatten(atual.props.style) as { opacity?: number } | undefined;
+    if (typeof estilo?.opacity === 'number') opacidade *= estilo.opacity;
+  }
+  return opacidade;
+}
+
+describe('tab bar com ícones (NAV-01)', () => {
+  it('Admin vê um ícone em cada uma das 5 abas', async () => {
+    await entrarComo('Admin');
+
+    for (const simbolo of Object.values(simboloDaAba)) {
+      expect(simbolos(simbolo).length).toBeGreaterThan(0);
+    }
+  });
+
+  it('Motorista só vê os ícones das abas dele', async () => {
+    await entrarComo('Motorista');
+
+    expect(simbolos('route').length).toBeGreaterThan(0);
+    expect(simbolos('settings').length).toBeGreaterThan(0);
+    expect(screen.queryAllByTestId('simbolo-account_balance_wallet', { includeHiddenElements: true })).toHaveLength(0);
+  });
+
+  it('aba ativa em textPrimary; as outras em textBody', async () => {
+    await entrarComo('Admin');
+    act(() => navegador.push('/financeiro'));
+    await screen.findByText('Tela Financeiro');
+
+    for (const [aba, simbolo] of Object.entries(simboloDaAba)) {
+      const visiveis = simbolos(simbolo).filter((icone) => opacidadeEfetiva(icone) > 0);
+      expect(visiveis).toHaveLength(1);
+      expect(visiveis[0]).toHaveStyle({ color: aba === 'Financeiro' ? colors.textPrimary : colors.textBody });
+    }
   });
 });
