@@ -23,7 +23,7 @@ Implement these tasks with the `tlc-spec-driven` skill: **activate it by name an
 | ---------- | ------------------ | -------------------- | ---------------- | ----------- |
 | Primitivos (`src/ui`) | unit (Testing Library) | Toda prop e estado citado nos ACs; `accessibilityRole`/`accessibilityLabel`; valores vindos de token | `src/ui/__tests__/*.test.tsx` | `npx jest --selectProjects app src/ui` |
 | Navegação (`src/navigation`: menu, options, views) | unit | 1:1 com os ACs (ícone por aba, aba inicial por perfil, opções do header, hub, placeholders) | `src/navigation/__tests__/*.test.ts(x)` | `npx jest --selectProjects app src/navigation` |
-| Layouts de rota (`app/**/_layout.tsx`) | unit com `renderRouter` (`expo-router/testing-library`) | Header com título e voltar; ícones da tab bar; voltar retorna à tela anterior | `src/navigation/__tests__/*Layout.test.tsx` | `npx jest --selectProjects app src/navigation` |
+| Layouts de rota (`app/**/_layout.tsx`) | unit com `renderRouter` (`expo-router/testing-library`) | Header com título e voltar; ícones da tab bar; voltar retorna à tela anterior | `__tests__/routes/*.test.tsx` (padrão do projeto, skill `teste-componente`) | `npx jest routes --selectProjects app` |
 | Telas de feature (`src/features/*/*View.tsx`) | unit (Testing Library) | Caminho feliz + cada AC + carregando, vazio e erro | `src/features/*/__tests__/*View.test.tsx` | `npx jest --selectProjects app src/features` |
 | Hooks (`src/lib`) | unit | Todos os ramos: primeira carga, recarga sem piscar, falha em recarga, resposta antiga descartada, pull-to-refresh | `src/lib/__tests__/*.test.ts` | `npx jest --selectProjects app src/lib` |
 | Arquivo de rota fino (`app/**` que só renderiza uma View) | none | build gate | - | build gate only |
@@ -230,9 +230,9 @@ T49
 
 **Done when**:
 
-- [ ] `"expo-symbols": "~57.0.3"` em `dependencies`
-- [ ] `npx -y npm@10 ci --dry-run --ignore-scripts` passa
-- [ ] Gate check passes: `npm run typecheck && npm run lint && npm run test`
+- [x] `"expo-symbols": "~57.0.3"` em `dependencies`
+- [x] `npx -y npm@10 ci --dry-run --ignore-scripts` passa
+- [x] Gate check passes: `npm run typecheck && npm run lint && npm run test`
 
 **Tests**: none
 **Gate**: build
@@ -256,9 +256,9 @@ T49
 
 **Done when**:
 
-- [ ] Teste: todo nome Android do mapa existe em `expo-symbols/build/android/symbols.json`
-- [ ] Teste: todo item tem nome iOS não vazio
-- [ ] Gate check passes: `npx jest --selectProjects app src/ui/__tests__/icons.test.ts`
+- [x] Teste: todo nome Android do mapa existe em `expo-symbols/build/android/symbols.json`
+- [x] Teste: todo item tem nome iOS não vazio
+- [x] Gate check passes: `npx jest --selectProjects app src/ui/__tests__/icons.test.ts`
 
 **Tests**: unit
 **Gate**: quick
@@ -282,10 +282,10 @@ T49
 
 **Done when**:
 
-- [ ] Teste: renderiza o nome Android do mapa no tamanho do token pedido
-- [ ] Teste: sem `accessibilityLabel` fica escondido do leitor de tela; com rótulo é anunciado
-- [ ] Teste: `tone="body"` usa `colors.textBody`
-- [ ] Gate check passes: `npx jest --selectProjects app src/ui/__tests__/Icon.test.tsx`
+- [x] Teste: renderiza o nome Android do mapa no tamanho do token pedido
+- [x] Teste: sem `accessibilityLabel` fica escondido do leitor de tela; com rótulo é anunciado
+- [x] Teste: `tone="body"` usa `colors.textBody`
+- [x] Gate check passes: `npx jest --selectProjects app src/ui/__tests__/Icon.test.tsx`
 
 **Tests**: unit
 **Gate**: quick
@@ -309,8 +309,8 @@ T49
 
 **Done when**:
 
-- [ ] Teste do `menu.test.ts` afirma o ícone de cada uma das 5 abas
-- [ ] Gate check passes: `npx jest --selectProjects app src/navigation/__tests__/menu.test.ts`
+- [x] Teste do `menu.test.ts` afirma o ícone de cada uma das 5 abas
+- [x] Gate check passes: `npx jest --selectProjects app src/navigation/__tests__/menu.test.ts`
 
 **Tests**: unit
 **Gate**: quick
@@ -334,8 +334,8 @@ T49
 
 **Done when**:
 
-- [ ] Teste com `renderRouter` (perfil Admin): 5 abas com ícone; ativa em `textPrimary`, inativas em `textBody`
-- [ ] Gate check passes: `npm run test`
+- [x] Teste com `renderRouter` (perfil Admin): 5 abas com ícone; ativa em `textPrimary`, inativas em `textBody`
+- [x] Gate check passes: `npm run test`
 
 **Tests**: unit
 **Gate**: full
@@ -361,8 +361,8 @@ T49
 
 **Done when**:
 
-- [ ] Teste afirma cada opção contra o token correspondente
-- [ ] Gate check passes: `npx jest --selectProjects app src/navigation/__tests__/stackOptions.test.ts`
+- [x] Teste afirma cada opção contra o token correspondente
+- [x] Gate check passes: `npx jest --selectProjects app src/navigation/__tests__/stackOptions.test.ts`
 
 **Tests**: unit
 **Gate**: quick
@@ -373,7 +373,7 @@ T49
 
 #### T9: Header e títulos na pilha do app
 
-**What**: Usar `screenOptions={stackOptions}` na pilha de `(app)`, manter `headerShown: false` só em `(tabs)` e dar o título em português a cada uma das 12 telas internas.
+**What**: Usar `screenOptions={stackOptions}` na pilha de `(app)`, manter `headerShown: false` só em `(tabs)` e dar o título em português a cada uma das 14 telas internas (as 12 originais + Novo veículo e Editar veículo, que entraram com o PR #7).
 **Where**: `app/(app)/_layout.tsx`
 **Depends on**: T8
 **Reuses**: guards existentes do `Stack.Protected`
@@ -386,10 +386,10 @@ T49
 
 **Done when**:
 
-- [ ] Teste com `renderRouter`: `/categorias` mostra o header "Categorias" e o botão voltar; voltar retorna à aba
-- [ ] Teste: a aba Financeiro não tem header nativo
-- [ ] Mergeado depois do PR #7 (EIX-37) ou conflito resolvido junto com o Diogo
-- [ ] Gate check passes: `npm run test`
+- [x] Teste com `renderRouter`: `/categorias` mostra o header "Categorias" e o botão voltar; voltar retorna à aba
+- [x] Teste: a aba Financeiro não tem header nativo
+- [x] PR #7 (EIX-37) mergeado antes desta task (06/10)
+- [x] Gate check passes: `npm run test`
 
 **Tests**: unit
 **Gate**: full
@@ -413,11 +413,11 @@ T49
 
 **Done when**:
 
-- [ ] Teste: sem props, renderiza como hoje
-- [ ] Teste: `scroll` cria `ScrollView` com `keyboardShouldPersistTaps="handled"`
-- [ ] Teste: `overlay` fica fora do `ScrollView`
-- [ ] Teste: `underHeader` tira o `top` das `edges`
-- [ ] Gate check passes: `npx jest --selectProjects app src/ui/__tests__/Screen.test.tsx`
+- [x] Teste: sem props, renderiza como hoje
+- [x] Teste: `scroll` cria `ScrollView` com `keyboardShouldPersistTaps="handled"`
+- [x] Teste: `overlay` fica fora do `ScrollView`
+- [x] Teste: `underHeader` tira o `top` das `edges`
+- [x] Gate check passes: `npx jest --selectProjects app src/ui/__tests__/Screen.test.tsx`
 
 **Tests**: unit
 **Gate**: quick
@@ -428,8 +428,8 @@ T49
 
 #### T11: Formulários e detalhe sem título duplicado
 
-**What**: Nos formulários de categoria, forma de pagamento e movimentação e no detalhe de usuário, tirar o sobretítulo e o título do conteúdo, usar `Screen underHeader scroll` (o formulário de movimentação larga o próprio `ScrollView`) e mover o Snackbar para `overlay`. É a mesma edição mecânica em 4 arquivos.
-**Where**: `src/features/categorias/CategoriaFormView.tsx`, `src/features/formas-pagamento/FormaPagamentoFormView.tsx`, `src/features/movimentacoes/MovimentacaoFormView.tsx`, `src/features/usuarios/UsuarioDetalheView.tsx`
+**What**: Nos formulários de categoria, forma de pagamento, movimentação e veículo e no detalhe de usuário, tirar o sobretítulo e o título do conteúdo, usar `Screen underHeader scroll` (o formulário de movimentação larga o próprio `ScrollView`) e mover o Snackbar para `overlay`, que passa a assentar no rodapé. É a mesma edição mecânica em 5 arquivos (o de veículo entrou com o PR #7). No detalhe de usuário o nome continua: é dado, não título repetido.
+**Where**: `src/features/categorias/CategoriaFormView.tsx`, `src/features/formas-pagamento/FormaPagamentoFormView.tsx`, `src/features/movimentacoes/MovimentacaoFormView.tsx`, `src/features/veiculos/VeiculoFormView.tsx`, `src/features/usuarios/UsuarioDetalheView.tsx`
 **Depends on**: T9, T10
 **Reuses**: views atuais
 **Requirement**: NAV-02, NAV-04
@@ -441,9 +441,9 @@ T49
 
 **Done when**:
 
-- [ ] Testes das 4 telas: não existe "Eixo Certo" nem título no conteúdo; validações e salvamento seguem passando
-- [ ] Teclado testado no emulador em Nova movimentação (campo Descrição e botão Salvar visíveis)
-- [ ] Gate check passes: `npm run test`
+- [x] Testes das 5 telas: não existe "Eixo Certo" nem título no conteúdo; validações e salvamento seguem passando
+- [ ] Teclado testado no emulador em Nova movimentação (campo Descrição e botão Salvar visíveis) — **pendente: conferência manual do Jean no emulador**; o desconto do header está coberto em `Screen.test.tsx`
+- [x] Gate check passes: `npm run test`
 
 **Tests**: unit
 **Gate**: full
@@ -467,9 +467,9 @@ T49
 
 **Done when**:
 
-- [ ] Testes das 5 telas: sem "Eixo Certo" nem título no conteúdo; estados carregando, vazio e erro intactos
-- [ ] `grep -rn "headerShown: false"` só acha `app/_layout.tsx`, `(auth)`, `(pendente)` e `(tabs)`
-- [ ] Gate check passes: `npm run typecheck && npm run lint && npm run test`
+- [x] Testes das 5 telas: sem "Eixo Certo" nem título no conteúdo; estados carregando, vazio e erro intactos
+- [x] `grep -rn "headerShown: false"` só acha `app/_layout.tsx`, `(auth)`, `(pendente)` e `(tabs)`
+- [x] Gate check passes: `npm run typecheck && npm run lint && npm run test`
 
 **Tests**: unit
 **Gate**: build
@@ -477,6 +477,20 @@ T49
 **Commit**: `refactor(telas): listas sem título duplicado sob o header (EIX-60)`
 
 ---
+
+**Ajustes do Verifier (EIX-60, iteração 1 → 2).** O Verifier deu FAIL por lacunas de teste: 7 de 18 mutantes sobreviveram. Correções:
+
+- [x] AC 4: estilo do header renderizado afirmado no `RNSScreenStackHeaderConfig` (`__tests__/routes/navegacaoPorPerfil.test.tsx`)
+- [x] AC 9–11: as 10 telas internas afirmam `underHeader`, e os 5 formulários afirmam o `ScrollView` dentro do `KeyboardAvoidingView`
+- [x] AC 8: `Icon` afirma as duas props de esconder, a do iOS e a do Android
+- [x] AC 2: a cor do rótulo da aba também é afirmada; o rótulo fica numa linha só (edge case de fonte 1.3)
+- [x] AC 6: Formas de pagamento busca o título sem depender de maiúscula; Nova movimentação ganhou a checagem
+- [x] AC 1: `tabBarLabelPosition: 'below-icon'` fixa o rótulo abaixo do ícone também no tablet
+
+**Ajustes do Verifier (EIX-60, iteração 2 → 3).**
+
+- [x] AC 11: carregando e erro de carga dos 5 formulários afirmam que a tela fica sob o header (sem inset de topo)
+- [x] AC 12 (novo na spec): o overlay do `Screen` usa `pointerEvents="box-none"`, e o conteúdo continua tocável com o Snackbar visível
 
 ### Phase 4: Primitivos de lista e feedback — EIX-61
 

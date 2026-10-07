@@ -1,4 +1,5 @@
 import { fireEvent, render, screen } from '@testing-library/react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { CategoriasListView } from '../CategoriasListView';
 import { definirAtivaCategoria, listarCategorias } from '../categoriasRepository';
@@ -48,6 +49,18 @@ describe('CategoriasListView', () => {
     expect(screen.getByText('Combustível')).toBeOnTheScreen();
     expect(screen.getByText('Entrada')).toBeOnTheScreen();
     expect(screen.getByText('Saída')).toBeOnTheScreen();
+  });
+
+  it('o título da tela fica no header nativo, não no conteúdo (NAV-02)', async () => {
+    (listarCategorias as jest.Mock).mockResolvedValue({ ok: true, data: categoriasMock });
+
+    render(<CategoriasListView />);
+    await screen.findByText('Frete');
+
+    expect(screen.queryByText('Eixo Certo')).not.toBeOnTheScreen();
+    expect(screen.queryByText('Categorias')).not.toBeOnTheScreen();
+    // Tela interna: o header nativo protege o topo, o Screen não repete o inset (NAV-04, AC 11).
+    expect(screen.UNSAFE_getByType(SafeAreaView).props.edges).not.toContain('top');
   });
 
   it('esconde categorias desativadas por padrão e mostra ao ligar o filtro (com opção de reativar)', async () => {

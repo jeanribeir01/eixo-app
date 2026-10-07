@@ -1,4 +1,6 @@
 import { act, fireEvent, render, screen } from '@testing-library/react-native';
+import { KeyboardAvoidingView, ScrollView } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { VeiculoFormView } from '../VeiculoFormView';
 import { atualizarVeiculo, buscarVeiculoPorId, criarVeiculo } from '../repository';
@@ -49,7 +51,12 @@ describe('VeiculoFormView', () => {
   it('modo criar: renderiza só os campos que existem no banco e os 3 status', () => {
     render(<VeiculoFormView />);
 
-    expect(screen.getByText('Novo veículo')).toBeOnTheScreen();
+    expect(screen.queryByText('Novo veículo')).not.toBeOnTheScreen();
+    expect(screen.queryByText('Eixo Certo')).not.toBeOnTheScreen();
+    // Tela interna: o header nativo protege o topo, o Screen não repete o inset (NAV-04, AC 11).
+    expect(screen.UNSAFE_getByType(SafeAreaView).props.edges).not.toContain('top');
+    // Formulário rola e sobe com o teclado (NAV-04, AC 9 e 10).
+    expect(screen.UNSAFE_getByType(KeyboardAvoidingView).findByType(ScrollView).props.keyboardShouldPersistTaps).toBe('handled');
     expect(screen.getByLabelText('Placa')).toBeOnTheScreen();
     expect(screen.getByLabelText('Marca')).toBeOnTheScreen();
     expect(screen.getByLabelText('Modelo')).toBeOnTheScreen();
@@ -145,7 +152,8 @@ describe('VeiculoFormView', () => {
     render(<VeiculoFormView veiculoId="9" />);
 
     expect(screen.getByLabelText('Carregando veículo')).toBeOnTheScreen();
-    expect(await screen.findByText('Editar veículo')).toBeOnTheScreen();
+    expect(await screen.findByLabelText('Placa')).toBeOnTheScreen();
+    expect(screen.queryByText('Editar veículo')).not.toBeOnTheScreen();
     expect(screen.getByLabelText('Placa').props.value).toBe('ABC-1234');
     expect(screen.getByLabelText('Capacidade de carga (toneladas)').props.value).toBe('12,5');
     expect(screen.getByRole('tab', { name: 'Em Manutenção' })).toHaveProp('accessibilityState', { selected: true });
@@ -156,7 +164,7 @@ describe('VeiculoFormView', () => {
     (atualizarVeiculo as jest.Mock).mockResolvedValue({ ok: true, data: { ...volvo, modelo: 'FH 460' } });
 
     render(<VeiculoFormView veiculoId="9" />);
-    await screen.findByText('Editar veículo');
+    await screen.findByLabelText('Placa');
 
     fireEvent.changeText(screen.getByLabelText('Modelo'), 'FH 460');
     await salvar();
@@ -173,5 +181,24 @@ describe('VeiculoFormView', () => {
     expect(await screen.findByText('Não foi possível carregar o veículo')).toBeOnTheScreen();
     fireEvent.press(screen.getByRole('button', { name: 'Voltar' }));
     expect(mockBack).toHaveBeenCalledTimes(1);
+  });
+});
+
+// Carregando e erro de carga também abrem sob o header nativo: sem inset de topo duplicado (NAV-04, AC 11).
+describe('VeiculoFormView — estados de carga sob o header (NAV-04)', () => {
+  it('carregando: sem o inset de topo', () => {
+    (buscarVeiculoPorId as jest.Mock).mockReturnValue(new Promise(() => {}));
+    render(<VeiculoFormView veiculoId="9" />);
+
+    expect(screen.getByLabelText('Carregando veículo')).toBeOnTheScreen();
+    expect(screen.UNSAFE_getByType(SafeAreaView).props.edges).not.toContain('top');
+  });
+
+  it('erro ao carregar: sem o inset de topo', async () => {
+    (buscarVeiculoPorId as jest.Mock).mockResolvedValue({ ok: false, mensagem: 'Veículo não encontrado.' });
+    render(<VeiculoFormView veiculoId="9" />);
+
+    expect(await screen.findByText('Não foi possível carregar o veículo')).toBeOnTheScreen();
+    expect(screen.UNSAFE_getByType(SafeAreaView).props.edges).not.toContain('top');
   });
 });

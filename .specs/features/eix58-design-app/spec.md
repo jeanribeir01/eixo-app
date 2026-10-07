@@ -63,7 +63,7 @@ O app funciona, mas parece um protótipo. As telas internas não têm header nem
 
 1. The system SHALL render each visible tab with a Material Symbols icon above its label: Dashboards `dashboard`, Financeiro `account_balance_wallet`, Frota `local_shipping`, Viagens `route`, Configurações `settings`.
 2. WHILE a tab is active the system SHALL draw its icon and label in `colors.textPrimary`, and the inactive tabs in `colors.textBody`.
-3. WHEN an internal screen opens THEN the system SHALL show a native header with a back button and a title in Portuguese: Saldo e projeção, Categorias, Nova categoria, Editar categoria, Formas de pagamento, Nova forma de pagamento, Editar forma de pagamento, Movimentações, Nova movimentação, Editar movimentação, Usuários, Usuário.
+3. WHEN an internal screen opens THEN the system SHALL show a native header with a back button and a title in Portuguese: Saldo e projeção, Categorias, Nova categoria, Editar categoria, Formas de pagamento, Nova forma de pagamento, Editar forma de pagamento, Movimentações, Nova movimentação, Editar movimentação, Novo veículo, Editar veículo, Usuários, Usuário.
 4. The system SHALL style the header with `colors.canvas` background, no shadow or elevation, title in `typography.subheading` with `fontFamily.regular` and tint `colors.textPrimary`.
 5. WHEN the user taps the header back button THEN the system SHALL return to the previous screen.
 6. The system SHALL NOT render the "Eixo Certo" overline or a second in-content title on internal screens that have a header.
@@ -71,7 +71,8 @@ O app funciona, mas parece um protótipo. As telas internas não têm header nem
 8. IF an `Icon` is rendered without `accessibilityLabel` THEN the system SHALL hide it from screen readers.
 9. WHERE `Screen` receives `scroll` the system SHALL render the content in a `ScrollView` with `keyboardShouldPersistTaps="handled"` inside a `KeyboardAvoidingView`.
 10. WHEN a text field inside a `Screen` with `scroll` receives focus THEN the system SHALL keep that field visible above the keyboard.
-11. WHERE `Screen` is rendered under a native header the system SHALL NOT add the top safe-area inset.
+11. WHERE `Screen` is rendered under a native header the system SHALL NOT add the top safe-area inset, including in its loading and error states.
+12. WHILE an `overlay` (Snackbar, FAB) is visible the system SHALL keep the content under it touchable outside the overlay's own elements.
 
 **Independent Test**: Abrir Financeiro → Categorias no emulador: tab bar com 5 ícones, header "Categorias" com seta de voltar, nenhum "Eixo Certo" no conteúdo; abrir Nova movimentação e focar Descrição com o teclado aberto.
 
@@ -325,7 +326,7 @@ O app funciona, mas parece um protótipo. As telas internas não têm header nem
 | NAV-01 | P1: Navegação nativa e ícones (AC 1–2) | Tasks | Pending |
 | NAV-02 | P1: Navegação nativa e ícones (AC 3–6) | Tasks | Pending |
 | NAV-03 | P1: Navegação nativa e ícones (AC 7–8) + edge case de fonte | Tasks | Pending |
-| NAV-04 | P1: Navegação nativa e ícones (AC 9–11) + edge case de teclado | Tasks | Pending |
+| NAV-04 | P1: Navegação nativa e ícones (AC 9–12) + edge case de teclado | Tasks | Pending |
 | UIP-01 | P1: Primitivos (AC 1–3) | Tasks | Pending |
 | UIP-02 | P1: Primitivos (AC 4) | Tasks | Pending |
 | UIP-03 | P1: Primitivos (AC 5–6) | Tasks | Pending |

@@ -76,11 +76,11 @@
 
 ## Handoff
 
-- **Feature**: `.specs/features/eix32-rls`
-- **Phase / Task**: Execute concluído + Verifier PASS (iteração 1)
-- **Completed**: migration `perfil_select` só a própria linha para não aprovado (336ea34), matriz de RLS por perfil (fc161b4), `src/lib/errors.ts` com "Acesso negado" (543fa75), repositórios usando errors.ts (debf143)
+- **Feature**: `.specs/features/eix58-design-app` (épico EIX-58, sub-issues EIX-59 a EIX-72 + EIX-11)
+- **Phase / Task**: EIX-60 (fases 2 e 3, T3–T12) concluída localmente; Verifier PASS na iteração 3 (`validation.md`)
+- **Completed**: T3–T12 (236f7b6..d7210ed); ajustes do Verifier (0415cb0, edab078, 3247c01); 611 testes do app e 163 do Supabase verdes
 - **In-progress** (file:line): none
-- **Next step**: aplicar `20261006000100_perfil_select_aprovado.sql` na nuvem (`supabase db push`), push da branch e PR (EIX-32, revisor Eduardo)
-- **Blockers**: none
+- **Next step**: Jean confere no emulador a lista "Manual Verification" do `validation.md` e confirma as 3 edições da spec (AC 3, 11 e 12 de NAV) → push + PR da EIX-60 (depende do PR #17) → EIX-61 (T13–T20)
+- **Blockers**: ok do Jean para push/PR
 - **Uncommitted files**: none
-- **Branch**: feat/eix-32-us18-rls
+- **Branch**: feat/eix-60-design-fundacao-navegacao (local, com merge da chore/eix-59)

@@ -1,11 +1,12 @@
 import type { Session } from '@supabase/supabase-js';
 import { router as navegador, type Href } from 'expo-router';
 import { act, renderRouter, screen } from 'expo-router/testing-library';
-import { Text } from 'react-native';
+import { StyleSheet, Text } from 'react-native';
 
 import { limparPerfil } from '@/features/auth/profileStore';
 import { useSessionStore } from '@/features/auth/sessionStore';
 import type { PerfilNome } from '@/features/auth/permissions';
+import { colors, fontFamily, typography } from '@/ui';
 
 import InicioRoute from '../../app/(app)/(tabs)/index';
 import TabsLayout from '../../app/(app)/(tabs)/_layout';
@@ -42,6 +43,12 @@ const routes = {
   '(app)/frota/novo': () => <Text>Tela Novo Veiculo</Text>,
   '(app)/frota/[id]/editar': () => <Text>Tela Editar Veiculo</Text>,
   '(app)/caixa/index': () => <Text>Tela Caixa</Text>,
+  '(app)/formas-pagamento/index': () => <Text>Tela Formas</Text>,
+  '(app)/formas-pagamento/nova': () => <Text>Tela Nova Forma</Text>,
+  '(app)/formas-pagamento/[id]/editar': () => <Text>Tela Editar Forma</Text>,
+  '(app)/movimentacoes/index': () => <Text>Tela Movimentacoes</Text>,
+  '(app)/movimentacoes/nova': () => <Text>Tela Nova Movimentacao</Text>,
+  '(app)/movimentacoes/[id]/editar': () => <Text>Tela Editar Movimentacao</Text>,
   '(app)/usuarios/index': () => <Text>Tela Usuarios</Text>,
   '(app)/usuarios/[id]': () => <Text>Tela Usuario</Text>,
   '(auth)/_layout': AuthLayout,
@@ -211,5 +218,146 @@ describe('telas internas seguem o módulo (EIX-31)', () => {
     expect(await screen.findByText('Tela Viagens')).toBeOnTheScreen();
     expect(screen.queryByText('Tela Financeiro')).not.toBeOnTheScreen();
     expect(router.getPathname()).toBe('/viagens');
+  });
+});
+
+// Ícone Material Symbols de cada aba, direto do critério de aceite NAV-01.
+const simboloDaAba: Record<string, string> = {
+  Dashboards: 'dashboard',
+  Financeiro: 'account_balance_wallet',
+  Frota: 'local_shipping',
+  Viagens: 'route',
+  Configurações: 'settings',
+};
+
+// O ícone é decorativo (o rótulo da aba já diz o que é), por isso as buscas incluem elementos escondidos
+// do leitor de tela.
+function simbolos(nome: string) {
+  return screen.getAllByTestId(`simbolo-${nome}`, { includeHiddenElements: true });
+}
+
+// A tab bar desenha duas cópias de cada ícone (ativa e inativa) e alterna pela opacidade. Só vale a
+// cópia que o usuário vê: opacidade efetiva, somando os ancestrais, maior que zero.
+type NoDaArvore = ReturnType<typeof simbolos>[number];
+function opacidadeEfetiva(no: NoDaArvore | null): number {
+  let opacidade = 1;
+  for (let atual = no; atual; atual = atual.parent) {
+    const estilo = StyleSheet.flatten(atual.props.style) as { opacity?: number } | undefined;
+    if (typeof estilo?.opacity === 'number') opacidade *= estilo.opacity;
+  }
+  return opacidade;
+}
+
+describe('tab bar com ícones (NAV-01)', () => {
+  it('Admin vê um ícone em cada uma das 5 abas', async () => {
+    await entrarComo('Admin');
+
+    for (const simbolo of Object.values(simboloDaAba)) {
+      expect(simbolos(simbolo).length).toBeGreaterThan(0);
+    }
+  });
+
+  it('Motorista só vê os ícones das abas dele', async () => {
+    await entrarComo('Motorista');
+
+    expect(simbolos('route').length).toBeGreaterThan(0);
+    expect(simbolos('settings').length).toBeGreaterThan(0);
+    expect(screen.queryAllByTestId('simbolo-account_balance_wallet', { includeHiddenElements: true })).toHaveLength(0);
+  });
+
+  it('aba ativa em textPrimary; as outras em textBody', async () => {
+    await entrarComo('Admin');
+    act(() => navegador.push('/financeiro'));
+    await screen.findByText('Tela Financeiro');
+
+    for (const [aba, simbolo] of Object.entries(simboloDaAba)) {
+      const visiveis = simbolos(simbolo).filter((icone) => opacidadeEfetiva(icone) > 0);
+      expect(visiveis).toHaveLength(1);
+      expect(visiveis[0]).toHaveStyle({ color: aba === 'Financeiro' ? colors.textPrimary : colors.textBody });
+    }
+  });
+
+  it('rótulo da aba ativa em textPrimary; os outros em textBody (AC 2)', async () => {
+    await entrarComo('Admin');
+    act(() => navegador.push('/financeiro'));
+    await screen.findByText('Tela Financeiro');
+
+    for (const aba of todasAsAbas) {
+      expect(screen.getByText(aba)).toHaveStyle({ color: aba === 'Financeiro' ? colors.textPrimary : colors.textBody });
+    }
+  });
+
+  it('rótulo da aba fica numa linha só: com fonte grande, corta com reticências em vez de quebrar', async () => {
+    await entrarComo('Admin');
+
+    for (const aba of todasAsAbas) {
+      expect(screen.getByText(aba).props.numberOfLines).toBe(1);
+    }
+  });
+});
+
+// O header do Stack nativo é configurado pelo react-native-screens: no Jest ele aparece como o elemento
+// RNSScreenStackHeaderConfig, com o título e as flags nas props (a seta em si é desenhada pelo sistema).
+function headersVisiveis() {
+  return screen.root
+    .findAll((no) => (no.type as unknown) === 'RNSScreenStackHeaderConfig')
+    .filter((header) => header.props.hidden === false);
+}
+
+describe('header nativo nas telas internas (NAV-02)', () => {
+  it.each([
+    ['/caixa', 'Tela Caixa', 'Saldo e projeção'],
+    ['/categorias', 'Tela Categorias', 'Categorias'],
+    ['/categorias/nova', 'Tela Nova Categoria', 'Nova categoria'],
+    ['/categorias/c1/editar', 'Tela Editar Categoria', 'Editar categoria'],
+    ['/formas-pagamento', 'Tela Formas', 'Formas de pagamento'],
+    ['/formas-pagamento/nova', 'Tela Nova Forma', 'Nova forma de pagamento'],
+    ['/formas-pagamento/f1/editar', 'Tela Editar Forma', 'Editar forma de pagamento'],
+    ['/movimentacoes', 'Tela Movimentacoes', 'Movimentações'],
+    ['/movimentacoes/nova', 'Tela Nova Movimentacao', 'Nova movimentação'],
+    ['/movimentacoes/m1/editar', 'Tela Editar Movimentacao', 'Editar movimentação'],
+    ['/frota/novo', 'Tela Novo Veiculo', 'Novo veículo'],
+    ['/frota/v1/editar', 'Tela Editar Veiculo', 'Editar veículo'],
+    ['/usuarios', 'Tela Usuarios', 'Usuários'],
+    ['/usuarios/u1', 'Tela Usuario', 'Usuário'],
+  ] as const)('%s abre %s com o header "%s" e o botão voltar', async (rota, tela, titulo) => {
+    await entrarComo('Admin');
+
+    act(() => navegador.push(rota as Href));
+    await screen.findByText(tela);
+
+    const header = headersVisiveis().find((h) => h.props.title === titulo);
+    expect(header).toBeDefined();
+    expect(header?.props.hideBackButton).toBe(false);
+    // Estilo do header como o usuário vê (AC 4): fundo canvas, sem sombra, título subheading regular.
+    expect(header?.props).toMatchObject({
+      backgroundColor: colors.canvas,
+      hideShadow: true,
+      titleFontFamily: fontFamily.regular,
+      titleFontSize: typography.subheading.fontSize,
+      titleColor: colors.textPrimary,
+      color: colors.textPrimary,
+    });
+  });
+
+  it('as abas não têm header nativo: o título delas fica no conteúdo', async () => {
+    await entrarComo('Admin');
+    act(() => navegador.push('/financeiro'));
+    await screen.findByText('Tela Financeiro');
+
+    expect(headersVisiveis()).toHaveLength(0);
+  });
+
+  it('voltar de uma tela interna retorna para a aba de onde ela foi aberta', async () => {
+    const router = await entrarComo('Admin');
+    act(() => navegador.push('/financeiro'));
+    await screen.findByText('Tela Financeiro');
+    act(() => navegador.push('/categorias'));
+    await screen.findByText('Tela Categorias');
+
+    act(() => navegador.back());
+
+    expect(await screen.findByText('Tela Financeiro')).toBeOnTheScreen();
+    expect(router.getPathname()).toBe('/financeiro');
   });
 });

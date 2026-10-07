@@ -129,7 +129,7 @@ export function VeiculoFormView({ veiculoId }: VeiculoFormViewProps) {
 
   if (status === 'carregando') {
     return (
-      <Screen align="center">
+      <Screen align="center" underHeader>
         <ActivityIndicator size="small" color={colors.accent} accessibilityLabel="Carregando veículo" />
       </Screen>
     );
@@ -137,21 +137,18 @@ export function VeiculoFormView({ veiculoId }: VeiculoFormViewProps) {
 
   if (status === 'erro') {
     return (
-      <Screen align="center">
+      <Screen align="center" underHeader>
         <EmptyState title="Não foi possível carregar o veículo" description={erroCarga ?? undefined} actionLabel="Voltar" onAction={() => router.back()} />
       </Screen>
     );
   }
 
   return (
-    <Screen>
-      <Column gap="xs">
-        <Text variant="bodySm" weight="medium">
-          Eixo Certo
-        </Text>
-        <Text variant="heading">{modoEdicao ? 'Editar veículo' : 'Novo veículo'}</Text>
-      </Column>
-
+    <Screen
+      underHeader
+      scroll
+      overlay={feedback && <Snackbar message={feedback.mensagem} tone={feedback.tone} duration={1200} onDismiss={handleFeedbackDismiss} />}
+    >
       <Column gap="md">
         <Input
           label="Placa"
@@ -198,7 +195,6 @@ export function VeiculoFormView({ veiculoId }: VeiculoFormViewProps) {
       <Button label="Salvar" onPress={handleSalvar} loading={salvando} />
       <Button label="Cancelar" variant="ghost" onPress={() => router.back()} />
 
-      {feedback && <Snackbar message={feedback.mensagem} tone={feedback.tone} duration={1200} onDismiss={handleFeedbackDismiss} />}
     </Screen>
   );
 }
