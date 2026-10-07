@@ -66,14 +66,10 @@ export function CategoriasListView() {
   });
 
   return (
-    <Screen>
-      <Column gap="xs">
-        <Text variant="bodySm" weight="medium">
-          Eixo Certo
-        </Text>
-        <Text variant="heading">Categorias</Text>
-      </Column>
-
+    <Screen
+      underHeader
+      overlay={feedback && <Snackbar message={feedback.mensagem} tone={feedback.tone} onDismiss={() => setFeedback(null)} />}
+    >
       <Input label="Buscar" placeholder="Buscar por título" value={busca} onChangeText={setBusca} />
 
       <Switch label="Mostrar desativadas" value={mostrarDesativadas} onValueChange={setMostrarDesativadas} />
@@ -131,9 +127,6 @@ export function CategoriasListView() {
         />
       )}
 
-      {feedback && (
-        <Snackbar message={feedback.mensagem} tone={feedback.tone} onDismiss={() => setFeedback(null)} />
-      )}
     </Screen>
   );
 }

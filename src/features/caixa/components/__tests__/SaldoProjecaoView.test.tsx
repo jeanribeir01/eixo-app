@@ -69,6 +69,16 @@ describe('SaldoProjecaoView', () => {
     expect(screen.getByText('− R$ 1.200,00')).toBeOnTheScreen();
   });
 
+  it('o título da tela fica no header nativo, não no conteúdo (NAV-02)', async () => {
+    responder(resumoCaixaComDados);
+
+    render(<SaldoProjecaoView />);
+    await screen.findByText('+ R$ 12.500,00');
+
+    expect(screen.queryByText('Financeiro')).not.toBeOnTheScreen();
+    expect(screen.queryByText('Saldo e projeção')).not.toBeOnTheScreen();
+  });
+
   it('mês com saldo projetado negativo: valor em vermelho com sinal e alerta', async () => {
     responder(resumoCaixaComDados);
 

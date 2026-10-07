@@ -97,6 +97,14 @@ describe('MovimentacoesListView — mês (MOV-08)', () => {
     expect(mockListar).toHaveBeenCalledWith(2026, 10);
   });
 
+  it('o título da tela fica no header nativo, não no conteúdo (NAV-02)', async () => {
+    render(<MovimentacoesListView />);
+    await screen.findByText('Frete Curitiba');
+
+    expect(screen.queryByText('Eixo Certo')).not.toBeOnTheScreen();
+    expect(screen.queryByText('Movimentações')).not.toBeOnTheScreen();
+  });
+
   it('‹ e › carregam o mês anterior e o seguinte', async () => {
     await renderLista();
 

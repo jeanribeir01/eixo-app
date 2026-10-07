@@ -467,9 +467,9 @@ T49
 
 **Done when**:
 
-- [ ] Testes das 5 telas: sem "Eixo Certo" nem título no conteúdo; estados carregando, vazio e erro intactos
-- [ ] `grep -rn "headerShown: false"` só acha `app/_layout.tsx`, `(auth)`, `(pendente)` e `(tabs)`
-- [ ] Gate check passes: `npm run typecheck && npm run lint && npm run test`
+- [x] Testes das 5 telas: sem "Eixo Certo" nem título no conteúdo; estados carregando, vazio e erro intactos
+- [x] `grep -rn "headerShown: false"` só acha `app/_layout.tsx`, `(auth)`, `(pendente)` e `(tabs)`
+- [x] Gate check passes: `npm run typecheck && npm run lint && npm run test`
 
 **Tests**: unit
 **Gate**: build

@@ -50,6 +50,16 @@ describe('CategoriasListView', () => {
     expect(screen.getByText('Saída')).toBeOnTheScreen();
   });
 
+  it('o título da tela fica no header nativo, não no conteúdo (NAV-02)', async () => {
+    (listarCategorias as jest.Mock).mockResolvedValue({ ok: true, data: categoriasMock });
+
+    render(<CategoriasListView />);
+    await screen.findByText('Frete');
+
+    expect(screen.queryByText('Eixo Certo')).not.toBeOnTheScreen();
+    expect(screen.queryByText('Categorias')).not.toBeOnTheScreen();
+  });
+
   it('esconde categorias desativadas por padrão e mostra ao ligar o filtro (com opção de reativar)', async () => {
     (listarCategorias as jest.Mock).mockResolvedValue({ ok: true, data: categoriasMock });
 

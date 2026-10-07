@@ -59,6 +59,16 @@ describe('UsuariosListView', () => {
     expect(screen.queryByLabelText('Carregando usuários')).not.toBeOnTheScreen();
   });
 
+  it('o título da tela fica no header nativo, não no conteúdo (NAV-02)', async () => {
+    (listarUsuarios as jest.Mock).mockResolvedValue({ ok: true, data: usuarios });
+
+    render(<UsuariosListView />);
+    await screen.findByText('Ana Souza');
+
+    expect(screen.queryByText('Eixo Certo')).not.toBeOnTheScreen();
+    expect(screen.queryByText('Usuários')).not.toBeOnTheScreen();
+  });
+
   it('tocar em um usuário abre o detalhe dele', async () => {
     (listarUsuarios as jest.Mock).mockResolvedValue({ ok: true, data: usuarios });
     render(<UsuariosListView />);

@@ -48,6 +48,16 @@ describe('FormasPagamentoListView', () => {
     expect(screen.getByText('Dinheiro')).toBeOnTheScreen();
   });
 
+  it('o título da tela fica no header nativo, não no conteúdo (NAV-02)', async () => {
+    (listarFormasPagamento as jest.Mock).mockResolvedValue({ ok: true, data: formasMock });
+
+    render(<FormasPagamentoListView />);
+    await screen.findByText('Pix');
+
+    expect(screen.queryByText('Eixo Certo')).not.toBeOnTheScreen();
+    expect(screen.queryByText('Formas de Pagamento')).not.toBeOnTheScreen();
+  });
+
   it('bloqueia edição e desativação das formas fixas (Pix, Boleto, TED, Cartão Corporativo)', async () => {
     (listarFormasPagamento as jest.Mock).mockResolvedValue({ ok: true, data: formasMock });
 
