@@ -69,6 +69,7 @@ function linha(sobrescrever: Record<string, unknown> = {}) {
     data_pagamento: null,
     data_inclusao: '2026-10-01T12:00:00+00:00',
     status_pagamento: 'Pendente',
+    comprovante_url: null,
     categoria: { titulo: 'Pedágio', tipo: 'Saida', ativa: true },
     forma_pagamento: { nome: 'Pix', ativa: true },
     ...sobrescrever,
@@ -83,6 +84,7 @@ const input: MovimentacaoInput = {
   dataVencimento: '2026-10-20',
   status: 'Pago',
   dataPagamento: '2026-10-05',
+  comprovanteUrl: null,
 };
 
 beforeEach(() => {
@@ -124,6 +126,7 @@ describe('listarMovimentacoesDoMes (MOV-08)', () => {
           data_pagamento: null,
           data_inclusao: '2026-10-01T12:00:00+00:00',
           status_pagamento: 'Pendente',
+          comprovante_url: null,
           categoria: { titulo: 'Pedágio', tipo: 'Saida', ativa: true },
           formaPagamento: { nome: 'Pix', ativa: true },
         },

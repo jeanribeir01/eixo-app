@@ -193,6 +193,7 @@ describe('MovimentacaoFormView — salvar (MOV-02)', () => {
       dataVencimento: null,
       status: 'Pago',
       dataPagamento: '2026-10-05',
+      comprovanteUrl: null,
     });
     expect(screen.getByText('Movimentação registrada.')).toBeOnTheScreen();
     await waitFor(() => expect(mockBack).toHaveBeenCalled(), { timeout: 3000 });
@@ -250,6 +251,7 @@ describe('MovimentacaoFormView — editar (MOV-10)', () => {
       dataVencimento: '2026-10-10',
       status: 'Pendente',
       dataPagamento: null,
+      comprovanteUrl: null,
     });
     expect(screen.getByText('Movimentação atualizada.')).toBeOnTheScreen();
   });
