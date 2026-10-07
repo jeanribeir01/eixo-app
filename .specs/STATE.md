@@ -66,6 +66,14 @@
 - **Date**: 2026-10-05
 - **Status**: active
 
+### AD-009
+- **Decision**: Em cor, tipografia, espaçamento, borda e forma, o `DESIGN_CYAN.md` vence as skills `expo-*` instaladas na EIX-59 (`expo-router`, `expo-native-ui`, `expo-design-system`, `expo-animation`) e a `vercel-react-native-skills`. As skills mandam em navegação, comportamento nativo, motion, acessibilidade e performance.
+- **Reason**: As skills da Expo pedem cores semânticas do iOS, fonte do sistema, `@expo/ui` e evitam bordas de 1px; o guia do projeto escolhe Inter, paleta stone + um cyan e a hairline como estrutura. AGENTS.md §0 faz do guia a fonte única de verdade visual.
+- **Trade-off**: Algumas "native slop tells" da skill (#6 Inter Everywhere, #9 Wireframe Borders, #18 Dark-Mode Amnesia) ficam aceitas de propósito; a auditoria da EIX-72 não as conta como defeito.
+- **Scope**: Todas as telas e primitivos; EIX-58 e sub-tasks.
+- **Date**: 2026-10-06
+- **Status**: active
+
 ## Handoff
 
 - **Feature**: `.specs/features/eix32-rls`
