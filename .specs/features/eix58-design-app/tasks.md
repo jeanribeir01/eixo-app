@@ -535,11 +535,11 @@ T49
 
 **Done when**:
 
-- [ ] Teste: título, subtítulo e ícone aparecem
-- [ ] Teste: chevron só com `onPress` e sem `trailing`
-- [ ] Teste: `android_ripple` com `colors.border`
-- [ ] Teste: uso com `children` continua igual
-- [ ] Gate check passes: `npx jest --selectProjects app src/ui/__tests__/ListItem.test.tsx`
+- [x] Teste: título, subtítulo e ícone aparecem
+- [x] Teste: chevron só com `onPress` e sem `trailing`
+- [x] Teste: `android_ripple` com `colors.border`
+- [x] Teste: uso com `children` continua igual
+- [x] Gate check passes: `npx jest --selectProjects app src/ui/__tests__/ListItem.test.tsx`
 
 **Tests**: unit
 **Gate**: quick
