@@ -770,11 +770,11 @@ T49
 
 **Done when**:
 
-- [ ] Teste: saldo aparece formatado; skeleton enquanto carrega
-- [ ] Teste: erro mostra "Não foi possível carregar o saldo." e "Tentar novamente", e as 4 linhas continuam tocáveis
-- [ ] Teste: cada linha e o FAB navegam para a rota certa
-- [ ] Teste: não aparece "Em breve"
-- [ ] Gate check passes: `npx jest --selectProjects app src/navigation/__tests__/FinanceiroHubView.test.tsx`
+- [x] Teste: saldo aparece formatado; skeleton enquanto carrega
+- [x] Teste: erro mostra "Não foi possível carregar o saldo." e "Tentar novamente", e as 4 linhas continuam tocáveis
+- [x] Teste: cada linha e o FAB navegam para a rota certa
+- [x] Teste: não aparece "Em breve"
+- [x] Gate check passes: `npx jest --selectProjects app src/navigation/__tests__/FinanceiroHubView.test.tsx`
 
 **Tests**: unit
 **Gate**: quick
