@@ -66,13 +66,21 @@
 - **Date**: 2026-10-05
 - **Status**: active
 
+### AD-009
+- **Decision**: Em cor, tipografia, espaçamento, borda e forma, o `DESIGN_CYAN.md` vence as skills `expo-*` instaladas na EIX-59 (`expo-router`, `expo-native-ui`, `expo-design-system`, `expo-animation`) e a `vercel-react-native-skills`. As skills mandam em navegação, comportamento nativo, motion, acessibilidade e performance.
+- **Reason**: As skills da Expo pedem cores semânticas do iOS, fonte do sistema, `@expo/ui` e evitam bordas de 1px; o guia do projeto escolhe Inter, paleta stone + um cyan e a hairline como estrutura. AGENTS.md §0 faz do guia a fonte única de verdade visual.
+- **Trade-off**: Algumas "native slop tells" da skill (#6 Inter Everywhere, #9 Wireframe Borders, #18 Dark-Mode Amnesia) ficam aceitas de propósito; a auditoria da EIX-72 não as conta como defeito.
+- **Scope**: Todas as telas e primitivos; EIX-58 e sub-tasks.
+- **Date**: 2026-10-06
+- **Status**: active
+
 ## Handoff
 
-- **Feature**: `.specs/features/eix32-rls`
-- **Phase / Task**: Execute concluído + Verifier PASS (iteração 1)
-- **Completed**: migration `perfil_select` só a própria linha para não aprovado (336ea34), matriz de RLS por perfil (fc161b4), `src/lib/errors.ts` com "Acesso negado" (543fa75), repositórios usando errors.ts (debf143)
-- **In-progress** (file:line): none
-- **Next step**: aplicar `20261006000100_perfil_select_aprovado.sql` na nuvem (`supabase db push`), push da branch e PR (EIX-32, revisor Eduardo)
+- **Feature**: `.specs/features/eix58-design-app` (épico EIX-58, sub-issues EIX-59 a EIX-72 + EIX-11)
+- **Phase / Task**: Execute da EIX-60 (fases 2 e 3, T3–T12) em andamento
+- **Completed**: EIX-59 (T1, T2) no PR #17; `npm ci` feito; PR #7 (Frota) mergeado
+- **In-progress** (file:line): T3
+- **Next step**: T3 → T12 com um commit por task; Verifier no fim da EIX-60
 - **Blockers**: none
 - **Uncommitted files**: none
-- **Branch**: feat/eix-32-us18-rls
+- **Branch**: feat/eix-60-design-fundacao-navegacao (com merge da chore/eix-59 até o PR #17 entrar na main)
