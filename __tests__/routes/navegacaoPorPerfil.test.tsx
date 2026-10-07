@@ -49,6 +49,9 @@ const routes = {
   '(app)/movimentacoes/index': () => <Text>Tela Movimentacoes</Text>,
   '(app)/movimentacoes/nova': () => <Text>Tela Nova Movimentacao</Text>,
   '(app)/movimentacoes/[id]/editar': () => <Text>Tela Editar Movimentacao</Text>,
+  '(app)/dividas/index': () => <Text>Tela Dividas</Text>,
+  '(app)/dividas/nova': () => <Text>Tela Nova Divida</Text>,
+  '(app)/dividas/[id]': () => <Text>Tela Divida</Text>,
   '(app)/usuarios/index': () => <Text>Tela Usuarios</Text>,
   '(app)/usuarios/[id]': () => <Text>Tela Usuario</Text>,
   '(auth)/_layout': AuthLayout,
@@ -212,6 +215,27 @@ describe('telas internas seguem o módulo (EIX-31)', () => {
     expect(await screen.findByText('Tela Caixa')).toBeOnTheScreen();
   });
 
+  // Dívidas (EIX-50): só Financeiro e Admin. O RLS de `divida` é quem garante.
+  it.each(['Gestor de Frota', 'Motorista'] as const)('%s digitando /dividas volta para a home do perfil', async (perfil) => {
+    const { telaInicial, rotaInicial } = cenarios.find((c) => c.perfil === perfil)!;
+    const router = await entrarComo(perfil);
+    await screen.findByText(telaInicial);
+
+    act(() => navegador.push('/dividas'));
+
+    expect(await screen.findByText(telaInicial)).toBeOnTheScreen();
+    expect(screen.queryByText('Tela Dividas')).not.toBeOnTheScreen();
+    expect(router.getPathname()).toBe(rotaInicial);
+  });
+
+  it.each(['Admin', 'Financeiro'] as const)('%s abre /dividas', async (perfil) => {
+    await entrarComo(perfil);
+
+    act(() => navegador.push('/dividas'));
+
+    expect(await screen.findByText('Tela Dividas')).toBeOnTheScreen();
+  });
+
   it('Motorista que abre o app já numa URL financeira cai em Viagens', async () => {
     const router = await entrarComo('Motorista', '/financeiro');
 
@@ -318,6 +342,9 @@ describe('header nativo nas telas internas (NAV-02)', () => {
     ['/movimentacoes/m1/editar', 'Tela Editar Movimentacao', 'Editar movimentação'],
     ['/frota/novo', 'Tela Novo Veiculo', 'Novo veículo'],
     ['/frota/v1/editar', 'Tela Editar Veiculo', 'Editar veículo'],
+    ['/dividas', 'Tela Dividas', 'Dívidas'],
+    ['/dividas/nova', 'Tela Nova Divida', 'Nova dívida'],
+    ['/dividas/d1', 'Tela Divida', 'Dívida'],
     ['/usuarios', 'Tela Usuarios', 'Usuários'],
     ['/usuarios/u1', 'Tela Usuario', 'Usuário'],
   ] as const)('%s abre %s com o header "%s" e o botão voltar', async (rota, tela, titulo) => {

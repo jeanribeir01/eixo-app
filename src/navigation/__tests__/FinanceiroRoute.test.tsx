@@ -15,6 +15,7 @@ describe('aba Financeiro', () => {
     ['Categorias', '/categorias'],
     ['Formas de Pagamento', '/formas-pagamento'],
     ['Movimentações', '/movimentacoes'],
+    ['Dívidas', '/dividas'],
   ])('atalho %s leva para %s', (rotulo, href) => {
     render(<FinanceiroRoute />);
 
