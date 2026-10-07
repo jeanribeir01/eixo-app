@@ -277,7 +277,6 @@ describe('MovimentacaoFormView — opções (edge case)', () => {
 // Carregando e erro de carga também abrem sob o header nativo: sem inset de topo duplicado (NAV-04, AC 11).
 describe('MovimentacaoFormView — estados de carga sob o header (NAV-04)', () => {
   it('carregando: sem o inset de topo', () => {
-    mockOpcoes.mockResolvedValue({ ok: true, data: { categorias: [], formasPagamento: [] } });
     mockOpcoes.mockReturnValue(new Promise(() => {}));
     render(<MovimentacaoFormView movimentacaoId="x" />);
 

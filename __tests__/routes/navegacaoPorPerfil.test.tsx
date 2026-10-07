@@ -320,7 +320,7 @@ describe('header nativo nas telas internas (NAV-02)', () => {
     ['/frota/v1/editar', 'Tela Editar Veiculo', 'Editar veículo'],
     ['/usuarios', 'Tela Usuarios', 'Usuários'],
     ['/usuarios/u1', 'Tela Usuario', 'Usuário'],
-  ] as const)('%s mostra o header "%s" com o botão voltar', async (rota, tela, titulo) => {
+  ] as const)('%s abre %s com o header "%s" e o botão voltar', async (rota, tela, titulo) => {
     await entrarComo('Admin');
 
     act(() => navegador.push(rota as Href));
