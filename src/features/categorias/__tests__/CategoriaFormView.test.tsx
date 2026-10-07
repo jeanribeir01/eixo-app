@@ -159,3 +159,22 @@ describe('CategoriaFormView', () => {
     expect(criarCategoria).not.toHaveBeenCalled();
   });
 });
+
+// Carregando e erro de carga também abrem sob o header nativo: sem inset de topo duplicado (NAV-04, AC 11).
+describe('CategoriaFormView — estados de carga sob o header (NAV-04)', () => {
+  it('carregando: sem o inset de topo', () => {
+    (buscarCategoriaPorId as jest.Mock).mockReturnValue(new Promise(() => {}));
+    render(<CategoriaFormView categoriaId="9" />);
+
+    expect(screen.getByLabelText('Carregando categoria')).toBeOnTheScreen();
+    expect(screen.UNSAFE_getByType(SafeAreaView).props.edges).not.toContain('top');
+  });
+
+  it('erro ao carregar: sem o inset de topo', async () => {
+    (buscarCategoriaPorId as jest.Mock).mockResolvedValue({ ok: false, mensagem: 'Categoria não encontrada.' });
+    render(<CategoriaFormView categoriaId="9" />);
+
+    expect(await screen.findByText('Não foi possível carregar a categoria')).toBeOnTheScreen();
+    expect(screen.UNSAFE_getByType(SafeAreaView).props.edges).not.toContain('top');
+  });
+});

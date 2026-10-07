@@ -119,3 +119,22 @@ describe('FormaPagamentoFormView', () => {
     expect(criarFormaPagamento).not.toHaveBeenCalled();
   });
 });
+
+// Carregando e erro de carga também abrem sob o header nativo: sem inset de topo duplicado (NAV-04, AC 11).
+describe('FormaPagamentoFormView — estados de carga sob o header (NAV-04)', () => {
+  it('carregando: sem o inset de topo', () => {
+    (buscarFormaPagamentoPorId as jest.Mock).mockReturnValue(new Promise(() => {}));
+    render(<FormaPagamentoFormView formaPagamentoId="2" />);
+
+    expect(screen.getByLabelText('Carregando forma de pagamento')).toBeOnTheScreen();
+    expect(screen.UNSAFE_getByType(SafeAreaView).props.edges).not.toContain('top');
+  });
+
+  it('erro ao carregar: sem o inset de topo', async () => {
+    (buscarFormaPagamentoPorId as jest.Mock).mockResolvedValue({ ok: false, mensagem: 'Forma de pagamento não encontrada.' });
+    render(<FormaPagamentoFormView formaPagamentoId="2" />);
+
+    expect(await screen.findByText('Não foi possível carregar a forma de pagamento')).toBeOnTheScreen();
+    expect(screen.UNSAFE_getByType(SafeAreaView).props.edges).not.toContain('top');
+  });
+});

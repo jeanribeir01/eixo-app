@@ -71,7 +71,8 @@ O app funciona, mas parece um protótipo. As telas internas não têm header nem
 8. IF an `Icon` is rendered without `accessibilityLabel` THEN the system SHALL hide it from screen readers.
 9. WHERE `Screen` receives `scroll` the system SHALL render the content in a `ScrollView` with `keyboardShouldPersistTaps="handled"` inside a `KeyboardAvoidingView`.
 10. WHEN a text field inside a `Screen` with `scroll` receives focus THEN the system SHALL keep that field visible above the keyboard.
-11. WHERE `Screen` is rendered under a native header the system SHALL NOT add the top safe-area inset.
+11. WHERE `Screen` is rendered under a native header the system SHALL NOT add the top safe-area inset, including in its loading and error states.
+12. WHILE an `overlay` (Snackbar, FAB) is visible the system SHALL keep the content under it touchable outside the overlay's own elements.
 
 **Independent Test**: Abrir Financeiro → Categorias no emulador: tab bar com 5 ícones, header "Categorias" com seta de voltar, nenhum "Eixo Certo" no conteúdo; abrir Nova movimentação e focar Descrição com o teclado aberto.
 
@@ -325,7 +326,7 @@ O app funciona, mas parece um protótipo. As telas internas não têm header nem
 | NAV-01 | P1: Navegação nativa e ícones (AC 1–2) | Tasks | Pending |
 | NAV-02 | P1: Navegação nativa e ícones (AC 3–6) | Tasks | Pending |
 | NAV-03 | P1: Navegação nativa e ícones (AC 7–8) + edge case de fonte | Tasks | Pending |
-| NAV-04 | P1: Navegação nativa e ícones (AC 9–11) + edge case de teclado | Tasks | Pending |
+| NAV-04 | P1: Navegação nativa e ícones (AC 9–12) + edge case de teclado | Tasks | Pending |
 | UIP-01 | P1: Primitivos (AC 1–3) | Tasks | Pending |
 | UIP-02 | P1: Primitivos (AC 4) | Tasks | Pending |
 | UIP-03 | P1: Primitivos (AC 5–6) | Tasks | Pending |

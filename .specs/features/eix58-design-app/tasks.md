@@ -487,6 +487,11 @@ T49
 - [x] AC 6: Formas de pagamento busca o título sem depender de maiúscula; Nova movimentação ganhou a checagem
 - [x] AC 1: `tabBarLabelPosition: 'below-icon'` fixa o rótulo abaixo do ícone também no tablet
 
+**Ajustes do Verifier (EIX-60, iteração 2 → 3).**
+
+- [x] AC 11: carregando e erro de carga dos 5 formulários afirmam que a tela fica sob o header (sem inset de topo)
+- [x] AC 12 (novo na spec): o overlay do `Screen` usa `pointerEvents="box-none"`, e o conteúdo continua tocável com o Snackbar visível
+
 ### Phase 4: Primitivos de lista e feedback — EIX-61
 
 #### T13: Declarar Reanimated e Worklets

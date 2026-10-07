@@ -94,4 +94,14 @@ describe('Screen (NAV-04)', () => {
     const camada = screen.getByText('Flutuante').parent?.parent;
     expect(camada).toHaveStyle({ position: 'absolute', justifyContent: 'flex-end', padding: spacing.base });
   });
+
+  it('overlay não engole o toque: o conteúdo embaixo continua tocável fora do Snackbar (AC 12)', () => {
+    render(
+      <Screen overlay={<Text>Flutuante</Text>}>
+        <Text>Campo</Text>
+      </Screen>,
+    );
+
+    expect(screen.getByText('Flutuante').parent?.parent?.props.pointerEvents).toBe('box-none');
+  });
 });

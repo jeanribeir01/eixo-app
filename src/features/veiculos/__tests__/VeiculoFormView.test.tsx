@@ -183,3 +183,22 @@ describe('VeiculoFormView', () => {
     expect(mockBack).toHaveBeenCalledTimes(1);
   });
 });
+
+// Carregando e erro de carga também abrem sob o header nativo: sem inset de topo duplicado (NAV-04, AC 11).
+describe('VeiculoFormView — estados de carga sob o header (NAV-04)', () => {
+  it('carregando: sem o inset de topo', () => {
+    (buscarVeiculoPorId as jest.Mock).mockReturnValue(new Promise(() => {}));
+    render(<VeiculoFormView veiculoId="9" />);
+
+    expect(screen.getByLabelText('Carregando veículo')).toBeOnTheScreen();
+    expect(screen.UNSAFE_getByType(SafeAreaView).props.edges).not.toContain('top');
+  });
+
+  it('erro ao carregar: sem o inset de topo', async () => {
+    (buscarVeiculoPorId as jest.Mock).mockResolvedValue({ ok: false, mensagem: 'Veículo não encontrado.' });
+    render(<VeiculoFormView veiculoId="9" />);
+
+    expect(await screen.findByText('Não foi possível carregar o veículo')).toBeOnTheScreen();
+    expect(screen.UNSAFE_getByType(SafeAreaView).props.edges).not.toContain('top');
+  });
+});

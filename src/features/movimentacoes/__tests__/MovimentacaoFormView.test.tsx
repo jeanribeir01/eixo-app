@@ -273,3 +273,24 @@ describe('MovimentacaoFormView — opções (edge case)', () => {
     expect(screen.getByText('Nenhuma opção cadastrada.')).toBeOnTheScreen();
   });
 });
+
+// Carregando e erro de carga também abrem sob o header nativo: sem inset de topo duplicado (NAV-04, AC 11).
+describe('MovimentacaoFormView — estados de carga sob o header (NAV-04)', () => {
+  it('carregando: sem o inset de topo', () => {
+    mockOpcoes.mockResolvedValue({ ok: true, data: { categorias: [], formasPagamento: [] } });
+    mockOpcoes.mockReturnValue(new Promise(() => {}));
+    render(<MovimentacaoFormView movimentacaoId="x" />);
+
+    expect(screen.getByLabelText('Carregando formulário')).toBeOnTheScreen();
+    expect(screen.UNSAFE_getByType(SafeAreaView).props.edges).not.toContain('top');
+  });
+
+  it('erro ao carregar: sem o inset de topo', async () => {
+    mockOpcoes.mockResolvedValue({ ok: true, data: { categorias: [], formasPagamento: [] } });
+    mockBuscar.mockResolvedValue({ ok: false, mensagem: 'Movimentação não encontrada.' });
+    render(<MovimentacaoFormView movimentacaoId="x" />);
+
+    expect(await screen.findByText('Movimentação não encontrada.')).toBeOnTheScreen();
+    expect(screen.UNSAFE_getByType(SafeAreaView).props.edges).not.toContain('top');
+  });
+});
