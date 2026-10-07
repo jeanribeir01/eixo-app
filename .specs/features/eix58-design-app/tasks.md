@@ -798,8 +798,8 @@ T49
 
 **Done when**:
 
-- [ ] Teste da rota: renderiza o hub
-- [ ] Gate check passes: `npm run typecheck && npm run lint && npm run test`
+- [x] Teste da rota: renderiza o hub
+- [x] Gate check passes: `npm run typecheck && npm run lint && npm run test`
 
 **Tests**: unit
 **Gate**: build
