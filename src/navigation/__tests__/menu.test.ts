@@ -36,11 +36,11 @@ describe('menu por perfil (US17)', () => {
   });
 
   it.each([
-    ['Admin', 'dashboards'],
+    ['Admin', 'financeiro'],
     ['Gestor de Frota', 'frota'],
-    ['Financeiro', 'dashboards'],
+    ['Financeiro', 'financeiro'],
     ['Motorista', 'viagens'],
-  ] as const)('%s abre o app em %s', (perfil, esperada) => {
+  ] as const)('%s abre o app em %s (FIN-01)', (perfil, esperada) => {
     expect(abaInicial(usuario(perfil))).toBe(esperada);
   });
 

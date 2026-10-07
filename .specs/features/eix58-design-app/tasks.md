@@ -720,8 +720,8 @@ T49
 
 **Done when**:
 
-- [ ] Teste: Admin → financeiro, Financeiro → financeiro, Gestor de Frota → frota, Motorista → viagens
-- [ ] Gate check passes: `npx jest --selectProjects app src/navigation/__tests__/menu.test.ts`
+- [x] Teste: Admin → financeiro, Financeiro → financeiro, Gestor de Frota → frota, Motorista → viagens
+- [x] Gate check passes: `npx jest --selectProjects app src/navigation/__tests__/menu.test.ts`
 
 **Tests**: unit
 **Gate**: quick

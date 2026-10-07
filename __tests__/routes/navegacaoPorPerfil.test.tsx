@@ -66,7 +66,8 @@ const todasAsAbas = ['Dashboards', 'Financeiro', 'Frota', 'Viagens', 'Configura�
 
 // O que cada perfil deve enxergar e onde abre, direto dos critérios de aceite da EIX-31.
 const cenarios: { perfil: PerfilNome; abas: string[]; telaInicial: string; rotaInicial: string }[] = [
-  { perfil: 'Admin', abas: todasAsAbas, telaInicial: 'Tela Dashboards', rotaInicial: '/dashboards' },
+  // Admin e Financeiro abrem no hub Financeiro (EIX-62).
+  { perfil: 'Admin', abas: todasAsAbas, telaInicial: 'Tela Financeiro', rotaInicial: '/financeiro' },
   {
     perfil: 'Gestor de Frota',
     abas: ['Dashboards', 'Frota', 'Viagens', 'Configurações'],
@@ -76,8 +77,8 @@ const cenarios: { perfil: PerfilNome; abas: string[]; telaInicial: string; rotaI
   {
     perfil: 'Financeiro',
     abas: ['Dashboards', 'Financeiro', 'Configurações'],
-    telaInicial: 'Tela Dashboards',
-    rotaInicial: '/dashboards',
+    telaInicial: 'Tela Financeiro',
+    rotaInicial: '/financeiro',
   },
   { perfil: 'Motorista', abas: ['Viagens', 'Configurações'], telaInicial: 'Tela Viagens', rotaInicial: '/viagens' },
 ];
