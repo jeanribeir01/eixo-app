@@ -881,9 +881,9 @@ T49
 
 **Done when**:
 
-- [ ] Teste: forma fixa não tem switch nem abre edição
-- [ ] Teste: forma editável abre edição no toque e alterna pelo switch com Snackbar
-- [ ] Gate check passes: `npx jest --selectProjects app src/features/formas-pagamento`
+- [x] Teste: forma fixa não tem switch nem abre edição
+- [x] Teste: forma editável abre edição no toque e alterna pelo switch com Snackbar
+- [x] Gate check passes: `npx jest --selectProjects app src/features/formas-pagamento`
 
 **Tests**: unit
 **Gate**: quick

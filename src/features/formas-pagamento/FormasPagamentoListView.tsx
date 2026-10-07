@@ -1,43 +1,41 @@
-import { useCallback, useState } from 'react';
-import { useFocusEffect, useRouter } from 'expo-router';
-import { ActivityIndicator, FlatList } from 'react-native';
+import { useState } from 'react';
+import { useRouter } from 'expo-router';
+import { FlatList, RefreshControl, StyleSheet } from 'react-native';
 
-import { Button, Column, EmptyState, Input, ListItem, Screen, Snackbar, Switch, Text, colors } from '@/ui';
+import { useDadosDaTela } from '@/lib/useDadosDaTela';
+import {
+  Column,
+  EmptyState,
+  FAB,
+  FAB_ALTURA_RESERVADA,
+  Input,
+  ListItem,
+  Screen,
+  Skeleton,
+  Snackbar,
+  Switch,
+  colors,
+} from '@/ui';
 
 import { definirAtivaFormaPagamento, listarFormasPagamento } from './formasPagamentoRepository';
 import { isFormaFixa, type FormaPagamento } from './types';
 
-type Status = 'carregando' | 'pronto' | 'erro';
-
 type Feedback = { mensagem: string; tone: 'success' | 'error' };
+
+// Forma fixa (do seed) não muda: o subtítulo explica por que a linha não abre nem tem switch.
+function subtitulo(forma: FormaPagamento): string | undefined {
+  if (isFormaFixa(forma.nome)) return 'Padrão do sistema';
+  return forma.ativa ? undefined : 'Desativada';
+}
 
 export function FormasPagamentoListView() {
   const router = useRouter();
-  const [status, setStatus] = useState<Status>('carregando');
-  const [formasPagamento, setFormasPagamento] = useState<FormaPagamento[]>([]);
-  const [erro, setErro] = useState<string | null>(null);
+  // Carrega ao abrir e ao voltar da criação/edição, sem a lista piscar (EIX-63).
+  const tela = useDadosDaTela(listarFormasPagamento);
   const [busca, setBusca] = useState('');
   const [mostrarDesativadas, setMostrarDesativadas] = useState(false);
   const [processandoId, setProcessandoId] = useState<string | null>(null);
   const [feedback, setFeedback] = useState<Feedback | null>(null);
-
-  const carregar = useCallback(async () => {
-    setStatus('carregando');
-    const resultado = await listarFormasPagamento();
-    if (!resultado.ok) {
-      setErro(resultado.mensagem);
-      setStatus('erro');
-      return;
-    }
-    setFormasPagamento(resultado.data);
-    setStatus('pronto');
-  }, []);
-
-  useFocusEffect(
-    useCallback(() => {
-      carregar();
-    }, [carregar]),
-  );
 
   async function handleAlternarAtiva(forma: FormaPagamento) {
     setProcessandoId(forma.id);
@@ -49,7 +47,7 @@ export function FormasPagamentoListView() {
       return;
     }
 
-    setFormasPagamento((atual) => atual.map((item) => (item.id === forma.id ? resultado.data : item)));
+    tela.atualizarDados((atuais) => atuais.map((item) => (item.id === forma.id ? resultado.data : item)));
     setFeedback({
       mensagem: resultado.data.ativa ? 'Forma de pagamento reativada.' : 'Forma de pagamento desativada.',
       tone: 'success',
@@ -57,75 +55,107 @@ export function FormasPagamentoListView() {
   }
 
   const termo = busca.trim().toLowerCase();
-  const filtradas = formasPagamento.filter((forma) => {
+  const filtradas = (tela.dados ?? []).filter((forma) => {
     if (!mostrarDesativadas && !forma.ativa) return false;
     if (!termo) return true;
     return forma.nome.toLowerCase().includes(termo);
   });
 
+  // Um Snackbar só: o retorno da ação vem antes do aviso de recarga que falhou.
+  const snackbar = feedback ?? (tela.feedbackErro ? { mensagem: tela.feedbackErro, tone: 'error' as const } : null);
+
   return (
     <Screen
       underHeader
-      overlay={feedback && <Snackbar message={feedback.mensagem} tone={feedback.tone} onDismiss={() => setFeedback(null)} />}
+      overlay={
+        snackbar && (
+          <Snackbar
+            message={snackbar.mensagem}
+            tone={snackbar.tone}
+            onDismiss={() => (feedback ? setFeedback(null) : tela.limparFeedbackErro())}
+          />
+        )
+      }
+      // O FAB é a ação de criar e o único cyan da tela (DESIGN_CYAN §7).
+      fab={<FAB label="Nova forma de pagamento" onPress={() => router.push('/formas-pagamento/nova')} />}
     >
       <Input label="Buscar" placeholder="Buscar por nome" value={busca} onChangeText={setBusca} />
 
       <Switch label="Mostrar desativadas" value={mostrarDesativadas} onValueChange={setMostrarDesativadas} />
 
-      <Button label="Nova forma de pagamento" onPress={() => router.push('/formas-pagamento/nova')} />
-
-      {status === 'carregando' && (
-        <Column align="center">
-          <ActivityIndicator size="small" color={colors.accent} accessibilityLabel="Carregando formas de pagamento" />
+      {tela.status === 'carregando' && (
+        <Column gap="sm">
+          <Skeleton height="xxl" accessibilityLabel="Carregando formas de pagamento" />
+          <Skeleton height="xxl" />
+          <Skeleton height="xxl" />
         </Column>
       )}
 
-      {status === 'erro' && (
-        <EmptyState title="Não foi possível carregar" description={erro ?? undefined} actionLabel="Tentar novamente" onAction={carregar} />
-      )}
-
-      {status === 'pronto' && filtradas.length === 0 && (
+      {tela.status === 'erro' && (
         <EmptyState
-          title={termo ? 'Nenhuma forma de pagamento encontrada' : 'Nenhuma forma de pagamento cadastrada'}
-          description={termo ? 'Tente buscar por outro nome.' : 'Crie a primeira forma de pagamento para começar.'}
-          actionLabel={termo ? undefined : 'Nova forma de pagamento'}
-          onAction={termo ? undefined : () => router.push('/formas-pagamento/nova')}
+          title="Não foi possível carregar"
+          description={tela.erro ?? undefined}
+          actionLabel="Tentar novamente"
+          onAction={tela.recarregar}
         />
       )}
 
-      {status === 'pronto' && filtradas.length > 0 && (
+      {tela.status === 'pronto' && (
         <FlatList
           data={filtradas}
           keyExtractor={(item) => item.id}
-          style={{ flex: 1 }}
+          style={styles.lista}
+          contentContainerStyle={styles.espacoDoFab}
+          refreshControl={
+            <RefreshControl
+              refreshing={tela.atualizando}
+              onRefresh={tela.puxarParaAtualizar}
+              colors={[colors.accent]}
+              tintColor={colors.accent}
+            />
+          }
+          // Vazio dentro da lista: o pull-to-refresh funciona até sem forma nenhuma. Sem ação aqui,
+          // porque o FAB já está na tela.
+          ListEmptyComponent={
+            <EmptyState
+              title={termo ? 'Nenhuma forma de pagamento encontrada' : 'Nenhuma forma de pagamento cadastrada'}
+              description={termo ? 'Tente buscar por outro nome.' : 'Crie a primeira forma de pagamento para começar.'}
+            />
+          }
           renderItem={({ item }) => {
-            const isFixo = isFormaFixa(item.nome);
+            const fixa = isFormaFixa(item.nome);
             return (
-              <ListItem>
-                <Column gap="sm">
-                  <Column gap="xs" align="start">
-                    <Text weight="medium" tone={item.ativa ? 'primary' : 'muted'}>
-                      {item.nome}
-                    </Text>
-                  </Column>
-                  <Column direction="row" gap="sm" wrap>
-                    {!isFixo && <Button label="Editar" variant="ghost" onPress={() => router.push(`/formas-pagamento/${item.id}/editar`)} />}
-                    {!isFixo && (
-                      <Button
-                        label={item.ativa ? 'Desativar' : 'Reativar'}
-                        variant="ghost"
-                        loading={processandoId === item.id}
-                        onPress={() => handleAlternarAtiva(item)}
-                      />
-                    )}
-                  </Column>
-                </Column>
-              </ListItem>
+              <ListItem
+                title={item.nome}
+                subtitle={subtitulo(item)}
+                // A regra das fixas continua: sem edição e sem switch.
+                onPress={fixa ? undefined : () => router.push(`/formas-pagamento/${item.id}/editar`)}
+                control={
+                  fixa ? undefined : (
+                    <Switch
+                      label="Ativa"
+                      accessibilityLabel={`Ativa: ${item.nome}`}
+                      value={item.ativa}
+                      disabled={processandoId === item.id}
+                      onValueChange={() => handleAlternarAtiva(item)}
+                    />
+                  )
+                }
+              />
             );
           }}
         />
       )}
-
     </Screen>
   );
 }
+
+const styles = StyleSheet.create({
+  lista: {
+    flex: 1,
+  },
+  // O Screen só reserva o espaço do FAB quando ele mesmo rola; aqui quem rola é a FlatList.
+  espacoDoFab: {
+    paddingBottom: FAB_ALTURA_RESERVADA,
+  },
+});
