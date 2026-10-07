@@ -256,9 +256,9 @@ T49
 
 **Done when**:
 
-- [ ] Teste: todo nome Android do mapa existe em `expo-symbols/build/android/symbols.json`
-- [ ] Teste: todo item tem nome iOS não vazio
-- [ ] Gate check passes: `npx jest --selectProjects app src/ui/__tests__/icons.test.ts`
+- [x] Teste: todo nome Android do mapa existe em `expo-symbols/build/android/symbols.json`
+- [x] Teste: todo item tem nome iOS não vazio
+- [x] Gate check passes: `npx jest --selectProjects app src/ui/__tests__/icons.test.ts`
 
 **Tests**: unit
 **Gate**: quick

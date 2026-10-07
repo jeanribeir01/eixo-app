@@ -41,6 +41,9 @@ export const shadow = {
 // Alvo de toque mínimo (44×44pt): o guia foi feito para mouse, o app é usado com o dedo.
 export const touchTarget = 44;
 
+// Tamanhos de ícone: sm dentro de texto pequeno, md em linha de lista e aba, lg em estado vazio.
+export const iconSize = { sm: 16, md: 20, lg: 24 } as const;
+
 // Nomes das fontes registradas no layout raiz via expo-font (@expo-google-fonts/inter).
 export const fontFamily = {
   regular: 'Inter_400Regular',
