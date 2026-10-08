@@ -1,26 +1,17 @@
-import { fireEvent, render, screen } from '@testing-library/react-native';
+import { render, screen } from '@testing-library/react-native';
 
 import FinanceiroRoute from '../../../app/(app)/(tabs)/financeiro';
 
-const mockPush = jest.fn();
-jest.mock('expo-router', () => ({ useRouter: () => ({ push: mockPush }) }));
+jest.mock('expo-router', () => ({ useRouter: () => ({ push: jest.fn() }), useFocusEffect: jest.fn() }));
+jest.mock('@/features/caixa/fonteResumoCaixa', () => ({ buscarResumoCaixa: jest.fn() }));
 
-beforeEach(() => {
-  mockPush.mockReset();
-});
-
-// A aba Financeiro é a porta de entrada das telas do módulo (Admin e Financeiro).
+// A aba Financeiro abre o hub do módulo (EIX-62). O comportamento do hub está em FinanceiroHubView.test.
 describe('aba Financeiro', () => {
-  it.each([
-    ['Categorias', '/categorias'],
-    ['Formas de Pagamento', '/formas-pagamento'],
-    ['Movimentações', '/movimentacoes'],
-    ['Dívidas', '/dividas'],
-  ])('atalho %s leva para %s', (rotulo, href) => {
+  it('renderiza o hub: título, menu do módulo e FAB', () => {
     render(<FinanceiroRoute />);
 
-    fireEvent.press(screen.getByRole('button', { name: rotulo }));
-
-    expect(mockPush).toHaveBeenCalledWith(href);
+    expect(screen.getByText('Financeiro')).toBeOnTheScreen();
+    expect(screen.getByRole('button', { name: 'Movimentações' })).toBeOnTheScreen();
+    expect(screen.getByRole('button', { name: 'Nova movimentação' })).toBeOnTheScreen();
   });
 });

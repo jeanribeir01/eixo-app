@@ -720,8 +720,8 @@ T49
 
 **Done when**:
 
-- [ ] Teste: Admin → financeiro, Financeiro → financeiro, Gestor de Frota → frota, Motorista → viagens
-- [ ] Gate check passes: `npx jest --selectProjects app src/navigation/__tests__/menu.test.ts`
+- [x] Teste: Admin → financeiro, Financeiro → financeiro, Gestor de Frota → frota, Motorista → viagens
+- [x] Gate check passes: `npx jest --selectProjects app src/navigation/__tests__/menu.test.ts`
 
 **Tests**: unit
 **Gate**: quick
@@ -745,8 +745,8 @@ T49
 
 **Done when**:
 
-- [ ] Teste: mostra ícone, nome do módulo e a frase; não mostra "Este módulo ainda está em construção."
-- [ ] Gate check passes: `npx jest --selectProjects app src/navigation/__tests__/ModuloEmBreveView.test.tsx`
+- [x] Teste: mostra ícone, nome do módulo e a frase; não mostra "Este módulo ainda está em construção."
+- [x] Gate check passes: `npx jest --selectProjects app src/navigation/__tests__/ModuloEmBreveView.test.tsx`
 
 **Tests**: unit
 **Gate**: quick
@@ -770,11 +770,11 @@ T49
 
 **Done when**:
 
-- [ ] Teste: saldo aparece formatado; skeleton enquanto carrega
-- [ ] Teste: erro mostra "Não foi possível carregar o saldo." e "Tentar novamente", e as 4 linhas continuam tocáveis
-- [ ] Teste: cada linha e o FAB navegam para a rota certa
-- [ ] Teste: não aparece "Em breve"
-- [ ] Gate check passes: `npx jest --selectProjects app src/navigation/__tests__/FinanceiroHubView.test.tsx`
+- [x] Teste: saldo aparece formatado; skeleton enquanto carrega
+- [x] Teste: erro mostra "Não foi possível carregar o saldo." e "Tentar novamente", e as 4 linhas continuam tocáveis
+- [x] Teste: cada linha e o FAB navegam para a rota certa
+- [x] Teste: não aparece "Em breve"
+- [x] Gate check passes: `npx jest --selectProjects app src/navigation/__tests__/FinanceiroHubView.test.tsx`
 
 **Tests**: unit
 **Gate**: quick
@@ -798,8 +798,8 @@ T49
 
 **Done when**:
 
-- [ ] Teste da rota: renderiza o hub
-- [ ] Gate check passes: `npm run typecheck && npm run lint && npm run test`
+- [x] Teste da rota: renderiza o hub
+- [x] Gate check passes: `npm run typecheck && npm run lint && npm run test`
 
 **Tests**: unit
 **Gate**: build
