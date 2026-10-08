@@ -1,8 +1,9 @@
 import type { Session } from '@supabase/supabase-js';
+import Constants from 'expo-constants';
 import { useRouter } from 'expo-router';
 import { z } from 'zod';
 
-import { Avatar, Button, Card, Column, Screen, Text } from '@/ui';
+import { Avatar, Badge, Button, Card, Column, ListItem, ListSection, Screen, Text } from '@/ui';
 
 import { signOut } from './googleAuth';
 import { useProfile } from './profileStore';
@@ -24,32 +25,29 @@ function profileFromSession(session: Session) {
 
   return {
     email,
-    // Sem nome no Google, mostramos o e-mail para a Home nunca ficar com um título vazio.
+    // Sem nome no Google, mostramos o e-mail para o cartão nunca ficar com um título vazio.
     displayName: fullName || email,
     photoUrl: metadata.avatar_url || metadata.picture || null,
   };
 }
 
-export function HomeView() {
+// Aba Configurações (EIX-64): quem está logado, os atalhos de administração e o Sair. Substitui a
+// Home de teste da US15.
+export function ContaView() {
   const router = useRouter();
   const session = useSessionStore((state) => state.session);
-  const { isAdmin } = useProfile();
+  const { usuario, isAdmin } = useProfile();
 
   // O layout só renderiza esta tela com sessão; o retorno nulo é apenas proteção de tipo.
   if (!session) return null;
 
   const profile = profileFromSession(session);
+  const versao = Constants.expoConfig?.version ?? '—';
 
   return (
-    <Screen>
-      <Text variant="bodySm" weight="medium">
-        Eixo Certo
-      </Text>
-
-      <Column gap="xs">
-        <Text variant="heading">Login confirmado</Text>
-        <Text tone="body">Esta é uma tela de teste da autenticação com Google.</Text>
-      </Column>
+    <Screen scroll>
+      {/* Aba não tem header nativo: o título fica no conteúdo. */}
+      <Text variant="heading">Configurações</Text>
 
       <Card>
         <Avatar name={profile.displayName} photoUrl={profile.photoUrl} />
@@ -57,11 +55,22 @@ export function HomeView() {
           <Text variant="subheading">{profile.displayName}</Text>
           <Text tone="body">{profile.email}</Text>
         </Column>
+        {/* Enquanto o perfil carrega, sem Badge: melhor nada do que um perfil errado. */}
+        {usuario && <Badge label={usuario.perfil} />}
       </Card>
 
-      {/* Só o Admin vê o atalho; a rota também não existe para os outros perfis (US16). */}
-      {isAdmin && <Button label="Usuários" variant="ghost" onPress={() => router.push('/usuarios')} />}
+      {/* Só o Admin vê a seção; a rota de Usuários também não existe para os outros perfis (US16). */}
+      {isAdmin && (
+        <ListSection label="Administração">
+          <ListItem title="Usuários" icon="usuarios" onPress={() => router.push('/usuarios')} />
+        </ListSection>
+      )}
 
+      <ListSection label="Aplicativo">
+        <ListItem title="Versão" icon="versao" trailing={<Text tone="body">{versao}</Text>} />
+      </ListSection>
+
+      {/* Sem confirmação: sair é reversível (é só entrar de novo), e o roteiro do vídeo sai duas vezes. */}
       <Button label="Sair" variant="ghost" onPress={signOut} />
     </Screen>
   );
