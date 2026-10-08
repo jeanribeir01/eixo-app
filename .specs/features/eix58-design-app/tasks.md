@@ -1096,9 +1096,9 @@ T49
 
 **Done when**:
 
-- [ ] Dependência declarada; `npx -y npm@10 ci --dry-run --ignore-scripts` passa
+- [x] Dependência declarada; `npx -y npm@10 ci --dry-run --ignore-scripts` passa
 - [ ] Aviso de rebuild postado no grupo antes do merge
-- [ ] Gate check passes: `npm run typecheck && npm run lint && npm run test`
+- [x] Gate check passes: `npm run typecheck && npm run lint && npm run test`
 
 **Tests**: none
 **Gate**: build
