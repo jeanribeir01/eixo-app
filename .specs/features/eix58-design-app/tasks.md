@@ -1096,9 +1096,9 @@ T49
 
 **Done when**:
 
-- [ ] Dependência declarada; `npx -y npm@10 ci --dry-run --ignore-scripts` passa
+- [x] Dependência declarada; `npx -y npm@10 ci --dry-run --ignore-scripts` passa
 - [ ] Aviso de rebuild postado no grupo antes do merge
-- [ ] Gate check passes: `npm run typecheck && npm run lint && npm run test`
+- [x] Gate check passes: `npm run typecheck && npm run lint && npm run test`
 
 **Tests**: none
 **Gate**: build
@@ -1122,10 +1122,10 @@ T49
 
 **Done when**:
 
-- [ ] Teste (mock de `DateTimePickerAndroid.open`): confirmar 05/10/2026 chama `onChange('05/10/2026')`
-- [ ] Teste: cancelar não chama `onChange`
-- [ ] Teste: "Limpar data" chama `onChange('')`
-- [ ] Gate check passes: `npm run typecheck && npm run lint && npm run test`
+- [x] Teste (mock de `DateTimePickerAndroid.open`): confirmar 05/10/2026 chama `onChange('05/10/2026')`
+- [x] Teste: cancelar não chama `onChange`
+- [x] Teste: "Limpar data" chama `onChange('')`
+- [x] Gate check passes: `npm run typecheck && npm run lint && npm run test`
 
 **Tests**: unit
 **Gate**: build
