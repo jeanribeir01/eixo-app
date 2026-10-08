@@ -1,87 +1,94 @@
-import { useCallback, useState } from 'react';
-import { useFocusEffect, useRouter } from 'expo-router';
-import { ActivityIndicator, FlatList } from 'react-native';
+import { useRouter } from 'expo-router';
+import { FlatList, RefreshControl, StyleSheet } from 'react-native';
 
 import { rotuloPerfil, rotuloStatus } from '@/features/auth/permissions';
-import { Badge, Column, EmptyState, ListItem, Screen, Text, colors } from '@/ui';
+import { useDadosDaTela } from '@/lib/useDadosDaTela';
+import { Badge, Column, EmptyState, ListItem, Screen, Skeleton, Snackbar, Text, colors } from '@/ui';
 
 import type { Usuario } from './types';
 import { listarUsuarios } from './usuariosRepository';
 
-type Status = 'carregando' | 'pronto' | 'erro';
+// Um Badge só por linha, para caber no celular pequeno. Status fora do normal tem prioridade: é o que
+// o Admin precisa resolver (aprovar ou desbloquear). O perfil completo continua no detalhe.
+function rotuloDoBadge(usuario: Usuario): string {
+  if (usuario.status !== 'Ativo') return rotuloStatus[usuario.status];
+  return rotuloPerfil[usuario.perfil.nome];
+}
 
 // Tela só do Admin (US16): a rota nem é registrada para outros perfis — ver app/(app)/_layout.tsx.
 export function UsuariosListView() {
   const router = useRouter();
-  const [status, setStatus] = useState<Status>('carregando');
-  const [usuarios, setUsuarios] = useState<Usuario[]>([]);
-  const [erro, setErro] = useState<string | null>(null);
-
-  const carregar = useCallback(async () => {
-    setStatus('carregando');
-    const resultado = await listarUsuarios();
-    if (!resultado.ok) {
-      setErro(resultado.mensagem);
-      setStatus('erro');
-      return;
-    }
-    setUsuarios(resultado.data);
-    setStatus('pronto');
-  }, []);
-
-  // Recarrega ao voltar do detalhe: a lista não desmonta na navegação em pilha e ficaria com
-  // o perfil/status de antes da alteração.
-  useFocusEffect(
-    useCallback(() => {
-      carregar();
-    }, [carregar]),
-  );
+  // Carrega ao abrir e ao voltar do detalhe (o perfil/status pode ter mudado), sem a lista piscar.
+  const tela = useDadosDaTela(listarUsuarios);
 
   return (
-    <Screen underHeader>
+    <Screen
+      underHeader
+      // Recarga que falhou com a lista já na tela: aviso no Snackbar, sem apagar a lista.
+      overlay={
+        tela.feedbackErro ? (
+          <Snackbar message={tela.feedbackErro} tone="error" onDismiss={tela.limparFeedbackErro} />
+        ) : null
+      }
+    >
       <Text tone="body">Toque em um usuário para alterar o perfil, aprovar ou bloquear.</Text>
 
-      {status === 'carregando' && (
-        <Column align="center">
-          <ActivityIndicator size="small" color={colors.accent} accessibilityLabel="Carregando usuários" />
+      {tela.status === 'carregando' && (
+        <Column gap="sm">
+          <Skeleton height="xxl" accessibilityLabel="Carregando usuários" />
+          <Skeleton height="xxl" />
+          <Skeleton height="xxl" />
         </Column>
       )}
 
-      {status === 'erro' && (
+      {tela.status === 'erro' && (
         <EmptyState
           title="Não foi possível carregar"
-          description={erro ?? undefined}
+          description={tela.erro ?? undefined}
           actionLabel="Tentar novamente"
-          onAction={carregar}
+          onAction={tela.recarregar}
         />
       )}
 
-      {status === 'pronto' && usuarios.length === 0 && (
-        <EmptyState title="Nenhum usuário encontrado" description="Contas aparecem aqui depois do primeiro login." />
-      )}
-
-      {status === 'pronto' && usuarios.length > 0 && (
+      {tela.status === 'pronto' && (
         <FlatList
-          data={usuarios}
+          data={tela.dados ?? []}
           keyExtractor={(item) => item.id}
-          style={{ flex: 1 }}
+          style={styles.lista}
+          refreshControl={
+            <RefreshControl
+              refreshing={tela.atualizando}
+              onRefresh={tela.puxarParaAtualizar}
+              colors={[colors.accent]}
+              tintColor={colors.accent}
+            />
+          }
+          // Vazio dentro da lista: o pull-to-refresh funciona até sem usuário nenhum. Sem ação, porque
+          // conta nova nasce do primeiro login com Google, não de um cadastro aqui.
+          ListEmptyComponent={
+            <EmptyState
+              icon="usuarios"
+              title="Nenhum usuário encontrado"
+              description="Contas aparecem aqui depois do primeiro login."
+            />
+          }
           renderItem={({ item }) => (
-            <ListItem accessibilityLabel={`Gerenciar ${item.nome}`} onPress={() => router.push(`/usuarios/${item.id}`)}>
-              <Column gap="xs" align="start">
-                <Text weight="medium">{item.nome}</Text>
-                <Text variant="bodySm" tone="body">
-                  {item.email}
-                </Text>
-                <Column direction="row" gap="sm" wrap>
-                  <Text variant="bodySm">{rotuloPerfil[item.perfil.nome]}</Text>
-                  {/* Status como rótulo neutro: verde/vermelho são reservados ao financeiro (DESIGN_CYAN §1). */}
-                  <Badge label={rotuloStatus[item.status]} />
-                </Column>
-              </Column>
-            </ListItem>
+            <ListItem
+              title={item.nome}
+              subtitle={item.email}
+              trailing={<Badge label={rotuloDoBadge(item)} />}
+              accessibilityLabel={`Gerenciar ${item.nome}`}
+              onPress={() => router.push(`/usuarios/${item.id}`)}
+            />
           )}
         />
       )}
     </Screen>
   );
 }
+
+const styles = StyleSheet.create({
+  lista: {
+    flex: 1,
+  },
+});

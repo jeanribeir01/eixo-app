@@ -965,9 +965,9 @@ T49
 
 **Done when**:
 
-- [ ] Teste: linha mostra nome, e-mail e perfil; toque abre `/usuarios/:id`
-- [ ] Teste: pull-to-refresh recarrega
-- [ ] Gate check passes: `npm run typecheck && npm run lint && npm run test`
+- [x] Teste: linha mostra nome, e-mail e perfil; toque abre `/usuarios/:id`
+- [x] Teste: pull-to-refresh recarrega
+- [x] Gate check passes: `npm run typecheck && npm run lint && npm run test`
 
 **Tests**: unit
 **Gate**: build
