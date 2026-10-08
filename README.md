@@ -3,33 +3,62 @@
 App mobile de **gestão financeira e controle de frota** para empresas de logística — Projeto da
 Disciplina x PIEX. Esta é a reimplementação em **React Native + Expo + Supabase**.
 
-> Contexto completo, regras e arquitetura: [`.claude/CLAUDE.md`](.claude/CLAUDE.md).
-> Guia visual: [`.claude/docs/DESIGN-CYAN.md`](.claude/docs/DESIGN-CYAN.md).
-> Specs por US: [`.specs/features/`](.specs/features/).
+> Contexto completo, regras e arquitetura: [`.claude/CLAUDE.md`](.claude/CLAUDE.md) e [`AGENTS.md`](AGENTS.md).
+> Guia visual: [`DESIGN_CYAN.md`](DESIGN_CYAN.md).
+> Specs por US: [`.specs/features/`](.specs/features/). Decisões: [`docs/adr/`](docs/adr/) e [`.specs/STATE.md`](.specs/STATE.md).
 
-**Estado atual:** US15 — Login com Google (Android) e uma Home de teste.
+**Estado atual (out/2026):** login com Google e perfis de acesso (US15–US18), módulo Financeiro
+completo — categorias, formas de pagamento, movimentações com comprovante, dívidas com rollback e
+saldo com projeção de caixa (US01–US05) — e cadastro de frota (US06). Viagens, rotas e dashboards
+estão em construção.
 
 | Camada | Tecnologia |
 |---|---|
 | App | Expo SDK 57, React Native, TypeScript strict, expo-router |
-| Backend | Supabase (Auth com provider Google) |
+| Backend | Supabase: Postgres com RLS, RPCs em plpgsql, Auth com provider Google, Storage |
 | Login | `@react-native-google-signin/google-signin` → `supabase.auth.signInWithIdToken` |
 | Sessão | `expo-secure-store` (nunca AsyncStorage) |
-| Testes | Jest (`jest-expo`) + React Native Testing Library |
+| Estado e validação | Zustand, Zod |
+| Testes | Jest (`jest-expo`) + React Native Testing Library; migrations testadas com PGlite |
 
 ---
 
 ## Sumário
 
+0. [Arquitetura](#0-arquitetura)
 1. [Pré-requisitos](#1-pré-requisitos)
 2. [Configurar o emulador Android](#2-configurar-o-emulador-android)
 3. [Configurar o Supabase](#3-configurar-o-supabase)
 4. [Configurar o Google Cloud](#4-configurar-o-google-cloud)
 5. [Variáveis de ambiente](#5-variáveis-de-ambiente)
 6. [Rodar o app](#6-rodar-o-app)
-7. [Testes, lint e typecheck](#7-testes-lint-e-typecheck)
-8. [Problemas comuns](#8-problemas-comuns)
-9. [Fluxo de trabalho: Git + Linear](#9-fluxo-de-trabalho-git--linear)
+7. [Perfis de teste: Admin e Motorista](#7-perfis-de-teste-admin-e-motorista)
+8. [Testes, lint e typecheck](#8-testes-lint-e-typecheck)
+9. [Problemas comuns](#9-problemas-comuns)
+10. [Fluxo de trabalho: Git + Linear](#10-fluxo-de-trabalho-git--linear)
+
+---
+
+## 0. Arquitetura
+
+**Apresentação:** _link a definir (EIX-54)_ · **Vídeo demonstrativo:** _link a definir (EIX-55)_
+
+O app fala **direto** com o Postgres do Supabase, sem API própria no meio. Por isso a segurança
+mora no banco:
+
+| Peça | Onde | Por quê |
+|---|---|---|
+| Autorização | **RLS** em todas as tabelas, deny-by-default, com a função `auth_perfil()` | É a única fronteira: o app esconde telas, o banco decide o acesso ([ADR 0002](docs/adr/0002-schema-base-rls-e-testes-pglite.md)) |
+| Operações atômicas | **RPCs em plpgsql** (ex.: `criar_divida` cria a dívida e as N parcelas) | Cada chamada é uma transação: se uma parcela falha, nada é gravado |
+| Regras de integridade | Constraints e triggers nas migrations | Valem até para quem chama a API por fora do app |
+| Saldo e projeção | RPC `resumo_caixa` agregando no banco | O cliente não soma lançamentos (RNF06) |
+| Comprovantes | Storage em bucket **privado**, lido por URL assinada | [ADR 0003](docs/adr/0003-anexo-de-comprovante-imagem.md) |
+| Sessão | `expo-secure-store`, só a chave **anon** no app | A `service_role` nunca entra no app ([ADR 0001](docs/adr/0001-google-signin-nativo-e-sessao-securestore.md)) |
+
+No app, as rotas ficam em `app/` (expo-router) e só renderizam telas de `src/features/<módulo>/`,
+montadas com os primitivos de `src/ui/` (tokens do `DESIGN_CYAN.md`). O perfil do usuário define
+quais abas existem: Admin e Financeiro abrem no **Financeiro**, Gestor de Frota na **Frota** e
+Motorista em **Viagens**.
 
 ---
 
@@ -37,9 +66,10 @@ Disciplina x PIEX. Esta é a reimplementação em **React Native + Expo + Supaba
 
 | Ferramenta | Versão | Como conferir |
 |---|---|---|
-| Node.js | 20 LTS ou mais novo | `node --version` |
+| Node.js | 20 LTS ou mais novo (o CI usa o 20) | `node --version` |
 | JDK | 17 ou mais novo (recomendado: Temurin 21) | `java -version` |
 | Android Studio | Atual (instala o Android SDK e o emulador) | — |
+| Expo CLI | Vem no projeto (`expo` ~57): use `npx expo`, sem instalar nada global | `npx expo --version` |
 | Git | Qualquer recente | `git --version` |
 
 > **Expo Go não funciona neste projeto.** O login com Google usa código nativo, então o app roda
@@ -91,7 +121,8 @@ emulator -list-avds
 
 1. Android Studio → **More Actions → Virtual Device Manager → Create Virtual Device**.
 2. Escolha **Pixel 7**.
-3. Na imagem do sistema, escolha **API 36** com o ícone da **Play Store** (*Google Play*).
+3. Na imagem do sistema, escolha **API 36** (a do vídeo de demonstração) com o ícone da
+   **Play Store** (*Google Play*).
    Imagens "Google APIs" sem Play Store **não** fazem login com Google.
 4. Finalize e dê um nome (ex.: `pixel_7_-_api_36_0`).
 
@@ -116,7 +147,11 @@ adb devices
 
 ## 3. Configurar o Supabase
 
-> Feito **uma vez** pelo Tech Lead; os demais devs só recebem a URL e a anon key. Issue: EIX-14.
+Há dois caminhos:
+
+- **Usar o projeto da equipe** (devs do time): peça ao Tech Lead a URL e a anon key, peça para
+  incluir seu e-mail Google em *Test users* (seção 4.1) e pule para a [seção 5](#5-variáveis-de-ambiente).
+- **Montar um projeto próprio** (para reproduzir do zero): siga esta seção e a seção 4.
 
 1. Crie um projeto em [supabase.com](https://supabase.com) (região **South America (São Paulo)**).
 2. **Authentication → Sign In / Providers → Google**:
@@ -135,17 +170,27 @@ O schema mora em `supabase/migrations/` (SQL) e é a única forma de mudar o ban
 tabela pelo painel. A CLI roda via `npx`, sem instalação global e sem Docker.
 
 ```bash
-npx supabase login                                    # uma vez por máquina, abre o navegador
-npx supabase link --project-ref xqbxvvvaphycjrqzzrif  # uma vez por clone
-npx supabase migration list                           # compara local x nuvem
+npx supabase login                               # uma vez por máquina, abre o navegador
+npx supabase link --project-ref <PROJECT-REF>    # uma vez por clone
+npx supabase migration list                      # compara local x nuvem
 ```
 
-**Aplicar migrations** — altera o banco que o time inteiro usa. Rode só depois do PR aprovado,
-e combine com o Tech Lead:
+O `<PROJECT-REF>` é o trecho da Project URL antes de `.supabase.co`
+(`https://<PROJECT-REF>.supabase.co`).
+
+**Aplicar migrations:**
 
 ```bash
 npx supabase db push
 ```
+
+Num projeto novo, isso monta o banco inteiro e já cria os dados de partida: os 4 perfis, as
+categorias padrão (Combustível, Pedágio, Manutenção, Salário, Financiamento, Frete), as formas de
+pagamento (Boleto, Pix, TED, Cartão Corporativo) e o bucket privado de comprovantes. Não há outro
+seed para rodar. Lançamentos, dívidas e veículos de exemplo você cria pelo próprio app.
+
+> No projeto da equipe, `db push` altera o banco que todos usam: rode só depois do PR aprovado e
+> combine com o Tech Lead.
 
 **Regenerar os tipos** depois de qualquer migration aplicada. O arquivo nunca é editado à mão:
 
@@ -223,8 +268,10 @@ Preencha o `.env`:
 | `EXPO_PUBLIC_SUPABASE_URL` | Supabase → Project Settings → API → Project URL |
 | `EXPO_PUBLIC_SUPABASE_ANON_KEY` | Supabase → Project Settings → API → anon public |
 | `EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID` | Google Cloud → Credentials → client **Web** → Client ID |
+| `EXPO_PUBLIC_LOGIN_EMAIL_HABILITADO` | Opcional. `true` mostra o login por e-mail e senha, para as contas de teste da [seção 7](#7-perfis-de-teste-admin-e-motorista). Vazio em produção |
 
-O `.env` está no `.gitignore`. Se faltar alguma variável, o app fecha na abertura com uma mensagem
+Todas são públicas por design (o prefixo `EXPO_PUBLIC_` entra no app). A chave **service_role**
+nunca entra aqui. O `.env` está no `.gitignore`. Se faltar alguma variável, o app fecha na abertura com uma mensagem
 dizendo qual é.
 
 ---
@@ -254,26 +301,60 @@ ou mudar o `app.config.ts`, rode `npx expo run:android` de novo.
 
 1. O app abre na tela **Entre para continuar**.
 2. Toque **Continuar com Google** e escolha a conta.
-3. A Home mostra **Login confirmado** com seu nome, e-mail e foto.
-4. Feche o app (arraste para fora da lista de recentes) e abra de novo: deve ir direto para a Home.
-5. Toque **Sair**: volta para o Login.
-6. Confira o usuário em Supabase → **Authentication → Users**.
+3. Na primeira vez, a conta nasce como Motorista **aguardando liberação** e o app mostra a tela
+   **Aguardando liberação**. Para liberar, siga a [seção 7](#7-perfis-de-teste-admin-e-motorista).
+4. Liberada, a conta abre na aba do seu perfil (Admin: **Financeiro**).
+5. Feche o app (arraste para fora da lista de recentes) e abra de novo: a sessão continua.
+6. Em **Configurações**, o cartão mostra nome, e-mail e perfil; **Sair** volta para o Login.
 
 ---
 
-## 7. Testes, lint e typecheck
+## 7. Perfis de teste: Admin e Motorista
 
-```bash
-npm test            # Jest
-npm run lint        # ESLint (config do Expo)
-npm run typecheck   # TypeScript sem emitir arquivos
+Toda conta nova entra como **Motorista** com status **Aguardando liberação**: ninguém ganha acesso
+sem aprovação. O primeiro Admin é promovido por SQL; os demais, pelo próprio app.
+
+**1. Criar as contas.** Escolha um jeito:
+
+- **Google:** entre no app com cada conta (o e-mail precisa estar em *Test users*, seção 4.1).
+- **E-mail e senha** (mais rápido para testar vários perfis): no Supabase, **Authentication →
+  Users → Add user → Create new user**, marque *Auto Confirm User*, e ponha
+  `EXPO_PUBLIC_LOGIN_EMAIL_HABILITADO=true` no `.env` (reinicie com `npm start -- --clear`).
+
+**2. Promover o primeiro Admin** no **SQL Editor** do Supabase. O SQL Editor pode fazer isso; pelo
+app, ninguém altera o próprio perfil.
+
+```sql
+update public.usuario
+set perfil_id = (select id from public.perfil where nome = 'Admin'),
+    status = 'Ativo'
+where email = 'admin@exemplo.com';
 ```
 
-Todo PR precisa passar nos três.
+**3. Liberar o Motorista pelo app:** entre como Admin → **Configurações → Usuários** → toque na
+conta → **Aprovar**. A conta já nasce como Motorista; para testar outro perfil, escolha o perfil e
+toque **Salvar perfil**.
+
+**4. Conferir o RBAC:** o Admin vê todas as abas e abre no Financeiro; o Motorista abre em
+**Viagens** e não vê nenhuma área financeira. O banco aplica a mesma regra pelo RLS, então nem uma
+chamada direta à API devolve dado financeiro ao Motorista.
 
 ---
 
-## 8. Problemas comuns
+## 8. Testes, lint e typecheck
+
+```bash
+npm test                     # Jest: app + migrations (PGlite)
+npm test -- supabase/tests   # só as migrations, RLS e RPCs
+npm run lint                 # ESLint (config do Expo)
+npm run typecheck            # TypeScript sem emitir arquivos
+```
+
+Todo PR precisa passar nos três; o CI do GitHub roda os três em cada PR.
+
+---
+
+## 9. Problemas comuns
 
 | Sintoma | Causa provável | Solução |
 |---|---|---|
@@ -284,25 +365,30 @@ Todo PR precisa passar nos três.
 | `SDK location not found` no Gradle | `ANDROID_HOME` não definido | Seção 2.2 |
 | Erro de acesso bloqueado na tela do Google | E-mail não está em *Test users* | Seção 4.1 |
 | Mudou `.env` e nada aconteceu | Metro guardou o valor antigo em cache | `npm start -- --clear` |
+| Tela **Aguardando liberação** depois do login | Conta nova, ainda não aprovada | Seção 7 |
+| App fecha ao abrir uma tela depois de um `git pull` | Entrou uma biblioteca nativa nova e o app instalado é o antigo | `npm install` e `npx expo run:android` de novo |
 
 ---
 
-## 9. Fluxo de trabalho: Git + Linear
+## 10. Fluxo de trabalho: Git + Linear
 
 As tarefas ficam no Linear (workspace **Eixo App**, time **EIX**). Cada US é uma issue-mãe com
 sub-issues por task. A integração GitHub ↔ Linear liga commits e PRs às issues automaticamente.
 
 ### Branch
 
-Uma branch por issue, com o nome gerado pelo Linear (na issue: **⌘/Ctrl + Shift + .** ou botão
-*Copy git branch name*):
+Uma branch por issue, com o nome escrito no rodapé da issue no Linear (campo **Branch**):
 
 ```bash
-git checkout main && git pull
-git checkout -b jeanribeiro1905/eix-13-us15-login-com-google-no-app-expo
+git checkout main && git pull origin main
+git checkout -b feat/eix-64-design-conta-usuarios
 ```
 
-A `main` é protegida por convenção: **nada de commit direto**, só via PR aprovado pelo Tech Lead.
+A `main` é protegida por um ruleset do GitHub: **nada de commit direto** nem `push --force`; tudo
+entra por PR com **1 aprovação** de outro dev e merge por **Squash and merge**.
+
+Para instalar dependência, use o npm 10, o mesmo do CI: `npx -y npm@10 install <pacote>`. O npm 11
+reescreve o `package-lock.json` de um jeito que quebra o `npm ci` do CI.
 
 ### Commits
 
