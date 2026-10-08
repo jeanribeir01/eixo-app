@@ -1,45 +1,40 @@
-import { useCallback, useState } from 'react';
-import { useFocusEffect, useRouter } from 'expo-router';
-import { ActivityIndicator, FlatList } from 'react-native';
+import { useState } from 'react';
+import { useRouter } from 'expo-router';
+import { FlatList, RefreshControl, StyleSheet } from 'react-native';
 
-import { Badge, Button, Column, EmptyState, Input, ListItem, Screen, Snackbar, Switch, Text, colors } from '@/ui';
+import { useDadosDaTela } from '@/lib/useDadosDaTela';
+import {
+  Column,
+  EmptyState,
+  FAB,
+  FAB_ALTURA_RESERVADA,
+  Input,
+  ListItem,
+  Screen,
+  Skeleton,
+  Snackbar,
+  Switch,
+  colors,
+} from '@/ui';
 
 import { definirAtivaCategoria, listarCategorias } from './categoriasRepository';
 import { rotuloTipoCategoria, type Categoria } from './types';
 
-type Status = 'carregando' | 'pronto' | 'erro';
-
 type Feedback = { mensagem: string; tone: 'success' | 'error' };
+
+function subtitulo(categoria: Categoria): string {
+  const tipo = rotuloTipoCategoria[categoria.tipo];
+  return categoria.ativa ? tipo : `${tipo} · Desativada`;
+}
 
 export function CategoriasListView() {
   const router = useRouter();
-  const [status, setStatus] = useState<Status>('carregando');
-  const [categorias, setCategorias] = useState<Categoria[]>([]);
-  const [erro, setErro] = useState<string | null>(null);
+  // Carrega ao abrir e ao voltar da criação/edição, sem a lista piscar (EIX-63).
+  const tela = useDadosDaTela(listarCategorias);
   const [busca, setBusca] = useState('');
   const [mostrarDesativadas, setMostrarDesativadas] = useState(false);
   const [processandoId, setProcessandoId] = useState<string | null>(null);
   const [feedback, setFeedback] = useState<Feedback | null>(null);
-
-  const carregar = useCallback(async () => {
-    setStatus('carregando');
-    const resultado = await listarCategorias();
-    if (!resultado.ok) {
-      setErro(resultado.mensagem);
-      setStatus('erro');
-      return;
-    }
-    setCategorias(resultado.data);
-    setStatus('pronto');
-  }, []);
-
-  // Recarrega ao voltar da criação/edição: a tela não desmonta na navegação em pilha,
-  // então sem isso a lista ficaria com o snapshot de antes da mudança.
-  useFocusEffect(
-    useCallback(() => {
-      carregar();
-    }, [carregar]),
-  );
 
   async function handleAlternarAtiva(categoria: Categoria) {
     setProcessandoId(categoria.id);
@@ -51,7 +46,7 @@ export function CategoriasListView() {
       return;
     }
 
-    setCategorias((atual) => atual.map((item) => (item.id === categoria.id ? resultado.data : item)));
+    tela.atualizarDados((atuais) => atuais.map((item) => (item.id === categoria.id ? resultado.data : item)));
     setFeedback({
       mensagem: resultado.data.ativa ? 'Categoria reativada.' : 'Categoria desativada.',
       tone: 'success',
@@ -59,74 +54,101 @@ export function CategoriasListView() {
   }
 
   const termo = busca.trim().toLowerCase();
-  const categoriasFiltradas = categorias.filter((categoria) => {
+  const categoriasFiltradas = (tela.dados ?? []).filter((categoria) => {
     if (!mostrarDesativadas && !categoria.ativa) return false;
     if (!termo) return true;
     return categoria.titulo.toLowerCase().includes(termo);
   });
 
+  // Um Snackbar só: o retorno da ação vem antes do aviso de recarga que falhou.
+  const snackbar = feedback ?? (tela.feedbackErro ? { mensagem: tela.feedbackErro, tone: 'error' as const } : null);
+
   return (
     <Screen
       underHeader
-      overlay={feedback && <Snackbar message={feedback.mensagem} tone={feedback.tone} onDismiss={() => setFeedback(null)} />}
+      overlay={
+        snackbar && (
+          <Snackbar
+            message={snackbar.mensagem}
+            tone={snackbar.tone}
+            onDismiss={() => (feedback ? setFeedback(null) : tela.limparFeedbackErro())}
+          />
+        )
+      }
+      // O FAB é a ação de criar e o único cyan da tela (DESIGN_CYAN §7).
+      fab={<FAB label="Nova categoria" onPress={() => router.push('/categorias/nova')} />}
     >
       <Input label="Buscar" placeholder="Buscar por título" value={busca} onChangeText={setBusca} />
 
       <Switch label="Mostrar desativadas" value={mostrarDesativadas} onValueChange={setMostrarDesativadas} />
 
-      {/* Único elemento cyan preenchido da tela: a ação primária (DESIGN_CYAN §1). */}
-      <Button label="Nova categoria" onPress={() => router.push('/categorias/nova')} />
-
-      {status === 'carregando' && (
-        <Column align="center">
-          <ActivityIndicator size="small" color={colors.accent} accessibilityLabel="Carregando categorias" />
+      {tela.status === 'carregando' && (
+        <Column gap="sm">
+          <Skeleton height="xxl" accessibilityLabel="Carregando categorias" />
+          <Skeleton height="xxl" />
+          <Skeleton height="xxl" />
         </Column>
       )}
 
-      {status === 'erro' && (
-        <EmptyState title="Não foi possível carregar" description={erro ?? undefined} actionLabel="Tentar novamente" onAction={carregar} />
-      )}
-
-      {status === 'pronto' && categoriasFiltradas.length === 0 && (
+      {tela.status === 'erro' && (
         <EmptyState
-          title={termo ? 'Nenhuma categoria encontrada' : 'Nenhuma categoria cadastrada'}
-          description={termo ? 'Tente buscar por outro título.' : 'Crie a primeira categoria para começar.'}
-          actionLabel={termo ? undefined : 'Nova categoria'}
-          onAction={termo ? undefined : () => router.push('/categorias/nova')}
+          title="Não foi possível carregar"
+          description={tela.erro ?? undefined}
+          actionLabel="Tentar novamente"
+          onAction={tela.recarregar}
         />
       )}
 
-      {status === 'pronto' && categoriasFiltradas.length > 0 && (
+      {tela.status === 'pronto' && (
         <FlatList
           data={categoriasFiltradas}
           keyExtractor={(item) => item.id}
-          style={{ flex: 1 }}
+          style={styles.lista}
+          contentContainerStyle={styles.espacoDoFab}
+          refreshControl={
+            <RefreshControl
+              refreshing={tela.atualizando}
+              onRefresh={tela.puxarParaAtualizar}
+              colors={[colors.accent]}
+              tintColor={colors.accent}
+            />
+          }
+          // Vazio dentro da lista: o pull-to-refresh funciona até sem categoria. Sem ação aqui,
+          // porque o FAB "Nova categoria" já está na tela.
+          ListEmptyComponent={
+            <EmptyState
+              title={termo ? 'Nenhuma categoria encontrada' : 'Nenhuma categoria cadastrada'}
+              description={termo ? 'Tente buscar por outro título.' : 'Crie a primeira categoria para começar.'}
+            />
+          }
           renderItem={({ item }) => (
-            // Sem onPress no ListItem: dois botões-irmãos em vez de aninhar Pressable dentro de
-            // Pressable, que é ambíguo tanto para o usuário (alvo de toque incerto) quanto para teste.
-            <ListItem>
-              <Column gap="sm">
-                <Column gap="xs" align="start">
-                  <Text weight="medium" tone={item.ativa ? 'primary' : 'muted'}>
-                    {item.titulo}
-                  </Text>
-                  <Badge label={rotuloTipoCategoria[item.tipo]} tone={item.tipo === 'Entrada' ? 'success' : 'danger'} />
-                </Column>
-                <Column direction="row" gap="sm" wrap>
-                  <Button label="Editar" variant="ghost" onPress={() => router.push(`/categorias/${item.id}/editar`)} />
-                  <Button
-                    label={item.ativa ? 'Desativar' : 'Reativar'}
-                    variant="ghost"
-                    loading={processandoId === item.id}
-                    onPress={() => handleAlternarAtiva(item)}
-                  />
-                </Column>
-              </Column>
-            </ListItem>
+            <ListItem
+              title={item.titulo}
+              subtitle={subtitulo(item)}
+              onPress={() => router.push(`/categorias/${item.id}/editar`)}
+              control={
+                <Switch
+                  label="Ativa"
+                  accessibilityLabel={`Ativa: ${item.titulo}`}
+                  value={item.ativa}
+                  disabled={processandoId === item.id}
+                  onValueChange={() => handleAlternarAtiva(item)}
+                />
+              }
+            />
           )}
         />
       )}
-
     </Screen>
   );
 }
+
+const styles = StyleSheet.create({
+  lista: {
+    flex: 1,
+  },
+  // O Screen só reserva o espaço do FAB quando ele mesmo rola; aqui quem rola é a FlatList.
+  espacoDoFab: {
+    paddingBottom: FAB_ALTURA_RESERVADA,
+  },
+});

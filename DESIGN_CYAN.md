@@ -132,6 +132,11 @@ Vale para botão, linha de lista, `Switch` de soft delete, ícone de ação e ab
 - Pílula, fundo transparente, borda 1px `border`, texto `textPrimary` peso 400.
 - Ações secundárias e "Cancelar".
 
+### Botão de ícone (`Button variant="icon" icon="..."`)
+- Só o ícone (`md`, `textBody`), sem borda nem fundo, com alvo de 44×44.
+- O `label` não aparece: é o nome que o leitor de tela anuncia ("Mês anterior", "Mais opções: Diesel"). Sempre diga a ação e, numa lista, de qual linha.
+- Ações secundárias que todo mundo reconhece pelo ícone: trocar de mês, "Mais opções" de uma linha.
+
 ### Estados de botão
 
 | Estado | Visual | Comportamento |
@@ -164,10 +169,11 @@ Todo botão tem `accessibilityRole="button"` e `accessibilityLabel`. Toda ação
 - `fab`: o botão flutuante da tela (ver FAB). Fica no rodapé, à direita, sempre abaixo do Snackbar.
 
 ### Linha de lista (`ListItem`)
-- **Anatomia:** ícone `md` em `textBody` (opcional) · título em `body` · subtítulo em `bodySm` `textBody`, uma linha com reticências (opcional) · à direita, o `trailing` (valor, `Switch`, `Badge`) ou, se a linha abre algo, o chevron `avancar` em `textMuted`.
+- **Anatomia:** ícone `md` em `textBody` (opcional) · título em `body` · subtítulo em `bodySm` `textBody`, uma linha com reticências (opcional) · à direita, o `trailing` (valor, `Badge`) ou, se a linha abre algo, o chevron `avancar` em `textMuted`.
 - `minHeight` 44, padding vertical `spacing.md`, gap `spacing.md`. Solta na tela, a linha separa-se da próxima com hairline `border` embaixo.
 - Ao tocar: ripple `border` no Android e fundo `border` no iOS. A linha não usa o `opacity 0.6` dos botões.
 - O `accessibilityLabel` padrão é o título. Passe outro quando o título sozinho não basta ("Gerenciar Bruno Lima").
+- Controle à direita que responde sozinho (o `Switch` "Ativa", o botão "Mais opções") vai em `control`, **não** em `trailing`. Ele fica fora da área de toque da linha: tocar na linha abre o item, tocar no controle muda só ele, e o leitor de tela alcança os dois separados. Linha com `control` não mostra o chevron.
 - Conteúdo que não cabe na linha padrão vai em `children` (modo livre).
 
 ### Grupo de linhas (`ListSection`)

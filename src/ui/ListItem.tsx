@@ -16,13 +16,17 @@ export type ListItemProps = {
   trailing?: ReactNode;
   onPress?: () => void;
   accessibilityLabel?: string;
+  // Controle que responde sozinho à direita (ex.: Switch "Ativa"). Fica fora da área de toque da
+  // linha: tocar na linha abre o item, tocar no controle muda só ele, e o leitor de tela alcança os
+  // dois separados. No trailing ele ficaria dentro do botão da linha e o TalkBack não chegaria nele.
+  control?: ReactNode;
   // Modo livre, para conteúdo que não cabe na linha padrão. Funciona como antes da linha padrão existir.
   children?: ReactNode;
 };
 
 // Linha de lista: borda hairline como separador, sem sombra (DESIGN_CYAN §5). Ao tocar, a linha inteira
 // reage com o ripple do Android na cor da hairline; o opacity 0.6 fica para os botões.
-export function ListItem({ title, subtitle, icon, trailing, onPress, accessibilityLabel, children }: ListItemProps) {
+export function ListItem({ title, subtitle, icon, trailing, onPress, accessibilityLabel, control, children }: ListItemProps) {
   const dentroDeSecao = useContext(ListSectionContext);
   const estiloItem = [styles.item, dentroDeSecao && styles.itemEmSecao];
 
@@ -38,11 +42,35 @@ export function ListItem({ title, subtitle, icon, trailing, onPress, accessibili
             </Text>
           )}
         </View>
-        {trailing ?? (onPress && <Icon name="avancar" tone="muted" />)}
+        {/* Com controle à direita o chevron sai: a linha já tem um elemento ali. */}
+        {trailing ?? (onPress && !control && <Icon name="avancar" tone="muted" />)}
       </View>
     ) : (
       children
     );
+
+  if (control) {
+    // A borda da linha fica no contêiner; a área tocável e o controle são irmãos dentro dele.
+    const estiloArea = [styles.area, dentroDeSecao && styles.areaEmSecao];
+    return (
+      <View style={[...estiloItem, styles.comControle]}>
+        {onPress ? (
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel={accessibilityLabel ?? title}
+            onPress={onPress}
+            android_ripple={{ color: colors.border }}
+            style={({ pressed }) => [...estiloArea, pressed && Platform.OS === 'ios' && styles.pressedIos]}
+          >
+            {conteudo}
+          </Pressable>
+        ) : (
+          <View style={estiloArea}>{conteudo}</View>
+        )}
+        <View style={dentroDeSecao && styles.controleEmSecao}>{control}</View>
+      </View>
+    );
+  }
 
   if (!onPress) {
     return <View style={estiloItem}>{conteudo}</View>;
@@ -86,5 +114,25 @@ const styles = StyleSheet.create({
   },
   pressedIos: {
     backgroundColor: colors.border,
+  },
+  // Linha com controle: o espaço vertical passa para a área tocável, para o ripple ocupar a altura toda.
+  comControle: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.md,
+    paddingVertical: 0,
+    paddingHorizontal: 0,
+  },
+  area: {
+    flex: 1,
+    minHeight: touchTarget,
+    paddingVertical: spacing.md,
+    justifyContent: 'center',
+  },
+  areaEmSecao: {
+    paddingLeft: spacing.base,
+  },
+  controleEmSecao: {
+    paddingRight: spacing.base,
   },
 });
