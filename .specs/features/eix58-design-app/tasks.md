@@ -1122,10 +1122,10 @@ T49
 
 **Done when**:
 
-- [ ] Teste (mock de `DateTimePickerAndroid.open`): confirmar 05/10/2026 chama `onChange('05/10/2026')`
-- [ ] Teste: cancelar não chama `onChange`
-- [ ] Teste: "Limpar data" chama `onChange('')`
-- [ ] Gate check passes: `npm run typecheck && npm run lint && npm run test`
+- [x] Teste (mock de `DateTimePickerAndroid.open`): confirmar 05/10/2026 chama `onChange('05/10/2026')`
+- [x] Teste: cancelar não chama `onChange`
+- [x] Teste: "Limpar data" chama `onChange('')`
+- [x] Gate check passes: `npm run typecheck && npm run lint && npm run test`
 
 **Tests**: unit
 **Gate**: build
