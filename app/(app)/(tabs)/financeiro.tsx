@@ -1,16 +1,5 @@
-import { ModuloEmBreveView } from '@/navigation/ModuloEmBreveView';
+import { FinanceiroHubView } from '@/navigation/FinanceiroHubView';
 
 export default function FinanceiroRoute() {
-  return (
-    <ModuloEmBreveView
-      titulo="Financeiro"
-      atalhos={[
-        { rotulo: 'Saldo e Projeção', href: '/caixa' },
-        { rotulo: 'Categorias', href: '/categorias' },
-        { rotulo: 'Formas de Pagamento', href: '/formas-pagamento' },
-        { rotulo: 'Movimentações', href: '/movimentacoes' },
-        { rotulo: 'Dívidas', href: '/dividas' },
-      ]}
-    />
-  );
+  return <FinanceiroHubView />;
 }

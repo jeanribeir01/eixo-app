@@ -1,15 +1,28 @@
-import { useCallback, useRef, useState } from 'react';
-import { useFocusEffect, useRouter } from 'expo-router';
-import { ActivityIndicator, Alert, FlatList, View } from 'react-native';
+import { useCallback, useState } from 'react';
+import { useRouter } from 'expo-router';
+import { Alert, FlatList, RefreshControl, StyleSheet } from 'react-native';
 
 import { isoParaDataBR, nomeDoMes } from '@/lib/datas';
 import { formatarMoeda } from '@/lib/money';
-import { Button, Column, EmptyState, ListItem, Screen, Snackbar, Tabs, Text, colors } from '@/ui';
+import { useDadosDaTela } from '@/lib/useDadosDaTela';
+import {
+  Button,
+  Column,
+  EmptyState,
+  FAB,
+  FAB_ALTURA_RESERVADA,
+  ListItem,
+  Screen,
+  Skeleton,
+  Snackbar,
+  Tabs,
+  Text,
+  colors,
+} from '@/ui';
 
 import { dataDeReferencia, excluirMovimentacao, listarMovimentacoesDoMes } from './movimentacoesRepository';
 import { rotuloStatus, type Movimentacao } from './types';
 
-type Status = 'carregando' | 'pronto' | 'erro';
 type Feedback = { mensagem: string; tone: 'success' | 'error' };
 type FiltroTipo = 'todas' | 'Entrada' | 'Saida';
 type FiltroStatus = 'todos' | 'Pendente' | 'Pago';
@@ -41,40 +54,26 @@ function ValorComSinal({ movimentacao }: { movimentacao: Movimentacao }) {
   );
 }
 
+// "Combustível · 12/10 · Pendente". A parcela de dívida avisa que é parcela: é por isso que ela não
+// tem a opção de excluir (some só quando a dívida é excluída).
+function subtitulo(movimentacao: Movimentacao): string {
+  const data = isoParaDataBR(dataDeReferencia(movimentacao)).slice(0, 5);
+  const status = rotuloStatus(movimentacao.status_pagamento, movimentacao.categoria.tipo);
+  const partes = [movimentacao.categoria.titulo, data, status];
+  if (movimentacao.divida_id !== null) partes.push('Parcela');
+  return partes.join(' · ');
+}
+
 export function MovimentacoesListView() {
   const router = useRouter();
   const [periodo, setPeriodo] = useState(mesAtual);
-  const [status, setStatus] = useState<Status>('carregando');
-  const [movimentacoes, setMovimentacoes] = useState<Movimentacao[]>([]);
-  const [erro, setErro] = useState<string | null>(null);
   const [filtroTipo, setFiltroTipo] = useState<FiltroTipo>('todas');
   const [filtroStatus, setFiltroStatus] = useState<FiltroStatus>('todos');
   const [feedback, setFeedback] = useState<Feedback | null>(null);
-  // Cada carga ganha um número; só a mais recente pode escrever na tela. Evita que a resposta
-  // lenta de outubro apareça depois que o usuário já foi para novembro.
-  const ultimoPedido = useRef(0);
 
-  const carregar = useCallback(async () => {
-    const pedido = ++ultimoPedido.current;
-    setStatus('carregando');
-    const resultado = await listarMovimentacoesDoMes(periodo.ano, periodo.mes);
-    if (pedido !== ultimoPedido.current) return;
-
-    if (!resultado.ok) {
-      setErro(resultado.mensagem);
-      setStatus('erro');
-      return;
-    }
-    setMovimentacoes(resultado.data);
-    setStatus('pronto');
-  }, [periodo]);
-
-  // Recarrega ao voltar do formulário e quando o mês muda.
-  useFocusEffect(
-    useCallback(() => {
-      carregar();
-    }, [carregar]),
-  );
+  // Cada mês é uma consulta: trocar de mês volta ao skeleton em vez de mostrar o mês anterior.
+  const buscar = useCallback(() => listarMovimentacoesDoMes(periodo.ano, periodo.mes), [periodo]);
+  const tela = useDadosDaTela(buscar);
 
   function mudarMes(delta: number) {
     setPeriodo(({ ano, mes }) => {
@@ -89,7 +88,7 @@ export function MovimentacoesListView() {
       setFeedback({ mensagem: resultado.mensagem, tone: 'error' });
       return;
     }
-    setMovimentacoes((atuais) => atuais.filter((item) => item.id !== movimentacao.id));
+    tela.atualizarDados((atuais) => atuais.filter((item) => item.id !== movimentacao.id));
     setFeedback({ mensagem: 'Movimentação excluída.', tone: 'success' });
   }
 
@@ -102,24 +101,35 @@ export function MovimentacoesListView() {
   }
 
   // Um mês cabe na memória: tipo e status filtram aqui, sem nova chamada ao banco.
-  const filtradas = movimentacoes.filter(
+  const filtradas = (tela.dados ?? []).filter(
     (movimentacao) =>
       (filtroTipo === 'todas' || movimentacao.categoria.tipo === filtroTipo) &&
       (filtroStatus === 'todos' || movimentacao.status_pagamento === filtroStatus),
   );
   const comFiltro = filtroTipo !== 'todas' || filtroStatus !== 'todos';
 
+  // Um Snackbar só: o retorno da ação vem antes do aviso de recarga que falhou.
+  const snackbar = feedback ?? (tela.feedbackErro ? { mensagem: tela.feedbackErro, tone: 'error' as const } : null);
+
   return (
     <Screen
       underHeader
-      overlay={feedback && <Snackbar message={feedback.mensagem} tone={feedback.tone} onDismiss={() => setFeedback(null)} />}
+      overlay={
+        snackbar && (
+          <Snackbar
+            message={snackbar.mensagem}
+            tone={snackbar.tone}
+            onDismiss={() => (feedback ? setFeedback(null) : tela.limparFeedbackErro())}
+          />
+        )
+      }
+      // O FAB é a ação de criar e o único cyan da tela (DESIGN_CYAN §7).
+      fab={<FAB label="Nova movimentação" onPress={() => router.push('/movimentacoes/nova')} />}
     >
-      <Button label="Nova movimentação" onPress={() => router.push('/movimentacoes/nova')} />
-
       <Column direction="row" align="center" gap="sm">
-        <Button label="‹" variant="ghost" onPress={() => mudarMes(-1)} />
+        <Button variant="icon" icon="voltarMes" label="Mês anterior" onPress={() => mudarMes(-1)} />
         <Text variant="subheading">{nomeDoMes(periodo.ano, periodo.mes)}</Text>
-        <Button label="›" variant="ghost" onPress={() => mudarMes(1)} />
+        <Button variant="icon" icon="avancarMes" label="Próximo mês" onPress={() => mudarMes(1)} />
       </Column>
 
       <Tabs
@@ -135,68 +145,76 @@ export function MovimentacoesListView() {
         onChange={(valor) => setFiltroStatus(valor as FiltroStatus)}
       />
 
-      {status === 'carregando' && (
-        <Column align="center">
-          <ActivityIndicator size="small" color={colors.accent} accessibilityLabel="Carregando movimentações" />
+      {tela.status === 'carregando' && (
+        <Column gap="sm">
+          <Skeleton height="xxl" accessibilityLabel="Carregando movimentações" />
+          <Skeleton height="xxl" />
+          <Skeleton height="xxl" />
         </Column>
       )}
 
-      {status === 'erro' && (
+      {tela.status === 'erro' && (
         <EmptyState
           title="Não foi possível carregar"
-          description={erro ?? undefined}
+          description={tela.erro ?? undefined}
           actionLabel="Tentar novamente"
-          onAction={carregar}
+          onAction={tela.recarregar}
         />
       )}
 
-      {status === 'pronto' && filtradas.length === 0 && (
-        <EmptyState
-          title={comFiltro ? 'Nenhuma movimentação com esses filtros' : 'Nenhuma movimentação neste mês'}
-          description="Registre uma entrada ou saída para começar."
-          actionLabel="Nova movimentação"
-          onAction={() => router.push('/movimentacoes/nova')}
-        />
-      )}
-
-      {status === 'pronto' && filtradas.length > 0 && (
+      {tela.status === 'pronto' && (
         <FlatList
           data={filtradas}
           keyExtractor={(item) => item.id}
-          renderItem={({ item }) => {
-            const parcela = item.divida_id !== null;
-            const data = isoParaDataBR(dataDeReferencia(item)).slice(0, 5);
-            return (
-              <View accessibilityLabel={`Movimentação ${item.descricao}`}>
-                <ListItem>
-                  <Column gap="xs">
-                    <Text weight="medium">{item.descricao}</Text>
-                    <ValorComSinal movimentacao={item} />
-                    <Text variant="bodySm" tone="body">
-                      {`${item.categoria.titulo} · ${data} · ${rotuloStatus(item.status_pagamento, item.categoria.tipo)}`}
-                    </Text>
-                    {parcela && (
-                      <Text variant="caption" tone="muted">
-                        Parcela de dívida
-                      </Text>
-                    )}
-                    <Column direction="row" gap="sm" wrap>
-                      <Button
-                        label="Editar"
-                        variant="ghost"
-                        onPress={() => router.push(`/movimentacoes/${item.id}/editar`)}
-                      />
-                      {/* Parcela pertence à dívida (US04): some só quando a dívida é excluída. */}
-                      {!parcela && <Button label="Excluir" variant="ghost" onPress={() => confirmarExclusao(item)} />}
-                    </Column>
-                  </Column>
-                </ListItem>
-              </View>
-            );
-          }}
+          style={styles.lista}
+          contentContainerStyle={styles.espacoDoFab}
+          refreshControl={
+            <RefreshControl
+              refreshing={tela.atualizando}
+              onRefresh={tela.puxarParaAtualizar}
+              colors={[colors.accent]}
+              tintColor={colors.accent}
+            />
+          }
+          // Vazio dentro da lista: o pull-to-refresh funciona até num mês sem lançamento. Sem ação
+          // aqui, porque o FAB "Nova movimentação" já está na tela.
+          ListEmptyComponent={
+            <EmptyState
+              title={comFiltro ? 'Nenhuma movimentação com esses filtros' : 'Nenhuma movimentação neste mês'}
+              description="Registre uma entrada ou saída para começar."
+            />
+          }
+          renderItem={({ item }) => (
+            <ListItem
+              title={item.descricao}
+              subtitle={subtitulo(item)}
+              trailing={<ValorComSinal movimentacao={item} />}
+              onPress={() => router.push(`/movimentacoes/${item.id}/editar`)}
+              // Parcela pertence à dívida (US04): não tem a opção de excluir.
+              control={
+                item.divida_id === null ? (
+                  <Button
+                    variant="icon"
+                    icon="maisOpcoes"
+                    label={`Mais opções: ${item.descricao}`}
+                    onPress={() => confirmarExclusao(item)}
+                  />
+                ) : undefined
+              }
+            />
+          )}
         />
       )}
-
     </Screen>
   );
 }
+
+const styles = StyleSheet.create({
+  lista: {
+    flex: 1,
+  },
+  // O Screen só reserva o espaço do FAB quando ele mesmo rola; aqui quem rola é a FlatList.
+  espacoDoFab: {
+    paddingBottom: FAB_ALTURA_RESERVADA,
+  },
+});

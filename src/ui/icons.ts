@@ -13,6 +13,7 @@ export const icons = {
   // Telas do Financeiro
   movimentacoes: { android: 'swap_vert', ios: 'arrow.up.arrow.down' },
   saldo: { android: 'monitoring', ios: 'chart.line.uptrend.xyaxis' },
+  dividas: { android: 'receipt_long', ios: 'doc.text' },
   categorias: { android: 'category', ios: 'tag' },
   formasPagamento: { android: 'credit_card', ios: 'creditcard' },
   usuarios: { android: 'group', ios: 'person.2' },

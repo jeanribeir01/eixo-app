@@ -33,11 +33,12 @@ export const abas: readonly Aba[] = [
   { id: 'configuracoes', rotulo: 'Configurações', icone: 'configuracoes', pode: isAprovado },
 ];
 
-// Onde cada perfil abre o app. O Motorista cai direto na rotina de campo.
+// Onde cada perfil abre o app. Admin e Financeiro abrem no hub Financeiro, com o saldo em destaque
+// (EIX-62); o Gestor de Frota, na frota; o Motorista cai direto na rotina de campo.
 const abaInicialPorPerfil: Record<PerfilNome, AbaId> = {
-  Admin: 'dashboards',
+  Admin: 'financeiro',
   'Gestor de Frota': 'frota',
-  Financeiro: 'dashboards',
+  Financeiro: 'financeiro',
   Motorista: 'viagens',
 };
 

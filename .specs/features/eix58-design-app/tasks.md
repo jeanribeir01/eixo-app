@@ -720,8 +720,8 @@ T49
 
 **Done when**:
 
-- [ ] Teste: Admin → financeiro, Financeiro → financeiro, Gestor de Frota → frota, Motorista → viagens
-- [ ] Gate check passes: `npx jest --selectProjects app src/navigation/__tests__/menu.test.ts`
+- [x] Teste: Admin → financeiro, Financeiro → financeiro, Gestor de Frota → frota, Motorista → viagens
+- [x] Gate check passes: `npx jest --selectProjects app src/navigation/__tests__/menu.test.ts`
 
 **Tests**: unit
 **Gate**: quick
@@ -745,8 +745,8 @@ T49
 
 **Done when**:
 
-- [ ] Teste: mostra ícone, nome do módulo e a frase; não mostra "Este módulo ainda está em construção."
-- [ ] Gate check passes: `npx jest --selectProjects app src/navigation/__tests__/ModuloEmBreveView.test.tsx`
+- [x] Teste: mostra ícone, nome do módulo e a frase; não mostra "Este módulo ainda está em construção."
+- [x] Gate check passes: `npx jest --selectProjects app src/navigation/__tests__/ModuloEmBreveView.test.tsx`
 
 **Tests**: unit
 **Gate**: quick
@@ -770,11 +770,11 @@ T49
 
 **Done when**:
 
-- [ ] Teste: saldo aparece formatado; skeleton enquanto carrega
-- [ ] Teste: erro mostra "Não foi possível carregar o saldo." e "Tentar novamente", e as 4 linhas continuam tocáveis
-- [ ] Teste: cada linha e o FAB navegam para a rota certa
-- [ ] Teste: não aparece "Em breve"
-- [ ] Gate check passes: `npx jest --selectProjects app src/navigation/__tests__/FinanceiroHubView.test.tsx`
+- [x] Teste: saldo aparece formatado; skeleton enquanto carrega
+- [x] Teste: erro mostra "Não foi possível carregar o saldo." e "Tentar novamente", e as 4 linhas continuam tocáveis
+- [x] Teste: cada linha e o FAB navegam para a rota certa
+- [x] Teste: não aparece "Em breve"
+- [x] Gate check passes: `npx jest --selectProjects app src/navigation/__tests__/FinanceiroHubView.test.tsx`
 
 **Tests**: unit
 **Gate**: quick
@@ -798,8 +798,8 @@ T49
 
 **Done when**:
 
-- [ ] Teste da rota: renderiza o hub
-- [ ] Gate check passes: `npm run typecheck && npm run lint && npm run test`
+- [x] Teste da rota: renderiza o hub
+- [x] Gate check passes: `npm run typecheck && npm run lint && npm run test`
 
 **Tests**: unit
 **Gate**: build
@@ -825,11 +825,11 @@ T49
 
 **Done when**:
 
-- [ ] Teste: primeira carga `carregando` → `pronto`
-- [ ] Teste: recarga com dado na tela mantém `pronto` e os dados antigos até chegar o novo
-- [ ] Teste: falha em recarga preenche `feedbackErro` e mantém os dados
-- [ ] Teste: resposta de um pedido antigo que chega depois é descartada
-- [ ] Gate check passes: `npx jest --selectProjects app src/lib/__tests__/useDadosDaTela.test.ts`
+- [x] Teste: primeira carga `carregando` → `pronto`
+- [x] Teste: recarga com dado na tela mantém `pronto` e os dados antigos até chegar o novo
+- [x] Teste: falha em recarga preenche `feedbackErro` e mantém os dados
+- [x] Teste: resposta de um pedido antigo que chega depois é descartada
+- [x] Gate check passes: `npx jest --selectProjects app src/lib/__tests__/useDadosDaTela.test.ts`
 
 **Tests**: unit
 **Gate**: quick
@@ -853,11 +853,11 @@ T49
 
 **Done when**:
 
-- [ ] Teste: tocar na linha abre `/categorias/:id/editar`
-- [ ] Teste: switch desativa, mostra "Categoria desativada." e fica desabilitado enquanto salva
-- [ ] Teste: FAB abre `/categorias/nova`
-- [ ] Teste: não existe botão "Editar" nem "Desativar" na linha
-- [ ] Gate check passes: `npx jest --selectProjects app src/features/categorias`
+- [x] Teste: tocar na linha abre `/categorias/:id/editar`
+- [x] Teste: switch desativa, mostra "Categoria desativada." e fica desabilitado enquanto salva
+- [x] Teste: FAB abre `/categorias/nova`
+- [x] Teste: não existe botão "Editar" nem "Desativar" na linha
+- [x] Gate check passes: `npx jest --selectProjects app src/features/categorias`
 
 **Tests**: unit
 **Gate**: quick
@@ -881,9 +881,9 @@ T49
 
 **Done when**:
 
-- [ ] Teste: forma fixa não tem switch nem abre edição
-- [ ] Teste: forma editável abre edição no toque e alterna pelo switch com Snackbar
-- [ ] Gate check passes: `npx jest --selectProjects app src/features/formas-pagamento`
+- [x] Teste: forma fixa não tem switch nem abre edição
+- [x] Teste: forma editável abre edição no toque e alterna pelo switch com Snackbar
+- [x] Gate check passes: `npx jest --selectProjects app src/features/formas-pagamento`
 
 **Tests**: unit
 **Gate**: quick
@@ -907,11 +907,11 @@ T49
 
 **Done when**:
 
-- [ ] Teste: toque na linha abre `/movimentacoes/:id/editar`
-- [ ] Teste: "Mais opções" abre "Excluir movimentação?"; parcela não tem a opção
-- [ ] Teste: botões "Mês anterior" e "Próximo mês" trocam o mês
-- [ ] Teste: valor com `+`/`−` e tom semântico
-- [ ] Gate check passes: `npm run typecheck && npm run lint && npm run test`
+- [x] Teste: toque na linha abre `/movimentacoes/:id/editar`
+- [x] Teste: "Mais opções" abre "Excluir movimentação?"; parcela não tem a opção
+- [x] Teste: botões "Mês anterior" e "Próximo mês" trocam o mês
+- [x] Teste: valor com `+`/`−` e tom semântico
+- [x] Gate check passes: `npm run typecheck && npm run lint && npm run test`
 
 **Tests**: unit
 **Gate**: build
