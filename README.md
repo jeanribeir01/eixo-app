@@ -294,8 +294,20 @@ Nas próximas vezes, se você **não** instalou nenhuma biblioteca nativa nova, 
 npm start
 ```
 
-e abrir o app **Eixo Certo** já instalado no emulador. Se instalar/remover uma biblioteca nativa
-ou mudar o `app.config.ts`, rode `npx expo run:android` de novo.
+e abrir o app **Eixo Certo** já instalado no emulador.
+
+**Quando recompilar o app nativo:**
+
+| Mudou | Rode |
+|---|---|
+| Só código TypeScript/JS | Nada: o `npm start` recarrega |
+| Entrou ou saiu uma biblioteca nativa (ex.: `datetimepicker`) | `npm install` e `npx expo run:android` |
+| `app.config.ts` ou arquivos de `assets/` usados nele (ícone, splash, plugins, permissões) | `npx expo prebuild --platform android` e depois `npx expo run:android` |
+
+O `npx expo run:android` só recompila a pasta `android/` que já existe: ele **não** reaplica o
+`app.config.ts`. Sem o `prebuild`, o ícone, a splash e as permissões continuam os antigos. O
+`prebuild` recria a pasta `android/` do zero, o que é seguro: ela é gerada e fica fora do Git, e o
+certificado de debug continua o mesmo, então o login com Google não quebra.
 
 ### Testando o login
 
@@ -367,6 +379,8 @@ Todo PR precisa passar nos três; o CI do GitHub roda os três em cada PR.
 | Mudou `.env` e nada aconteceu | Metro guardou o valor antigo em cache | `npm start -- --clear` |
 | Tela **Aguardando liberação** depois do login | Conta nova, ainda não aprovada | Seção 7 |
 | App fecha ao abrir uma tela depois de um `git pull` | Entrou uma biblioteca nativa nova e o app instalado é o antigo | `npm install` e `npx expo run:android` de novo |
+| Ícone ou splash continuam os antigos | A pasta `android/` é anterior à mudança no `app.config.ts` | `npx expo prebuild --platform android` e `npx expo run:android`. Se o launcher ainda mostrar o ícone antigo, é cache: `adb uninstall com.eixocerto.app` e rode de novo |
+| `Error while reading cache, falling back to a full crawl` | Cache do Metro ilegível (comum depois do `prebuild`) | Só um aviso: o Metro refaz o cache. Se repetir sempre, `npx expo start --clear` |
 
 ---
 
