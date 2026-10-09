@@ -27,6 +27,13 @@ beforeEach(() => {
 });
 
 describe('LoginView', () => {
+  it('mostra a marca Eixo Certo com o nome no topo (MRC-02)', () => {
+    render(<LoginView />);
+
+    expect(screen.getByRole('image', { name: 'Eixo Certo' })).toBeOnTheScreen();
+    expect(screen.getByText('Eixo Certo')).toBeOnTheScreen();
+  });
+
   it('exibe o botão "Continuar com Google" habilitado (AUTH-01)', () => {
     render(<LoginView />);
 

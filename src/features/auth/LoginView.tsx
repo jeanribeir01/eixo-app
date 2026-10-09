@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { z } from 'zod';
 
-import { Button, Column, Input, Screen, Text } from '@/ui';
+import { Button, Column, Input, Logo, Screen, Text } from '@/ui';
 
 import { loginEmailHabilitado, signInWithEmail } from './emailAuth';
 import { authErrorMessage } from './errors';
@@ -61,9 +61,8 @@ export function LoginView({ mostrarLoginEmail = loginEmailHabilitado }: LoginVie
 
   return (
     <Screen align="center">
-      <Text variant="bodySm" weight="medium">
-        Eixo Certo
-      </Text>
+      {/* A mesma marca do ícone e da splash: quem abre o app reconhece onde está (EIX-11). */}
+      <Logo withWordmark />
 
       <Column gap="sm">
         <Text variant="display">Entre para continuar</Text>
