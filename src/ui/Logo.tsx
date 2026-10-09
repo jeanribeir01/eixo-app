@@ -44,8 +44,9 @@ export function Logo({ withWordmark = false }: LogoProps) {
 }
 
 const styles = StyleSheet.create({
+  // Marca e nome empilhados e centralizados um sobre o outro; quem posiciona o bloco é a tela.
   logo: {
-    alignItems: 'flex-start',
+    alignItems: 'center',
     gap: spacing.sm,
   },
 });

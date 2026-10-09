@@ -216,7 +216,7 @@ Todo botão tem `accessibilityRole="button"` e `accessibilityLabel`. Toda ação
 ### Logo
 - Wordmark só na tela de Login e no header da Home. Avatar único no perfil; nada de cluster de avatares.
 - **Marca:** duas rodas ligadas por um eixo, em `accentEdge`. Fonte única: `assets/brand/eixo-certo-mark.svg`.
-- **No app:** `<Logo />` desenha a marca com 48pt (`spacing.xxl`); `<Logo withWordmark />` põe "Eixo Certo" em `subheading` abaixo dela, com gap `spacing.sm`. O leitor de tela anuncia "Eixo Certo, imagem".
+- **No app:** `<Logo />` desenha a marca com 48pt (`spacing.xxl`); `<Logo withWordmark />` põe "Eixo Certo" em `subheading` abaixo dela, centralizado, com gap `spacing.sm`. No Login, a marca fica no topo e o login centralizado no espaço que sobra. O leitor de tela anuncia "Eixo Certo, imagem".
 - **Ícone do app:** marca branca sobre `accentEdge`, a única superfície preenchida de azul fora da ação primária. **Splash:** marca em `accentEdge` sobre `canvas`, o mesmo fundo do Login.
 
 ---

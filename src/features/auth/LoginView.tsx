@@ -1,7 +1,8 @@
 import { useState } from 'react';
+import { StyleSheet, View } from 'react-native';
 import { z } from 'zod';
 
-import { Button, Column, Input, Logo, Screen, Text } from '@/ui';
+import { Button, Column, Input, Logo, Screen, Text, spacing } from '@/ui';
 
 import { loginEmailHabilitado, signInWithEmail } from './emailAuth';
 import { authErrorMessage } from './errors';
@@ -60,65 +61,78 @@ export function LoginView({ mostrarLoginEmail = loginEmailHabilitado }: LoginVie
   }
 
   return (
-    <Screen align="center">
-      {/* A mesma marca do ícone e da splash: quem abre o app reconhece onde está (EIX-11). */}
+    <Screen>
+      {/* A mesma marca do ícone e da splash, no topo e centralizada: quem abre o app reconhece onde
+          está (EIX-11). */}
       <Logo withWordmark />
 
-      <Column gap="sm">
-        <Text variant="display">Entre para continuar</Text>
-        <Text tone="body">Use sua conta Google para acessar a gestão financeira e a frota da empresa.</Text>
-      </Column>
-
-      <Button
-        label="Continuar com Google"
-        onPress={handleGooglePress}
-        loading={loadingGoogle}
-        disabled={loadingEmail}
-        variant="google"
-      />
-
-      {mostrarLoginEmail && (
-        <Column gap="md">
-          <Text variant="bodySm" tone="muted">
-            Ou entre com uma conta de teste
-          </Text>
-          <Input
-            label="E-mail"
-            placeholder="voce@empresa.com"
-            value={email}
-            onChangeText={setEmail}
-            error={errosEmail.email}
-            autoCapitalize="none"
-            autoComplete="email"
-            keyboardType="email-address"
-            editable={!entrando}
-          />
-          <Input
-            label="Senha"
-            value={senha}
-            onChangeText={setSenha}
-            error={errosEmail.senha}
-            secureTextEntry
-            autoCapitalize="none"
-            autoComplete="password"
-            editable={!entrando}
-          />
-          <Button
-            label="Entrar com e-mail"
-            onPress={handleEmailPress}
-            loading={loadingEmail}
-            disabled={loadingGoogle}
-            variant="ghost"
-          />
+      {/* O login fica no centro do espaço que sobra abaixo da marca. */}
+      <View style={styles.conteudo}>
+        <Column gap="sm">
+          <Text variant="display">Entre para continuar</Text>
+          <Text tone="body">Use sua conta Google para acessar a gestão financeira e a frota da empresa.</Text>
         </Column>
-      )}
 
-      {errorMessage && (
-        // role "alert" faz o leitor de tela anunciar o erro assim que ele aparece.
-        <Text accessibilityRole="alert" variant="bodySm">
-          {errorMessage}
-        </Text>
-      )}
+        <Button
+          label="Continuar com Google"
+          onPress={handleGooglePress}
+          loading={loadingGoogle}
+          disabled={loadingEmail}
+          variant="google"
+        />
+
+        {mostrarLoginEmail && (
+          <Column gap="md">
+            <Text variant="bodySm" tone="muted">
+              Ou entre com uma conta de teste
+            </Text>
+            <Input
+              label="E-mail"
+              placeholder="voce@empresa.com"
+              value={email}
+              onChangeText={setEmail}
+              error={errosEmail.email}
+              autoCapitalize="none"
+              autoComplete="email"
+              keyboardType="email-address"
+              editable={!entrando}
+            />
+            <Input
+              label="Senha"
+              value={senha}
+              onChangeText={setSenha}
+              error={errosEmail.senha}
+              secureTextEntry
+              autoCapitalize="none"
+              autoComplete="password"
+              editable={!entrando}
+            />
+            <Button
+              label="Entrar com e-mail"
+              onPress={handleEmailPress}
+              loading={loadingEmail}
+              disabled={loadingGoogle}
+              variant="ghost"
+            />
+          </Column>
+        )}
+
+        {errorMessage && (
+          // role "alert" faz o leitor de tela anunciar o erro assim que ele aparece.
+          <Text accessibilityRole="alert" variant="bodySm">
+            {errorMessage}
+          </Text>
+        )}
+      </View>
     </Screen>
   );
 }
+
+const styles = StyleSheet.create({
+  // Ocupa a altura abaixo da marca e centraliza o login nela, com o mesmo gap do Screen.
+  conteudo: {
+    flex: 1,
+    justifyContent: 'center',
+    gap: spacing.lg,
+  },
+});

@@ -2,7 +2,7 @@ import { render, screen } from '@testing-library/react-native';
 import Svg, { Line, Path } from 'react-native-svg';
 
 import { Logo } from '../Logo';
-import { colors } from '../tokens';
+import { colors, spacing } from '../tokens';
 
 describe('Logo (MRC-02)', () => {
   it('é uma imagem chamada "Eixo Certo" para o leitor de tela', () => {
@@ -19,10 +19,11 @@ describe('Logo (MRC-02)', () => {
     expect(screen.UNSAFE_getAllByType(Svg)).toHaveLength(1);
   });
 
-  it('com withWordmark mostra o nome abaixo da marca', () => {
+  it('com withWordmark mostra o nome abaixo da marca, os dois centralizados', () => {
     render(<Logo withWordmark />);
 
     expect(screen.getByText('Eixo Certo')).toBeOnTheScreen();
+    expect(screen.getByLabelText('Eixo Certo')).toHaveStyle({ alignItems: 'center', gap: spacing.sm });
   });
 
   it('desenha as duas rodas e o eixo na cor accentEdge do design system', () => {
