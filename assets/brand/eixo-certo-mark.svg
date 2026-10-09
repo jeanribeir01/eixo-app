@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg id="Layer_2" data-name="Layer 2" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 78.74 78.74"><metadata><?xpacket begin="" id="W5M0MpCehiHzreSzNTczkc9d"?><x:xmpmeta xmlns:x="adobe:ns:meta/" x:xmptk="XMP Core 6.0.0"><rdf:RDF xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#"><rdf:Description rdf:about="" xmlns:xmp="http://ns.adobe.com/xap/1.0/" xmlns:xmpMM="http://ns.adobe.com/xap/1.0/mm/" xmlns:dc="http://purl.org/dc/elements/1.1/" xmlns:dcterms="http://purl.org/dc/terms/" xmpMM:DocumentID="xmp.did:cb9f5498-bb58-4572-8043-8c369e6bfb9b" xmpMM:InstanceID="xmp.iid:cb9f5498-bb58-4572-8043-8c369e6bfb9b" dcterms:provenance="https://cai-manifests.adobe.com/manifests/urn-c2pa-c3ff8561-12b8-476b-b5df-cf188fc65f6b-adobe"> </rdf:Description></rdf:RDF></x:xmpmeta>
+<?xpacket end="w"?></metadata>
+  <defs>
+    <style>
+      .cls-1 {
+        fill: #3398e1;
+      }
+
+      .cls-2 {
+        fill: none;
+        stroke: #3398e1;
+        stroke-linecap: round;
+        stroke-width: 9px;
+      }
+    </style>
+  </defs>
+  <g id="Layer_1-2" data-name="Layer 1">
+    <g>
+      <path class="cls-1" d="M61.54,0c-9.5,0-17.2,7.7-17.2,17.2s7.7,17.2,17.2,17.2,17.2-7.7,17.2-17.2S71.04,0,61.54,0ZM61.54,24.44c-4,0-7.24-3.24-7.24-7.24s3.24-7.24,7.24-7.24,7.24,3.24,7.24,7.24-3.24,7.24-7.24,7.24Z"/>
+      <line class="cls-2" x1="51.59" y1="26.25" x2="34.12" y2="43.71"/>
+      <path class="cls-1" d="M23.53,31.68C10.54,31.68,0,42.21,0,55.21s10.54,23.53,23.53,23.53,23.53-10.54,23.53-23.53-10.54-23.53-23.53-23.53ZM23.53,65.16c-5.5,0-9.96-4.46-9.96-9.96s4.46-9.96,9.96-9.96,9.96,4.46,9.96,9.96-4.46,9.96-9.96,9.96Z"/>
+    </g>
+  </g>
+</svg>

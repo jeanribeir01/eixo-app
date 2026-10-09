@@ -994,7 +994,7 @@ T49
 **Done when**:
 
 - [ ] SVG legível a 48px e a 1024px
-- [ ] Gate check passes: `npm run typecheck && npm run lint && npm run test`
+- [x] Gate check passes: `npm run typecheck && npm run lint && npm run test`
 
 **Tests**: none
 **Gate**: build
@@ -1018,8 +1018,8 @@ T49
 
 **Done when**:
 
-- [ ] Teste: `accessibilityLabel="Eixo Certo"`; wordmark só com `withWordmark`
-- [ ] Gate check passes: `npx jest --selectProjects app src/ui/__tests__/Logo.test.tsx`
+- [x] Teste: `accessibilityLabel="Eixo Certo"`; wordmark só com `withWordmark`
+- [x] Gate check passes: `npx jest --selectProjects app src/ui/__tests__/Logo.test.tsx`
 
 **Tests**: unit
 **Gate**: quick
@@ -1044,8 +1044,8 @@ T49
 **Done when**:
 
 - [ ] Launcher e splash do emulador mostram a marca (print anexado na EIX-11)
-- [ ] Nenhuma imagem do template em `assets/`
-- [ ] Gate check passes: `npm run typecheck && npm run lint && npm run test`
+- [x] Nenhuma imagem do template em `assets/`
+- [x] Gate check passes: `npm run typecheck && npm run lint && npm run test`
 
 **Tests**: none
 **Gate**: build
@@ -1069,8 +1069,8 @@ T49
 
 **Done when**:
 
-- [ ] Teste: Login mostra o `Logo`; botões e erros continuam passando
-- [ ] Gate check passes: `npm run typecheck && npm run lint && npm run test`
+- [x] Teste: Login mostra o `Logo`; botões e erros continuam passando
+- [x] Gate check passes: `npm run typecheck && npm run lint && npm run test`
 
 **Tests**: unit
 **Gate**: build

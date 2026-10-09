@@ -12,10 +12,11 @@ const config: ExpoConfig = {
     // O client OAuth Android do Google Cloud é registrado com este package + SHA-1.
     // Mudar o package quebra o login até registrar um novo client.
     package: 'com.eixocerto.app',
+    // Ícone da marca (EIX-11): marca branca sobre o azul, igual ao icon.png. O foreground deixa a marca
+    // dentro do círculo central que todo launcher mostra, qualquer que seja a máscara do aparelho.
     adaptiveIcon: {
-      backgroundColor: '#fafaf9',
+      backgroundColor: '#3398e1', // tokens.colors.accentEdge
       foregroundImage: './assets/android-icon-foreground.png',
-      backgroundImage: './assets/android-icon-background.png',
       monochromeImage: './assets/android-icon-monochrome.png',
     },
     predictiveBackGestureEnabled: false,
@@ -29,8 +30,10 @@ const config: ExpoConfig = {
     [
       'expo-splash-screen',
       {
+        // Marca azul sem margem. No Android 12+ a splash recorta o que passa de um círculo de 192dp:
+        // a 144dp, a roda mais distante fica a ~89dp do centro, dentro do raio de 96dp.
         image: './assets/splash-icon.png',
-        imageWidth: 160,
+        imageWidth: 144,
         resizeMode: 'contain',
         backgroundColor: '#fafaf9', // tokens.colors.canvas
       },
