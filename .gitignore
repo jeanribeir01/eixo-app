@@ -39,8 +39,13 @@ Thumbs.db
 *.log
 
 # local env files (credenciais nunca vão para o git; use .env.example como modelo)
-.env
-.env*.local
+.env*
+!.env.example
+
+# certificados e config do Firebase/Google: podem carregar segredo (EIX-52)
+*.keystore
+google-services.json
+GoogleService-Info.plist
 
 # coverage
 coverage/
