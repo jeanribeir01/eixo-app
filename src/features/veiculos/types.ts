@@ -3,14 +3,12 @@ import type { Enums, Tables } from '@/types/database';
 // Derivados dos tipos gerados por `supabase gen types typescript` — nunca digite o tipo de
 // tabela na mão (AGENTS.md §2.2, CLAUDE.md §12).
 //
-// TODO(EIX-37): o critério de aceite pede o status "Inativo" (soft delete do veículo), mas o enum
-// `status_veiculo` só tem Disponivel, EmViagem e EmManutencao. Depende de uma migration que ainda
-// não existe — quando ela entrar e os tipos forem regerados, o novo valor aparece aqui sozinho e o
-// `Record` abaixo passa a exigir o rótulo dele (o typecheck acusa).
+// "Inativo" (soft delete do veículo) entrou no enum pela migration da EIX-56.
+// TODO(EIX-37): incluir "Inativo" em STATUS_VEICULO quando o botão Inativar existir.
 export type StatusVeiculo = Enums<'status_veiculo'>;
 
-// TODO(EIX-37): falta `ano_fabricacao` — a coluna não existe na tabela `veiculo` e depende de uma
-// migration que ainda não existe. Não adicionar o campo aqui antes de os tipos serem regerados.
+// TODO(EIX-37): a coluna `ano_fabricacao` já existe (EIX-56); falta incluí-la aqui, no schema Zod
+// e no formulário.
 // Só as colunas que a tela usa; data_inclusao/data_atualizacao ficam no banco.
 export type Veiculo = Pick<Tables<'veiculo'>, 'id' | 'placa' | 'marca' | 'modelo' | 'capacidade_carga' | 'status'>;
 
@@ -26,6 +24,7 @@ export const rotuloStatusVeiculo: Record<StatusVeiculo, string> = {
   Disponivel: 'Disponível',
   EmViagem: 'Em Viagem',
   EmManutencao: 'Em Manutenção',
+  Inativo: 'Inativo',
 };
 
 // Ordem fixa usada nos filtros e no formulário.

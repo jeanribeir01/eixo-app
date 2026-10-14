@@ -124,7 +124,7 @@ describe('veiculos/repository', () => {
     });
 
     it('resposta fora do formato esperado é rejeitada pelo Zod', async () => {
-      responder(ok([{ ...volvo, status: 'Inativo' }]));
+      responder(ok([{ ...volvo, status: 'Vendido' }]));
 
       expect(await listarVeiculos()).toEqual({ ok: false, mensagem: 'Os dados recebidos são inválidos. Tente novamente.' });
     });

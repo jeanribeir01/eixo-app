@@ -158,6 +158,56 @@ describe('migration de frota: veiculo, rota, viagem, manutencao', () => {
     ).rejects.toThrow();
   });
 
+  describe('ano_fabricacao (EIX-56)', () => {
+    // O ano vem do banco, no mesmo fuso do trigger: calculado no Node, o teste falharia
+    // entre 21h e 24h de 31/12, quando UTC já está no ano seguinte.
+    let anoAtual: number;
+
+    beforeAll(async () => {
+      const resultado = await db.query<{ ano: number }>(
+        `select extract(year from (now() at time zone 'America/Sao_Paulo'))::int as ano`,
+      );
+      anoAtual = resultado.rows[0]!.ano;
+    });
+
+    async function criarVeiculoComAno(placa: string, ano: number) {
+      const resultado = await db.query<{ ano_fabricacao: number }>(
+        `insert into veiculo (placa, marca, modelo, capacidade_carga, ano_fabricacao)
+         values ($1, 'Volvo', 'FH', 10000, $2) returning ano_fabricacao`,
+        [placa, ano],
+      );
+      return resultado.rows[0]!.ano_fabricacao;
+    }
+
+    it('aceita os limites: 1950 e ano atual + 1', async () => {
+      await expect(criarVeiculoComAno('ANO1A50', 1950)).resolves.toBe(1950);
+      await expect(criarVeiculoComAno('ANO2A51', anoAtual + 1)).resolves.toBe(anoAtual + 1);
+    });
+
+    it('rejeita 1949 e ano atual + 2', async () => {
+      await expect(criarVeiculoComAno('ANO3A49', 1949)).rejects.toThrow();
+      await expect(criarVeiculoComAno('ANO4A52', anoAtual + 2)).rejects.toThrow();
+    });
+
+    it('rejeita update que leva o ano para depois de ano atual + 1', async () => {
+      await criarVeiculoComAno('ANO5A53', anoAtual);
+
+      await expect(
+        db.query(`update veiculo set ano_fabricacao = $1 where placa = 'ANO5A53'`, [anoAtual + 2]),
+      ).rejects.toThrow();
+    });
+
+    it('aceita veículo sem ano (cadastros anteriores à EIX-56)', async () => {
+      const veiculoId = await criarVeiculo('ANO6A54');
+
+      const resultado = await db.query<{ ano_fabricacao: number | null }>(
+        `select ano_fabricacao from veiculo where id = $1`,
+        [veiculoId],
+      );
+      expect(resultado.rows[0]?.ano_fabricacao).toBeNull();
+    });
+  });
+
   it('rejeita manutencao sem veiculo_id', async () => {
     await expect(
       db.query(

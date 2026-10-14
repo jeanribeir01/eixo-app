@@ -10,7 +10,7 @@ export type Database = {
   // Allows to automatically instantiate createClient with right options
   // instead of createClient<Database, { PostgrestVersion: 'XX' }>(URL, KEY)
   __InternalSupabase: {
-    PostgrestVersion: "14.5"
+    PostgrestVersion: "14.17"
   }
   public: {
     Tables: {
@@ -331,6 +331,7 @@ export type Database = {
       }
       veiculo: {
         Row: {
+          ano_fabricacao: number | null
           capacidade_carga: number
           data_atualizacao: string
           data_inclusao: string
@@ -341,6 +342,7 @@ export type Database = {
           status: Database["public"]["Enums"]["status_veiculo"]
         }
         Insert: {
+          ano_fabricacao?: number | null
           capacidade_carga: number
           data_atualizacao?: string
           data_inclusao?: string
@@ -351,6 +353,7 @@ export type Database = {
           status?: Database["public"]["Enums"]["status_veiculo"]
         }
         Update: {
+          ano_fabricacao?: number | null
           capacidade_carga?: number
           data_atualizacao?: string
           data_inclusao?: string
@@ -455,7 +458,7 @@ export type Database = {
       perfil_nome: "Admin" | "Gestor de Frota" | "Financeiro" | "Motorista"
       status_pagamento: "Pendente" | "Pago"
       status_usuario: "AguardandoAprovacao" | "Ativo" | "Bloqueado"
-      status_veiculo: "Disponivel" | "EmViagem" | "EmManutencao"
+      status_veiculo: "Disponivel" | "EmViagem" | "EmManutencao" | "Inativo"
       status_viagem: "EmAndamento" | "Finalizada" | "Cancelada"
       tipo_categoria: "Entrada" | "Saida"
     }
@@ -588,7 +591,7 @@ export const Constants = {
       perfil_nome: ["Admin", "Gestor de Frota", "Financeiro", "Motorista"],
       status_pagamento: ["Pendente", "Pago"],
       status_usuario: ["AguardandoAprovacao", "Ativo", "Bloqueado"],
-      status_veiculo: ["Disponivel", "EmViagem", "EmManutencao"],
+      status_veiculo: ["Disponivel", "EmViagem", "EmManutencao", "Inativo"],
       status_viagem: ["EmAndamento", "Finalizada", "Cancelada"],
       tipo_categoria: ["Entrada", "Saida"],
     },

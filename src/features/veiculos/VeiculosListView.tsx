@@ -13,11 +13,11 @@ type Status = 'carregando' | 'pronto' | 'erro';
 // Chip por status (critério da US06). Vermelho/verde são reservados para entrada/saída
 // financeira (DESIGN_CYAN §1, CLAUDE.md §8), então "Em Manutenção" fica neutro; o rótulo
 // escrito acompanha sempre — cor nunca é o único indicador.
-// TODO(EIX-37): "Inativo" entra aqui quando a migration do enum existir.
 const tomStatus: Record<StatusVeiculo, BadgeTone> = {
   Disponivel: 'success',
   EmViagem: 'neutral',
   EmManutencao: 'neutral',
+  Inativo: 'neutral',
 };
 
 const TODOS = 'Todos';
@@ -142,8 +142,8 @@ export function VeiculosListView() {
                     variant="ghost"
                     onPress={() => router.push(`/frota/${item.id}/editar`)}
                   />
-                  {/* TODO(EIX-37): botão "Inativar" (soft delete) depende da migration que adiciona
-                      "Inativo" ao enum status_veiculo — ainda não existe. */}
+                  {/* TODO(EIX-37): botão "Inativar" (soft delete) — o status "Inativo" já existe
+                      no banco desde a EIX-56. */}
                 </Column>
               </Column>
             </ListItem>
