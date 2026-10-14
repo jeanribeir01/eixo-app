@@ -11,9 +11,8 @@ import type { FiltroVeiculos, Veiculo, VeiculoInput } from './types';
 // (escrita só para Admin e Gestor de Frota) é decidida pelas policies de RLS da tabela `veiculo`.
 //
 // TODO(EIX-37): falta "inativar" (soft delete — veículo com viagens no histórico nunca é apagado).
-// Depende de uma migration que ainda não existe: o enum `status_veiculo` não tem o valor "Inativo".
-// Quando existir, entra aqui um `inativarVeiculo(id)` fazendo `update({ status: 'Inativo' })` —
-// nunca `.delete()`.
+// O valor "Inativo" já existe no enum (EIX-56): entra aqui um `inativarVeiculo(id)` fazendo
+// `update({ status: 'Inativo' })` — nunca `.delete()`, que o RLS rejeita desde a EIX-56.
 
 // `campo` diz à tela em qual input mostrar a mensagem (ex.: placa duplicada aparece na Placa).
 export type Resultado<T> = { ok: true; data: T } | { ok: false; mensagem: string; campo?: 'placa' };

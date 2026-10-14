@@ -60,6 +60,8 @@ describe('veiculoSchema', () => {
 
   it('aceita só os status que existem no enum do banco', () => {
     expect(veiculoSchema.safeParse({ ...inputValido, status: 'EmManutencao' }).success).toBe(true);
-    expect(mensagens({ ...inputValido, status: 'Inativo' })).toEqual(['Escolha o status do veículo.']);
+    // "Inativo" entrou no enum na EIX-56.
+    expect(veiculoSchema.safeParse({ ...inputValido, status: 'Inativo' }).success).toBe(true);
+    expect(mensagens({ ...inputValido, status: 'Vendido' })).toEqual(['Escolha o status do veículo.']);
   });
 });

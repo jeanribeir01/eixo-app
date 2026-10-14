@@ -177,7 +177,7 @@ export function VeiculoFormView({ veiculoId }: VeiculoFormViewProps) {
           <Text variant="bodySm" tone="body" weight="medium">
             Status
           </Text>
-          {/* TODO(EIX-37): "Inativo" depende da migration que adiciona o valor ao enum status_veiculo. */}
+          {/* TODO(EIX-37): "Inativo" já existe no enum (EIX-56); fica fora das opções até o botão Inativar. */}
           <Tabs
             options={opcoesStatus}
             value={statusVeiculo}

@@ -233,6 +233,37 @@ describe('migration rls: policies por perfil', () => {
     });
   });
 
+  // EIX-56: veículo deixou de ter delete físico; sai de circulação com status Inativo.
+  it('admin e gestor de frota inativam veiculo, mas o delete afeta 0 linhas', async () => {
+    const perfis = [
+      { perfil: 'Admin', id: '40000000-0000-0000-0000-000000000002', placa: 'INA1A23' },
+      { perfil: 'Gestor de Frota', id: '40000000-0000-0000-0000-000000000003', placa: 'INA2B34' },
+    ] as const;
+
+    for (const { perfil, id, placa } of perfis) {
+      // Veículo próprio do caso: se o delete passasse, apagaria o veículo das viagens de teste.
+      const veiculo = await comoSuperuser(db, (tx) =>
+        tx.query<{ id: string }>(
+          `insert into veiculo (placa, marca, modelo, capacidade_carga)
+           values ($1, 'Volvo', 'FH', 10000) returning id`,
+          [placa],
+        ),
+      );
+      const veiculoInativoId = veiculo.rows[0]!.id;
+
+      await comoUsuario(db, { id, perfil }, async (tx) => {
+        const inativado = await tx.query<{ status: string }>(
+          `update veiculo set status = 'Inativo' where id = $1 returning status`,
+          [veiculoInativoId],
+        );
+        expect(inativado.rows[0]?.status).toBe('Inativo');
+
+        const deleteVeiculo = await tx.query('delete from veiculo where id = $1 returning id', [veiculoInativoId]);
+        expect(deleteVeiculo.rows).toHaveLength(0);
+      });
+    }
+  });
+
   it('usuário não autenticado (anon) vê zero linhas em todas as tabelas', async () => {
     await comoAnonimo(db, async (tx) => {
       const tabelas = [
