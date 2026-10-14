@@ -79,8 +79,8 @@ describe('EIX-32: RLS por perfil', () => {
       ).rows[0]!.id;
       rotaId = (
         await tx.query<{ id: string }>(
-          `insert into rota (cidade_origem, cidade_destino, distancia_estimada_km)
-           values ('Campinas', 'Santos', 160) returning id`,
+          `insert into rota (cidade_origem, uf_origem, cidade_destino, uf_destino, distancia_estimada_km)
+           values ('Campinas', 'SP', 'Santos', 'SP', 160) returning id`,
         )
       ).rows[0]!.id;
 

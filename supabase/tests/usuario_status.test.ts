@@ -94,8 +94,8 @@ describe('migration usuario_status: aprovação de usuários', () => {
            values ('STA1B23', 'Volvo', 'FH', 10000) returning id`,
         );
         const rota = await tx.query<{ id: string }>(
-          `insert into rota (cidade_origem, cidade_destino, distancia_estimada_km)
-           values ('Campinas', 'Santos', 200) returning id`,
+          `insert into rota (cidade_origem, uf_origem, cidade_destino, uf_destino, distancia_estimada_km)
+           values ('Campinas', 'SP', 'Santos', 'SP', 200) returning id`,
         );
         await tx.query(
           `insert into viagem (veiculo_id, rota_id, motorista_id, hodometro_inicial) values ($1, $2, $3, 500)`,
@@ -130,7 +130,8 @@ describe('migration usuario_status: aprovação de usuários', () => {
          values ('VRA1B23', 'Scania', 'R450', 20000) on conflict do nothing`,
       );
       await tx.query(
-        `insert into rota (cidade_origem, cidade_destino, distancia_estimada_km) values ('Jundiaí', 'Sorocaba', 90)`,
+        `insert into rota (cidade_origem, uf_origem, cidade_destino, uf_destino, distancia_estimada_km)
+         values ('Jundiaí', 'SP', 'Sorocaba', 'SP', 90) on conflict do nothing`,
       );
     });
 

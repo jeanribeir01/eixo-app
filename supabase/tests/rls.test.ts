@@ -46,8 +46,8 @@ describe('migration rls: policies por perfil', () => {
       veiculoId = veiculo.rows[0]!.id;
 
       const rota = await tx.query<{ id: string }>(
-        `insert into rota (cidade_origem, cidade_destino, distancia_estimada_km)
-         values ('São Paulo', 'Curitiba', 400) returning id`,
+        `insert into rota (cidade_origem, uf_origem, cidade_destino, uf_destino, distancia_estimada_km)
+         values ('São Paulo', 'SP', 'Curitiba', 'PR', 400) returning id`,
       );
       rotaId = rota.rows[0]!.id;
 
@@ -150,7 +150,8 @@ describe('migration rls: policies por perfil', () => {
     });
   });
 
-  it('admin e gestor de frota gravam veiculo, rota, viagem e manutencao', async () => {
+  // Manutenção saiu daqui na EIX-75: só a RPC registrar_manutencao grava (manutencao.test.ts).
+  it('admin e gestor de frota gravam veiculo e rota', async () => {
     for (const perfil of ['Admin', 'Gestor de Frota'] as const) {
       const usuarioId = perfil === 'Admin' ? '30000000-0000-0000-0000-000000000001' : '30000000-0000-0000-0000-000000000002';
       await comoUsuario(db, { id: usuarioId, perfil }, async (tx) => {
@@ -161,12 +162,12 @@ describe('migration rls: policies por perfil', () => {
         );
         expect(veiculo.rows[0]?.id).toBeDefined();
 
-        const manutencao = await tx.query<{ id: string }>(
-          `insert into manutencao (veiculo_id, descricao, data_manutencao, valor)
-           values ($1, 'Troca de óleo', current_date, 300) returning id`,
-          [veiculoId],
+        const rota = await tx.query<{ id: string }>(
+          `insert into rota (cidade_origem, uf_origem, cidade_destino, uf_destino, distancia_estimada_km)
+           values ('Campinas', 'SP', $1, 'MG', 600) returning id`,
+          [`Belo Horizonte ${perfil}`],
         );
-        expect(manutencao.rows[0]?.id).toBeDefined();
+        expect(rota.rows[0]?.id).toBeDefined();
       });
     }
   });

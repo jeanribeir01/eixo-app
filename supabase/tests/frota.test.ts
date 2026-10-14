@@ -26,10 +26,14 @@ describe('migration de frota: veiculo, rota, viagem, manutencao', () => {
     return resultado.rows[0]!.id;
   }
 
+  // Cada chamada usa um destino diferente: origem + destino repetidos é rota duplicada (EIX-75).
+  let rotasCriadas = 0;
   async function criarRota() {
+    rotasCriadas += 1;
     const resultado = await db.query<{ id: string }>(
-      `insert into rota (cidade_origem, cidade_destino, distancia_estimada_km)
-       values ('Origem', 'Destino', 100) returning id`,
+      `insert into rota (cidade_origem, uf_origem, cidade_destino, uf_destino, distancia_estimada_km)
+       values ('Origem', 'SP', $1, 'PR', 100) returning id`,
+      [`Destino ${rotasCriadas}`],
     );
     return resultado.rows[0]!.id;
   }
