@@ -241,11 +241,11 @@ A EIX-40 (US08, tela de viagem) e a EIX-41 (sincronização offline) dependem de
 | VIAG-25 | P2: Quilometragem rodada — AC2 | Execute | Verified |
 | VIAG-26 | P2: Quilometragem rodada — AC3 | Execute | Verified |
 | VIAG-27 | P2: Viagem não é apagada — AC1 | Execute | Verified |
-| VIAG-28 | P1: Correção do hodômetro final — AC1 | Execute | Implementing |
-| VIAG-29 | P1: Correção do hodômetro final — AC2 | Execute | Implementing |
-| VIAG-30 | P1: Correção do hodômetro final — AC3 | Execute | Implementing |
-| VIAG-31 | P1: Correção do hodômetro final — AC4 | Execute | Implementing |
-| VIAG-32 | P1: Correção do hodômetro final — AC5 | Execute | Implementing |
+| VIAG-28 | P1: Correção do hodômetro final — AC1 | Execute | Verified |
+| VIAG-29 | P1: Correção do hodômetro final — AC2 | Execute | Verified |
+| VIAG-30 | P1: Correção do hodômetro final — AC3 | Execute | Verified |
+| VIAG-31 | P1: Correção do hodômetro final — AC4 | Execute | Verified |
+| VIAG-32 | P1: Correção do hodômetro final — AC5 | Execute | Verified |
 
 **Coverage:** 32 total, 32 mapped to tasks (VIAG-28..32 em T9), 0 unmapped
 

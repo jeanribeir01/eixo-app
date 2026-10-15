@@ -138,6 +138,12 @@ Seen once or not yet corroborated. Tracked, not trusted.
 - evidence: validation.md VIAG-26 e edge case RLS (supabase, rls, triggers)
 - last seen: 2026-10-15T12:43:41Z
 
+### L-022 - When a rule ranks rows by an ordering column, test ties on that column with a cancelled or incomplete row, since inclusive bounds can block a legitimate retry
+- signal: `surviving_mutant` · recurrence: 1 feature(s) · scope: `supabase, triggers` · harmful: 0
+- features: eix76-db-viagem
+- evidence: validation.md N08 (viagem_regras.sql VG007, VIAG-29/VIAG-30) (supabase, triggers)
+- last seen: 2026-10-15T13:11:41Z
+
 ## Quarantined (failed when applied - ignore)
 
 A confirmed lesson that recurred alongside failure. Kept for the maintainer to review.
