@@ -180,10 +180,10 @@ T2 → T3 → T4 → T5 → T6 → T7 → T8
 
 **Done when**:
 
-- [ ] `Finalizada` → `EmAndamento` dá `VG005`; `Cancelada` → `Finalizada` dá `VG005`; mudar `hodometro_final` de encerrada dá `VG005`
-- [ ] Update com os mesmos valores em viagem encerrada é aceito
-- [ ] Trocar `veiculo_id` → `VG006`
-- [ ] Gate quick verde
+- [x] `Finalizada` → `EmAndamento` dá `VG005`; `Cancelada` → `Finalizada` dá `VG005`; mudar `hodometro_final` de encerrada dá `VG005`
+- [x] Update com os mesmos valores em viagem encerrada é aceito
+- [x] Trocar `veiculo_id` → `VG006`
+- [x] Gate quick verde
 
 **Tests**: integration
 **Gate**: quick

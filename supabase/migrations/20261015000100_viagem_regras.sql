@@ -18,6 +18,8 @@
 --   VG002  veículo em manutenção
 --   VG003  veículo inativo
 --   VG004  hodômetro inicial menor que o último hodômetro final do veículo
+--   VG005  viagem encerrada (Finalizada ou Cancelada) não pode ser alterada
+--   VG006  veículo da viagem não pode ser trocado
 -- Os códigos VG*** são nossos, no mesmo esquema dos MN*** da manutenção: classe "VG"
 -- (viagem) fica na faixa que o padrão SQL deixa livre para a aplicação.
 
@@ -69,11 +71,31 @@ begin
         raise exception 'Veículo inativo não pode sair em viagem.' using errcode = 'VG003';
       end if;
     end if;
-  elsif new.hodometro_inicial is distinct from old.hodometro_inicial then
+  else
+    -- Trocar o veículo exigiria liberar um e prender outro no mesmo passo. Para corrigir,
+    -- cancela a viagem e abre outra no veículo certo.
+    if new.veiculo_id is distinct from old.veiculo_id then
+      raise exception 'O veículo de uma viagem não pode ser trocado.' using errcode = 'VG006';
+    end if;
+
+    -- Viagem encerrada é histórico: reabrir ou mexer no hodômetro furaria a regra de
+    -- hodômetro das viagens seguintes. Também é o que impede um reenvio atrasado do sync
+    -- ("abrir") de reabrir uma viagem já fechada. Regravar os mesmos valores passa, porque
+    -- o sync pode reenviar o fechamento.
+    if old.status <> 'EmAndamento' and (
+      new.status is distinct from old.status
+      or new.hodometro_inicial is distinct from old.hodometro_inicial
+      or new.hodometro_final is distinct from old.hodometro_final
+    ) then
+      raise exception 'Viagem encerrada não pode ser alterada.' using errcode = 'VG005';
+    end if;
+
+    if new.hodometro_inicial is not distinct from old.hodometro_inicial then
+      return new;
+    end if;
+
     -- Mesmo lock do insert: uma viagem que fecha no meio desta conta não escapa da comparação.
     perform 1 from veiculo v where v.id = new.veiculo_id for update;
-  else
-    return new;
   end if;
 
   -- O "último" hodômetro final é o maior: hodômetro só sobe, e `data_fim` é opcional e vem do

@@ -208,9 +208,9 @@ A EIX-40 (US08, tela de viagem) e a EIX-41 (sincronização offline) dependem de
 | VIAG-14 | P1: Status automático — AC3 | Tasks | Pending |
 | VIAG-15 | P1: Status automático — AC4 | Tasks | Pending |
 | VIAG-16 | P1: Status automático — AC5 | Tasks | Pending |
-| VIAG-17 | P1: Viagem encerrada é terminal — AC1 | Tasks | Pending |
-| VIAG-18 | P1: Viagem encerrada é terminal — AC2 | Tasks | Pending |
-| VIAG-19 | P1: Viagem encerrada é terminal — AC3 | Tasks | Pending |
+| VIAG-17 | P1: Viagem encerrada é terminal — AC1 | Execute | Implementing |
+| VIAG-18 | P1: Viagem encerrada é terminal — AC2 | Execute | Implementing |
+| VIAG-19 | P1: Viagem encerrada é terminal — AC3 | Execute | Implementing |
 | VIAG-20 | P1: Upsert idempotente — AC1 | Tasks | Pending |
 | VIAG-21 | P1: Upsert idempotente — AC2 | Tasks | Pending |
 | VIAG-22 | P1: Upsert idempotente — AC3 | Tasks | Pending |

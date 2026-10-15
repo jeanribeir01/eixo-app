@@ -264,4 +264,60 @@ describe('migration viagem_regras', () => {
       expect(await viagensDoVeiculo(veiculoId)).toBe(0);
     });
   });
+
+  describe('viagem encerrada é terminal', () => {
+    async function lerViagem(id: string) {
+      const resultado = await db.query<{
+        status: StatusViagem;
+        hodometro_inicial: string;
+        hodometro_final: string | null;
+        veiculo_id: string;
+      }>('select status, hodometro_inicial, hodometro_final, veiculo_id from viagem where id = $1', [id]);
+      return resultado.rows[0]!;
+    }
+
+    it.each([
+      ['Finalizada', `status = 'EmAndamento'`],
+      ['Cancelada', `status = 'Finalizada'`],
+      ['Finalizada', 'hodometro_final = 1600'],
+      ['Finalizada', 'hodometro_inicial = 1100'],
+    ] as const)('rejeita alterar viagem %s com %s usando VG005 (VIAG-17)', async (status, alteracao) => {
+      const veiculoId = await criarVeiculo();
+      const id = await inserirViagem({ veiculoId, hodometroInicial: 1000, hodometroFinal: 1500, status });
+
+      const codigo = await codigoDoErro(db.query(`update viagem set ${alteracao} where id = $1`, [id]));
+
+      expect(codigo).toBe('VG005');
+      expect(await lerViagem(id)).toMatchObject({ status, hodometro_inicial: '1000.0', hodometro_final: '1500.0' });
+    });
+
+    it('aceita regravar viagem encerrada com os mesmos status e hodômetros (VIAG-18)', async () => {
+      const veiculoId = await criarVeiculo();
+      const id = await inserirViagem({ veiculoId, hodometroInicial: 1000, hodometroFinal: 1500, status: 'Finalizada' });
+
+      const resultado = await db.query(
+        `update viagem set status = 'Finalizada', hodometro_inicial = 1000, hodometro_final = 1500
+         where id = $1 returning id`,
+        [id],
+      );
+
+      expect(resultado.rows).toHaveLength(1);
+    });
+
+    it.each([
+      ['aberta', 'EmAndamento', null],
+      ['encerrada', 'Finalizada', 1500],
+    ] as const)('rejeita trocar o veículo de viagem %s com VG006 (VIAG-19)', async (_rotulo, status, hodometroFinal) => {
+      const veiculoId = await criarVeiculo();
+      const outroVeiculoId = await criarVeiculo();
+      const id = await inserirViagem({ veiculoId, hodometroInicial: 1000, hodometroFinal, status });
+
+      const codigo = await codigoDoErro(
+        db.query('update viagem set veiculo_id = $1 where id = $2', [outroVeiculoId, id]),
+      );
+
+      expect(codigo).toBe('VG006');
+      expect((await lerViagem(id)).veiculo_id).toBe(veiculoId);
+    });
+  });
 });
