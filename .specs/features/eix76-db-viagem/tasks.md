@@ -20,7 +20,7 @@ Implement these tasks with the `tlc-spec-driven` skill: **activate it by name an
 
 | Code Layer | Required Test Type | Coverage Expectation | Location Pattern | Run Command |
 | --- | --- | --- | --- | --- |
-| Migration SQL (trigger, índice, coluna gerada, policy) | integration (PGlite) | 1:1 com os AC da spec; todo SQLSTATE `VG***` tem caso que o dispara e caso-limite que passa; RLS do Motorista exercitado via `comoUsuario` | `supabase/tests/viagem.test.ts` | `node --experimental-vm-modules node_modules/jest/bin/jest.js --selectProjects supabase supabase/tests/viagem.test.ts` |
+| Migration SQL (trigger, índice, coluna gerada, policy) | integration (PGlite) | 1:1 com os AC da spec; todo SQLSTATE `VG***` tem caso que o dispara e caso-limite que passa; RLS do Motorista exercitado via `comoUsuario` | `supabase/tests/viagem.test.ts` | `node --experimental-vm-modules node_modules/jest/bin/jest.js supabase/tests/viagem.test.ts --selectProjects supabase` |
 | Fixtures de testes existentes | integration (PGlite) | Mesmas asserções de antes, todas verdes; nenhuma removida | `supabase/tests/rls*.test.ts` | `node --experimental-vm-modules node_modules/jest/bin/jest.js --selectProjects supabase` |
 | App (`src/**`) | none | Fora do escopo; só o build gate | - | build gate only |
 
@@ -30,7 +30,7 @@ Implement these tasks with the `tlc-spec-driven` skill: **activate it by name an
 
 | Gate Level | When to Use | Command |
 | --- | --- | --- |
-| Quick | Task que só mexe em `viagem.test.ts` + migration | `node --experimental-vm-modules node_modules/jest/bin/jest.js --selectProjects supabase supabase/tests/viagem.test.ts` |
+| Quick | Task que só mexe em `viagem.test.ts` + migration | `node --experimental-vm-modules node_modules/jest/bin/jest.js supabase/tests/viagem.test.ts --selectProjects supabase` |
 | Full | Task que pode afetar outros testes do banco | `node --experimental-vm-modules node_modules/jest/bin/jest.js --selectProjects supabase` |
 | Build | Fim de fase | `npm run typecheck && npm run lint && npm run test` |
 
@@ -99,10 +99,10 @@ T2 → T3 → T4 → T5 → T6 → T7 → T8
 
 **Done when**:
 
-- [ ] Segunda viagem aberta no mesmo veículo → `VG001`
-- [ ] Insert direto que pula o trigger (`session_replication_role = replica` como superuser) → `23505`
-- [ ] Depois de finalizar/cancelar, abre de novo
-- [ ] Gate full verde
+- [x] Segunda viagem aberta no mesmo veículo → `VG001`
+- [x] Insert direto que pula o trigger (`session_replication_role = replica` como superuser) → `23505`
+- [x] Depois de finalizar/cancelar, abre de novo
+- [x] Gate full verde
 
 **Tests**: integration
 **Gate**: full

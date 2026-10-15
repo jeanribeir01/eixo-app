@@ -192,9 +192,9 @@ A EIX-40 (US08, tela de viagem) e a EIX-41 (sincronização offline) dependem de
 
 | Requirement ID | Story | Phase | Status |
 | --- | --- | --- | --- |
-| VIAG-01 | P1: Um veículo, uma viagem em andamento — AC1 | Tasks | Pending |
-| VIAG-02 | P1: Um veículo, uma viagem em andamento — AC2 | Tasks | Pending |
-| VIAG-03 | P1: Um veículo, uma viagem em andamento — AC3 | Tasks | Pending |
+| VIAG-01 | P1: Um veículo, uma viagem em andamento — AC1 | Execute | Implementing |
+| VIAG-02 | P1: Um veículo, uma viagem em andamento — AC2 | Execute | Implementing |
+| VIAG-03 | P1: Um veículo, uma viagem em andamento — AC3 | Execute | Implementing |
 | VIAG-04 | P1: Veículo indisponível — AC1 | Tasks | Pending |
 | VIAG-05 | P1: Veículo indisponível — AC2 | Tasks | Pending |
 | VIAG-06 | P1: Veículo indisponível — AC3 | Tasks | Pending |
