@@ -3,6 +3,8 @@
 // As regras de viagem moram em trigger, não em RPC: o sync offline grava direto na tabela.
 // Os testes gravam como o app gravaria (insert/update/upsert) e conferem o que ficou no banco.
 
+import { randomUUID } from 'node:crypto';
+
 import { criarBanco, comoSuperuser, comoUsuario, type Banco } from './helpers/db';
 
 const MOTORISTA_A = { id: '76100000-0000-0000-0000-000000000001', perfil: 'Motorista' as const };
@@ -318,6 +320,155 @@ describe('migration viagem_regras', () => {
 
       expect(codigo).toBe('VG006');
       expect((await lerViagem(id)).veiculo_id).toBe(veiculoId);
+    });
+  });
+
+  async function statusDoVeiculo(veiculoId: string) {
+    const resultado = await db.query<{ status: StatusVeiculo }>('select status from veiculo where id = $1', [veiculoId]);
+    return resultado.rows[0]!.status;
+  }
+
+  describe('status automático do veículo', () => {
+    it('põe o veículo EmViagem quando a viagem abre (VIAG-12)', async () => {
+      const veiculoId = await criarVeiculo();
+
+      await inserirViagem({ veiculoId });
+
+      expect(await statusDoVeiculo(veiculoId)).toBe('EmViagem');
+    });
+
+    it.each(['Finalizada', 'Cancelada'] as const)(
+      'devolve o veículo para Disponivel quando a viagem fica %s (VIAG-13)',
+      async (encerramento) => {
+        const veiculoId = await criarVeiculo();
+        const id = await inserirViagem({ veiculoId });
+        expect(await statusDoVeiculo(veiculoId)).toBe('EmViagem');
+
+        await db.query('update viagem set status = $1, hodometro_final = 1500 where id = $2', [encerramento, id]);
+
+        expect(await statusDoVeiculo(veiculoId)).toBe('Disponivel');
+      },
+    );
+
+    it('mantém Inativo o veículo inativado durante a viagem (VIAG-14)', async () => {
+      const veiculoId = await criarVeiculo();
+      const id = await inserirViagem({ veiculoId });
+      await db.query(`update veiculo set status = 'Inativo' where id = $1`, [veiculoId]);
+
+      await db.query(`update viagem set status = 'Finalizada', hodometro_final = 1500 where id = $1`, [id]);
+
+      expect(await statusDoVeiculo(veiculoId)).toBe('Inativo');
+    });
+
+    it.each([
+      ['Disponivel', 'Finalizada'],
+      ['EmManutencao', 'Cancelada'],
+    ] as const)('não mexe no veículo %s quando a viagem já chega %s (VIAG-15)', async (statusVeiculo, status) => {
+      const veiculoId = await criarVeiculo(statusVeiculo);
+
+      await inserirViagem({ veiculoId, hodometroFinal: 1500, status });
+
+      expect(await statusDoVeiculo(veiculoId)).toBe(statusVeiculo);
+    });
+
+    it('muda o status quando o Motorista abre e fecha a própria viagem, sem policy de update em veiculo (VIAG-16)', async () => {
+      const veiculoId = await criarVeiculo();
+
+      const id = await comoUsuario(db, MOTORISTA_A, async (tx) => {
+        const resultado = await tx.query<{ id: string }>(
+          `insert into viagem (veiculo_id, rota_id, motorista_id, hodometro_inicial)
+           values ($1, $2, $3, 1000) returning id`,
+          [veiculoId, rotaId, MOTORISTA_A.id],
+        );
+        return resultado.rows[0]!.id;
+      });
+      expect(await statusDoVeiculo(veiculoId)).toBe('EmViagem');
+
+      await comoUsuario(db, MOTORISTA_A, (tx) =>
+        tx.query(`update viagem set status = 'Finalizada', hodometro_final = 1500 where id = $1`, [id]),
+      );
+      expect(await statusDoVeiculo(veiculoId)).toBe('Disponivel');
+    });
+  });
+
+  describe('upsert idempotente (sync offline)', () => {
+    // Mesmo formato do upsert do PostgREST (`Prefer: resolution=merge-duplicates`): o `id`
+    // vem do celular e toda coluna enviada é sobrescrita no conflito.
+    function upsertComoMotorista(dados: DadosViagem & { id: string }) {
+      return comoUsuario(db, MOTORISTA_A, (tx) =>
+        tx.query(
+          `insert into viagem (id, veiculo_id, rota_id, motorista_id, hodometro_inicial, hodometro_final, status)
+           values ($1, $2, $3, $4, $5, $6, $7)
+           on conflict (id) do update set
+             veiculo_id = excluded.veiculo_id,
+             rota_id = excluded.rota_id,
+             motorista_id = excluded.motorista_id,
+             hodometro_inicial = excluded.hodometro_inicial,
+             hodometro_final = excluded.hodometro_final,
+             status = excluded.status`,
+          [
+            dados.id,
+            dados.veiculoId,
+            rotaId,
+            MOTORISTA_A.id,
+            dados.hodometroInicial ?? 1000,
+            dados.hodometroFinal ?? null,
+            dados.status ?? 'EmAndamento',
+          ],
+        ),
+      );
+    }
+
+    it('aceita reenviar a mesma viagem aberta: uma linha só e veículo EmViagem (VIAG-20)', async () => {
+      const veiculoId = await criarVeiculo();
+      const id = randomUUID();
+
+      await upsertComoMotorista({ id, veiculoId });
+      await upsertComoMotorista({ id, veiculoId });
+
+      expect(await viagensDoVeiculo(veiculoId)).toBe(1);
+      expect(await statusDoVeiculo(veiculoId)).toBe('EmViagem');
+    });
+
+    it('fecha a viagem por upsert e devolve o veículo para Disponivel (VIAG-23)', async () => {
+      const veiculoId = await criarVeiculo();
+      const id = randomUUID();
+      await upsertComoMotorista({ id, veiculoId });
+      expect(await statusDoVeiculo(veiculoId)).toBe('EmViagem');
+
+      await upsertComoMotorista({ id, veiculoId, hodometroFinal: 1500, status: 'Finalizada' });
+
+      const gravada = await db.query<{ status: StatusViagem; hodometro_final: string }>(
+        'select status, hodometro_final from viagem where id = $1',
+        [id],
+      );
+      expect(gravada.rows[0]).toEqual({ status: 'Finalizada', hodometro_final: '1500.0' });
+      expect(await statusDoVeiculo(veiculoId)).toBe('Disponivel');
+    });
+
+    it('reenvio atrasado do fechamento não libera o veículo que já abriu outra viagem (VIAG-21)', async () => {
+      const veiculoId = await criarVeiculo();
+      const primeiraId = randomUUID();
+      await upsertComoMotorista({ id: primeiraId, veiculoId });
+      await upsertComoMotorista({ id: primeiraId, veiculoId, hodometroFinal: 1500, status: 'Finalizada' });
+      await upsertComoMotorista({ id: randomUUID(), veiculoId, hodometroInicial: 1500 });
+
+      await upsertComoMotorista({ id: primeiraId, veiculoId, hodometroFinal: 1500, status: 'Finalizada' });
+
+      expect(await viagensDoVeiculo(veiculoId)).toBe(2);
+      expect(await statusDoVeiculo(veiculoId)).toBe('EmViagem');
+    });
+
+    it('rejeita com VG005 o reenvio de "abrir" para uma viagem já Finalizada (VIAG-22)', async () => {
+      const veiculoId = await criarVeiculo();
+      const id = randomUUID();
+      await upsertComoMotorista({ id, veiculoId });
+      await upsertComoMotorista({ id, veiculoId, hodometroFinal: 1500, status: 'Finalizada' });
+
+      const codigo = await codigoDoErro(upsertComoMotorista({ id, veiculoId }));
+
+      expect(codigo).toBe('VG005');
+      expect(await statusDoVeiculo(veiculoId)).toBe('Disponivel');
     });
   });
 });

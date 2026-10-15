@@ -207,12 +207,12 @@ T2 → T3 → T4 → T5 → T6 → T7 → T8
 
 **Done when**:
 
-- [ ] Abrir → `EmViagem`; finalizar e cancelar → `Disponivel`; inativado durante a viagem → continua `Inativo`; insert encerrado → status intacto
-- [ ] Motorista abre e fecha a própria viagem e o status muda (sem policy de update em `veiculo`)
-- [ ] Upsert repetido da viagem aberta: 1 linha, veículo `EmViagem`
-- [ ] Reenvio do fechamento depois de viagem nova: veículo continua `EmViagem`
-- [ ] Upsert `EmAndamento` sobre `Finalizada` → `VG005`; fechamento por upsert → `Disponivel`
-- [ ] Gate full verde (manutencao/rls não quebram com o status mudando)
+- [x] Abrir → `EmViagem`; finalizar e cancelar → `Disponivel`; inativado durante a viagem → continua `Inativo`; insert encerrado → status intacto
+- [x] Motorista abre e fecha a própria viagem e o status muda (sem policy de update em `veiculo`)
+- [x] Upsert repetido da viagem aberta: 1 linha, veículo `EmViagem`
+- [x] Reenvio do fechamento depois de viagem nova: veículo continua `EmViagem`
+- [x] Upsert `EmAndamento` sobre `Finalizada` → `VG005`; fechamento por upsert → `Disponivel`
+- [x] Gate full verde (manutencao/rls não quebram com o status mudando)
 
 **Tests**: integration
 **Gate**: full

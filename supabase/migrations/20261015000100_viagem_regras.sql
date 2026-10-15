@@ -118,3 +118,35 @@ $$;
 create trigger viagem_valida
   before insert or update on viagem
   for each row execute function valida_viagem();
+
+-- O status do veículo acompanha a viagem. `security definer` porque o Motorista abre e fecha
+-- a própria viagem, mas não tem policy de update em `veiculo`.
+-- É trigger `after`: só roda quando a linha foi gravada de fato. No upsert de uma viagem que
+-- já existe, o `after insert` não dispara (a gravação virou update), e o `after update` só
+-- age na transição EmAndamento → encerrada; reenviar o mesmo estado não mexe no veículo.
+create or replace function sincroniza_status_veiculo()
+returns trigger
+language plpgsql
+security definer
+set search_path = public
+as $$
+begin
+  if tg_op = 'INSERT' then
+    -- Viagem que já chega encerrada não ocupa o veículo.
+    if new.status = 'EmAndamento' then
+      update veiculo v set status = 'EmViagem' where v.id = new.veiculo_id;
+    end if;
+  elsif old.status = 'EmAndamento' and new.status <> 'EmAndamento' then
+    -- Só devolve se ele ainda está EmViagem: um veículo inativado durante a viagem continua
+    -- Inativo (mesmo cuidado da `concluir_manutencao`).
+    update veiculo v set status = 'Disponivel'
+    where v.id = new.veiculo_id and v.status = 'EmViagem';
+  end if;
+
+  return null;
+end;
+$$;
+
+create trigger viagem_sincroniza_status_veiculo
+  after insert or update of status on viagem
+  for each row execute function sincroniza_status_veiculo();

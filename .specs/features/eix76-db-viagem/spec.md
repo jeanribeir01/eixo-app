@@ -203,18 +203,18 @@ A EIX-40 (US08, tela de viagem) e a EIX-41 (sincronização offline) dependem de
 | VIAG-09 | P1: Hodômetro não regride — AC3 | Execute | Implementing |
 | VIAG-10 | P1: Hodômetro não regride — AC4 | Execute | Implementing |
 | VIAG-11 | P1: Hodômetro não regride — AC5 | Execute | Implementing |
-| VIAG-12 | P1: Status automático — AC1 | Tasks | Pending |
-| VIAG-13 | P1: Status automático — AC2 | Tasks | Pending |
-| VIAG-14 | P1: Status automático — AC3 | Tasks | Pending |
-| VIAG-15 | P1: Status automático — AC4 | Tasks | Pending |
-| VIAG-16 | P1: Status automático — AC5 | Tasks | Pending |
+| VIAG-12 | P1: Status automático — AC1 | Execute | Implementing |
+| VIAG-13 | P1: Status automático — AC2 | Execute | Implementing |
+| VIAG-14 | P1: Status automático — AC3 | Execute | Implementing |
+| VIAG-15 | P1: Status automático — AC4 | Execute | Implementing |
+| VIAG-16 | P1: Status automático — AC5 | Execute | Implementing |
 | VIAG-17 | P1: Viagem encerrada é terminal — AC1 | Execute | Implementing |
 | VIAG-18 | P1: Viagem encerrada é terminal — AC2 | Execute | Implementing |
 | VIAG-19 | P1: Viagem encerrada é terminal — AC3 | Execute | Implementing |
-| VIAG-20 | P1: Upsert idempotente — AC1 | Tasks | Pending |
-| VIAG-21 | P1: Upsert idempotente — AC2 | Tasks | Pending |
-| VIAG-22 | P1: Upsert idempotente — AC3 | Tasks | Pending |
-| VIAG-23 | P1: Upsert idempotente — AC4 | Tasks | Pending |
+| VIAG-20 | P1: Upsert idempotente — AC1 | Execute | Implementing |
+| VIAG-21 | P1: Upsert idempotente — AC2 | Execute | Implementing |
+| VIAG-22 | P1: Upsert idempotente — AC3 | Execute | Implementing |
+| VIAG-23 | P1: Upsert idempotente — AC4 | Execute | Implementing |
 | VIAG-24 | P2: Quilometragem rodada — AC1 | Tasks | Pending |
 | VIAG-25 | P2: Quilometragem rodada — AC2 | Tasks | Pending |
 | VIAG-26 | P2: Quilometragem rodada — AC3 | Tasks | Pending |
