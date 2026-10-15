@@ -386,6 +386,7 @@ export type Database = {
           hodometro_final: number | null
           hodometro_inicial: number
           id: string
+          km_rodado: number | null
           motorista_id: string
           rota_id: string
           status: Database["public"]["Enums"]["status_viagem"]
@@ -399,6 +400,7 @@ export type Database = {
           hodometro_final?: number | null
           hodometro_inicial: number
           id?: string
+          km_rodado?: number | null
           motorista_id: string
           rota_id: string
           status?: Database["public"]["Enums"]["status_viagem"]
@@ -412,6 +414,7 @@ export type Database = {
           hodometro_final?: number | null
           hodometro_inicial?: number
           id?: string
+          km_rodado?: number | null
           motorista_id?: string
           rota_id?: string
           status?: Database["public"]["Enums"]["status_viagem"]
