@@ -287,6 +287,33 @@ describe('migration viagem_regras', () => {
       expect(await viagensDoVeiculo(veiculoId)).toBe(1);
     });
 
+    it('não expõe no texto do VG004 o hodômetro de viagens que o Motorista não enxerga (edge case)', async () => {
+      const veiculoId = await criarVeiculo();
+      await inserirViagem({
+        veiculoId,
+        motoristaId: MOTORISTA_A.id,
+        hodometroInicial: 1000,
+        hodometroFinal: 1500,
+        status: 'Finalizada',
+      });
+
+      let mensagem = '';
+      try {
+        await comoUsuario(db, MOTORISTA_B, (tx) =>
+          tx.query(
+            `insert into viagem (veiculo_id, rota_id, motorista_id, hodometro_inicial)
+             values ($1, $2, $3, 1499)`,
+            [veiculoId, rotaId, MOTORISTA_B.id],
+          ),
+        );
+      } catch (erro) {
+        mensagem = (erro as { message?: string }).message ?? '';
+      }
+
+      expect(mensagem).not.toBe('');
+      expect(mensagem).not.toMatch(/\d/);
+    });
+
     it('mantém as checks antigas: final igual ao inicial e Finalizada sem final dão 23514 (VIAG-11)', async () => {
       const veiculoId = await criarVeiculo();
 

@@ -111,9 +111,10 @@ begin
   from viagem v
   where v.veiculo_id = new.veiculo_id and v.id <> new.id;
 
+  -- A mensagem não traz os números: o último final pode ser de uma viagem de outro motorista,
+  -- que o Motorista não enxerga pelo RLS, e o texto do erro chega ao celular.
   if new.hodometro_inicial < ultimo_hodometro_final then
-    raise exception 'Hodômetro inicial % menor que o último hodômetro final do veículo (%).',
-      new.hodometro_inicial, ultimo_hodometro_final
+    raise exception 'Hodômetro inicial menor que o último hodômetro final do veículo.'
       using errcode = 'VG004';
   end if;
 
