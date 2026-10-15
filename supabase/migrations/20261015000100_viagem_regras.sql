@@ -111,13 +111,15 @@ begin
         perform 1 from veiculo v where v.id = new.veiculo_id for update;
 
         -- O final corrigido não pode passar do inicial de nenhuma viagem que veio depois
-        -- desta (inicial maior ou igual ao desta). Assim a correção vale também para o erro
-        -- para menos depois que a próxima viagem já abriu, e nunca fura a regra do VG004.
+        -- desta (inicial maior que o desta). Assim a correção vale também para o erro para
+        -- menos depois que a próxima viagem já abriu, e nunca fura a regra do VG004.
+        -- Maior, e não maior ou igual: inicial igual é a viagem cancelada sem rodar antes de
+        -- reabrir no mesmo hodômetro, que não veio depois e não pode travar a correção.
         if exists (
           select 1 from viagem v
           where v.veiculo_id = new.veiculo_id
             and v.id <> new.id
-            and v.hodometro_inicial >= old.hodometro_inicial
+            and v.hodometro_inicial > old.hodometro_inicial
             and v.hodometro_inicial < new.hodometro_final
         ) then
           raise exception 'Hodômetro final corrigido passa do hodômetro inicial de uma viagem posterior.'

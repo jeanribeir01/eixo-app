@@ -638,6 +638,23 @@ describe('migration viagem_regras', () => {
       expect((await lerHodometroFinal(anteriorId)).hodometro_final).toBe('1500.0');
     });
 
+    it('destrava o caminhão também quando a viagem foi cancelada sem rodar e reaberta no mesmo hodômetro (VIAG-29)', async () => {
+      // A cancelada começou em 15000, igual à reaberta: não veio depois dela, então não
+      // pode barrar a correção.
+      const veiculoId = await criarVeiculo();
+      const canceladaId = await inserirViagem({ veiculoId, hodometroInicial: 15000 });
+      await db.query(`update viagem set status = 'Cancelada' where id = $1`, [canceladaId]);
+      const reabertaId = await inserirViagem({ veiculoId, hodometroInicial: 15000 });
+      await db.query(`update viagem set status = 'Finalizada', hodometro_final = 152300 where id = $1`, [reabertaId]);
+
+      await corrigirFinal(GESTOR, reabertaId, 15230);
+      await inserirViagem({ veiculoId, hodometroInicial: 15230 });
+
+      expect((await lerHodometroFinal(reabertaId)).hodometro_final).toBe('15230.0');
+      expect(await viagensDoVeiculo(veiculoId)).toBe(3);
+      expect(await statusDoVeiculo(veiculoId)).toBe('EmViagem');
+    });
+
     it('rejeita com VG007 a correção que passa do inicial de viagem posterior (VIAG-30)', async () => {
       const veiculoId = await criarVeiculo();
       const anteriorId = await inserirViagem({ veiculoId, hodometroInicial: 1000, hodometroFinal: 1450, status: 'Finalizada' });
