@@ -9,6 +9,8 @@ import { criarBanco, comoSuperuser, comoUsuario, type Banco } from './helpers/db
 
 const MOTORISTA_A = { id: '76100000-0000-0000-0000-000000000001', perfil: 'Motorista' as const };
 const MOTORISTA_B = { id: '76100000-0000-0000-0000-000000000002', perfil: 'Motorista' as const };
+const ADMIN = { id: '76100000-0000-0000-0000-000000000003', perfil: 'Admin' as const };
+const GESTOR = { id: '76100000-0000-0000-0000-000000000004', perfil: 'Gestor de Frota' as const };
 
 type StatusVeiculo = 'Disponivel' | 'EmViagem' | 'EmManutencao' | 'Inativo';
 type StatusViagem = 'EmAndamento' | 'Finalizada' | 'Cancelada';
@@ -507,6 +509,24 @@ describe('migration viagem_regras', () => {
 
       expect(codigo).toBe('428C9');
       expect(await viagensDoVeiculo(veiculoId)).toBe(0);
+    });
+  });
+
+  describe('viagem não é apagada', () => {
+    it.each([
+      ['Admin', ADMIN],
+      ['Gestor de Frota', GESTOR],
+      ['Motorista dono da viagem', MOTORISTA_A],
+    ] as const)('delete como %s afeta 0 linhas e a viagem continua (VIAG-27)', async (_perfil, usuario) => {
+      const veiculoId = await criarVeiculo();
+      const id = await inserirViagem({ veiculoId, motoristaId: MOTORISTA_A.id });
+
+      const resultado = await comoUsuario(db, usuario, (tx) =>
+        tx.query('delete from viagem where id = $1 returning id', [id]),
+      );
+
+      expect(resultado.rows).toHaveLength(0);
+      expect(await viagensDoVeiculo(veiculoId)).toBe(1);
     });
   });
 });

@@ -156,3 +156,8 @@ $$;
 create trigger viagem_sincroniza_status_veiculo
   after insert or update of status on viagem
   for each row execute function sincroniza_status_veiculo();
+
+-- Viagem com hodômetro é histórico: o custo por km (US10) e a regra "hodômetro não regride"
+-- dependem dela. O caminho de desfazer é Cancelada. Sem policy, o RLS rejeita o delete de
+-- qualquer perfil (0 linhas afetadas), inclusive Admin — mesmo padrão de `veiculo` (EIX-56).
+drop policy viagem_delete on viagem;

@@ -262,8 +262,8 @@ T2 → T3 → T4 → T5 → T6 → T7 → T8
 
 **Done when**:
 
-- [ ] Admin, Gestor e Motorista: `delete` afeta 0 linhas e a viagem continua
-- [ ] Build gate verde (`typecheck`, `lint`, `test`)
+- [x] Admin, Gestor e Motorista: `delete` afeta 0 linhas e a viagem continua
+- [x] Build gate verde (`typecheck`, `lint`, `test`)
 
 **Tests**: integration
 **Gate**: build
