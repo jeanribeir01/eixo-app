@@ -76,11 +76,11 @@
 
 ## Handoff
 
-- **Feature**: `.specs/features/eix58-design-app` (épico EIX-58, sub-issues EIX-59 a EIX-72 + EIX-11)
-- **Phase / Task**: EIX-60 (fases 2 e 3, T3–T12) concluída localmente; Verifier PASS na iteração 3 (`validation.md`)
-- **Completed**: T3–T12 (236f7b6..d7210ed); ajustes do Verifier (0415cb0, edab078, 3247c01); 611 testes do app e 163 do Supabase verdes
+- **Feature**: `.specs/features/eix76-db-viagem` (EIX-76, DB de viagem)
+- **Phase / Task**: Execute concluído — T1–T8 + correção do Verifier; Verifier PASS na iteração 2 (`validation.md`)
+- **Completed**: 36838bf..6e1e0e1; 284 testes do Supabase e 794 do app verdes; lições L-019..L-021 (candidatas)
 - **In-progress** (file:line): none
-- **Next step**: Jean confere no emulador a lista "Manual Verification" do `validation.md` e confirma as 3 edições da spec (AC 3, 11 e 12 de NAV) → push + PR da EIX-60 (depende do PR #17) → EIX-61 (T13–T20)
-- **Blockers**: ok do Jean para push/PR
+- **Next step**: Jean roda a pré-checagem do cabeçalho de `supabase/migrations/20261015000100_viagem_regras.sql` na nuvem → `db push` → `gen types` (`km_rodado` em `src/types/database.ts`) → push + PR (registrar `Finalizada` vs "Concluída") → avisar o Eduardo (EIX-40/EIX-41)
+- **Blockers**: ok do Jean para `db push`, `gen types` e push/PR; decisão sobre tirar os hodômetros do texto do `VG004`
 - **Uncommitted files**: none
-- **Branch**: feat/eix-60-design-fundacao-navegacao (local, com merge da chore/eix-59)
+- **Branch**: feat/eix-76-db-viagem (local, sem push)

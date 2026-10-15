@@ -192,35 +192,35 @@ A EIX-40 (US08, tela de viagem) e a EIX-41 (sincronização offline) dependem de
 
 | Requirement ID | Story | Phase | Status |
 | --- | --- | --- | --- |
-| VIAG-01 | P1: Um veículo, uma viagem em andamento — AC1 | Execute | Implementing |
-| VIAG-02 | P1: Um veículo, uma viagem em andamento — AC2 | Execute | Implementing |
-| VIAG-03 | P1: Um veículo, uma viagem em andamento — AC3 | Execute | Implementing |
-| VIAG-04 | P1: Veículo indisponível — AC1 | Execute | Implementing |
-| VIAG-05 | P1: Veículo indisponível — AC2 | Execute | Implementing |
-| VIAG-06 | P1: Veículo indisponível — AC3 | Execute | Implementing |
-| VIAG-07 | P1: Hodômetro não regride — AC1 | Execute | Implementing |
-| VIAG-08 | P1: Hodômetro não regride — AC2 | Execute | Implementing |
-| VIAG-09 | P1: Hodômetro não regride — AC3 | Execute | Implementing |
-| VIAG-10 | P1: Hodômetro não regride — AC4 | Execute | Implementing |
-| VIAG-11 | P1: Hodômetro não regride — AC5 | Execute | Implementing |
-| VIAG-12 | P1: Status automático — AC1 | Execute | Implementing |
-| VIAG-13 | P1: Status automático — AC2 | Execute | Implementing |
-| VIAG-14 | P1: Status automático — AC3 | Execute | Implementing |
-| VIAG-15 | P1: Status automático — AC4 | Execute | Implementing |
-| VIAG-16 | P1: Status automático — AC5 | Execute | Implementing |
-| VIAG-17 | P1: Viagem encerrada é terminal — AC1 | Execute | Implementing |
-| VIAG-18 | P1: Viagem encerrada é terminal — AC2 | Execute | Implementing |
-| VIAG-19 | P1: Viagem encerrada é terminal — AC3 | Execute | Implementing |
-| VIAG-20 | P1: Upsert idempotente — AC1 | Execute | Implementing |
-| VIAG-21 | P1: Upsert idempotente — AC2 | Execute | Implementing |
-| VIAG-22 | P1: Upsert idempotente — AC3 | Execute | Implementing |
-| VIAG-23 | P1: Upsert idempotente — AC4 | Execute | Implementing |
-| VIAG-24 | P2: Quilometragem rodada — AC1 | Execute | Implementing |
-| VIAG-25 | P2: Quilometragem rodada — AC2 | Execute | Implementing |
-| VIAG-26 | P2: Quilometragem rodada — AC3 | Execute | Implementing |
-| VIAG-27 | P2: Viagem não é apagada — AC1 | Execute | Implementing |
+| VIAG-01 | P1: Um veículo, uma viagem em andamento — AC1 | Execute | Verified |
+| VIAG-02 | P1: Um veículo, uma viagem em andamento — AC2 | Execute | Verified |
+| VIAG-03 | P1: Um veículo, uma viagem em andamento — AC3 | Execute | Verified |
+| VIAG-04 | P1: Veículo indisponível — AC1 | Execute | Verified |
+| VIAG-05 | P1: Veículo indisponível — AC2 | Execute | Verified |
+| VIAG-06 | P1: Veículo indisponível — AC3 | Execute | Verified |
+| VIAG-07 | P1: Hodômetro não regride — AC1 | Execute | Verified |
+| VIAG-08 | P1: Hodômetro não regride — AC2 | Execute | Verified |
+| VIAG-09 | P1: Hodômetro não regride — AC3 | Execute | Verified |
+| VIAG-10 | P1: Hodômetro não regride — AC4 | Execute | Verified |
+| VIAG-11 | P1: Hodômetro não regride — AC5 | Execute | Verified |
+| VIAG-12 | P1: Status automático — AC1 | Execute | Verified |
+| VIAG-13 | P1: Status automático — AC2 | Execute | Verified |
+| VIAG-14 | P1: Status automático — AC3 | Execute | Verified |
+| VIAG-15 | P1: Status automático — AC4 | Execute | Verified |
+| VIAG-16 | P1: Status automático — AC5 | Execute | Verified |
+| VIAG-17 | P1: Viagem encerrada é terminal — AC1 | Execute | Verified |
+| VIAG-18 | P1: Viagem encerrada é terminal — AC2 | Execute | Verified |
+| VIAG-19 | P1: Viagem encerrada é terminal — AC3 | Execute | Verified |
+| VIAG-20 | P1: Upsert idempotente — AC1 | Execute | Verified |
+| VIAG-21 | P1: Upsert idempotente — AC2 | Execute | Verified |
+| VIAG-22 | P1: Upsert idempotente — AC3 | Execute | Verified |
+| VIAG-23 | P1: Upsert idempotente — AC4 | Execute | Verified |
+| VIAG-24 | P2: Quilometragem rodada — AC1 | Execute | Verified |
+| VIAG-25 | P2: Quilometragem rodada — AC2 | Execute | Verified |
+| VIAG-26 | P2: Quilometragem rodada — AC3 | Execute | Verified |
+| VIAG-27 | P2: Viagem não é apagada — AC1 | Execute | Verified |
 
-**Coverage:** 27 total, 0 mapped to tasks, 27 unmapped ⚠️ (mapeados no `tasks.md`)
+**Coverage:** 27 total, 27 mapped to tasks, 0 unmapped
 
 ---
 

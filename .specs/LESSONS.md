@@ -120,6 +120,24 @@ Seen once or not yet corroborated. Tracked, not trusted.
 - evidence: validation.md N6 (src/ui/Screen.tsx:50; design.md:89) (ui, overlay)
 - last seen: 2026-10-07T02:27:17Z
 
+### L-019 - When a trigger branches by status or operation, test each validation rule on every branch it must run in, not only on the main path
+- signal: `surviving_mutant` · recurrence: 1 feature(s) · scope: `supabase, triggers` · harmful: 0
+- features: eix76-db-viagem
+- evidence: validation.md M20 (viagem_regras.sql:79, VIAG-07) (supabase, triggers)
+- last seen: 2026-10-15T12:43:41Z
+
+### L-020 - When a rule compares a row against its siblings, test a row whose own values would violate the rule so excluding the row itself is proven
+- signal: `surviving_mutant` · recurrence: 1 feature(s) · scope: `supabase, triggers` · harmful: 0
+- features: eix76-db-viagem
+- evidence: validation.md M02 (viagem_regras.sql:112, VIAG-09) (supabase, triggers)
+- last seen: 2026-10-15T12:43:41Z
+
+### L-021 - Name the exact SQLSTATE in every rejection criterion and state which check answers first when a before trigger and RLS both reject
+- signal: `spec_precision_gap` · recurrence: 1 feature(s) · scope: `supabase, rls, triggers` · harmful: 0
+- features: eix76-db-viagem
+- evidence: validation.md VIAG-26 e edge case RLS (supabase, rls, triggers)
+- last seen: 2026-10-15T12:43:41Z
+
 ## Quarantined (failed when applied - ignore)
 
 A confirmed lesson that recurred alongside failure. Kept for the maintainer to review.
