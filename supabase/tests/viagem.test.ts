@@ -188,6 +188,21 @@ describe('migration viagem_regras', () => {
       expect(await viagensDoVeiculo(veiculoId)).toBe(1);
     });
 
+    it.each(['Finalizada', 'Cancelada'] as const)(
+      'rejeita com VG004 a viagem que já chega %s com hodômetro abaixo do último final (VIAG-07)',
+      async (status) => {
+        const veiculoId = await criarVeiculo();
+        await inserirViagem({ veiculoId, hodometroInicial: 1000, hodometroFinal: 1500, status: 'Finalizada' });
+
+        const codigo = await codigoDoErro(
+          inserirViagem({ veiculoId, hodometroInicial: 1400, hodometroFinal: 1450, status }),
+        );
+
+        expect(codigo).toBe('VG004');
+        expect(await viagensDoVeiculo(veiculoId)).toBe(1);
+      },
+    );
+
     it('compara com o maior final, inclusive de viagem Cancelada (VIAG-07)', async () => {
       const veiculoId = await criarVeiculo();
       await inserirViagem({ veiculoId, hodometroInicial: 1000, hodometroFinal: 1500, status: 'Finalizada' });
@@ -231,6 +246,21 @@ describe('migration viagem_regras', () => {
         [abertaId],
       );
       expect(gravada.rows[0]!.hodometro_inicial).toBe('1600.0');
+    });
+
+    it('ignora o próprio hodômetro final ao conferir o inicial da viagem (VIAG-09)', async () => {
+      // Viagem aberta com o final já preenchido: o "último final" é das OUTRAS viagens do
+      // veículo, então subir o inicial de 1000 para 1100 (abaixo do próprio final) passa.
+      const veiculoId = await criarVeiculo();
+      const id = await inserirViagem({ veiculoId, hodometroInicial: 1000, hodometroFinal: 1500 });
+
+      await db.query('update viagem set hodometro_inicial = 1100 where id = $1', [id]);
+
+      const gravada = await db.query<{ hodometro_inicial: string }>(
+        'select hodometro_inicial from viagem where id = $1',
+        [id],
+      );
+      expect(gravada.rows[0]!.hodometro_inicial).toBe('1100.0');
     });
 
     it('barra o Motorista pelo final da viagem de outro motorista, que ele não enxerga (VIAG-10)', async () => {

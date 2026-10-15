@@ -160,7 +160,7 @@ A EIX-40 (US08, tela de viagem) e a EIX-41 (sincronização offline) dependem de
 
 1. WHEN a `viagem` has `hodometro_final` filled THEN the system SHALL expose `km_rodado = hodometro_final - hodometro_inicial`.
 2. WHILE `hodometro_final` is null the system SHALL keep `km_rodado` null.
-3. IF a write sets `km_rodado` explicitly THEN the system SHALL reject it.
+3. IF a write sets `km_rodado` explicitly THEN the system SHALL reject it with SQLSTATE `428C9`.
 
 **Independent Test**: Viagem 1000 → 1234,5 tem `km_rodado = 234.5`; aberta tem `null`.
 
@@ -182,7 +182,7 @@ A EIX-40 (US08, tela de viagem) e a EIX-41 (sincronização offline) dependem de
 
 ## Edge Cases
 
-- IF a Motorista inserts a `viagem` for another motorista THEN the system SHALL keep rejecting it by RLS (comportamento atual preservado).
+- IF a Motorista inserts a `viagem` for another motorista on an available vehicle THEN the system SHALL keep rejecting it by RLS with SQLSTATE `42501` (comportamento atual preservado). Num veículo ocupado, em manutenção ou inativo o trigger roda antes do RLS e a rejeição chega como `VG001`/`VG002`/`VG003` — a escrita é barrada do mesmo jeito.
 - WHEN a Motorista opens their own `viagem` on an available vehicle THEN the system SHALL accept it (RLS + triggers juntos).
 - WHEN a vehicle has no previous trip THEN the system SHALL accept any `hodometro_inicial >= 0`.
 
