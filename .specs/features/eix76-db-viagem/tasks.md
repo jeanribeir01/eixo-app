@@ -126,9 +126,9 @@ T2 → T3 → T4 → T5 → T6 → T7 → T8
 
 **Done when**:
 
-- [ ] `EmManutencao` → `VG002`; `Inativo` → `VG003`
-- [ ] `Finalizada` / `Cancelada` retroativa aceita nesses veículos
-- [ ] Gate quick verde
+- [x] `EmManutencao` → `VG002`; `Inativo` → `VG003`
+- [x] `Finalizada` / `Cancelada` retroativa aceita nesses veículos
+- [x] Gate quick verde
 
 **Tests**: integration
 **Gate**: quick

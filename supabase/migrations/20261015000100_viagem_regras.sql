@@ -15,6 +15,8 @@
 -- banco nunca chega ao usuário):
 --   VG001  veículo já está em outra viagem em andamento
 --   23505  mesma regra, pelo índice único (só aparece se o trigger for contornado)
+--   VG002  veículo em manutenção
+--   VG003  veículo inativo
 -- Os códigos VG*** são nossos, no mesmo esquema dos MN*** da manutenção: classe "VG"
 -- (viagem) fica na faixa que o padrão SQL deixa livre para a aplicação.
 
@@ -31,6 +33,8 @@ language plpgsql
 security definer
 set search_path = public
 as $$
+declare
+  status_veiculo_atual status_veiculo;
 begin
   if tg_op = 'INSERT' then
     -- No upsert, o Postgres roda este trigger de insert mesmo quando o `id` já existe, e em
@@ -42,13 +46,26 @@ begin
 
     -- Trava o veículo: duas aberturas ao mesmo tempo no mesmo veículo ficam em fila, e a
     -- segunda já enxerga a primeira. É o mesmo lock que `registrar_manutencao` usa.
-    perform 1 from veiculo v where v.id = new.veiculo_id for update;
+    select v.status into status_veiculo_atual from veiculo v where v.id = new.veiculo_id for update;
 
-    if new.status = 'EmAndamento' and exists (
-      select 1 from viagem v
-      where v.veiculo_id = new.veiculo_id and v.status = 'EmAndamento'
-    ) then
-      raise exception 'Veículo já está em uma viagem em andamento.' using errcode = 'VG001';
+    -- Disponibilidade só vale para quem abre viagem agora. Viagem que já chega encerrada
+    -- (registro retroativo, ou o sync subindo abrir + fechar numa operação só) aconteceu no
+    -- passado, e o status de hoje do veículo não diz nada sobre ela.
+    if new.status = 'EmAndamento' then
+      if exists (
+        select 1 from viagem v
+        where v.veiculo_id = new.veiculo_id and v.status = 'EmAndamento'
+      ) then
+        raise exception 'Veículo já está em uma viagem em andamento.' using errcode = 'VG001';
+      end if;
+
+      if status_veiculo_atual = 'EmManutencao' then
+        raise exception 'Veículo em manutenção não pode sair em viagem.' using errcode = 'VG002';
+      end if;
+
+      if status_veiculo_atual = 'Inativo' then
+        raise exception 'Veículo inativo não pode sair em viagem.' using errcode = 'VG003';
+      end if;
     end if;
   end if;
 

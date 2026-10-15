@@ -139,4 +139,37 @@ describe('migration viagem_regras', () => {
       },
     );
   });
+
+  describe('veículo indisponível', () => {
+    it('rejeita abrir viagem em veículo EmManutencao com VG002 (VIAG-04)', async () => {
+      const veiculoId = await criarVeiculo('EmManutencao');
+
+      const codigo = await codigoDoErro(inserirViagem({ veiculoId }));
+
+      expect(codigo).toBe('VG002');
+      expect(await viagensDoVeiculo(veiculoId)).toBe(0);
+    });
+
+    it('rejeita abrir viagem em veículo Inativo com VG003 (VIAG-05)', async () => {
+      const veiculoId = await criarVeiculo('Inativo');
+
+      const codigo = await codigoDoErro(inserirViagem({ veiculoId }));
+
+      expect(codigo).toBe('VG003');
+      expect(await viagensDoVeiculo(veiculoId)).toBe(0);
+    });
+
+    it.each([
+      ['EmManutencao', 'Finalizada'],
+      ['EmManutencao', 'Cancelada'],
+      ['Inativo', 'Finalizada'],
+      ['Inativo', 'Cancelada'],
+    ] as const)('aceita viagem retroativa em veículo %s quando já chega %s (VIAG-06)', async (statusVeiculo, status) => {
+      const veiculoId = await criarVeiculo(statusVeiculo);
+
+      await inserirViagem({ veiculoId, hodometroFinal: 1200, status });
+
+      expect(await viagensDoVeiculo(veiculoId)).toBe(1);
+    });
+  });
 });
