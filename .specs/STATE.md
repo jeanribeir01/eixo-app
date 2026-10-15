@@ -77,10 +77,10 @@
 ## Handoff
 
 - **Feature**: `.specs/features/eix76-db-viagem` (EIX-76, DB de viagem)
-- **Phase / Task**: Execute concluído — T1–T9; Verifier PASS na iteração 4 (`validation.md`)
-- **Completed**: 36838bf..40cc577; 296 testes do Supabase e 794 do app verdes; lições L-019..L-022 (candidatas)
+- **Phase / Task**: concluída — Verifier PASS (iteração 4); migration aplicada na nuvem em 15/10/2026; PR #33 aberto
+- **Completed**: 36838bf..a14b5aa; `src/types/database.ts` regerado pela CLI (`km_rodado`); avisos ao Eduardo comentados na EIX-40 e na EIX-41
 - **In-progress** (file:line): none
-- **Next step**: Jean roda a pré-checagem do cabeçalho de `supabase/migrations/20261015000100_viagem_regras.sql` na nuvem → `db push` → `gen types` (`km_rodado` em `src/types/database.ts`) → push + PR (registrar `Finalizada` vs "Concluída") → avisar o Eduardo (EIX-40: confirmação ao fechar + tradução VG001..VG007; EIX-41: reenvio após correção volta VG005)
-- **Blockers**: ok do Jean para `db push`, `gen types` e push/PR; conferência manual dos locks com duas sessões num Postgres real
+- **Next step**: review do PR #33 (revisor: Eduardo) → squash and merge → fechar a EIX-76 (quem fecha é o Jean) → EIX-77 / EIX-78
+- **Blockers**: aprovação do PR
 - **Uncommitted files**: none
-- **Branch**: feat/eix-76-db-viagem (local, sem push)
+- **Branch**: feat/eix-76-db-viagem (no remoto, PR #33)
