@@ -198,11 +198,11 @@ A EIX-40 (US08, tela de viagem) e a EIX-41 (sincronização offline) dependem de
 | VIAG-04 | P1: Veículo indisponível — AC1 | Execute | Implementing |
 | VIAG-05 | P1: Veículo indisponível — AC2 | Execute | Implementing |
 | VIAG-06 | P1: Veículo indisponível — AC3 | Execute | Implementing |
-| VIAG-07 | P1: Hodômetro não regride — AC1 | Tasks | Pending |
-| VIAG-08 | P1: Hodômetro não regride — AC2 | Tasks | Pending |
-| VIAG-09 | P1: Hodômetro não regride — AC3 | Tasks | Pending |
-| VIAG-10 | P1: Hodômetro não regride — AC4 | Tasks | Pending |
-| VIAG-11 | P1: Hodômetro não regride — AC5 | Tasks | Pending |
+| VIAG-07 | P1: Hodômetro não regride — AC1 | Execute | Implementing |
+| VIAG-08 | P1: Hodômetro não regride — AC2 | Execute | Implementing |
+| VIAG-09 | P1: Hodômetro não regride — AC3 | Execute | Implementing |
+| VIAG-10 | P1: Hodômetro não regride — AC4 | Execute | Implementing |
+| VIAG-11 | P1: Hodômetro não regride — AC5 | Execute | Implementing |
 | VIAG-12 | P1: Status automático — AC1 | Tasks | Pending |
 | VIAG-13 | P1: Status automático — AC2 | Tasks | Pending |
 | VIAG-14 | P1: Status automático — AC3 | Tasks | Pending |

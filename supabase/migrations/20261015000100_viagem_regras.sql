@@ -17,6 +17,7 @@
 --   23505  mesma regra, pelo índice único (só aparece se o trigger for contornado)
 --   VG002  veículo em manutenção
 --   VG003  veículo inativo
+--   VG004  hodômetro inicial menor que o último hodômetro final do veículo
 -- Os códigos VG*** são nossos, no mesmo esquema dos MN*** da manutenção: classe "VG"
 -- (viagem) fica na faixa que o padrão SQL deixa livre para a aplicação.
 
@@ -35,6 +36,7 @@ set search_path = public
 as $$
 declare
   status_veiculo_atual status_veiculo;
+  ultimo_hodometro_final numeric(12, 1);
 begin
   if tg_op = 'INSERT' then
     -- No upsert, o Postgres roda este trigger de insert mesmo quando o `id` já existe, e em
@@ -67,6 +69,24 @@ begin
         raise exception 'Veículo inativo não pode sair em viagem.' using errcode = 'VG003';
       end if;
     end if;
+  elsif new.hodometro_inicial is distinct from old.hodometro_inicial then
+    -- Mesmo lock do insert: uma viagem que fecha no meio desta conta não escapa da comparação.
+    perform 1 from veiculo v where v.id = new.veiculo_id for update;
+  else
+    return new;
+  end if;
+
+  -- O "último" hodômetro final é o maior: hodômetro só sobe, e `data_fim` é opcional e vem do
+  -- relógio do celular. Entra viagem de qualquer status, inclusive Cancelada que chegou a
+  -- rodar (final preenchido). Igual é aceito: o caminhão sai de onde parou.
+  select max(v.hodometro_final) into ultimo_hodometro_final
+  from viagem v
+  where v.veiculo_id = new.veiculo_id and v.id <> new.id;
+
+  if new.hodometro_inicial < ultimo_hodometro_final then
+    raise exception 'Hodômetro inicial % menor que o último hodômetro final do veículo (%).',
+      new.hodometro_inicial, ultimo_hodometro_final
+      using errcode = 'VG004';
   end if;
 
   return new;

@@ -152,11 +152,11 @@ T2 → T3 → T4 → T5 → T6 → T7 → T8
 
 **Done when**:
 
-- [ ] Menor que o maior final → `VG004`; igual → aceito; sem viagem anterior → aceito
-- [ ] Update do inicial de viagem aberta para baixo → `VG004`
-- [ ] Motorista B (via `comoUsuario`) é barrado pelo final da viagem do motorista A
-- [ ] Checks antigas continuam com `23514`
-- [ ] Gate quick verde
+- [x] Menor que o maior final → `VG004`; igual → aceito; sem viagem anterior → aceito
+- [x] Update do inicial de viagem aberta para baixo → `VG004`
+- [x] Motorista B (via `comoUsuario`) é barrado pelo final da viagem do motorista A
+- [x] Checks antigas continuam com `23514`
+- [x] Gate quick verde
 
 **Tests**: integration
 **Gate**: quick
