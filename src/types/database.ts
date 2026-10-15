@@ -115,6 +115,7 @@ export type Database = {
       manutencao: {
         Row: {
           data_atualizacao: string
+          data_conclusao: string | null
           data_inclusao: string
           data_manutencao: string
           descricao: string
@@ -126,6 +127,7 @@ export type Database = {
         }
         Insert: {
           data_atualizacao?: string
+          data_conclusao?: string | null
           data_inclusao?: string
           data_manutencao: string
           descricao: string
@@ -137,6 +139,7 @@ export type Database = {
         }
         Update: {
           data_atualizacao?: string
+          data_conclusao?: string | null
           data_inclusao?: string
           data_manutencao?: string
           descricao?: string
@@ -263,28 +266,37 @@ export type Database = {
       }
       rota: {
         Row: {
+          ativa: boolean
           cidade_destino: string
           cidade_origem: string
           data_atualizacao: string
           data_inclusao: string
           distancia_estimada_km: number
           id: string
+          uf_destino: Database["public"]["Enums"]["uf"]
+          uf_origem: Database["public"]["Enums"]["uf"]
         }
         Insert: {
+          ativa?: boolean
           cidade_destino: string
           cidade_origem: string
           data_atualizacao?: string
           data_inclusao?: string
           distancia_estimada_km: number
           id?: string
+          uf_destino: Database["public"]["Enums"]["uf"]
+          uf_origem: Database["public"]["Enums"]["uf"]
         }
         Update: {
+          ativa?: boolean
           cidade_destino?: string
           cidade_origem?: string
           data_atualizacao?: string
           data_inclusao?: string
           distancia_estimada_km?: number
           id?: string
+          uf_destino?: Database["public"]["Enums"]["uf"]
+          uf_origem?: Database["public"]["Enums"]["uf"]
         }
         Relationships: []
       }
@@ -439,6 +451,10 @@ export type Database = {
         Returns: Database["public"]["Enums"]["perfil_nome"]
       }
       auth_usuario_id: { Args: never; Returns: string }
+      concluir_manutencao: {
+        Args: { id: string }
+        Returns: Database["public"]["Enums"]["status_veiculo"]
+      }
       criar_divida: {
         Args: {
           categoria_id: string
@@ -452,6 +468,18 @@ export type Database = {
         Returns: string
       }
       excluir_divida: { Args: { id: string }; Returns: Json }
+      normaliza_cidade: { Args: { cidade: string }; Returns: string }
+      registrar_manutencao: {
+        Args: {
+          data_manutencao: string
+          descricao: string
+          forma_pagamento_id: string
+          status_pagamento: Database["public"]["Enums"]["status_pagamento"]
+          valor: number
+          veiculo_id: string
+        }
+        Returns: string
+      }
       resumo_caixa: { Args: { referencia?: string }; Returns: Json }
     }
     Enums: {
@@ -461,6 +489,34 @@ export type Database = {
       status_veiculo: "Disponivel" | "EmViagem" | "EmManutencao" | "Inativo"
       status_viagem: "EmAndamento" | "Finalizada" | "Cancelada"
       tipo_categoria: "Entrada" | "Saida"
+      uf:
+        | "AC"
+        | "AL"
+        | "AM"
+        | "AP"
+        | "BA"
+        | "CE"
+        | "DF"
+        | "ES"
+        | "GO"
+        | "MA"
+        | "MG"
+        | "MS"
+        | "MT"
+        | "PA"
+        | "PB"
+        | "PE"
+        | "PI"
+        | "PR"
+        | "RJ"
+        | "RN"
+        | "RO"
+        | "RR"
+        | "RS"
+        | "SC"
+        | "SE"
+        | "SP"
+        | "TO"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -594,6 +650,35 @@ export const Constants = {
       status_veiculo: ["Disponivel", "EmViagem", "EmManutencao", "Inativo"],
       status_viagem: ["EmAndamento", "Finalizada", "Cancelada"],
       tipo_categoria: ["Entrada", "Saida"],
+      uf: [
+        "AC",
+        "AL",
+        "AM",
+        "AP",
+        "BA",
+        "CE",
+        "DF",
+        "ES",
+        "GO",
+        "MA",
+        "MG",
+        "MS",
+        "MT",
+        "PA",
+        "PB",
+        "PE",
+        "PI",
+        "PR",
+        "RJ",
+        "RN",
+        "RO",
+        "RR",
+        "RS",
+        "SC",
+        "SE",
+        "SP",
+        "TO",
+      ],
     },
   },
 } as const
