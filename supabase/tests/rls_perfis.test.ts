@@ -44,6 +44,10 @@ describe('EIX-32: RLS por perfil', () => {
   let categoriaId: string;
   let formaPagamentoId: string;
   let veiculoId: string;
+  let veiculoOutroMotoristaId: string;
+  // Sem viagem aberta: o teste de RLS-04 precisa que só o RLS barre o insert. Num veículo
+  // ocupado, o trigger da EIX-76 (VG001) respondia antes do RLS.
+  let veiculoLivreId: string;
   let rotaId: string;
 
   // Total de linhas sem RLS: "lê todas" (RLS-05, RLS-09) compara com isto, não com "> 0".
@@ -77,6 +81,19 @@ describe('EIX-32: RLS por perfil', () => {
            values ('EIX3200', 'Volvo', 'FH', 10000) returning id`,
         )
       ).rows[0]!.id;
+      // Um veículo por viagem aberta (EIX-76).
+      veiculoOutroMotoristaId = (
+        await tx.query<{ id: string }>(
+          `insert into veiculo (placa, marca, modelo, capacidade_carga)
+           values ('EIX3201', 'Volvo', 'FH', 10000) returning id`,
+        )
+      ).rows[0]!.id;
+      veiculoLivreId = (
+        await tx.query<{ id: string }>(
+          `insert into veiculo (placa, marca, modelo, capacidade_carga)
+           values ('EIX3202', 'Volvo', 'FH', 10000) returning id`,
+        )
+      ).rows[0]!.id;
       rotaId = (
         await tx.query<{ id: string }>(
           `insert into rota (cidade_origem, uf_origem, cidade_destino, uf_destino, distancia_estimada_km)
@@ -86,8 +103,8 @@ describe('EIX-32: RLS por perfil', () => {
 
       await tx.query(
         `insert into viagem (veiculo_id, rota_id, motorista_id, hodometro_inicial)
-         values ($1, $2, $3, 1000), ($1, $2, $4, 2000)`,
-        [veiculoId, rotaId, MOTORISTA, OUTRO_MOTORISTA],
+         values ($1, $2, $3, 1000), ($4, $2, $5, 2000)`,
+        [veiculoId, rotaId, MOTORISTA, veiculoOutroMotoristaId, OUTRO_MOTORISTA],
       );
       await tx.query(
         `insert into manutencao (veiculo_id, descricao, data_manutencao, valor)
@@ -130,7 +147,7 @@ describe('EIX-32: RLS por perfil', () => {
           tx.query(
             `insert into viagem (veiculo_id, rota_id, motorista_id, hodometro_inicial)
              values ($1, $2, $3, 3000)`,
-            [veiculoId, rotaId, OUTRO_MOTORISTA],
+            [veiculoLivreId, rotaId, OUTRO_MOTORISTA],
           ),
         ),
       );

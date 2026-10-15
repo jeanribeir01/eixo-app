@@ -10,7 +10,7 @@ Implement these tasks with the `tlc-spec-driven` skill: **activate it by name an
 
 **Spec**: `.specs/features/eix76-db-viagem/spec.md`
 **Design**: inline (sem `design.md`) — uma migration nova `supabase/migrations/20261015000100_viagem_regras.sql`, construída task a task, no molde de `20261014000300_manutencao_rpc.sql` (comentário de cabeçalho com a conferência antes do `db push` e a tabela de SQLSTATEs). Duas funções de trigger `security definer` + `set search_path = public`: `valida_viagem()` (`before insert or update`) e `sincroniza_status_veiculo()` (`after insert or update of status`).
-**Status**: Draft
+**Status**: In Progress
 
 ---
 
@@ -73,9 +73,9 @@ T2 → T3 → T4 → T5 → T6 → T7 → T8
 
 **Done when**:
 
-- [ ] `rls.test.ts` e `rls_perfis.test.ts` sem duas viagens abertas no mesmo veículo
-- [ ] Nenhuma asserção removida ou afrouxada
-- [ ] Gate full verde (mesma contagem de testes de antes)
+- [x] `rls.test.ts` e `rls_perfis.test.ts` sem duas viagens abertas no mesmo veículo
+- [x] Nenhuma asserção removida ou afrouxada
+- [x] Gate full verde (mesma contagem de testes de antes)
 
 **Tests**: integration
 **Gate**: full
