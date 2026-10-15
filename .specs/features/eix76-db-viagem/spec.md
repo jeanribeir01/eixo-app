@@ -16,6 +16,7 @@ A EIX-40 (US08, tela de viagem) e a EIX-41 (sincronização offline) dependem de
 | --- | --- |
 | Tela de viagem, formulário, Zod e repositório (`src/features/viagens/**`) | EIX-40 (Eduardo) |
 | Outbox, SQLite/Drizzle e espelho local de `viagem` | EIX-78 (fundação) e EIX-41 (Eduardo) |
+| Confirmação ao fechar a viagem ("X km rodados, confirma?") e aviso quando o km rodado passa muito da distância da rota | Prevenção do erro de digitação na tela: vira critério da EIX-40 (Eduardo), decidido com o Jean em 15/10/2026. Esta task cuida da correção depois do fato |
 | Renomear o enum `Finalizada` → `Concluída` | Decidido na task: o banco mantém `Finalizada`; a EIX-40 traduz só o rótulo (como `EmManutencao` → "Em Manutenção"). Registrado no PR |
 | Checar sobreposição de faixa de hodômetro entre uma viagem retroativa e uma aberta | Nenhum AC pede; a regra é "não regride em relação ao maior final" (ver Assumptions) |
 | Hodômetro da `manutencao` entrar na conta do "último hodômetro" | AC da task fala só em `hodometro_final` de viagem |
@@ -29,7 +30,9 @@ A EIX-40 (US08, tela de viagem) e a EIX-41 (sincronização offline) dependem de
 
 | Assumption / decision | Chosen default | Rationale | Confirmed? |
 | --- | --- | --- | --- |
-| Viagem encerrada | `Finalizada` e `Cancelada` são terminais: status, `hodometro_inicial`, `hodometro_final` e `veiculo_id` não mudam mais (`VG005`); reenviar os mesmos valores é aceito | Decidido com o usuário. Protege a regra de hodômetro das viagens seguintes e faz um reenvio atrasado de "abrir" ser rejeitado em vez de reabrir a viagem | y |
+| Viagem encerrada | `Finalizada` e `Cancelada` são terminais: status, `hodometro_inicial` e `veiculo_id` não mudam mais (`VG005`); `hodometro_final` só muda pela correção do Gestor/Admin (abaixo); reenviar os mesmos valores é aceito | Decidido com o usuário. Protege a regra de hodômetro das viagens seguintes e faz um reenvio atrasado de "abrir" ser rejeitado em vez de reabrir a viagem | y |
+| Erro de digitação no hodômetro final | Admin e Gestor de Frota corrigem o `hodometro_final` de viagem encerrada, desde que o valor antigo e o novo sejam não nulos e o novo não passe do `hodometro_inicial` de nenhuma outra viagem do veículo com `hodometro_inicial >=` o desta (as que vieram depois). Passar → `VG007`. Motorista não corrige (`VG005`) | Decidido com o usuário em 15/10/2026 (proposta A). Sem isso, um final digitado a mais (152.300 em vez de 15.230) trava o caminhão em `VG004` e só sai por SQL. O corte "não fura viagem posterior" cobre também o erro para menos depois que a próxima viagem já abriu, que a regra literal "só a última viagem" deixaria sem correção | y |
+| Reenvio do fechamento depois de uma correção | O payload do Motorista traz o final antigo, diferente do corrigido → `VG005`, e a EIX-41 manda para a fila de revisão | A correção do Gestor vence; o sync não desfaz a correção em silêncio | n |
 | Troca de veículo | `veiculo_id` não muda depois do insert (`VG006`); para corrigir, cancela e abre outra | Decidido com o usuário. Evita liberar um veículo e prender outro no mesmo trigger | y |
 | Insert já encerrado | Insert direto como `Finalizada`/`Cancelada` é aceito; hodômetro é validado, disponibilidade e status do veículo não entram | Decidido com o usuário. Deixa a EIX-41 livre para coalescer abrir + fechar numa operação; registro retroativo cabe | y |
 | "Último `hodometro_final` registrado" | O **maior** `hodometro_final` não nulo entre as outras viagens do veículo (qualquer status, inclusive `Cancelada` com final preenchido); igual é aceito (`>=`) | Hodômetro só sobe, então o maior é o último real; não depende de `data_fim`, que é opcional e vem do celular | n |
@@ -125,11 +128,29 @@ A EIX-40 (US08, tela de viagem) e a EIX-41 (sincronização offline) dependem de
 
 **Acceptance Criteria**:
 
-1. IF a `viagem` with `status` `Finalizada` or `Cancelada` is updated to a different `status`, `hodometro_inicial` or `hodometro_final` THEN the system SHALL reject it with SQLSTATE `VG005`.
+1. IF a `viagem` with `status` `Finalizada` or `Cancelada` is updated to a different `status` or `hodometro_inicial`, or to a different `hodometro_final` by anyone other than Admin or Gestor de Frota, THEN the system SHALL reject it with SQLSTATE `VG005`.
 2. WHEN a `viagem` with `status` `Finalizada` or `Cancelada` is updated with the same `status`, `hodometro_inicial` and `hodometro_final` THEN the system SHALL accept it.
 3. IF a `viagem` is updated to a different `veiculo_id` THEN the system SHALL reject it with SQLSTATE `VG006`.
 
 **Independent Test**: Viagem `Finalizada` → `update status = 'EmAndamento'` dá `VG005`; mudar `hodometro_final` dá `VG005`; trocar `veiculo_id` de viagem aberta dá `VG006`.
+
+---
+
+### P1: Correção do hodômetro final digitado errado ⭐ MVP
+
+**User Story**: As a gestor de frota, I want to fix a mistyped closing odometer so that the truck is not locked out of new trips and the km/cost-per-km stay right.
+
+**Why P1**: Sem correção, um final digitado a mais trava o caminhão em `VG004`; decidido com o usuário (proposta A).
+
+**Acceptance Criteria**:
+
+1. WHEN Admin or Gestor de Frota updates only the `hodometro_final` of a `Finalizada` or `Cancelada` `viagem` from a non-null value to a non-null value greater than its `hodometro_inicial`, and no other trip of the same vehicle with `hodometro_inicial` >= this trip's `hodometro_inicial` has `hodometro_inicial` lower than the new value, THEN the system SHALL accept it and `km_rodado` SHALL reflect the new value.
+2. WHEN the mistyped `hodometro_final` of the vehicle's last trip is corrected downwards THEN the system SHALL accept a new `viagem` whose `hodometro_inicial` equals the corrected value.
+3. IF the corrected `hodometro_final` is greater than the `hodometro_inicial` of another trip of the same vehicle that started at or after this trip's `hodometro_inicial` THEN the system SHALL reject it with SQLSTATE `VG007`.
+4. IF Admin or Gestor de Frota sets the `hodometro_final` of a closed `viagem` to null, or fills it on a closed `viagem` that had none, THEN the system SHALL reject it with SQLSTATE `VG005`.
+5. IF a Motorista updates the `hodometro_final` of their own closed `viagem` to a different value THEN the system SHALL reject it with SQLSTATE `VG005`.
+
+**Independent Test**: Viagem fecha em 152.300 (era 15.230); abrir viagem em 15.230 dá `VG004`; Gestor corrige para 15.230; abrir em 15.230 passa.
 
 ---
 
@@ -220,8 +241,13 @@ A EIX-40 (US08, tela de viagem) e a EIX-41 (sincronização offline) dependem de
 | VIAG-25 | P2: Quilometragem rodada — AC2 | Execute | Verified |
 | VIAG-26 | P2: Quilometragem rodada — AC3 | Execute | Verified |
 | VIAG-27 | P2: Viagem não é apagada — AC1 | Execute | Verified |
+| VIAG-28 | P1: Correção do hodômetro final — AC1 | Execute | Implementing |
+| VIAG-29 | P1: Correção do hodômetro final — AC2 | Execute | Implementing |
+| VIAG-30 | P1: Correção do hodômetro final — AC3 | Execute | Implementing |
+| VIAG-31 | P1: Correção do hodômetro final — AC4 | Execute | Implementing |
+| VIAG-32 | P1: Correção do hodômetro final — AC5 | Execute | Implementing |
 
-**Coverage:** 27 total, 27 mapped to tasks, 0 unmapped
+**Coverage:** 32 total, 32 mapped to tasks (VIAG-28..32 em T9), 0 unmapped
 
 ---
 

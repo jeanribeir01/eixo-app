@@ -586,4 +586,119 @@ describe('migration viagem_regras', () => {
       expect(await viagensDoVeiculo(veiculoId)).toBe(1);
     });
   });
+
+  describe('correção do hodômetro final de viagem encerrada', () => {
+    async function lerHodometroFinal(id: string) {
+      const resultado = await db.query<{ hodometro_final: string | null; km_rodado: string | null }>(
+        'select hodometro_final, km_rodado from viagem where id = $1',
+        [id],
+      );
+      return resultado.rows[0]!;
+    }
+
+    function corrigirFinal(usuario: { id: string; perfil: 'Admin' | 'Gestor de Frota' | 'Motorista' }, id: string, valor: number | null) {
+      return comoUsuario(db, usuario, (tx) =>
+        tx.query('update viagem set hodometro_final = $1 where id = $2 returning id', [valor, id]),
+      );
+    }
+
+    it.each([
+      ['Gestor de Frota', 'Finalizada', GESTOR],
+      ['Admin', 'Cancelada', ADMIN],
+    ] as const)('%s corrige o final de viagem %s e o km_rodado acompanha (VIAG-28)', async (_perfil, status, usuario) => {
+      const veiculoId = await criarVeiculo();
+      const id = await inserirViagem({ veiculoId, hodometroInicial: 1000, hodometroFinal: 1500, status });
+
+      const resultado = await corrigirFinal(usuario, id, 1400);
+
+      expect(resultado.rows).toHaveLength(1);
+      expect(await lerHodometroFinal(id)).toEqual({ hodometro_final: '1400.0', km_rodado: '400.0' });
+    });
+
+    it('destrava o caminhão quando o final digitado a mais é corrigido (VIAG-29)', async () => {
+      const veiculoId = await criarVeiculo();
+      const id = await inserirViagem({ veiculoId, hodometroInicial: 15000 });
+      await db.query(`update viagem set status = 'Finalizada', hodometro_final = 152300 where id = $1`, [id]);
+      expect(await codigoDoErro(inserirViagem({ veiculoId, hodometroInicial: 15230 }))).toBe('VG004');
+
+      await corrigirFinal(GESTOR, id, 15230);
+      await inserirViagem({ veiculoId, hodometroInicial: 15230 });
+
+      expect(await viagensDoVeiculo(veiculoId)).toBe(2);
+      expect(await statusDoVeiculo(veiculoId)).toBe('EmViagem');
+    });
+
+    it('aceita corrigir para menos até o inicial da viagem que veio depois (VIAG-28)', async () => {
+      const veiculoId = await criarVeiculo();
+      const anteriorId = await inserirViagem({ veiculoId, hodometroInicial: 1000, hodometroFinal: 1450, status: 'Finalizada' });
+      await inserirViagem({ veiculoId, hodometroInicial: 1500 });
+
+      await corrigirFinal(GESTOR, anteriorId, 1500);
+
+      expect((await lerHodometroFinal(anteriorId)).hodometro_final).toBe('1500.0');
+    });
+
+    it('rejeita com VG007 a correção que passa do inicial de viagem posterior (VIAG-30)', async () => {
+      const veiculoId = await criarVeiculo();
+      const anteriorId = await inserirViagem({ veiculoId, hodometroInicial: 1000, hodometroFinal: 1450, status: 'Finalizada' });
+      await inserirViagem({ veiculoId, hodometroInicial: 1500 });
+
+      const codigo = await codigoDoErro(corrigirFinal(GESTOR, anteriorId, 1501));
+
+      expect(codigo).toBe('VG007');
+      expect((await lerHodometroFinal(anteriorId)).hodometro_final).toBe('1450.0');
+    });
+
+    it('não deixa uma viagem anterior travar a correção da posterior (VIAG-30)', async () => {
+      // A viagem de 1000 → 1450 começou antes: o inicial dela (1000) é menor que o desta (1500),
+      // então não entra na conta do VG007.
+      const veiculoId = await criarVeiculo();
+      await inserirViagem({ veiculoId, hodometroInicial: 1000, hodometroFinal: 1450, status: 'Finalizada' });
+      const posteriorId = await inserirViagem({ veiculoId, hodometroInicial: 1500, hodometroFinal: 2000, status: 'Finalizada' });
+
+      await corrigirFinal(GESTOR, posteriorId, 2100);
+
+      expect((await lerHodometroFinal(posteriorId)).hodometro_final).toBe('2100.0');
+    });
+
+    it.each([
+      ['apagar o final', 1500, null],
+      ['preencher um final que era nulo', null, 1500],
+    ] as const)('rejeita com VG005 o Gestor %s de viagem Cancelada (VIAG-31)', async (_caso, antes, depois) => {
+      const veiculoId = await criarVeiculo();
+      const id = await inserirViagem({ veiculoId, hodometroInicial: 1000, hodometroFinal: antes, status: 'Cancelada' });
+
+      const codigo = await codigoDoErro(corrigirFinal(GESTOR, id, depois));
+
+      expect(codigo).toBe('VG005');
+      expect((await lerHodometroFinal(id)).hodometro_final).toBe(antes === null ? null : '1500.0');
+    });
+
+    it('rejeita com VG005 o Motorista corrigindo o final da própria viagem encerrada (VIAG-32)', async () => {
+      const veiculoId = await criarVeiculo();
+      const id = await inserirViagem({
+        veiculoId,
+        motoristaId: MOTORISTA_A.id,
+        hodometroInicial: 1000,
+        hodometroFinal: 1500,
+        status: 'Finalizada',
+      });
+
+      const codigo = await codigoDoErro(corrigirFinal(MOTORISTA_A, id, 1400));
+
+      expect(codigo).toBe('VG005');
+      expect((await lerHodometroFinal(id)).hodometro_final).toBe('1500.0');
+    });
+
+    it('rejeita com VG005 o Gestor mudando o hodômetro inicial de viagem encerrada (VIAG-17)', async () => {
+      const veiculoId = await criarVeiculo();
+      const id = await inserirViagem({ veiculoId, hodometroInicial: 1000, hodometroFinal: 1500, status: 'Finalizada' });
+
+      const codigo = await codigoDoErro(
+        comoUsuario(db, GESTOR, (tx) => tx.query('update viagem set hodometro_inicial = 1100 where id = $1', [id])),
+      );
+
+      expect(codigo).toBe('VG005');
+    });
+  });
 });

@@ -20,6 +20,7 @@
 --   VG004  hodômetro inicial menor que o último hodômetro final do veículo
 --   VG005  viagem encerrada (Finalizada ou Cancelada) não pode ser alterada
 --   VG006  veículo da viagem não pode ser trocado
+--   VG007  hodômetro final corrigido passa do inicial de uma viagem posterior do veículo
 -- Os códigos VG*** são nossos, no mesmo esquema dos MN*** da manutenção: classe "VG"
 -- (viagem) fica na faixa que o padrão SQL deixa livre para a aplicação.
 
@@ -84,16 +85,47 @@ begin
       raise exception 'O veículo de uma viagem não pode ser trocado.' using errcode = 'VG006';
     end if;
 
-    -- Viagem encerrada é histórico: reabrir ou mexer no hodômetro furaria a regra de
+    -- Viagem encerrada é histórico: reabrir ou mexer no hodômetro inicial furaria a regra de
     -- hodômetro das viagens seguintes. Também é o que impede um reenvio atrasado do sync
     -- ("abrir") de reabrir uma viagem já fechada. Regravar os mesmos valores passa, porque
     -- o sync pode reenviar o fechamento.
-    if old.status <> 'EmAndamento' and (
-      new.status is distinct from old.status
-      or new.hodometro_inicial is distinct from old.hodometro_inicial
-      or new.hodometro_final is distinct from old.hodometro_final
-    ) then
-      raise exception 'Viagem encerrada não pode ser alterada.' using errcode = 'VG005';
+    if old.status <> 'EmAndamento' then
+      if new.status is distinct from old.status
+        or new.hodometro_inicial is distinct from old.hodometro_inicial then
+        raise exception 'Viagem encerrada não pode ser alterada.' using errcode = 'VG005';
+      end if;
+
+      -- Única exceção: Admin e Gestor de Frota corrigem o hodômetro final digitado errado.
+      -- Sem isso, um final digitado a mais (152.300 em vez de 15.230) trava o caminhão em
+      -- VG004 para sempre. O Motorista não corrige, e o reenvio atrasado do sync (que traz o
+      -- final antigo) cai aqui como VG005: a correção do gestor vence.
+      -- Só troca valor por valor: apagar o final, ou preencher o de uma Cancelada que não
+      -- rodou, mudaria o que a viagem foi, não corrigiria um número.
+      if new.hodometro_final is distinct from old.hodometro_final then
+        if not coalesce(auth_perfil() in ('Admin', 'Gestor de Frota'), false)
+          or old.hodometro_final is null
+          or new.hodometro_final is null then
+          raise exception 'Viagem encerrada não pode ser alterada.' using errcode = 'VG005';
+        end if;
+
+        perform 1 from veiculo v where v.id = new.veiculo_id for update;
+
+        -- O final corrigido não pode passar do inicial de nenhuma viagem que veio depois
+        -- desta (inicial maior ou igual ao desta). Assim a correção vale também para o erro
+        -- para menos depois que a próxima viagem já abriu, e nunca fura a regra do VG004.
+        if exists (
+          select 1 from viagem v
+          where v.veiculo_id = new.veiculo_id
+            and v.id <> new.id
+            and v.hodometro_inicial >= old.hodometro_inicial
+            and v.hodometro_inicial < new.hodometro_final
+        ) then
+          raise exception 'Hodômetro final corrigido passa do hodômetro inicial de uma viagem posterior.'
+            using errcode = 'VG007';
+        end if;
+      end if;
+
+      return new;
     end if;
 
     if new.hodometro_inicial is not distinct from old.hodometro_inicial then

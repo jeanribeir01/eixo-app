@@ -10,7 +10,7 @@ Implement these tasks with the `tlc-spec-driven` skill: **activate it by name an
 
 **Spec**: `.specs/features/eix76-db-viagem/spec.md`
 **Design**: inline (sem `design.md`) — uma migration nova `supabase/migrations/20261015000100_viagem_regras.sql`, construída task a task, no molde de `20261014000300_manutencao_rpc.sql` (comentário de cabeçalho com a conferência antes do `db push` e a tabela de SQLSTATEs). Duas funções de trigger `security definer` + `set search_path = public`: `valida_viagem()` (`before insert or update`) e `sincroniza_status_veiculo()` (`after insert or update of status`).
-**Status**: Done
+**Status**: In Progress
 
 ---
 
@@ -272,13 +272,49 @@ T2 → T3 → T4 → T5 → T6 → T7 → T8
 
 ---
 
+### Phase 3: Correção do hodômetro final (decidido em 15/10/2026, depois do Verifier)
+
+```
+T9
+```
+
+### T9: Gestor e Admin corrigem o hodômetro final de viagem encerrada
+
+**What**: `valida_viagem()` passa a aceitar a mudança só do `hodometro_final` de viagem encerrada quando `auth_perfil()` é Admin ou Gestor de Frota, valor antigo e novo não nulos e o novo não passa do inicial de viagem posterior (`VG007`); qualquer outro caso continua `VG005`.
+**Where**: `supabase/migrations/20261015000100_viagem_regras.sql`
+**Depends on**: None (Phase 2 termina antes)
+**Reuses**: `valida_viagem()`; `auth_perfil()` (AD-005)
+**Requirement**: VIAG-28, VIAG-29, VIAG-30, VIAG-31, VIAG-32
+
+**Tools**:
+
+- MCP: NONE
+- Skill: NONE
+
+**Done when**:
+
+- [x] Gestor e Admin corrigem o final; `km_rodado` acompanha
+- [x] Caminhão travado por final digitado a mais volta a abrir viagem depois da correção
+- [x] Correção que passa do inicial de viagem posterior → `VG007`
+- [x] Final para nulo, ou preencher final que era nulo → `VG005`
+- [x] Motorista mudando o final da própria viagem encerrada → `VG005`
+- [x] Build gate verde
+
+**Tests**: integration
+**Gate**: build
+
+**Commit**: `feat(frota): gestor corrige hodômetro final de viagem encerrada (EIX-76)`
+
+---
+
 ## Phase Execution Map
 
 ```
-Phase 1 → Phase 2
+Phase 1 → Phase 2 → Phase 3
 
 Phase 1:  T1
 Phase 2:  T2 ──→ T3 ──→ T4 ──→ T5 ──→ T6 ──→ T7 ──→ T8
+Phase 3:  T9
 ```
 
 8 tasks → um batch só, execução inline (sem sub-agentes). Verifier roda ao final.
