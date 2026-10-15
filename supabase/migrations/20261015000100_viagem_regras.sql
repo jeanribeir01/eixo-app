@@ -28,6 +28,12 @@
 create unique index viagem_um_andamento_por_veiculo on viagem (veiculo_id)
   where status = 'EmAndamento';
 
+-- Km rodado calculado pelo banco, para a tela da viagem e as views de custo por km (US10)
+-- lerem pronto. Nulo enquanto a viagem está aberta (final nulo). O app não envia esta coluna
+-- no insert nem no upsert: o Postgres rejeita valor escrito à mão em coluna gerada (428C9).
+alter table viagem
+  add column km_rodado numeric(12, 1) generated always as (hodometro_final - hodometro_inicial) stored;
+
 -- `security definer`: o Motorista só enxerga as próprias viagens pelo RLS, mas a regra
 -- precisa olhar as viagens de todos os motoristas daquele veículo.
 create or replace function valida_viagem()

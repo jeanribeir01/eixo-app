@@ -236,9 +236,9 @@ T2 → T3 → T4 → T5 → T6 → T7 → T8
 
 **Done when**:
 
-- [ ] 1000 → 1234,5 dá `234.5`; aberta dá `null`
-- [ ] Insert com `km_rodado` explícito é rejeitado
-- [ ] Gate quick verde
+- [x] 1000 → 1234,5 dá `234.5`; aberta dá `null`
+- [x] Insert com `km_rodado` explícito é rejeitado
+- [x] Gate quick verde
 
 **Tests**: integration
 **Gate**: quick

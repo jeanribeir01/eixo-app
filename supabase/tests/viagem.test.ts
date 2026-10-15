@@ -471,4 +471,42 @@ describe('migration viagem_regras', () => {
       expect(await statusDoVeiculo(veiculoId)).toBe('Disponivel');
     });
   });
+
+  describe('quilometragem rodada', () => {
+    async function kmRodado(id: string) {
+      const resultado = await db.query<{ km_rodado: string | null }>('select km_rodado from viagem where id = $1', [id]);
+      return resultado.rows[0]!.km_rodado;
+    }
+
+    it('calcula km_rodado = final - inicial quando a viagem fecha (VIAG-24)', async () => {
+      const veiculoId = await criarVeiculo();
+      const id = await inserirViagem({ veiculoId, hodometroInicial: 1000 });
+
+      await db.query(`update viagem set status = 'Finalizada', hodometro_final = 1234.5 where id = $1`, [id]);
+
+      expect(await kmRodado(id)).toBe('234.5');
+    });
+
+    it('deixa km_rodado nulo enquanto a viagem está aberta (VIAG-25)', async () => {
+      const veiculoId = await criarVeiculo();
+      const id = await inserirViagem({ veiculoId, hodometroInicial: 1000 });
+
+      expect(await kmRodado(id)).toBeNull();
+    });
+
+    it('rejeita gravar km_rodado à mão com 428C9 (VIAG-26)', async () => {
+      const veiculoId = await criarVeiculo();
+
+      const codigo = await codigoDoErro(
+        db.query(
+          `insert into viagem (veiculo_id, rota_id, motorista_id, hodometro_inicial, km_rodado)
+           values ($1, $2, $3, 1000, 50)`,
+          [veiculoId, rotaId, MOTORISTA_A.id],
+        ),
+      );
+
+      expect(codigo).toBe('428C9');
+      expect(await viagensDoVeiculo(veiculoId)).toBe(0);
+    });
+  });
 });

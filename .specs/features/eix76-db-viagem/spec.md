@@ -215,9 +215,9 @@ A EIX-40 (US08, tela de viagem) e a EIX-41 (sincronização offline) dependem de
 | VIAG-21 | P1: Upsert idempotente — AC2 | Execute | Implementing |
 | VIAG-22 | P1: Upsert idempotente — AC3 | Execute | Implementing |
 | VIAG-23 | P1: Upsert idempotente — AC4 | Execute | Implementing |
-| VIAG-24 | P2: Quilometragem rodada — AC1 | Tasks | Pending |
-| VIAG-25 | P2: Quilometragem rodada — AC2 | Tasks | Pending |
-| VIAG-26 | P2: Quilometragem rodada — AC3 | Tasks | Pending |
+| VIAG-24 | P2: Quilometragem rodada — AC1 | Execute | Implementing |
+| VIAG-25 | P2: Quilometragem rodada — AC2 | Execute | Implementing |
+| VIAG-26 | P2: Quilometragem rodada — AC3 | Execute | Implementing |
 | VIAG-27 | P2: Viagem não é apagada — AC1 | Tasks | Pending |
 
 **Coverage:** 27 total, 0 mapped to tasks, 27 unmapped ⚠️ (mapeados no `tasks.md`)
