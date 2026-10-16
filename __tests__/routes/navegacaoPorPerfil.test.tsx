@@ -251,7 +251,9 @@ describe('telas internas seguem o módulo (EIX-31)', () => {
     ['/frota/veiculos', 'Tela Veiculos'],
     ['/rotas', 'Tela Rotas'],
     ['/rotas/nova', 'Tela Nova Rota'],
+    ['/rotas/r1/editar', 'Tela Editar Rota'],
     ['/manutencoes', 'Tela Manutencoes'],
+    ['/manutencoes/nova', 'Tela Nova Manutencao'],
   ] as const;
 
   it.each((['Financeiro', 'Motorista'] as const).flatMap((perfil) => telasDaFrota.map(([rota, tela]) => ({ perfil, rota, tela }))))(
@@ -292,14 +294,17 @@ describe('telas internas seguem o módulo (EIX-31)', () => {
     expect(router.getPathname()).toBe('/viagens/nova');
   });
 
-  it('Financeiro digitando /viagens/nova volta para a home do perfil (NAV5-10)', async () => {
+  it.each([
+    ['/viagens/nova', 'Tela Abrir Viagem'],
+    ['/viagens/v1/fechar', 'Tela Fechar Viagem'],
+  ] as const)('Financeiro digitando %s volta para a home do perfil (NAV5-10)', async (rota, tela) => {
     const router = await entrarComo('Financeiro');
     await screen.findByText('Tela Financeiro');
 
-    act(() => navegador.push('/viagens/nova'));
+    act(() => navegador.push(rota));
 
     expect(await screen.findByText('Tela Financeiro')).toBeOnTheScreen();
-    expect(screen.queryByText('Tela Abrir Viagem')).not.toBeOnTheScreen();
+    expect(screen.queryByText(tela)).not.toBeOnTheScreen();
     expect(router.getPathname()).toBe('/financeiro');
   });
 

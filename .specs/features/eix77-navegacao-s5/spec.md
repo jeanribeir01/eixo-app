@@ -69,10 +69,10 @@ Na S5 três telas de frota entram em paralelo (Rotas e Manutenção com o Diogo,
 **Acceptance Criteria**:
 
 1. WHEN um Admin abre `/frota/veiculos`, `/rotas`, `/rotas/nova`, `/rotas/r1/editar`, `/manutencoes`, `/manutencoes/nova`, `/viagens/nova` ou `/viagens/v1/fechar` THEN o sistema SHALL mostrar a tela com o header nativo de título "Veículos", "Rotas", "Nova rota", "Editar rota", "Manutenções", "Nova manutenção", "Abrir viagem" e "Fechar viagem", respectivamente.
-2. IF um Motorista ou um Financeiro navega para `/frota/veiculos`, `/rotas`, `/rotas/nova` ou `/manutencoes` THEN o sistema SHALL levá-lo de volta à tela inicial do perfil sem mostrar a tela pedida.
+2. IF um Motorista ou um Financeiro navega para `/frota/veiculos`, `/rotas`, `/rotas/nova`, `/rotas/r1/editar`, `/manutencoes` ou `/manutencoes/nova` THEN o sistema SHALL levá-lo de volta à tela inicial do perfil sem mostrar a tela pedida.
 3. WHEN um Gestor de Frota navega para `/frota/veiculos`, `/rotas` ou `/manutencoes` THEN o sistema SHALL mostrar a tela pedida.
 4. WHEN um Motorista navega para `/viagens/nova` THEN o sistema SHALL mostrar a tela de abrir viagem.
-5. IF um Financeiro navega para `/viagens/nova` THEN o sistema SHALL levá-lo de volta à tela inicial do perfil.
+5. IF um Financeiro navega para `/viagens/nova` ou `/viagens/v1/fechar` THEN o sistema SHALL levá-lo de volta à tela inicial do perfil.
 6. The system SHALL render, em cada rota nova, uma view exportada de `src/features/rotas/`, `src/features/manutencao/` ou `src/features/viagens/`, e a aba Viagens SHALL render `ViagensListView` de `src/features/viagens/`.
 7. The system SHALL NOT ter, em `app/(app)/`, uma rota interna com a mesma URL de uma aba (arquivo `<aba>/index.tsx` ou `<aba>.tsx` fora de `(tabs)`).
 
@@ -97,7 +97,7 @@ Na S5 três telas de frota entram em paralelo (Rotas e Manutenção com o Diogo,
 
 ## Edge Cases
 
-- IF uma URL de rota interna é aberta direto, sem passar pelo hub, THEN o sistema SHALL aplicar o mesmo guard (coberto por NAV5-07 a NAV5-10).
+- IF uma URL de rota interna é aberta direto, sem passar pelo hub, THEN o sistema SHALL aplicar o mesmo guard. NAV5-07 e NAV5-10 listam as 8 URLs novas, uma a uma (achado da iteração 1 do Verifier).
 - WHEN o usuário volta de `/frota/veiculos` THEN o sistema SHALL retornar ao hub de Frota.
 
 ---
