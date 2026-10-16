@@ -211,10 +211,10 @@ T6 → T7
 
 **Done when**:
 
-- [ ] Hub mostra "Frota", "Veículos", "Rotas", "Manutenções"
-- [ ] Cada entrada chama `router.push` com o `href` da spec
-- [ ] A aba Frota renderiza o hub
-- [ ] Gate quick verde
+- [x] Hub mostra "Frota", "Veículos", "Rotas", "Manutenções"
+- [x] Cada entrada chama `router.push` com o `href` da spec
+- [x] A aba Frota renderiza o hub
+- [x] Gate quick verde
 
 **Tests**: unit
 **Gate**: quick

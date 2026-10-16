@@ -1,5 +1,5 @@
-import { VeiculosListView } from '@/features/veiculos/VeiculosListView';
+import { FrotaHubView } from '@/navigation/FrotaHubView';
 
 export default function FrotaRoute() {
-  return <VeiculosListView />;
+  return <FrotaHubView />;
 }

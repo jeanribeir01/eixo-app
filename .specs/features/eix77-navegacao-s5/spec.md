@@ -106,10 +106,10 @@ Na S5 três telas de frota entram em paralelo (Rotas e Manutenção com o Diogo,
 
 | Requirement ID | Story | Phase | Status |
 | --- | --- | --- | --- |
-| NAV5-01 | P1: Hub de Frota — AC1 | Tasks | Pending |
-| NAV5-02 | P1: Hub de Frota — AC2 | Tasks | Pending |
-| NAV5-03 | P1: Hub de Frota — AC3 | Tasks | Pending |
-| NAV5-04 | P1: Hub de Frota — AC4 | Tasks | Pending |
+| NAV5-01 | P1: Hub de Frota — AC1 | Tasks | Verified |
+| NAV5-02 | P1: Hub de Frota — AC2 | Tasks | Verified |
+| NAV5-03 | P1: Hub de Frota — AC3 | Tasks | Verified |
+| NAV5-04 | P1: Hub de Frota — AC4 | Tasks | Verified |
 | NAV5-05 | P1: Hub de Frota — AC5 | Tasks | Verified |
 | NAV5-06 | P1: Rotas internas — AC1 | Tasks | Verified |
 | NAV5-07 | P1: Rotas internas — AC2 | Tasks | Verified |
