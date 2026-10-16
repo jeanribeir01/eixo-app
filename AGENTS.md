@@ -121,6 +121,8 @@ npm run lint
 npm run test
 ```
 
+Se a task criou rota em `app/` (ou a branch puxou rota nova), regenere os tipos de rota antes do typecheck: suba `npx expo start` até o Metro iniciar e encerre. O `href` tipado do expo-router é checado contra `.expo/types/router.d.ts`, que é gerado por esse comando e fica fora do Git; sem isso o typecheck acusa como inexistente uma rota que existe.
+
 E confira:
 
 - [ ] Todos os critérios de aceite da task atendidos

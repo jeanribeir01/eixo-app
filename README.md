@@ -364,6 +364,13 @@ npm run typecheck            # TypeScript sem emitir arquivos
 
 Todo PR precisa passar nos três; o CI do GitHub roda os três em cada PR.
 
+**Rota nova e o typecheck.** O projeto usa *typed routes* do expo-router: todo `href` (`router.push('/rotas')`)
+é conferido contra as rotas que existem em `app/`. Essa lista mora em `.expo/types/router.d.ts`, que é
+**gerado** pelo `npx expo start` (ou `npm start`) e fica fora do Git. Depois de criar uma rota ou de puxar
+uma branch que criou, rode `npm start` uma vez (pode fechar assim que o Metro subir) antes do
+`npm run typecheck`; sem isso, o typecheck acusa `Type '"/rotas"' is not assignable to type ...` numa rota
+que existe.
+
 ---
 
 ## 9. Problemas comuns
@@ -380,6 +387,7 @@ Todo PR precisa passar nos três; o CI do GitHub roda os três em cada PR.
 | Tela **Aguardando liberação** depois do login | Conta nova, ainda não aprovada | Seção 7 |
 | App fecha ao abrir uma tela depois de um `git pull` | Entrou uma biblioteca nativa nova e o app instalado é o antigo | `npm install` e `npx expo run:android` de novo |
 | Ícone ou splash continuam os antigos | A pasta `android/` é anterior à mudança no `app.config.ts` | `npx expo prebuild --platform android` e `npx expo run:android`. Se o launcher ainda mostrar o ícone antigo, é cache: `adb uninstall com.eixocerto.app` e rode de novo |
+| `Type '"/rotas"' is not assignable to type ...` no `npm run typecheck` | `.expo/types/router.d.ts` desatualizado: ele é gerado pelo `expo start` e não conhece a rota nova | `npm start` uma vez, até o Metro subir, e rode o typecheck de novo (seção 8) |
 | `Error while reading cache, falling back to a full crawl` | Cache do Metro ilegível (comum depois do `prebuild`) | Só um aviso: o Metro refaz o cache. Se repetir sempre, `npx expo start --clear` |
 
 ---
