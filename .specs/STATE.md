@@ -80,7 +80,7 @@
 - **Phase / Task**: concluída — T1..T7 + fix de guard; Verifier PASS (iteração 2, 13/13 mutantes mortos)
 - **Completed**: 58c8382..HEAD em `feat/eix-77-navegacao-s5`; lista de veículos em `/frota/veiculos` (não `frota/index`, que colide com a aba `/frota`)
 - **In-progress** (file:line): none
-- **Next step**: push + PR (revisor: Diogo) → avisar Diogo (EIX-38/39/79) e Eduardo (EIX-40) das rotas e placeholders → EIX-78
-- **Blockers**: none
+- **Next step**: review do PR #34 (revisor: Diogo) → squash and merge → fechar a EIX-77 (quem fecha é o Jean) → EIX-78. Avisos já comentados na EIX-38, EIX-39, EIX-40 e EIX-79
+- **Blockers**: aprovação do PR
 - **Uncommitted files**: none
-- **Branch**: feat/eix-77-navegacao-s5 (só local)
+- **Branch**: feat/eix-77-navegacao-s5 (no remoto, PR #34)
