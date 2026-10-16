@@ -20,11 +20,11 @@ Implement these tasks with the `tlc-spec-driven` skill: **activate it by name an
 
 | Code Layer | Required Test Type | Coverage Expectation | Location Pattern | Run Command |
 | --- | --- | --- | --- | --- |
-| Placeholders de feature | unit (render) | Cada view exportada renderiza título e frase do estado vazio | `src/features/<feature>/__tests__/*.test.tsx` | `npx jest --selectProjects app src/features/<feature>` |
-| Hub de Frota | unit (render + navegação) | Título, três entradas e o `href` de cada uma | `src/navigation/__tests__/FrotaHubView.test.tsx`, `FrotaRoute.test.tsx` | `npx jest --selectProjects app src/navigation` |
-| Lista de veículos | unit (render) | Sem o título "Frota" no conteúdo; testes existentes continuam verdes | `src/features/veiculos/__tests__/VeiculosListView.test.tsx` | `npx jest --selectProjects app src/features/veiculos` |
+| Placeholders de feature | unit (render) | Cada view exportada renderiza título e frase do estado vazio | `src/features/<feature>/__tests__/*.test.tsx` | `npx jest src/features/<feature> --selectProjects app` |
+| Hub de Frota | unit (render + navegação) | Título, três entradas e o `href` de cada uma | `src/navigation/__tests__/FrotaHubView.test.tsx`, `FrotaRoute.test.tsx` | `npx jest src/navigation --selectProjects app` |
+| Lista de veículos | unit (render) | Sem o título "Frota" no conteúdo; testes existentes continuam verdes | `src/features/veiculos/__tests__/VeiculosListView.test.tsx` | `npx jest src/features/veiculos --selectProjects app` |
 | Mapa de ícones (`src/ui/icons.ts`) | none | Só linhas novas; o tipo `AndroidSymbol`/`SFSymbol` valida no typecheck e o hub (T5) renderiza os ícones | - | build gate only |
-| Rotas, títulos e guards | integration (`renderRouter` com os layouts reais) | Toda rota nova: header de título certo (Admin), perfil permitido abre, perfil proibido volta para a home; sem colisão de URL com aba | `__tests__/routes/navegacaoPorPerfil.test.tsx`, `__tests__/routes/colisaoComAbas.test.ts` | `npx jest --selectProjects app __tests__/routes` |
+| Rotas, títulos e guards | integration (`renderRouter` com os layouts reais) | Toda rota nova: header de título certo (Admin), perfil permitido abre, perfil proibido volta para a home; sem colisão de URL com aba | `__tests__/routes/navegacaoPorPerfil.test.tsx`, `__tests__/routes/colisaoComAbas.test.ts` | `npx jest __tests__/routes --selectProjects app` |
 
 ## Gate Check Commands
 
@@ -32,7 +32,7 @@ Implement these tasks with the `tlc-spec-driven` skill: **activate it by name an
 
 | Gate Level | When to Use | Command |
 | --- | --- | --- |
-| Quick | Task com testes só da própria pasta | `npx jest --selectProjects app <pasta da task>` |
+| Quick | Task com testes só da própria pasta | `npx jest <pasta da task> --selectProjects app` |
 | Full | Task que mexe em rota ou navegação | `npx jest --selectProjects app` |
 | Build | Fim de fase e task sem teste | `npm run typecheck && npm run lint && npm run test` |
 
@@ -106,8 +106,8 @@ T7
 
 **Done when**:
 
-- [ ] As duas views renderizam título e frase do estado vazio
-- [ ] Gate quick verde
+- [x] As duas views renderizam título e frase do estado vazio
+- [x] Gate quick verde
 
 **Tests**: unit
 **Gate**: quick
