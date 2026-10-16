@@ -3,7 +3,7 @@
   "promote_threshold": 2,
   "window_days": 45,
   "quarantine_threshold": 2,
-  "next_id": 23,
+  "next_id": 25,
   "lessons": [
     {
       "id": "L-001",
@@ -406,6 +406,42 @@
       ],
       "created": "2026-10-15T13:11:41Z",
       "last_seen": "2026-10-15T13:11:41Z"
+    },
+    {
+      "id": "L-023",
+      "key": "surviving_mutant::test the guard denial of every route inside a stack protected block including dynamic and form routes because removing one route from the guard otherwise passes the suite",
+      "text": "Test the guard denial of every route inside a Stack.Protected block, including dynamic and form routes, because removing one route from the guard otherwise passes the suite",
+      "signal": "surviving_mutant",
+      "scope": "navigation, expo-router",
+      "status": "candidate",
+      "features": [
+        "eix77-navegacao-s5"
+      ],
+      "recurrence": 1,
+      "harmful": 0,
+      "evidence": [
+        "validation.md M11-M13; app/(app)/_layout.tsx:45,47,52 (navigation, expo-router)"
+      ],
+      "created": "2026-10-16T11:41:56Z",
+      "last_seen": "2026-10-16T11:41:56Z"
+    },
+    {
+      "id": "L-024",
+      "key": "spec_precision_gap::when an edge case claims coverage by other criteria check that those criteria list every route it covers or list the routes in the edge case itself",
+      "text": "When an edge case claims coverage by other criteria, check that those criteria list every route it covers, or list the routes in the edge case itself",
+      "signal": "spec_precision_gap",
+      "scope": "navigation, specs",
+      "status": "candidate",
+      "features": [
+        "eix77-navegacao-s5"
+      ],
+      "recurrence": 1,
+      "harmful": 0,
+      "evidence": [
+        "spec.md Edge Cases 1 vs NAV5-07/NAV5-10 (navigation, specs)"
+      ],
+      "created": "2026-10-16T11:41:56Z",
+      "last_seen": "2026-10-16T11:41:56Z"
     }
   ]
 }

@@ -17,6 +17,9 @@ export const icons = {
   categorias: { android: 'category', ios: 'tag' },
   formasPagamento: { android: 'credit_card', ios: 'creditcard' },
   usuarios: { android: 'group', ios: 'person.2' },
+  // Telas da Frota (Veículos usa o ícone da aba)
+  rotas: { android: 'alt_route', ios: 'arrow.triangle.branch' },
+  manutencoes: { android: 'build', ios: 'wrench.and.screwdriver' },
   // Ações
   adicionar: { android: 'add', ios: 'plus' },
   avancar: { android: 'chevron_right', ios: 'chevron.right' },

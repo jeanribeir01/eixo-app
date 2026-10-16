@@ -1,11 +1,5 @@
-import { ModuloEmBreveView } from '@/navigation/ModuloEmBreveView';
+import { ViagensListView } from '@/features/viagens/ViagensListView';
 
 export default function ViagensRoute() {
-  return (
-    <ModuloEmBreveView
-      titulo="Viagens"
-      icone="viagens"
-      descricao="Abertura e fechamento de viagens com o hodômetro, mesmo sem internet."
-    />
-  );
+  return <ViagensListView />;
 }

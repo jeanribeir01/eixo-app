@@ -144,6 +144,18 @@ Seen once or not yet corroborated. Tracked, not trusted.
 - evidence: validation.md N08 (viagem_regras.sql VG007, VIAG-29/VIAG-30) (supabase, triggers)
 - last seen: 2026-10-15T13:11:41Z
 
+### L-023 - Test the guard denial of every route inside a Stack.Protected block, including dynamic and form routes, because removing one route from the guard otherwise passes the suite
+- signal: `surviving_mutant` · recurrence: 1 feature(s) · scope: `navigation, expo-router` · harmful: 0
+- features: eix77-navegacao-s5
+- evidence: validation.md M11-M13; app/(app)/_layout.tsx:45,47,52 (navigation, expo-router)
+- last seen: 2026-10-16T11:41:56Z
+
+### L-024 - When an edge case claims coverage by other criteria, check that those criteria list every route it covers, or list the routes in the edge case itself
+- signal: `spec_precision_gap` · recurrence: 1 feature(s) · scope: `navigation, specs` · harmful: 0
+- features: eix77-navegacao-s5
+- evidence: spec.md Edge Cases 1 vs NAV5-07/NAV5-10 (navigation, specs)
+- last seen: 2026-10-16T11:41:56Z
+
 ## Quarantined (failed when applied - ignore)
 
 A confirmed lesson that recurred alongside failure. Kept for the maintainer to review.

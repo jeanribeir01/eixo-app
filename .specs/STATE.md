@@ -76,11 +76,11 @@
 
 ## Handoff
 
-- **Feature**: `.specs/features/eix76-db-viagem` (EIX-76, DB de viagem)
-- **Phase / Task**: concluída — Verifier PASS (iteração 4); migration aplicada na nuvem em 15/10/2026; PR #33 aberto
-- **Completed**: 36838bf..a14b5aa; `src/types/database.ts` regerado pela CLI (`km_rodado`); avisos ao Eduardo comentados na EIX-40 e na EIX-41
+- **Feature**: `.specs/features/eix77-navegacao-s5` (EIX-77, navegação da S5)
+- **Phase / Task**: concluída — T1..T7 + fix de guard; Verifier PASS (iteração 2, 13/13 mutantes mortos)
+- **Completed**: 58c8382..HEAD em `feat/eix-77-navegacao-s5`; lista de veículos em `/frota/veiculos` (não `frota/index`, que colide com a aba `/frota`)
 - **In-progress** (file:line): none
-- **Next step**: review do PR #33 (revisor: Eduardo) → squash and merge → fechar a EIX-76 (quem fecha é o Jean) → EIX-77 / EIX-78
+- **Next step**: review do PR #34 (revisor: Diogo) → squash and merge → fechar a EIX-77 (quem fecha é o Jean) → EIX-78. Avisos já comentados na EIX-38, EIX-39, EIX-40 e EIX-79
 - **Blockers**: aprovação do PR
 - **Uncommitted files**: none
-- **Branch**: feat/eix-76-db-viagem (no remoto, PR #33)
+- **Branch**: feat/eix-77-navegacao-s5 (no remoto, PR #34)

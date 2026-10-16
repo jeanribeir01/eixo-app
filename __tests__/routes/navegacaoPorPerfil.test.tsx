@@ -42,6 +42,14 @@ const routes = {
   '(app)/categorias/[id]/editar': () => <Text>Tela Editar Categoria</Text>,
   '(app)/frota/novo': () => <Text>Tela Novo Veiculo</Text>,
   '(app)/frota/[id]/editar': () => <Text>Tela Editar Veiculo</Text>,
+  '(app)/frota/veiculos': () => <Text>Tela Veiculos</Text>,
+  '(app)/rotas/index': () => <Text>Tela Rotas</Text>,
+  '(app)/rotas/nova': () => <Text>Tela Nova Rota</Text>,
+  '(app)/rotas/[id]/editar': () => <Text>Tela Editar Rota</Text>,
+  '(app)/manutencoes/index': () => <Text>Tela Manutencoes</Text>,
+  '(app)/manutencoes/nova': () => <Text>Tela Nova Manutencao</Text>,
+  '(app)/viagens/nova': () => <Text>Tela Abrir Viagem</Text>,
+  '(app)/viagens/[id]/fechar': () => <Text>Tela Fechar Viagem</Text>,
   '(app)/caixa/index': () => <Text>Tela Caixa</Text>,
   '(app)/formas-pagamento/index': () => <Text>Tela Formas</Text>,
   '(app)/formas-pagamento/nova': () => <Text>Tela Nova Forma</Text>,
@@ -237,6 +245,69 @@ describe('telas internas seguem o módulo (EIX-31)', () => {
     expect(await screen.findByText('Tela Dividas')).toBeOnTheScreen();
   });
 
+  // Telas da frota da S5 (EIX-77, NAV5-07): só Admin e Gestor de Frota, como o RLS de `rota` e a RPC
+  // `registrar_manutencao`.
+  const telasDaFrota = [
+    ['/frota/veiculos', 'Tela Veiculos'],
+    ['/rotas', 'Tela Rotas'],
+    ['/rotas/nova', 'Tela Nova Rota'],
+    ['/rotas/r1/editar', 'Tela Editar Rota'],
+    ['/manutencoes', 'Tela Manutencoes'],
+    ['/manutencoes/nova', 'Tela Nova Manutencao'],
+  ] as const;
+
+  it.each((['Financeiro', 'Motorista'] as const).flatMap((perfil) => telasDaFrota.map(([rota, tela]) => ({ perfil, rota, tela }))))(
+    '$perfil digitando $rota volta para a home do perfil (NAV5-07)',
+    async ({ perfil, rota, tela }) => {
+      const { telaInicial, rotaInicial } = cenarios.find((c) => c.perfil === perfil)!;
+      const router = await entrarComo(perfil);
+      await screen.findByText(telaInicial);
+
+      act(() => navegador.push(rota));
+
+      expect(await screen.findByText(telaInicial)).toBeOnTheScreen();
+      expect(screen.queryByText(tela)).not.toBeOnTheScreen();
+      expect(router.getPathname()).toBe(rotaInicial);
+    },
+  );
+
+  it.each([
+    ['/frota/veiculos', 'Tela Veiculos'],
+    ['/rotas', 'Tela Rotas'],
+    ['/manutencoes', 'Tela Manutencoes'],
+  ] as const)('Gestor de Frota abre %s (NAV5-08)', async (rota, tela) => {
+    const router = await entrarComo('Gestor de Frota');
+
+    act(() => navegador.push(rota));
+
+    expect(await screen.findByText(tela)).toBeOnTheScreen();
+    expect(router.getPathname()).toBe(rota);
+  });
+
+  // Abrir viagem segue a aba Viagens (NAV5-09, NAV5-10): o Motorista abre, o Financeiro não.
+  it('Motorista abre /viagens/nova (NAV5-09)', async () => {
+    const router = await entrarComo('Motorista');
+
+    act(() => navegador.push('/viagens/nova'));
+
+    expect(await screen.findByText('Tela Abrir Viagem')).toBeOnTheScreen();
+    expect(router.getPathname()).toBe('/viagens/nova');
+  });
+
+  it.each([
+    ['/viagens/nova', 'Tela Abrir Viagem'],
+    ['/viagens/v1/fechar', 'Tela Fechar Viagem'],
+  ] as const)('Financeiro digitando %s volta para a home do perfil (NAV5-10)', async (rota, tela) => {
+    const router = await entrarComo('Financeiro');
+    await screen.findByText('Tela Financeiro');
+
+    act(() => navegador.push(rota));
+
+    expect(await screen.findByText('Tela Financeiro')).toBeOnTheScreen();
+    expect(screen.queryByText(tela)).not.toBeOnTheScreen();
+    expect(router.getPathname()).toBe('/financeiro');
+  });
+
   it('Motorista que abre o app já numa URL financeira cai em Viagens', async () => {
     const router = await entrarComo('Motorista', '/financeiro');
 
@@ -348,6 +419,15 @@ describe('header nativo nas telas internas (NAV-02)', () => {
     ['/dividas/d1', 'Tela Divida', 'Dívida'],
     ['/usuarios', 'Tela Usuarios', 'Usuários'],
     ['/usuarios/u1', 'Tela Usuario', 'Usuário'],
+    // Telas da S5 (EIX-77, NAV5-06)
+    ['/frota/veiculos', 'Tela Veiculos', 'Veículos'],
+    ['/rotas', 'Tela Rotas', 'Rotas'],
+    ['/rotas/nova', 'Tela Nova Rota', 'Nova rota'],
+    ['/rotas/r1/editar', 'Tela Editar Rota', 'Editar rota'],
+    ['/manutencoes', 'Tela Manutencoes', 'Manutenções'],
+    ['/manutencoes/nova', 'Tela Nova Manutencao', 'Nova manutenção'],
+    ['/viagens/nova', 'Tela Abrir Viagem', 'Abrir viagem'],
+    ['/viagens/v1/fechar', 'Tela Fechar Viagem', 'Fechar viagem'],
   ] as const)('%s abre %s com o header "%s" e o botão voltar', async (rota, tela, titulo) => {
     await entrarComo('Admin');
 
@@ -387,5 +467,18 @@ describe('header nativo nas telas internas (NAV-02)', () => {
 
     expect(await screen.findByText('Tela Financeiro')).toBeOnTheScreen();
     expect(router.getPathname()).toBe('/financeiro');
+  });
+
+  // NAV5-15: a lista de veículos abre por cima do hub de Frota e o voltar retorna a ele.
+  it('voltar de /frota/veiculos retorna ao hub de Frota', async () => {
+    const router = await entrarComo('Gestor de Frota');
+    await screen.findByText('Tela Frota');
+    act(() => navegador.push('/frota/veiculos'));
+    await screen.findByText('Tela Veiculos');
+
+    act(() => navegador.back());
+
+    expect(await screen.findByText('Tela Frota')).toBeOnTheScreen();
+    expect(router.getPathname()).toBe('/frota');
   });
 });
