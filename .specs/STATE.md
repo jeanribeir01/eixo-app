@@ -76,11 +76,11 @@
 
 ## Handoff
 
-- **Feature**: `.specs/features/eix58-design-app` (épico EIX-58, sub-issues EIX-59 a EIX-72 + EIX-11)
-- **Phase / Task**: EIX-60 (fases 2 e 3, T3–T12) concluída localmente; Verifier PASS na iteração 3 (`validation.md`)
-- **Completed**: T3–T12 (236f7b6..d7210ed); ajustes do Verifier (0415cb0, edab078, 3247c01); 611 testes do app e 163 do Supabase verdes
+- **Feature**: `.specs/features/eix76-db-viagem` (EIX-76, DB de viagem)
+- **Phase / Task**: concluída — Verifier PASS (iteração 4); migration aplicada na nuvem em 15/10/2026; PR #33 aberto
+- **Completed**: 36838bf..a14b5aa; `src/types/database.ts` regerado pela CLI (`km_rodado`); avisos ao Eduardo comentados na EIX-40 e na EIX-41
 - **In-progress** (file:line): none
-- **Next step**: Jean confere no emulador a lista "Manual Verification" do `validation.md` e confirma as 3 edições da spec (AC 3, 11 e 12 de NAV) → push + PR da EIX-60 (depende do PR #17) → EIX-61 (T13–T20)
-- **Blockers**: ok do Jean para push/PR
+- **Next step**: review do PR #33 (revisor: Eduardo) → squash and merge → fechar a EIX-76 (quem fecha é o Jean) → EIX-77 / EIX-78
+- **Blockers**: aprovação do PR
 - **Uncommitted files**: none
-- **Branch**: feat/eix-60-design-fundacao-navegacao (local, com merge da chore/eix-59)
+- **Branch**: feat/eix-76-db-viagem (no remoto, PR #33)

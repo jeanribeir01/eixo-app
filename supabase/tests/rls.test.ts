@@ -13,6 +13,7 @@ describe('migration rls: policies por perfil', () => {
   let categoriaId: string;
   let formaPagamentoId: string;
   let veiculoId: string;
+  let veiculoAlheioId: string;
   let rotaId: string;
   let motoristaId: string;
   let outroMotoristaId: string;
@@ -45,6 +46,14 @@ describe('migration rls: policies por perfil', () => {
       );
       veiculoId = veiculo.rows[0]!.id;
 
+      // Um veículo por viagem aberta: o mesmo veículo em duas viagens EmAndamento é
+      // rejeitado desde a EIX-76.
+      const veiculoAlheio = await tx.query<{ id: string }>(
+        `insert into veiculo (placa, marca, modelo, capacidade_carga)
+         values ('RLS2B34', 'Volvo', 'FH', 10000) returning id`,
+      );
+      veiculoAlheioId = veiculoAlheio.rows[0]!.id;
+
       const rota = await tx.query<{ id: string }>(
         `insert into rota (cidade_origem, uf_origem, cidade_destino, uf_destino, distancia_estimada_km)
          values ('São Paulo', 'SP', 'Curitiba', 'PR', 400) returning id`,
@@ -61,7 +70,7 @@ describe('migration rls: policies por perfil', () => {
       const viagemAlheia = await tx.query<{ id: string }>(
         `insert into viagem (veiculo_id, rota_id, motorista_id, hodometro_inicial)
          values ($1, $2, $3, 1000) returning id`,
-        [veiculoId, rotaId, outroMotoristaId],
+        [veiculoAlheioId, rotaId, outroMotoristaId],
       );
       viagemAlheiaId = viagemAlheia.rows[0]!.id;
 

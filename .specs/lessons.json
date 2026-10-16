@@ -3,7 +3,7 @@
   "promote_threshold": 2,
   "window_days": 45,
   "quarantine_threshold": 2,
-  "next_id": 19,
+  "next_id": 23,
   "lessons": [
     {
       "id": "L-001",
@@ -334,6 +334,78 @@
       ],
       "created": "2026-10-07T02:27:17Z",
       "last_seen": "2026-10-07T02:27:17Z"
+    },
+    {
+      "id": "L-019",
+      "key": "surviving_mutant::when a trigger branches by status or operation test each validation rule on every branch it must run in not only on the main path",
+      "text": "When a trigger branches by status or operation, test each validation rule on every branch it must run in, not only on the main path",
+      "signal": "surviving_mutant",
+      "scope": "supabase, triggers",
+      "status": "candidate",
+      "features": [
+        "eix76-db-viagem"
+      ],
+      "recurrence": 1,
+      "harmful": 0,
+      "evidence": [
+        "validation.md M20 (viagem_regras.sql:79, VIAG-07) (supabase, triggers)"
+      ],
+      "created": "2026-10-15T12:43:41Z",
+      "last_seen": "2026-10-15T12:43:41Z"
+    },
+    {
+      "id": "L-020",
+      "key": "surviving_mutant::when a rule compares a row against its siblings test a row whose own values would violate the rule so excluding the row itself is proven",
+      "text": "When a rule compares a row against its siblings, test a row whose own values would violate the rule so excluding the row itself is proven",
+      "signal": "surviving_mutant",
+      "scope": "supabase, triggers",
+      "status": "candidate",
+      "features": [
+        "eix76-db-viagem"
+      ],
+      "recurrence": 1,
+      "harmful": 0,
+      "evidence": [
+        "validation.md M02 (viagem_regras.sql:112, VIAG-09) (supabase, triggers)"
+      ],
+      "created": "2026-10-15T12:43:41Z",
+      "last_seen": "2026-10-15T12:43:41Z"
+    },
+    {
+      "id": "L-021",
+      "key": "spec_precision_gap::name the exact sqlstate in every rejection criterion and state which check answers first when a before trigger and rls both reject",
+      "text": "Name the exact SQLSTATE in every rejection criterion and state which check answers first when a before trigger and RLS both reject",
+      "signal": "spec_precision_gap",
+      "scope": "supabase, rls, triggers",
+      "status": "candidate",
+      "features": [
+        "eix76-db-viagem"
+      ],
+      "recurrence": 1,
+      "harmful": 0,
+      "evidence": [
+        "validation.md VIAG-26 e edge case RLS (supabase, rls, triggers)"
+      ],
+      "created": "2026-10-15T12:43:41Z",
+      "last_seen": "2026-10-15T12:43:41Z"
+    },
+    {
+      "id": "L-022",
+      "key": "surviving_mutant::when a rule ranks rows by an ordering column test ties on that column with a cancelled or incomplete row since inclusive bounds can block a legitimate retry",
+      "text": "When a rule ranks rows by an ordering column, test ties on that column with a cancelled or incomplete row, since inclusive bounds can block a legitimate retry",
+      "signal": "surviving_mutant",
+      "scope": "supabase, triggers",
+      "status": "candidate",
+      "features": [
+        "eix76-db-viagem"
+      ],
+      "recurrence": 1,
+      "harmful": 0,
+      "evidence": [
+        "validation.md N08 (viagem_regras.sql VG007, VIAG-29/VIAG-30) (supabase, triggers)"
+      ],
+      "created": "2026-10-15T13:11:41Z",
+      "last_seen": "2026-10-15T13:11:41Z"
     }
   ]
 }
