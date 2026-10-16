@@ -1,3 +1,4 @@
+import { useMigrations } from 'drizzle-orm/expo-sqlite/migrator';
 import { useFonts } from 'expo-font';
 import { Stack } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
@@ -6,7 +7,9 @@ import { useEffect } from 'react';
 import { configureGoogleSignIn } from '@/features/auth/googleAuth';
 import { carregarPerfil, limparPerfil, useProfile } from '@/features/auth/profileStore';
 import { startSessionSync, useSessionStore } from '@/features/auth/sessionStore';
-import { fontAssets } from '@/ui';
+import { db } from '@/db/client';
+import migrations from '@/db/migrations/migrations';
+import { EmptyState, fontAssets, Screen } from '@/ui';
 
 // Mantém a splash nativa até sabermos se há sessão salva e as fontes carregarem (AUTH-09).
 SplashScreen.preventAutoHideAsync();
@@ -30,14 +33,34 @@ export default function RootLayout() {
     else limparPerfil();
   }, [usuarioId]);
 
-  const isReady = fontsLoaded && !isRestoring;
+  // O banco local precisa estar com o schema em dia antes de qualquer tela ler dele (RNF01).
+  const { success: dbPronto, error: dbErro } = useMigrations(db, migrations);
+
+  const isReady = fontsLoaded && !isRestoring && dbPronto;
   // Só entra na área do app quem está com status Ativo (aprovado). Enquanto o perfil carrega, falha ou não está
   // aprovado, a única rota registrada é (pendente) — que mostra o estado certo para cada caso.
   const temAcesso = session !== null && estado === 'pronto' && isAprovado;
 
+  // Com erro na migration o banco nunca ficará pronto: esconde a splash também nesse caso, senão o
+  // usuário ficaria preso nela sem saber o que houve.
+  const falhouNoBanco = dbErro !== undefined && fontsLoaded;
+
   useEffect(() => {
-    if (isReady) SplashScreen.hideAsync();
-  }, [isReady]);
+    if (isReady || falhouNoBanco) SplashScreen.hideAsync();
+  }, [isReady, falhouNoBanco]);
+
+  // Sem retry: erro de migration não é passageiro (SQL ou disco), repetir não resolve.
+  if (falhouNoBanco) {
+    return (
+      <Screen align="center">
+        <EmptyState
+          icon="alerta"
+          title="Não foi possível preparar o banco local"
+          description="Feche e abra o app novamente. Se o problema continuar, reinstale o app ou fale com o suporte."
+        />
+      </Screen>
+    );
+  }
 
   if (!isReady) return null;
 
