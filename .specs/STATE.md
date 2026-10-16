@@ -43,12 +43,12 @@
 - **Status**: active
 
 ### AD-006
-- **Decision**: Migrations testadas no Jest com `@electric-sql/pglite` e stubs mínimos de `auth`/`storage`; migrations aplicadas na nuvem com `npx supabase db push`; espelho Drizzle adiado para a US08.
+- **Decision**: Migrations testadas no Jest com `@electric-sql/pglite` e stubs mínimos de `auth`/`storage`; migrations aplicadas na nuvem com `npx supabase db push`. (O item "espelho Drizzle adiado para a US08" foi ENCERRADO na EIX-78: ver AD-010.)
 - **Reason**: Sem Docker (AD-003) não há Postgres local; PGlite roda Postgres real em WASM.
-- **Trade-off**: Stub não é o Supabase real; exceção à regra "migration local no mesmo PR" do CLAUDE.md até a US08.
+- **Trade-off**: Stub não é o Supabase real. A exceção à regra "migration local no mesmo PR" do CLAUDE.md foi encerrada em 2026-10-16 para `viagem`, `veiculo` e `rota` (AD-010).
 - **Scope**: `supabase/tests`, README, EIX-27.
 - **Date**: 2026-09-24
-- **Status**: active
+- **Status**: active (exceção do espelho Drizzle encerrada em 2026-10-16 pela AD-010)
 
 ### AD-007
 - **Decision**: O fuso `America/Sao_Paulo` do "mês atual" da `resumo_caixa()` sem `referencia` fica sem teste discriminante; os testes passam `referencia` explícita.
@@ -72,6 +72,14 @@
 - **Trade-off**: Algumas "native slop tells" da skill (#6 Inter Everywhere, #9 Wireframe Borders, #18 Dark-Mode Amnesia) ficam aceitas de propósito; a auditoria da EIX-72 não as conta como defeito.
 - **Scope**: Todas as telas e primitivos; EIX-58 e sub-tasks.
 - **Date**: 2026-10-06
+- **Status**: active
+
+### AD-010
+- **Decision**: Offline-first com `expo-sqlite` + Drizzle ORM (SQLite é a fonte da UI), conectividade por `expo-network` e outbox em tabela (`id`, `entidade`, `operacao`, `payload`, `tentativas`, `criado_em`, `ultimo_erro`) com upsert idempotente por UUID do cliente. Conflito: o servidor vence, exceto hodômetro de viagem fechada (triggers VG001-VG007), que vai para revisão do gestor. Escopo mínimo: `viagem` lê/escreve; `veiculo` e `rota` só leitura. Espelho Drizzle com os mesmos nomes de coluna do Postgres; migration de nuvem que muda `viagem`/`veiculo`/`rota` exige schema Drizzle + migration drizzle no mesmo PR. Jest usa `better-sqlite3` em memória com as mesmas migrations (`src/db/testing.ts`) e teste de paridade com `src/types/database.ts`.
+- **Reason**: Motorista opera sem internet (RNF01, RNF07); o `supabase-js` não tem camada offline. SQLite real no Jest prova o SQL e as migrations, o que um mock não prova. `expo-network` é do SDK do Expo, com versão alinhada ao SDK 57.
+- **Trade-off**: Duas definições de schema a manter em sincronia; o driver do Jest (`better-sqlite3`) difere do app (`expo-sqlite`); `expo-sqlite` e `expo-network` são nativos e exigem novo development build; edição local pode ser sobrescrita pelo servidor.
+- **Scope**: `src/db`, `src/db/migrations`, `drizzle.config.ts`, `package.json`, EIX-78 (fundação) e EIX-41 (drenagem, listener, backoff, indicador na UI e resolução de conflito). Detalhes em `docs/adr/0004-offline-first.md`.
+- **Date**: 2026-10-16
 - **Status**: active
 
 ## Handoff
