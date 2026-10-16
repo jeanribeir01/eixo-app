@@ -16,3 +16,14 @@ jest.mock('expo-symbols', () => {
       createElement(Text, { testID: `simbolo-${name.android}`, style: { width: size, height: size, color: tintColor } }),
   };
 });
+
+// `app/_layout.tsx` importa `@/db/client`, que chama `openDatabaseSync` já no import, e roda o
+// `useMigrations` com esse banco. Nada disso existe no Jest (módulo nativo), então os testes de tela
+// recebem um banco falso e migrations "já aplicadas". O banco REAL dos testes vem de
+// `criarBancoDeTeste()` (src/db/testing.ts, better-sqlite3). Quem quiser SQLite real num teste não
+// pode importar `@/db/client`: importe só `@/db/schema` e o helper.
+jest.mock('expo-sqlite', () => ({ openDatabaseSync: () => ({}) }));
+jest.mock('@/db/client', () => ({ db: {} }));
+jest.mock('drizzle-orm/expo-sqlite/migrator', () => ({
+  useMigrations: jest.fn(() => ({ success: true, error: undefined })),
+}));
