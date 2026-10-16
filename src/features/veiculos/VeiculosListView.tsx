@@ -79,14 +79,8 @@ export function VeiculosListView() {
   const filtrando = buscaAplicada.trim() !== '' || filtroStatus !== TODOS;
 
   return (
-    <Screen>
-      <Column gap="xs">
-        <Text variant="bodySm" weight="medium">
-          Eixo Certo
-        </Text>
-        <Text variant="heading">Frota</Text>
-      </Column>
-
+    // Tela interna, aberta pelo hub de Frota (EIX-77): o título "Veículos" vem do header nativo.
+    <Screen underHeader>
       <Input
         label="Buscar"
         placeholder="Buscar por placa ou modelo"

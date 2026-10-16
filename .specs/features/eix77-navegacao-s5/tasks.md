@@ -10,7 +10,7 @@ Implement these tasks with the `tlc-spec-driven` skill: **activate it by name an
 
 **Spec**: `.specs/features/eix77-navegacao-s5/spec.md`
 **Design**: inline (sem `design.md`) — mesmo padrão do hub Financeiro (EIX-62) e das rotas internas já existentes: a rota em `app/(app)/` só importa e renderiza a view da feature; título e guard ficam em `app/(app)/_layout.tsx`; a regra de perfil vem de `useMenu()`.
-**Status**: Draft
+**Status**: Done
 
 ---
 
@@ -238,9 +238,9 @@ T6 → T7
 
 **Done when**:
 
-- [ ] A lista não mostra "Frota" nem "Eixo Certo" no conteúdo
-- [ ] Testes existentes da lista continuam verdes, sem asserção removida
-- [ ] Gate build verde (fim de fase)
+- [x] A lista não mostra "Frota" nem "Eixo Certo" no conteúdo
+- [x] Testes existentes da lista continuam verdes, sem asserção removida
+- [x] Gate build verde (fim de fase)
 
 **Tests**: unit
 **Gate**: build

@@ -49,6 +49,17 @@ describe('VeiculosListView', () => {
     expect(screen.getAllByText('Em Viagem')).toHaveLength(1);
   });
 
+  // Desde a EIX-77 a lista abre por cima do hub de Frota, com o header nativo "Veículos" (NAV5-14).
+  it('não repete título no conteúdo: quem dá o título é o header nativo', async () => {
+    (listarVeiculos as jest.Mock).mockResolvedValue({ ok: true, data: veiculosMock });
+
+    render(<VeiculosListView />);
+
+    expect(await screen.findByText('ABC-1234')).toBeOnTheScreen();
+    expect(screen.queryByText('Frota')).not.toBeOnTheScreen();
+    expect(screen.queryByText('Eixo Certo')).not.toBeOnTheScreen();
+  });
+
   it('lista vazia sem filtro mostra estado vazio com ação de cadastrar', async () => {
     (listarVeiculos as jest.Mock).mockResolvedValue({ ok: true, data: [] });
 

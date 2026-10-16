@@ -119,7 +119,7 @@ Na S5 três telas de frota entram em paralelo (Rotas e Manutenção com o Diogo,
 | NAV5-11 | P1: Rotas internas — AC6 | Tasks | Verified |
 | NAV5-12 | P1: Rotas internas — AC7 | Tasks | Verified |
 | NAV5-13 | P2: Placeholders — AC1 | Tasks | Verified |
-| NAV5-14 | P2: Placeholders — AC2 | Tasks | Pending |
+| NAV5-14 | P2: Placeholders — AC2 | Tasks | Verified |
 | NAV5-15 | Edge: voltar de Veículos | Tasks | Verified |
 
 **Coverage:** 15 total, 15 mapped to tasks, 0 unmapped
