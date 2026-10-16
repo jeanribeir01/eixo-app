@@ -156,8 +156,8 @@ T7
 
 **Done when**:
 
-- [ ] As três views renderizam título e frase do estado vazio
-- [ ] Gate build verde (fim de fase)
+- [x] As três views renderizam título e frase do estado vazio
+- [x] Gate build verde (fim de fase)
 
 **Tests**: unit
 **Gate**: build
