@@ -131,8 +131,8 @@ T7
 
 **Done when**:
 
-- [ ] As duas views renderizam título e frase do estado vazio
-- [ ] Gate quick verde
+- [x] As duas views renderizam título e frase do estado vazio
+- [x] Gate quick verde
 
 **Tests**: unit
 **Gate**: quick
