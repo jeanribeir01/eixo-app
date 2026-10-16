@@ -21,6 +21,10 @@ function temPerfil(perfis: readonly PerfilNome[]) {
   return (usuario: PerfilDoUsuario | null) => isAprovado(usuario) && perfis.includes(usuario.perfil);
 }
 
+// Regra da aba Viagens, reaproveitada pelas telas internas de viagem (abrir e fechar): a aba e as
+// telas nunca divergem. O Motorista entra aqui; as viagens que ele vê são só as dele, pelo RLS.
+const podeVerViagens = temPerfil(['Admin', 'Gestor de Frota', 'Motorista']);
+
 // A ordem aqui é a ordem da tab bar. Financeiro e Frota reaproveitam as regras da US16 para
 // a navegação nunca divergir do que `useProfile()` já diz.
 export const abas: readonly Aba[] = [
@@ -28,7 +32,7 @@ export const abas: readonly Aba[] = [
   { id: 'dashboards', rotulo: 'Dashboards', icone: 'dashboards', pode: temPerfil(['Admin', 'Gestor de Frota', 'Financeiro']) },
   { id: 'financeiro', rotulo: 'Financeiro', icone: 'financeiro', pode: canSeeFinanceiro },
   { id: 'frota', rotulo: 'Frota', icone: 'frota', pode: canSeeFrota },
-  { id: 'viagens', rotulo: 'Viagens', icone: 'viagens', pode: temPerfil(['Admin', 'Gestor de Frota', 'Motorista']) },
+  { id: 'viagens', rotulo: 'Viagens', icone: 'viagens', pode: podeVerViagens },
   // Todos os perfis precisam de "Sair"; o que é só do Admin (Usuários) é protegido à parte.
   { id: 'configuracoes', rotulo: 'Configurações', icone: 'configuracoes', pode: isAprovado },
 ];
@@ -62,8 +66,10 @@ export function useMenu() {
     abaInicial: abaInicial(usuario),
     // Telas internas (abertas por cima das abas) seguem o módulo a que pertencem.
     podeVerCategorias: canSeeFinanceiro(usuario),
-    // Cadastro/edição de veículo: os mesmos perfis que o RLS de `veiculo` deixa escrever.
+    // Veículos, rotas e manutenções: os mesmos perfis que o RLS de `veiculo` e `rota` e a RPC
+    // `registrar_manutencao` deixam escrever.
     podeVerFrota: canSeeFrota(usuario),
+    podeVerViagens: podeVerViagens(usuario),
     podeVerUsuarios: isAdmin(usuario),
   };
 }

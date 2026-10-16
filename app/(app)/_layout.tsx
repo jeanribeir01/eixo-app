@@ -4,11 +4,11 @@ import { useMenu } from '@/navigation/menu';
 import { stackOptions } from '@/navigation/stackOptions';
 
 // Área de usuário autenticado e aprovado. As abas (menu por perfil, US17) ficam em (tabs);
-// telas internas como Categorias, Formas de Pagamento, Movimentações, cadastro de veículo e Usuários
+// telas internas como Categorias, Movimentações, Veículos, Rotas, Manutenções, Viagens e Usuários
 // abrem por cima delas, nesta pilha, com header nativo (título + voltar). O título de cada tela mora
 // aqui, junto do guard: a tela nunca configura o próprio header.
 export default function AppLayout() {
-  const { podeVerCategorias, podeVerFrota, podeVerUsuarios } = useMenu();
+  const { podeVerCategorias, podeVerFrota, podeVerViagens, podeVerUsuarios } = useMenu();
 
   // Rota fora do perfil nem existe na árvore: digitar a URL cai de volta nas abas, que abrem
   // na tela inicial do perfil. O RLS é quem garante de fato — esconder rota é usabilidade.
@@ -35,8 +35,21 @@ export default function AppLayout() {
         <Stack.Screen name="dividas/[id]" options={{ title: 'Dívida' }} />
       </Stack.Protected>
       <Stack.Protected guard={podeVerFrota}>
+        {/* Lista em `frota/veiculos`, não em `frota/index`: esse teria a URL da aba Frota (`/frota`). */}
+        <Stack.Screen name="frota/veiculos" options={{ title: 'Veículos' }} />
         <Stack.Screen name="frota/novo" options={{ title: 'Novo veículo' }} />
         <Stack.Screen name="frota/[id]/editar" options={{ title: 'Editar veículo' }} />
+        {/* Rotas (US07) e Manutenções (US06-b): mesmos perfis do RLS de `rota` e da RPC de manutenção. */}
+        <Stack.Screen name="rotas/index" options={{ title: 'Rotas' }} />
+        <Stack.Screen name="rotas/nova" options={{ title: 'Nova rota' }} />
+        <Stack.Screen name="rotas/[id]/editar" options={{ title: 'Editar rota' }} />
+        <Stack.Screen name="manutencoes/index" options={{ title: 'Manutenções' }} />
+        <Stack.Screen name="manutencoes/nova" options={{ title: 'Nova manutenção' }} />
+      </Stack.Protected>
+      {/* Viagens (US08) seguem a aba: o Motorista também abre e fecha. A lista é a própria aba. */}
+      <Stack.Protected guard={podeVerViagens}>
+        <Stack.Screen name="viagens/nova" options={{ title: 'Abrir viagem' }} />
+        <Stack.Screen name="viagens/[id]/fechar" options={{ title: 'Fechar viagem' }} />
       </Stack.Protected>
       <Stack.Protected guard={podeVerUsuarios}>
         <Stack.Screen name="usuarios/index" options={{ title: 'Usuários' }} />

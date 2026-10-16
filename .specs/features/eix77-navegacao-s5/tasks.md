@@ -48,18 +48,18 @@ Os ícones entram primeiro porque os placeholders usam. Depois cada feature ganh
 T1 → T2 → T3 → T4
 ```
 
-### Phase 2: Hub de Frota e lista de veículos
+### Phase 2: Rotas, títulos e guards
+
+Arquivos de rota, `_layout.tsx`, `menu.ts` e os testes de navegação por perfil. Vem antes do hub porque o `href` tipado do hub só existe depois dos arquivos de rota.
 
 ```
-T5 → T6
+T5
 ```
 
-### Phase 3: Rotas, títulos e guards
-
-Liga tudo: arquivos de rota, `_layout.tsx`, `menu.ts` e os testes de navegação por perfil.
+### Phase 3: Hub de Frota e lista de veículos
 
 ```
-T7
+T6 → T7
 ```
 
 ---
@@ -166,11 +166,41 @@ T7
 
 ---
 
-### T5: Hub de Frota
+### T5: Rotas de arquivo, títulos e guards
+
+**What**: Arquivos `app/(app)/frota/veiculos.tsx`, `rotas/index.tsx`, `rotas/nova.tsx`, `rotas/[id]/editar.tsx`, `manutencoes/index.tsx`, `manutencoes/nova.tsx`, `viagens/nova.tsx`, `viagens/[id]/fechar.tsx`; aba `(tabs)/viagens.tsx` renderiza `ViagensListView`. `podeVerViagens` em `useMenu()` com a mesma regra da aba. Títulos e guards em `app/(app)/_layout.tsx`. Testes de navegação por perfil e teste de colisão de URL com aba.
+**Where**: `app/(app)/**` (menos `(tabs)/frota.tsx`, que é da T6), `src/navigation/menu.ts`, `src/navigation/__tests__/menu.test.ts`, `__tests__/routes/navegacaoPorPerfil.test.tsx`, `__tests__/routes/colisaoComAbas.test.ts`
+**Nota**: vem antes do hub porque o `href` do hub é tipado pelas rotas que existem (`typedRoutes`, `.expo/types/router.d.ts` gerado pelo `expo start`): sem os arquivos de rota o hub não passa no typecheck.
+**Depends on**: None (a Phase 1 termina antes)
+**Reuses**: padrão `Stack.Protected` e `entrarComo()` existentes
+**Requirement**: NAV5-05, NAV5-06, NAV5-07, NAV5-08, NAV5-09, NAV5-10, NAV5-11, NAV5-12, NAV5-15
+
+**Tools**:
+
+- MCP: NONE
+- Skill: `expo-router`, `teste-componente`
+
+**Done when**:
+
+- [x] Admin abre as 8 URLs novas com o header de título da spec
+- [x] Motorista e Financeiro voltam para a home em `/frota/veiculos`, `/rotas`, `/rotas/nova`, `/manutencoes`; Gestor abre
+- [x] Motorista abre `/viagens/nova`; Financeiro volta para a home
+- [x] Gestor continua abrindo em `/frota` com o hub; voltar de `/frota/veiculos` retorna ao hub
+- [x] Nenhuma rota interna com a URL de uma aba
+- [x] Gate build verde
+
+**Tests**: integration
+**Gate**: build
+
+**Commit**: `feat(navegacao): rotas, títulos e guards de Rotas, Manutenção e Viagens (EIX-77)`
+
+---
+
+### T6: Hub de Frota
 
 **What**: `FrotaHubView` no padrão do `FinanceiroHubView`: título "Frota", `ListSection` "Operação" (Manutenções → `/manutencoes`) e "Cadastros" (Veículos → `/frota/veiculos`, Rotas → `/rotas`). A aba `(tabs)/frota.tsx` passa a renderizar o hub.
 **Where**: `src/navigation/FrotaHubView.tsx`, `app/(app)/(tabs)/frota.tsx`, `src/navigation/__tests__/FrotaHubView.test.tsx`, `src/navigation/__tests__/FrotaRoute.test.tsx`
-**Depends on**: None (a Phase 1 termina antes)
+**Depends on**: None (a Phase 2 termina antes)
 **Reuses**: `FinanceiroHubView`, `ListSection`, `ListItem`
 **Requirement**: NAV5-01, NAV5-02, NAV5-03, NAV5-04
 
@@ -193,11 +223,11 @@ T7
 
 ---
 
-### T6: Lista de veículos como tela interna
+### T7: Lista de veículos como tela interna
 
 **What**: `VeiculosListView` sem o bloco de título ("Eixo Certo" / "Frota") e com `Screen underHeader`.
 **Where**: `src/features/veiculos/VeiculosListView.tsx`, `src/features/veiculos/__tests__/VeiculosListView.test.tsx`
-**Depends on**: T5
+**Depends on**: T6
 **Reuses**: —
 **Requirement**: NAV5-14
 
@@ -216,32 +246,3 @@ T7
 **Gate**: build
 
 **Commit**: `refactor(veiculos): lista de veículos como tela interna, sem título no conteúdo (EIX-77)`
-
----
-
-### T7: Rotas de arquivo, títulos e guards
-
-**What**: Arquivos `app/(app)/frota/veiculos.tsx`, `rotas/index.tsx`, `rotas/nova.tsx`, `rotas/[id]/editar.tsx`, `manutencoes/index.tsx`, `manutencoes/nova.tsx`, `viagens/nova.tsx`, `viagens/[id]/fechar.tsx`; aba `(tabs)/viagens.tsx` renderiza `ViagensListView`. `podeVerViagens` em `useMenu()` com a mesma regra da aba. Títulos e guards em `app/(app)/_layout.tsx`. Testes de navegação por perfil e teste de colisão de URL com aba.
-**Where**: `app/(app)/**`, `src/navigation/menu.ts`, `src/navigation/__tests__/menu.test.ts`, `__tests__/routes/navegacaoPorPerfil.test.tsx`, `__tests__/routes/colisaoComAbas.test.ts`
-**Depends on**: None (a Phase 2 termina antes)
-**Reuses**: padrão `Stack.Protected` e `entrarComo()` existentes
-**Requirement**: NAV5-05, NAV5-06, NAV5-07, NAV5-08, NAV5-09, NAV5-10, NAV5-11, NAV5-12, NAV5-15
-
-**Tools**:
-
-- MCP: NONE
-- Skill: `expo-router`, `teste-componente`
-
-**Done when**:
-
-- [ ] Admin abre as 8 URLs novas com o header de título da spec
-- [ ] Motorista e Financeiro voltam para a home em `/frota/veiculos`, `/rotas`, `/rotas/nova`, `/manutencoes`; Gestor abre
-- [ ] Motorista abre `/viagens/nova`; Financeiro volta para a home
-- [ ] Gestor continua abrindo em `/frota` com o hub; voltar de `/frota/veiculos` retorna ao hub
-- [ ] Nenhuma rota interna com a URL de uma aba
-- [ ] Gate build verde
-
-**Tests**: integration
-**Gate**: build
-
-**Commit**: `feat(navegacao): rotas, títulos e guards de Rotas, Manutenção e Viagens (EIX-77)`

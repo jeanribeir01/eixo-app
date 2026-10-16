@@ -110,17 +110,17 @@ Na S5 três telas de frota entram em paralelo (Rotas e Manutenção com o Diogo,
 | NAV5-02 | P1: Hub de Frota — AC2 | Tasks | Pending |
 | NAV5-03 | P1: Hub de Frota — AC3 | Tasks | Pending |
 | NAV5-04 | P1: Hub de Frota — AC4 | Tasks | Pending |
-| NAV5-05 | P1: Hub de Frota — AC5 | Tasks | Pending |
-| NAV5-06 | P1: Rotas internas — AC1 | Tasks | Pending |
-| NAV5-07 | P1: Rotas internas — AC2 | Tasks | Pending |
-| NAV5-08 | P1: Rotas internas — AC3 | Tasks | Pending |
-| NAV5-09 | P1: Rotas internas — AC4 | Tasks | Pending |
-| NAV5-10 | P1: Rotas internas — AC5 | Tasks | Pending |
-| NAV5-11 | P1: Rotas internas — AC6 | Tasks | Pending |
-| NAV5-12 | P1: Rotas internas — AC7 | Tasks | Pending |
-| NAV5-13 | P2: Placeholders — AC1 | Tasks | Pending |
+| NAV5-05 | P1: Hub de Frota — AC5 | Tasks | Verified |
+| NAV5-06 | P1: Rotas internas — AC1 | Tasks | Verified |
+| NAV5-07 | P1: Rotas internas — AC2 | Tasks | Verified |
+| NAV5-08 | P1: Rotas internas — AC3 | Tasks | Verified |
+| NAV5-09 | P1: Rotas internas — AC4 | Tasks | Verified |
+| NAV5-10 | P1: Rotas internas — AC5 | Tasks | Verified |
+| NAV5-11 | P1: Rotas internas — AC6 | Tasks | Verified |
+| NAV5-12 | P1: Rotas internas — AC7 | Tasks | Verified |
+| NAV5-13 | P2: Placeholders — AC1 | Tasks | Verified |
 | NAV5-14 | P2: Placeholders — AC2 | Tasks | Pending |
-| NAV5-15 | Edge: voltar de Veículos | Tasks | Pending |
+| NAV5-15 | Edge: voltar de Veículos | Tasks | Verified |
 
 **Coverage:** 15 total, 15 mapped to tasks, 0 unmapped
 
