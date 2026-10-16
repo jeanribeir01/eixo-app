@@ -1,10 +1,10 @@
 import { render, screen } from '@testing-library/react-native';
 
 import DashboardsRoute from '../../../app/(app)/(tabs)/dashboards';
-import ViagensRoute from '../../../app/(app)/(tabs)/viagens';
 import { ModuloEmBreveView } from '../ModuloEmBreveView';
 
-// Abas cujo módulo ainda não existe (FIN-04): ícone, nome e o que o módulo vai fazer.
+// Abas cujo módulo ainda não existe (FIN-04): ícone, nome e o que o módulo vai fazer. A aba Viagens saiu
+// daqui na EIX-77: ela renderiza a `ViagensListView` da feature (coberta em __tests__/routes/rotasDaS5).
 describe('ModuloEmBreveView (FIN-04)', () => {
   it('mostra o ícone do módulo, o nome e a frase, sem botão nenhum', () => {
     render(<ModuloEmBreveView titulo="Viagens" icone="viagens" descricao="Abertura e fechamento de viagens." />);
@@ -24,7 +24,6 @@ describe('ModuloEmBreveView (FIN-04)', () => {
 
   it.each([
     ['Dashboards', DashboardsRoute, 'simbolo-dashboard', /^Indicadores do caixa e da frota/],
-    ['Viagens', ViagensRoute, 'simbolo-route', /^Abertura e fechamento de viagens/],
   ])('a aba %s usa o ícone do módulo e diz o que ele vai fazer', (titulo, Rota, simbolo, frase) => {
     render(<Rota />);
 
