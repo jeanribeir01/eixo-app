@@ -216,22 +216,39 @@ describe('ManutencaoFormView — salvar', () => {
 });
 
 describe('ManutencaoFormView — carga das opções', () => {
-  // MAN-40
-  it('falha ao carregar mostra o erro em português e "Tentar novamente" carrega de novo', async () => {
-    mockFormas
-      .mockResolvedValueOnce({ ok: false, mensagem: 'Não foi possível carregar as formas de pagamento. Tente novamente.' })
-      .mockResolvedValueOnce({ ok: true, data: formas });
+  // MAN-40: as duas cargas rodam em paralelo, e a falha de qualquer uma delas tem que aparecer.
+  // Um caso por fonte (lição L-025): testar só uma deixava passar a tela que ignora a outra.
+  it.each([
+    [
+      'dos veículos',
+      () =>
+        mockVeiculos
+          .mockResolvedValueOnce({ ok: false, mensagem: 'Não foi possível carregar os veículos. Tente novamente.' })
+          .mockResolvedValueOnce({ ok: true, data: veiculos }),
+      'Não foi possível carregar os veículos. Tente novamente.',
+      () => mockVeiculos,
+    ],
+    [
+      'das formas de pagamento',
+      () =>
+        mockFormas
+          .mockResolvedValueOnce({ ok: false, mensagem: 'Não foi possível carregar as formas de pagamento. Tente novamente.' })
+          .mockResolvedValueOnce({ ok: true, data: formas }),
+      'Não foi possível carregar as formas de pagamento. Tente novamente.',
+      () => mockFormas,
+    ],
+  ])('falha na carga %s mostra o erro em português e "Tentar novamente" carrega de novo', async (_fonte, falhar, mensagem, fonte) => {
+    falhar();
     render(<ManutencaoFormView />);
 
-    expect(
-      await screen.findByText('Não foi possível carregar as formas de pagamento. Tente novamente.'),
-    ).toBeOnTheScreen();
+    expect(await screen.findByText(mensagem)).toBeOnTheScreen();
+    expect(screen.queryByLabelText('Descrição do serviço')).not.toBeOnTheScreen();
     await act(async () => {
       fireEvent.press(screen.getByRole('button', { name: 'Tentar novamente' }));
     });
 
     expect(await screen.findByLabelText('Descrição do serviço')).toBeOnTheScreen();
-    expect(mockFormas).toHaveBeenCalledTimes(2);
+    expect(fonte()).toHaveBeenCalledTimes(2);
   });
 
   // MAN-40: o Gestor de Frota vê lista vazia até a T9 (RLS de forma_pagamento).
