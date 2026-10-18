@@ -6,11 +6,10 @@ import { z } from 'zod';
 import { rotuloTipoCategoria, type TipoCategoria } from '@/features/categorias/types';
 import { isoParaDataBR } from '@/lib/datas';
 import { removerComprovante } from '@/lib/storage';
-import { Button, Column, EmptyState, Input, Screen, Select, Snackbar, Tabs, Text, colors } from '@/ui';
+import { Button, CampoData, Column, EmptyState, Input, Screen, Select, Snackbar, Tabs, Text, colors } from '@/ui';
 
 import { camposMovimentacao, type CampoMovimentacao } from './camposMovimentacao';
 import { AnexoComprovante } from './components/AnexoComprovante';
-import { CampoData } from './components/CampoData';
 import { CampoMoeda } from './components/CampoMoeda';
 import {
   atualizarMovimentacao,
