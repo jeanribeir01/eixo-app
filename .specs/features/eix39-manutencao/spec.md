@@ -174,23 +174,23 @@ O gestor de frota não tem onde registrar a manutenção de um veículo: a tela 
 | MAN-14 | P1: Registrar — AC14 | Tasks | Implementing |
 | MAN-15 | P1: Registrar — AC15 | Tasks | Implementing |
 | MAN-16 | P1: Registrar — AC16 | Tasks | Implementing |
-| MAN-17 | P1: Concluir — AC1 | Tasks | Pending |
+| MAN-17 | P1: Concluir — AC1 | Tasks | Implementing |
 | MAN-18 | P1: Concluir — AC2 | Tasks | Implementing |
-| MAN-19 | P1: Concluir — AC3 | Tasks | Pending |
+| MAN-19 | P1: Concluir — AC3 | Tasks | Implementing |
 | MAN-20 | P1: Concluir — AC4 | Tasks | Implementing |
 | MAN-21 | P1: Concluir — AC5 | Tasks | Implementing |
-| MAN-22 | P1: Concluir — AC6 | Tasks | Pending |
-| MAN-23 | P1: Concluir — AC7 | Tasks | Pending |
-| MAN-24 | P1: Concluir — AC8 | Tasks | Pending |
-| MAN-25 | P1: Concluir — AC9 | Tasks | Pending |
-| MAN-26 | P1: Concluir — AC10 | Tasks | Pending |
-| MAN-27 | P1: Concluir — AC11 | Tasks | Pending |
+| MAN-22 | P1: Concluir — AC6 | Tasks | Implementing |
+| MAN-23 | P1: Concluir — AC7 | Tasks | Implementing |
+| MAN-24 | P1: Concluir — AC8 | Tasks | Implementing |
+| MAN-25 | P1: Concluir — AC9 | Tasks | Implementing |
+| MAN-26 | P1: Concluir — AC10 | Tasks | Implementing |
+| MAN-27 | P1: Concluir — AC11 | Tasks | Implementing |
 | MAN-28 | P1: Formas ativas — AC1 | Tasks | Implementing |
 | MAN-29 | P1: Formas ativas — AC2 | Tasks | Implementing |
 | MAN-30 | P1: Formas ativas — AC3 | Tasks | Implementing |
 | MAN-31 | P1: Formas ativas — AC4 | Tasks | Implementing |
 | MAN-32 | P1: Formas ativas — AC5 | Tasks | Pending |
-| MAN-33 | P1: Detalhe — AC1 | Tasks | Pending |
+| MAN-33 | P1: Detalhe — AC1 | Tasks | Implementing |
 | MAN-34 | P1: Detalhe — AC2 | Tasks | Implementing |
 | MAN-35 | P1: Detalhe — AC3 | Tasks | Implementing |
 | MAN-36 | P1: Detalhe — AC4 | Tasks | Implementing |

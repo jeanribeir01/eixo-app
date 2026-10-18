@@ -287,17 +287,17 @@ T5 → T9
 
 **Done when**:
 
-- [ ] Título e subtítulo no formato da spec; abertas primeiro
-- [ ] "Concluir" com loading e os dois textos de Snackbar; erro mantém a linha aberta
-- [ ] "Ver veículo" abre `/frota/<veiculo_id>`; FAB abre `/manutencoes/nova`
-- [ ] Skeleton, erro com "Tentar novamente" e vazio
-- [ ] `placeholders.test.tsx` removido
-- [ ] Gate check passes: `npm run typecheck && npm run lint && npm run test`
+- [x] Título e subtítulo no formato da spec; abertas primeiro
+- [x] "Concluir" com loading e os dois textos de Snackbar; erro mantém a linha aberta
+- [x] "Ver veículo" abre `/frota/<veiculo_id>`; FAB abre `/manutencoes/nova`
+- [x] Skeleton, erro com "Tentar novamente" e vazio
+- [x] `placeholders.test.tsx` removido
+- [x] Gate check passes: `npm run typecheck && npm run lint && npm run test`
 
 **Tests**: unit
 **Gate**: build
 
-**Commit**: `feat(manutencao): lista com conclusão e acesso ao detalhe do veículo (EIX-39)`
+**Commit**: `feat(manutencao): lista com conclusão e acesso ao veículo (EIX-39)`
 
 ---
 
