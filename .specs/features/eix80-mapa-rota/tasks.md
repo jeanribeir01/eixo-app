@@ -71,9 +71,9 @@ T4 → T5 → T6 → T7
 
 **Done when**:
 
-- [ ] `package.json` com a versão exata 11.5.0 e o `@types/geojson`
-- [ ] Plugin `@maplibre/maplibre-react-native` em `plugins`, com o motivo comentado
-- [ ] Gate check passes: `npm run typecheck && npm run lint && npm run test`
+- [x] `package.json` com a versão exata 11.5.0 e o `@types/geojson`
+- [x] Plugin `@maplibre/maplibre-react-native` em `plugins`, com o motivo comentado
+- [x] Gate check passes: `npm run typecheck && npm run lint && npm run test` (app 940/940, supabase 298/298)
 
 **Tests**: none
 **Gate**: build

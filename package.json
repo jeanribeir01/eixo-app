@@ -12,6 +12,7 @@
   },
   "dependencies": {
     "@expo-google-fonts/inter": "^0.4.2",
+    "@maplibre/maplibre-react-native": "11.5.0",
     "@react-native-community/datetimepicker": "9.1.0",
     "@react-native-google-signin/google-signin": "^16.1.5",
     "@supabase/supabase-js": "^2.116.0",
@@ -46,6 +47,7 @@
     "@electric-sql/pglite": "^0.5.8",
     "@testing-library/react-native": "^13.3.3",
     "@types/better-sqlite3": "^9.6.0",
+    "@types/geojson": "^7946.0.16",
     "@types/jest": "^29.5.14",
     "@types/react": "~19.2.2",
     "babel-plugin-inline-import": "^3.0.0",

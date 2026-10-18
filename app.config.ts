@@ -48,6 +48,9 @@ const config: ExpoConfig = {
         microphonePermission: false,
       },
     ],
+    // Mapa da rota (EIX-80, ADR 0005). No Android o plugin só aplica customizações; no iOS ele instala o
+    // MapLibre Native no Podfile. Não usa chave de API: os tiles vêm do OpenFreeMap.
+    '@maplibre/maplibre-react-native',
     // O plugin '@react-native-google-signin/google-signin' NÃO entra aqui de propósito:
     // sem opções ele configura o Firebase (exige google-services.json) e com opções só mexe no iOS.
     // No Android sem Firebase, o autolinking já instala o módulo nativo. Ao adicionar iOS, inclua:
