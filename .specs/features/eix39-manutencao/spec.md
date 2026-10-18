@@ -158,7 +158,7 @@ O gestor de frota não tem onde registrar a manutenção de um veículo: a tela 
 
 | Requirement ID | Story | Phase | Status |
 | --- | --- | --- | --- |
-| MAN-01 | P1: Registrar — AC1 | Tasks | Pending |
+| MAN-01 | P1: Registrar — AC1 | Tasks | Implementing |
 | MAN-02 | P1: Registrar — AC2 | Tasks | Implementing |
 | MAN-03 | P1: Registrar — AC3 | Tasks | Implementing |
 | MAN-04 | P1: Registrar — AC4 | Tasks | Implementing |
@@ -172,7 +172,7 @@ O gestor de frota não tem onde registrar a manutenção de um veículo: a tela 
 | MAN-12 | P1: Registrar — AC12 | Tasks | Implementing |
 | MAN-13 | P1: Registrar — AC13 | Tasks | Implementing |
 | MAN-14 | P1: Registrar — AC14 | Tasks | Implementing |
-| MAN-15 | P1: Registrar — AC15 | Tasks | Pending |
+| MAN-15 | P1: Registrar — AC15 | Tasks | Implementing |
 | MAN-16 | P1: Registrar — AC16 | Tasks | Implementing |
 | MAN-17 | P1: Concluir — AC1 | Tasks | Pending |
 | MAN-18 | P1: Concluir — AC2 | Tasks | Implementing |
@@ -197,7 +197,7 @@ O gestor de frota não tem onde registrar a manutenção de um veículo: a tela 
 | MAN-37 | P1: Detalhe — AC5 | Tasks | Pending |
 | MAN-38 | P1: Detalhe — AC6 | Tasks | Pending |
 | MAN-39 | Edge: códigos de erro das RPCs e resposta inválida | Tasks | Implementing |
-| MAN-40 | Edge: falha na carga das opções e nenhuma forma ativa | Tasks | Pending |
+| MAN-40 | Edge: falha na carga das opções e nenhuma forma ativa | Tasks | Implementing |
 | MAN-41 | Edge: R$ 1,13 sem resíduo de ponto flutuante | Tasks | Implementing |
 | MAN-42 | Edge: data de hoje às 23h30 | Tasks | Implementing |
 

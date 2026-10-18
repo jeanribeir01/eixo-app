@@ -233,11 +233,11 @@ T5 → T9
 
 **Done when**:
 
-- [ ] Render com os seis campos e os valores iniciais; caminho feliz com Snackbar e volta
-- [ ] Cada validação bloqueia o envio; `MN001` e `22023` mostram a mensagem; loading no "Salvar"
-- [ ] Erro na carga das opções com "Tentar novamente"; seletor vazio com "Nenhuma forma de pagamento ativa."
-- [ ] Caso do formulário removido de `placeholders.test.tsx`
-- [ ] Gate check passes: `npx jest src/features/manutencao --selectProjects app`
+- [x] Render com os seis campos e os valores iniciais; caminho feliz com Snackbar e volta
+- [x] Cada validação bloqueia o envio; `MN001` e `22023` mostram a mensagem; loading no "Salvar"
+- [x] Erro na carga das opções com "Tentar novamente"; seletor vazio com "Nenhuma forma de pagamento ativa."
+- [x] Caso do formulário removido de `placeholders.test.tsx`
+- [x] Gate check passes: `npx jest src/features/manutencao --selectProjects app`
 
 **Tests**: unit
 **Gate**: quick
