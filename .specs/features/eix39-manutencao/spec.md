@@ -161,15 +161,15 @@ O gestor de frota não tem onde registrar a manutenção de um veículo: a tela 
 | MAN-01 | P1: Registrar — AC1 | Tasks | Pending |
 | MAN-02 | P1: Registrar — AC2 | Tasks | Pending |
 | MAN-03 | P1: Registrar — AC3 | Tasks | Pending |
-| MAN-04 | P1: Registrar — AC4 | Tasks | Pending |
+| MAN-04 | P1: Registrar — AC4 | Tasks | Implementing |
 | MAN-05 | P1: Registrar — AC5 | Tasks | Pending |
-| MAN-06 | P1: Registrar — AC6 | Tasks | Pending |
-| MAN-07 | P1: Registrar — AC7 | Tasks | Pending |
-| MAN-08 | P1: Registrar — AC8 | Tasks | Pending |
-| MAN-09 | P1: Registrar — AC9 | Tasks | Pending |
-| MAN-10 | P1: Registrar — AC10 | Tasks | Pending |
-| MAN-11 | P1: Registrar — AC11 | Tasks | Pending |
-| MAN-12 | P1: Registrar — AC12 | Tasks | Pending |
+| MAN-06 | P1: Registrar — AC6 | Tasks | Implementing |
+| MAN-07 | P1: Registrar — AC7 | Tasks | Implementing |
+| MAN-08 | P1: Registrar — AC8 | Tasks | Implementing |
+| MAN-09 | P1: Registrar — AC9 | Tasks | Implementing |
+| MAN-10 | P1: Registrar — AC10 | Tasks | Implementing |
+| MAN-11 | P1: Registrar — AC11 | Tasks | Implementing |
+| MAN-12 | P1: Registrar — AC12 | Tasks | Implementing |
 | MAN-13 | P1: Registrar — AC13 | Tasks | Pending |
 | MAN-14 | P1: Registrar — AC14 | Tasks | Pending |
 | MAN-15 | P1: Registrar — AC15 | Tasks | Pending |
@@ -198,8 +198,8 @@ O gestor de frota não tem onde registrar a manutenção de um veículo: a tela 
 | MAN-38 | P1: Detalhe — AC6 | Tasks | Pending |
 | MAN-39 | Edge: códigos de erro das RPCs e resposta inválida | Tasks | Pending |
 | MAN-40 | Edge: falha na carga das opções e nenhuma forma ativa | Tasks | Pending |
-| MAN-41 | Edge: R$ 1,13 sem resíduo de ponto flutuante | Tasks | Pending |
-| MAN-42 | Edge: data de hoje às 23h30 | Tasks | Pending |
+| MAN-41 | Edge: R$ 1,13 sem resíduo de ponto flutuante | Tasks | Implementing |
+| MAN-42 | Edge: data de hoje às 23h30 | Tasks | Implementing |
 
 **Coverage:** 42 total, 42 mapped to tasks, 0 unmapped
 

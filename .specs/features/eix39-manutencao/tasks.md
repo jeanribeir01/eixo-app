@@ -180,9 +180,9 @@ T5 → T9
 
 **Done when**:
 
-- [ ] Cada mensagem dos AC 6 a 12 coberta; caminho feliz devolve data ISO e centavos inteiros
-- [ ] Hoje às 23h30 em `America/Sao_Paulo` aceito e amanhã recusado, com fuso fixo no teste (L-001)
-- [ ] Gate check passes: `npx jest src/features/manutencao --selectProjects app`
+- [x] Cada mensagem dos AC 6 a 12 coberta; caminho feliz devolve data ISO e centavos inteiros
+- [x] Hoje às 23h30 em `America/Sao_Paulo` aceito e amanhã recusado, com fuso fixo no teste (L-001)
+- [x] Gate check passes: `npx jest src/features/manutencao --selectProjects app`
 
 **Tests**: unit
 **Gate**: quick
