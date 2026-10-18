@@ -84,11 +84,11 @@
 
 ## Handoff
 
-- **Feature**: `.specs/features/eix77-navegacao-s5` (EIX-77, navegação da S5)
-- **Phase / Task**: concluída — T1..T7 + fix de guard; Verifier PASS (iteração 2, 13/13 mutantes mortos)
-- **Completed**: 58c8382..HEAD em `feat/eix-77-navegacao-s5`; lista de veículos em `/frota/veiculos` (não `frota/index`, que colide com a aba `/frota`)
+- **Feature**: `.specs/features/eix39-manutencao` (EIX-39, US06-b Manutenção)
+- **Phase / Task**: T1..T8 concluídas; Verifier PASS (iteração 2, 16/16 mutantes mortos, `validation.md`). T9 bloqueada
+- **Completed**: e42962d..HEAD em `feat/eix-39-us06b-manutencao` (RPC `listar_formas_pagamento_ativas`, CampoData/CampoMoeda em `src/ui`, schema, repositório, formulário, detalhe `/frota/[id]` e lista)
 - **In-progress** (file:line): none
-- **Next step**: review do PR #34 (revisor: Diogo) → squash and merge → fechar a EIX-77 (quem fecha é o Jean) → EIX-78. Avisos já comentados na EIX-38, EIX-39, EIX-40 e EIX-79
-- **Blockers**: aprovação do PR
+- **Next step**: Jean aplica `20261018000100_formas_pagamento_ativas.sql` (`npx supabase db push`) e regera `src/types/database.ts` → T9: `listarFormasPagamentoAtivas` em `src/features/manutencao/manutencaoRepository.ts` passa para `supabase.rpc('listar_formas_pagamento_ativas')` → conferência curta do Verifier → merge
+- **Blockers**: db push + tipos regerados (esta máquina não tem a Supabase CLI vinculada). Até lá o Gestor de Frota vê o seletor de formas vazio
 - **Uncommitted files**: none
-- **Branch**: feat/eix-77-navegacao-s5 (no remoto, PR #34)
+- **Branch**: feat/eix-39-us06b-manutencao
