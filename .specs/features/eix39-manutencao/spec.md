@@ -191,11 +191,11 @@ O gestor de frota não tem onde registrar a manutenção de um veículo: a tela 
 | MAN-31 | P1: Formas ativas — AC4 | Tasks | Implementing |
 | MAN-32 | P1: Formas ativas — AC5 | Tasks | Pending |
 | MAN-33 | P1: Detalhe — AC1 | Tasks | Pending |
-| MAN-34 | P1: Detalhe — AC2 | Tasks | Pending |
+| MAN-34 | P1: Detalhe — AC2 | Tasks | Implementing |
 | MAN-35 | P1: Detalhe — AC3 | Tasks | Implementing |
-| MAN-36 | P1: Detalhe — AC4 | Tasks | Pending |
-| MAN-37 | P1: Detalhe — AC5 | Tasks | Pending |
-| MAN-38 | P1: Detalhe — AC6 | Tasks | Pending |
+| MAN-36 | P1: Detalhe — AC4 | Tasks | Implementing |
+| MAN-37 | P1: Detalhe — AC5 | Tasks | Implementing |
+| MAN-38 | P1: Detalhe — AC6 | Tasks | Implementing |
 | MAN-39 | Edge: códigos de erro das RPCs e resposta inválida | Tasks | Implementing |
 | MAN-40 | Edge: falha na carga das opções e nenhuma forma ativa | Tasks | Implementing |
 | MAN-41 | Edge: R$ 1,13 sem resíduo de ponto flutuante | Tasks | Implementing |

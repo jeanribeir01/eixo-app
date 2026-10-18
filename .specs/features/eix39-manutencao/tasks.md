@@ -261,14 +261,14 @@ T5 → T9
 
 **Done when**:
 
-- [ ] Carregando, histórico na ordem certa, vazio e "Veículo não encontrado." com "Voltar"
-- [ ] Rota renderiza a View com o id da URL; título "Veículo" no `_layout`
-- [ ] Gate check passes: `npx jest src/features/manutencao __tests__/routes --selectProjects app`
+- [x] Carregando, histórico na ordem certa, vazio e "Veículo não encontrado." com "Voltar"
+- [x] Rota renderiza a View com o id da URL; título "Veículo" no `_layout`
+- [x] Gate check passes: `npx jest src/features/manutencao __tests__/routes --selectProjects app`
 
 **Tests**: unit
 **Gate**: quick
 
-**Commit**: `feat(manutencao): detalhe do veículo com histórico de manutenções (EIX-39)`
+**Commit**: `feat(manutencao): detalhe do veículo com histórico (EIX-39)`
 
 ---
 

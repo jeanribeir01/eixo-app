@@ -42,6 +42,7 @@ const routes = {
   '(app)/categorias/[id]/editar': () => <Text>Tela Editar Categoria</Text>,
   '(app)/frota/novo': () => <Text>Tela Novo Veiculo</Text>,
   '(app)/frota/[id]/editar': () => <Text>Tela Editar Veiculo</Text>,
+  '(app)/frota/[id]/index': () => <Text>Tela Detalhe Veiculo</Text>,
   '(app)/frota/veiculos': () => <Text>Tela Veiculos</Text>,
   '(app)/rotas/index': () => <Text>Tela Rotas</Text>,
   '(app)/rotas/nova': () => <Text>Tela Nova Rota</Text>,
@@ -254,6 +255,7 @@ describe('telas internas seguem o módulo (EIX-31)', () => {
     ['/rotas/r1/editar', 'Tela Editar Rota'],
     ['/manutencoes', 'Tela Manutencoes'],
     ['/manutencoes/nova', 'Tela Nova Manutencao'],
+    ['/frota/v1', 'Tela Detalhe Veiculo'],
   ] as const;
 
   it.each((['Financeiro', 'Motorista'] as const).flatMap((perfil) => telasDaFrota.map(([rota, tela]) => ({ perfil, rota, tela }))))(
@@ -275,6 +277,7 @@ describe('telas internas seguem o módulo (EIX-31)', () => {
     ['/frota/veiculos', 'Tela Veiculos'],
     ['/rotas', 'Tela Rotas'],
     ['/manutencoes', 'Tela Manutencoes'],
+    ['/frota/v1', 'Tela Detalhe Veiculo'],
   ] as const)('Gestor de Frota abre %s (NAV5-08)', async (rota, tela) => {
     const router = await entrarComo('Gestor de Frota');
 
@@ -428,6 +431,8 @@ describe('header nativo nas telas internas (NAV-02)', () => {
     ['/manutencoes/nova', 'Tela Nova Manutencao', 'Nova manutenção'],
     ['/viagens/nova', 'Tela Abrir Viagem', 'Abrir viagem'],
     ['/viagens/v1/fechar', 'Tela Fechar Viagem', 'Fechar viagem'],
+    // Detalhe do veículo (EIX-39)
+    ['/frota/v1', 'Tela Detalhe Veiculo', 'Veículo'],
   ] as const)('%s abre %s com o header "%s" e o botão voltar', async (rota, tela, titulo) => {
     await entrarComo('Admin');
 
