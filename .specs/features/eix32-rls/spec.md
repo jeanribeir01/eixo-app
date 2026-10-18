@@ -35,7 +35,7 @@ A US17 esconde telas por perfil, mas o app fala direto com o PostgREST: quem cha
 | "Categoria financeira" no AC | A tabela `categoria` inteira (e `forma_pagamento`) | Toda categoria é de movimentação financeira (Entrada/Saída) | y |
 | "Chamando a API direto" | Testes no PGlite com `set role authenticated` + `request.jwt.claims`, o mesmo contexto que o PostgREST monta | Padrão do projeto (AD-006); não há Postgres/PostgREST local (AD-003) | y |
 | Bloqueado | Mesmas regras de pendente | `auth_perfil()` devolve nulo para todo status diferente de `Ativo` | y |
-| Gestor de Frota em `forma_pagamento` e `divida` | Bloqueado, como em `movimentacao` e `categoria` | Gestor não tem área financeira (CLAUDE.md §7, tabela de RBAC) | y |
+| Gestor de Frota em `forma_pagamento` e `divida` | Bloqueado, como em `movimentacao` e `categoria`. **Revisto em 2026-10-18 (AD-011):** o Gestor lê as formas de pagamento ativas, para o seletor da manutenção (EIX-39) | Gestor não tem área financeira (CLAUDE.md §7, tabela de RBAC) | y |
 
 **Open questions:** none - all resolved or logged above.
 
@@ -56,10 +56,11 @@ A US17 esconde telas por perfil, mas o app fala direto com o PostgREST: quem cha
 3. WHILE the user is an approved Motorista, the database SHALL return only the `viagem` rows whose `motorista_id` is the user's id. <!-- RLS-03 -->
 4. IF an approved Motorista inserts a `viagem` whose `motorista_id` is another user THEN the database SHALL reject the insert with SQLSTATE `42501`; IF the Motorista updates another user's `viagem` THEN the database SHALL affect zero rows and leave that row unchanged. <!-- RLS-04 -->
 5. WHILE the user is an approved Gestor de Frota, the database SHALL return all rows of `veiculo`, `rota`, `viagem` and `manutencao`. <!-- RLS-05 -->
-6. WHILE the user is an approved Gestor de Frota, the database SHALL return zero rows from `movimentacao`, `divida`, `categoria` and `forma_pagamento`. <!-- RLS-06 -->
+6. WHILE the user is an approved Gestor de Frota, the database SHALL return zero rows from `movimentacao`, `divida` and `categoria` (`forma_pagamento` saiu desta lista: ver RLS-17). <!-- RLS-06 -->
 7. IF an approved Gestor de Frota or Motorista inserts into `movimentacao` THEN the database SHALL reject it with SQLSTATE `42501`. <!-- RLS-07 -->
 8. IF an approved Gestor de Frota or Motorista calls `resumo_caixa` or `criar_divida` THEN the database SHALL raise SQLSTATE `42501`. <!-- RLS-08 -->
 9. WHILE the user is an approved Admin or Financeiro, the database SHALL return all rows of `movimentacao`, `divida`, `categoria` and `forma_pagamento`. <!-- RLS-09 -->
+10. WHILE the user is an approved Gestor de Frota, the database SHALL return only the `forma_pagamento` rows with `ativa = true`; IF the Gestor inserts into `forma_pagamento` THEN the database SHALL reject it with SQLSTATE `42501`; IF the Gestor updates `forma_pagamento` THEN the database SHALL affect zero rows. Acrescentado em 2026-10-18 para a EIX-39 (AD-011). <!-- RLS-17 -->
 
 **Independent Test**: `npm run test -- supabase/tests/rls` roda a matriz por perfil no PGlite; trocar qualquer policy por `using (true)` derruba ao menos um teste.
 
@@ -110,7 +111,7 @@ A US17 esconde telas por perfil, mas o app fala direto com o PostgREST: quem cha
 
 | Dimension | Coverage |
 | --- | --- |
-| Auth boundaries | RLS-01 a RLS-13 |
+| Auth boundaries | RLS-01 a RLS-13, RLS-17 |
 | Failure states | RLS-14 a RLS-16; update/delete negados como 0 linhas (Assumptions) |
 | State-transition integrity | Pendente/bloqueado → RLS-10 a RLS-12; aprovado → RLS-13 |
 | Remaining dimensions | N/A for this scope: a task não cria escrita, fila, chamada externa nem dado com ciclo de vida novo |
@@ -137,8 +138,9 @@ A US17 esconde telas por perfil, mas o app fala direto com o PostgREST: quem cha
 | RLS-14 | P1: Acesso negado no app | Execute | Verified |
 | RLS-15 | P1: Acesso negado no app | Execute | Verified |
 | RLS-16 | P1: Acesso negado no app | Execute | Verified |
+| RLS-17 | P1: Banco recusa acesso | Execute | Verified |
 
-**Coverage:** 16 total, 16 implementados (RLS-02, RLS-03 e RLS-08 já tinham prova em rls.test.ts, divida.test.ts e resumo_caixa.test.ts)
+**Coverage:** 17 total, 17 implementados (RLS-02, RLS-03 e RLS-08 já tinham prova em rls.test.ts, divida.test.ts e resumo_caixa.test.ts; RLS-17 entrou depois, na EIX-39)
 
 ---
 
