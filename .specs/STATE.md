@@ -82,6 +82,14 @@
 - **Date**: 2026-10-16
 - **Status**: active
 
+### AD-011
+- **Decision**: O Gestor de Frota lê `forma_pagamento`, só as linhas com `ativa = true`, por uma policy própria (`forma_pagamento_select_gestor`). Continua sem gravar `forma_pagamento` e sem ler `movimentacao`, `divida` e `categoria`. Revê, só para `forma_pagamento`, a decisão da EIX-32 de bloquear o Gestor em todas as tabelas financeiras (RLS-06).
+- **Reason**: O formulário da US06-b (EIX-39) exige Forma de Pagamento, e quem registra manutenção é o Gestor (`registrar_manutencao` aceita Admin e Gestor). Com a policy da EIX-27, o seletor do Gestor vinha vazio. Mostrar só as ativas é o que o seletor precisa; forma inativa a RPC já recusa com `22023`.
+- **Trade-off**: O Gestor passa a ver os nomes das formas ativas (Pix, Boleto…), que não são dado financeiro sensível. A categoria "Manutenção" não precisou da mesma exceção, porque a RPC a acha sozinha como `security definer`.
+- **Scope**: `supabase/migrations/20261018000100_forma_pagamento_select_gestor.sql`, `supabase/tests/rls_perfis.test.ts` (RLS-06, RLS-17), EIX-39.
+- **Date**: 2026-10-18
+- **Status**: active
+
 ## Handoff
 
 - **Feature**: `.specs/features/eix77-navegacao-s5` (EIX-77, navegação da S5)
