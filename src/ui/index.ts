@@ -2,6 +2,7 @@ export { Avatar } from './Avatar';
 export { Badge, type BadgeProps, type BadgeTone } from './Badge';
 export { Button, type ButtonProps, type ButtonVariant } from './Button';
 export { CampoData } from './CampoData';
+export { CampoMoeda } from './CampoMoeda';
 export { Card } from './Card';
 export { Column } from './Column';
 export { EmptyState, type EmptyStateProps } from './EmptyState';

@@ -3,10 +3,9 @@ import { useRouter } from 'expo-router';
 import { ActivityIndicator } from 'react-native';
 import { z } from 'zod';
 
-import { CampoMoeda } from '@/features/movimentacoes/components/CampoMoeda';
 import { listarOpcoesMovimentacao, type OpcoesMovimentacao } from '@/features/movimentacoes/movimentacoesRepository';
 import { formatarMoeda } from '@/lib/money';
-import { Button, CampoData, Column, EmptyState, Input, Screen, Select, Snackbar, colors } from '@/ui';
+import { Button, CampoData, CampoMoeda, Column, EmptyState, Input, Screen, Select, Snackbar, colors } from '@/ui';
 
 import { criarDivida } from '../dividasRepository';
 import { MAXIMO_PARCELAS, dividaSchema, somaTotalCentavos, type DividaFormValues } from '../schema';

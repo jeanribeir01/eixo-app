@@ -154,9 +154,9 @@ T5 → T9
 
 **Done when**:
 
-- [ ] Nenhum import restante de `movimentacoes/components/CampoMoeda`
-- [ ] Mesma quantidade de casos no teste movido
-- [ ] Gate check passes: `npm run typecheck && npx jest src/ui src/features/movimentacoes src/features/dividas --selectProjects app`
+- [x] Nenhum import restante de `movimentacoes/components/CampoMoeda`
+- [x] Mesma quantidade de casos no teste movido
+- [x] Gate check passes: `npm run typecheck && npx jest src/ui src/features/movimentacoes src/features/dividas --selectProjects app`
 
 **Tests**: unit
 **Gate**: full
