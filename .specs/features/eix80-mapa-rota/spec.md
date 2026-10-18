@@ -107,7 +107,7 @@ A EIX-38 não criou tela de detalhe da rota. Esta task cria a tela de detalhe (d
 | --- | --- | --- | --- |
 | MAPA-01 | P1: Mapa — AC1 (marcadores e linha) | Tasks | Pending |
 | MAPA-02 | P1: Mapa — AC2 (enquadramento) | Tasks | Pending |
-| MAPA-03 | P1: Mapa — AC3 (busca no dataset) | Tasks | Pending |
+| MAPA-03 | P1: Mapa — AC3 (busca no dataset) | Execute | Implementing |
 | MAPA-04 | P1: Mapa — AC4 (cores dos tokens) | Tasks | Pending |
 | MAPA-05 | P1: Mapa — AC5 (legenda) | Tasks | Pending |
 | MAPA-06 | P1: Mapa — AC6 (carregando) | Tasks | Pending |

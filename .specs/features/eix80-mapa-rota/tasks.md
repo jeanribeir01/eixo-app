@@ -123,8 +123,8 @@ T4 → T5 → T6 → T7
 
 **Done when**:
 
-- [ ] Curitiba/PR devolve a coordenada do dataset; "sao  PAULO "/SP acha São Paulo/SP; Curitiba/SP e "Curitba"/PR devolvem `null`
-- [ ] Gate check passes: `npx jest src/features/rotas --selectProjects app`
+- [x] Curitiba/PR devolve a coordenada do dataset; "sao  PAULO "/SP acha São Paulo/SP; Curitiba/SP e "Curitba"/PR devolvem `null`
+- [x] Gate check passes: `npx jest src/features/rotas --selectProjects app` (6 suítes, 87 testes; 5 novos)
 
 **Tests**: unit
 **Gate**: quick
