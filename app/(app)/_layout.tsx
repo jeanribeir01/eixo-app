@@ -42,6 +42,8 @@ export default function AppLayout() {
         {/* Rotas (US07) e Manutenções (US06-b): mesmos perfis do RLS de `rota` e da RPC de manutenção. */}
         <Stack.Screen name="rotas/index" options={{ title: 'Rotas' }} />
         <Stack.Screen name="rotas/nova" options={{ title: 'Nova rota' }} />
+        {/* Detalhe com o mapa do trecho (EIX-80). */}
+        <Stack.Screen name="rotas/[id]/index" options={{ title: 'Rota' }} />
         <Stack.Screen name="rotas/[id]/editar" options={{ title: 'Editar rota' }} />
         <Stack.Screen name="manutencoes/index" options={{ title: 'Manutenções' }} />
         <Stack.Screen name="manutencoes/nova" options={{ title: 'Nova manutenção' }} />

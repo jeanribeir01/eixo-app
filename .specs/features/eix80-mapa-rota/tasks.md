@@ -23,7 +23,8 @@ Implement these tasks with the `tlc-spec-driven` skill: **activate it by name an
 | Busca de coordenadas | unit | Cada regra de MAPA-03 contra o JSON real: acento, maiúscula, espaço, UF errada, cidade inexistente | `src/features/rotas/mapa/__tests__/coordenadas.test.ts` | `npx jest src/features/rotas --selectProjects app` |
 | Componente do mapa | unit (MapLibre mockado) | Cada AC de MAPA-01..12 e MAPA-21, pelas props passadas ao MapLibre e pelo texto na tela | `src/features/rotas/mapa/__tests__/MapaRota.test.tsx` | `npx jest src/features/rotas --selectProjects app` |
 | Telas (detalhe e lista) | unit (render + interação) | Carregando, erro, sucesso, inativa, Editar, recarga ao focar, navegação da lista | `src/features/rotas/__tests__/*View.test.tsx` | `npx jest src/features/rotas --selectProjects app` |
-| Dados embarcados, config e rota do expo-router | none | Provados pelos testes de coordenadas e pelo typecheck dos tipos de rota | - | build gate only |
+| Rota do expo-router e título no layout | unit | A rota renderiza a view com o id; título "Rota" e guard de Frota (padrão NAV5 da EIX-77) | `__tests__/routes/*.test.tsx` | `npm run test` |
+| Dados embarcados e config | none | Provados pelos testes de coordenadas e pelo typecheck | - | build gate only |
 
 ## Gate Check Commands
 
@@ -202,11 +203,12 @@ T4 → T5 → T6 → T7
 
 **Done when**:
 
-- [ ] `Stack.Screen name="rotas/[id]/index"` com título "Rota" dentro de `podeVerFrota`
-- [ ] Tipos de rota regenerados (`npx expo start` até o Metro subir)
-- [ ] Gate check passes: `npm run typecheck && npm run lint && npm run test`
+- [x] `Stack.Screen name="rotas/[id]/index"` com título "Rota" dentro de `podeVerFrota`
+- [x] `rotasDaS5.test.tsx` e `navegacaoPorPerfil.test.tsx` cobrem `/rotas/<id>`: view com o id, título "Rota", Gestor abre, Financeiro e Motorista voltam para a home
+- [x] Tipos de rota regenerados (`npx expo start` até o Metro subir)
+- [x] Gate check passes: `npm run typecheck && npm run lint && npm run test` (app 975/975, supabase 298/298)
 
-**Tests**: none
+**Tests**: unit
 **Gate**: build
 
 **Commit**: `feat(rotas): rota do detalhe da rota (EIX-80)`
@@ -271,5 +273,5 @@ Phase 2:  T4 ------→ T5 ------→ T6 ------→ T7
 | T3 | Busca de coordenadas | unit | unit | ✅ OK |
 | T4 | Componente do mapa | unit | unit | ✅ OK |
 | T5 | Tela de detalhe | unit | unit | ✅ OK |
-| T6 | Rota do expo-router | none | none | ✅ OK |
+| T6 | Rota do expo-router e título no layout | unit | unit | ✅ OK |
 | T7 | Tela de lista | unit | unit | ✅ OK |

@@ -123,7 +123,7 @@ A EIX-38 não criou tela de detalhe da rota. Esta task cria a tela de detalhe (d
 | MAPA-16 | P1: Detalhe — AC4 (Editar) | Execute | Implementing |
 | MAPA-17 | P1: Detalhe — AC5 (carregando) | Execute | Implementing |
 | MAPA-18 | P1: Detalhe — AC6 (erro da carga) | Execute | Implementing |
-| MAPA-19 | P1: Detalhe — AC7 (título e guard) | Tasks | Pending |
+| MAPA-19 | P1: Detalhe — AC7 (título e guard) | Execute | Implementing |
 | MAPA-20 | P1: Detalhe — AC8 (recarrega ao voltar) | Execute | Implementing |
 | MAPA-21 | Edge: mesmo ponto | Execute | Implementing |
 | MAPA-22 | Edge: rota não encontrada | Execute | Implementing |
