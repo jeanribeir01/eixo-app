@@ -97,9 +97,9 @@ T4 → T5 → T6 → T7
 
 **Done when**:
 
-- [ ] 27 UFs e 5.571 municípios; arquivo de ~190 KB
-- [ ] `gerarMunicipios.mjs` regenera o JSON a partir dos CSVs do kelvins; `municipios.LICENSE` com o texto MIT
-- [ ] Gate check passes: `npm run typecheck && npm run lint && npm run test`
+- [x] 27 UFs e 5.571 municípios; arquivo de 194.618 bytes
+- [x] `gerarMunicipios.mjs` regenera o JSON a partir dos CSVs do kelvins; `municipios.LICENSE` com o texto MIT
+- [x] Gate check passes: `npm run typecheck && npm run lint && npm run test` (app 940/940, supabase 298/298)
 
 **Tests**: none
 **Gate**: build
