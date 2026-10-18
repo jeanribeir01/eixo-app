@@ -105,18 +105,18 @@ A EIX-38 não criou tela de detalhe da rota. Esta task cria a tela de detalhe (d
 
 | Requirement ID | Story | Phase | Status |
 | --- | --- | --- | --- |
-| MAPA-01 | P1: Mapa — AC1 (marcadores e linha) | Tasks | Pending |
-| MAPA-02 | P1: Mapa — AC2 (enquadramento) | Tasks | Pending |
+| MAPA-01 | P1: Mapa — AC1 (marcadores e linha) | Execute | Implementing |
+| MAPA-02 | P1: Mapa — AC2 (enquadramento) | Execute | Implementing |
 | MAPA-03 | P1: Mapa — AC3 (busca no dataset) | Execute | Implementing |
-| MAPA-04 | P1: Mapa — AC4 (cores dos tokens) | Tasks | Pending |
-| MAPA-05 | P1: Mapa — AC5 (legenda) | Tasks | Pending |
-| MAPA-06 | P1: Mapa — AC6 (carregando) | Tasks | Pending |
-| MAPA-07 | P1: Mapa — AC7 (erro do mapa) | Tasks | Pending |
-| MAPA-08 | P1: Mapa — AC8 (tentar novamente) | Tasks | Pending |
-| MAPA-09 | P1: Mapa — AC9 (sem coordenadas) | Tasks | Pending |
-| MAPA-10 | P1: Mapa — AC10 (gestos desligados) | Tasks | Pending |
-| MAPA-11 | P1: Mapa — AC11 (proporção, RNF02) | Tasks | Pending |
-| MAPA-12 | P1: Mapa — AC12 (estilo em constante) | Tasks | Pending |
+| MAPA-04 | P1: Mapa — AC4 (cores dos tokens) | Execute | Implementing |
+| MAPA-05 | P1: Mapa — AC5 (legenda) | Execute | Implementing |
+| MAPA-06 | P1: Mapa — AC6 (carregando) | Execute | Implementing |
+| MAPA-07 | P1: Mapa — AC7 (erro do mapa) | Execute | Implementing |
+| MAPA-08 | P1: Mapa — AC8 (tentar novamente) | Execute | Implementing |
+| MAPA-09 | P1: Mapa — AC9 (sem coordenadas) | Execute | Implementing |
+| MAPA-10 | P1: Mapa — AC10 (gestos desligados) | Execute | Implementing |
+| MAPA-11 | P1: Mapa — AC11 (proporção, RNF02) | Execute | Implementing |
+| MAPA-12 | P1: Mapa — AC12 (estilo em constante) | Execute | Implementing |
 | MAPA-13 | P1: Detalhe — AC1 (lista abre o detalhe) | Tasks | Pending |
 | MAPA-14 | P1: Detalhe — AC2 (trecho, distância, mapa) | Tasks | Pending |
 | MAPA-15 | P1: Detalhe — AC3 (inativa) | Tasks | Pending |
@@ -125,7 +125,7 @@ A EIX-38 não criou tela de detalhe da rota. Esta task cria a tela de detalhe (d
 | MAPA-18 | P1: Detalhe — AC6 (erro da carga) | Tasks | Pending |
 | MAPA-19 | P1: Detalhe — AC7 (título e guard) | Tasks | Pending |
 | MAPA-20 | P1: Detalhe — AC8 (recarrega ao voltar) | Tasks | Pending |
-| MAPA-21 | Edge: mesmo ponto | Tasks | Pending |
+| MAPA-21 | Edge: mesmo ponto | Execute | Implementing |
 | MAPA-22 | Edge: rota não encontrada | Tasks | Pending |
 | MAPA-23 | Edge: resto da tela usável sem mapa | Tasks | Pending |
 

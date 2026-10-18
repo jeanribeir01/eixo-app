@@ -148,11 +148,11 @@ T4 → T5 → T6 → T7
 
 **Done when**:
 
-- [ ] Com coordenadas: dados GeoJSON com os dois pontos e a linha, bounds e padding certos, cores só dos tokens, gestos desligados, estilo da constante, legenda
-- [ ] Sem coordenadas: mensagem por cidade, sem montar o mapa
-- [ ] Skeleton até `onDidFinishLoadingMap`; `onDidFailLoadingMap` mostra o erro; "Tentar novamente" volta ao carregando
-- [ ] Mesmo ponto: centraliza com zoom 10; proporção 4:3 e 16:9 conforme a largura
-- [ ] Gate check passes: `npx jest src/features/rotas --selectProjects app`
+- [x] Com coordenadas: dados GeoJSON com os dois pontos e a linha, bounds e padding certos, cores só dos tokens, gestos desligados, estilo da constante, legenda
+- [x] Sem coordenadas: mensagem por cidade, sem montar o mapa
+- [x] Skeleton até `onDidFinishLoadingMap`; `onDidFailLoadingMap` mostra o erro; "Tentar novamente" volta ao carregando
+- [x] Mesmo ponto: centraliza com zoom 10; proporção 4:3 e 16:9 conforme a largura
+- [x] Gate check passes: `npx jest src/features/rotas --selectProjects app` (7 suítes, 103 testes; 16 novos)
 
 **Tests**: unit
 **Gate**: quick
