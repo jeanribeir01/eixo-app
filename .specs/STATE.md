@@ -90,6 +90,14 @@
 - **Date**: 2026-10-18
 - **Status**: active
 
+### AD-012
+- **Decision**: Mapa da rota com `@maplibre/maplibre-react-native` 11.5.0 e o estilo "positron" do OpenFreeMap, numa constante única. As coordenadas vêm de um JSON compacto por UF, gerado do `kelvins/Municipios-Brasileiros` (MIT) e embarcado em `src/features/rotas/mapa/`. A busca usa a mesma UF e a `chaveCidade`. Não há latitude/longitude em `rota`, então não há migration. O detalhe `/rotas/[id]` passa a ser o destino do toque na lista (substitui o ROTA-23 da EIX-38).
+- **Reason**: Sem chave, sem conta de faturamento e sem SHA-1; coordenada offline e sem limite de requisição; decidido pelo Diogo e pelo Jean depois de o professor confirmar o requisito (ADR 0005).
+- **Trade-off**: Os tiles vêm de um servidor sem SLA. Sem rede, o mapa cai no estado de erro. Cidade digitada errado fica sem mapa até alguém corrigir o cadastro. O JSON precisa ser regerado quando surgir município novo. O MapLibre é nativo e exige um development build novo.
+- **Scope**: `docs/adr/0005-mapa-da-rota-provedor-e-coordenadas.md`, `src/features/rotas/mapa/`, `src/features/rotas/RotaDetalheView.tsx`, `app/(app)/rotas/[id]/index.tsx`, `app.config.ts`, EIX-80.
+- **Date**: 2026-10-18
+- **Status**: active
+
 ## Handoff
 
 - **Feature**: `.specs/features/eix77-navegacao-s5` (EIX-77, navegação da S5)
