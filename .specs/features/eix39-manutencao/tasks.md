@@ -10,7 +10,7 @@ Implement these tasks with the `tlc-spec-driven` skill: **activate it by name an
 
 **Spec**: `.specs/features/eix39-manutencao/spec.md`
 **Design**: inline (sem `design.md`) — RPC no molde de `criar_divida` (AD-008) e de `registrar_manutencao`; repositório no molde de `src/features/dividas/dividasRepository.ts` (RPC + tradução de SQLSTATE) e de `src/features/rotas/rotasRepository.ts` (Zod na resposta); lista no molde de `RotasListView` (`useDadosDaTela`, FAB, quatro estados); formulário no molde de `MovimentacaoFormView` (`Select`, `CampoData`, `CampoMoeda`, `Tabs`).
-**Status**: Approved
+**Status**: In Progress
 
 ---
 
@@ -101,15 +101,15 @@ T5 → T9
 
 **Done when**:
 
-- [ ] Admin, Financeiro e Gestor ativos recebem só as ativas, só `id` e `nome`, ordenadas por nome
-- [ ] Motorista, Gestor bloqueado e anon recebem `42501`; `has_function_privilege` prova anon sem execute e authenticated com execute
-- [ ] Select direto do Gestor em `forma_pagamento` continua vazio (policy intacta)
-- [ ] Gate check passes: `node --experimental-vm-modules node_modules/jest/bin/jest.js --selectProjects supabase supabase/tests/formasPagamentoAtivas.test.ts`
+- [x] Admin, Financeiro e Gestor ativos recebem só as ativas, só `id` e `nome`, ordenadas por nome
+- [x] Motorista, Gestor bloqueado e anon recebem `42501`; `has_function_privilege` prova anon sem execute e authenticated com execute
+- [x] Select direto do Gestor em `forma_pagamento` continua vazio (policy intacta)
+- [x] Gate check passes: `node --experimental-vm-modules node_modules/jest/bin/jest.js --selectProjects supabase supabase/tests/formasPagamentoAtivas.test.ts`
 
 **Tests**: integration
 **Gate**: full
 
-**Commit**: `feat(db): RPC listar_formas_pagamento_ativas para o Gestor de Frota (EIX-39)`
+**Commit**: `feat(db): rpc de formas de pagamento ativas para o gestor (EIX-39)`
 
 ---
 

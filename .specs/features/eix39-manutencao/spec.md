@@ -185,10 +185,10 @@ O gestor de frota não tem onde registrar a manutenção de um veículo: a tela 
 | MAN-25 | P1: Concluir — AC9 | Tasks | Pending |
 | MAN-26 | P1: Concluir — AC10 | Tasks | Pending |
 | MAN-27 | P1: Concluir — AC11 | Tasks | Pending |
-| MAN-28 | P1: Formas ativas — AC1 | Tasks | Pending |
-| MAN-29 | P1: Formas ativas — AC2 | Tasks | Pending |
-| MAN-30 | P1: Formas ativas — AC3 | Tasks | Pending |
-| MAN-31 | P1: Formas ativas — AC4 | Tasks | Pending |
+| MAN-28 | P1: Formas ativas — AC1 | Tasks | Implementing |
+| MAN-29 | P1: Formas ativas — AC2 | Tasks | Implementing |
+| MAN-30 | P1: Formas ativas — AC3 | Tasks | Implementing |
+| MAN-31 | P1: Formas ativas — AC4 | Tasks | Implementing |
 | MAN-32 | P1: Formas ativas — AC5 | Tasks | Pending |
 | MAN-33 | P1: Detalhe — AC1 | Tasks | Pending |
 | MAN-34 | P1: Detalhe — AC2 | Tasks | Pending |
