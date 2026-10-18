@@ -1,7 +1,8 @@
 # ADR 0005 — Mapa da rota: provedor de mapa e origem das coordenadas das cidades
 
-- **Status:** Proposto — **a decisão é do Diogo e do Jean**, não deste documento
-- **Data:** 2026-10-18
+- **Status:** Aceito — **B (MapLibre) + C (IBGE embarcado)**, decidido pelo Diogo e pelo Jean em
+  2026-10-18
+- **Data:** 2026-10-18 (proposto e aceito)
 - **US:** EIX-80 (US07-b), depende da EIX-38 (US07)
 - **Decisões relacionadas:** ADR 0004 (offline-first), `.specs/STATE.md` AD-009 e AD-010
 
@@ -11,10 +12,10 @@ A EIX-80 pede um mapa no detalhe da Rota, com marcador de origem, marcador de de
 reta entre eles, enquadrando os dois pontos. Rota real por estrada e GPS ao vivo estão fora do
 escopo.
 
-**A origem do requisito ainda não foi confirmada.** Ele veio de um pedido informal do professor
-sobre "mapa de rotas" e não está no CLAUDE.md, nas US01–US18, nos ADRs nem nas specs. O Jean vai
-confirmar com o professor. Se não for exigido, a task é cancelada e este ADR fica como **Rejeitado**.
-Por isso, esta etapa é só o spike: nenhuma dependência instalada e nenhuma migration criada.
+O requisito veio de um pedido informal do professor sobre "mapa de rotas" e não está no CLAUDE.md,
+nas US01–US18, nos ADRs nem nas specs. Por isso, a primeira etapa foi só o spike (este ADR), sem
+dependência instalada nem migration. **Em 2026-10-18 o Jean confirmou com o professor que o
+requisito é necessário**, e a task foi liberada.
 
 Duas perguntas ficam para decidir:
 
@@ -28,8 +29,9 @@ O que já existe e pesa na decisão:
 - `rota` guarda `cidade_origem` e `cidade_destino` como **texto livre**, com UF em enum
   (`20261014000200_rota_uf_ativa.sql`). Não tem latitude nem longitude. A duplicidade ignora acento
   e maiúscula por meio de `normaliza_cidade()` (`20261014000400_rota_trecho_sem_acento.sql`).
-- O formulário e a lista de Rotas ainda são placeholders. Quem os implementa é a EIX-38, que usa o
-  `Select` de `src/ui/` para as 27 UFs.
+- Quando este ADR foi proposto, o formulário e a lista de Rotas ainda eram placeholders. A EIX-38
+  (#36) os entregou depois, com a cidade em texto livre e o `Select` de `src/ui/` para as 27 UFs.
+  Ela não criou tela de detalhe; a EIX-80 cria uma para o mapa.
 - O app roda em **development build** (Expo SDK 57, RN 0.86, New Architecture). `android/` e `ios/`
   são gerados (CNG) e não vão para o Git. Ainda não existe `eas.json`.
 - O projeto no Google Cloud já existe por causa do login (ADR 0001), com o package
@@ -120,7 +122,7 @@ O que já existe e pesa na decisão:
 
 #### C) Tabela de municípios do IBGE embarcada no app
 
-Arquivo JSON com código IBGE, nome, UF, latitude e longitude dos 5.570 municípios. A fonte mais
+Arquivo JSON com código IBGE, nome, UF, latitude e longitude dos 5.571 municípios. A fonte mais
 prática é o dataset `kelvins/Municipios-Brasileiros` (licença MIT, derivado dos dados do IBGE). O
 IBGE publica coordenadas oficiais no "Cadastro de Localidades Brasileiras Selecionadas", mas esse
 arquivo cobre localidades e não serve direto.
@@ -137,11 +139,13 @@ arquivo cobre localidades e não serve direto.
 - **Cidade é texto livre.** Um erro de digitação ("Curitba") não acha a cidade, e o mapa cai no
   fallback "sem coordenadas". A correção de verdade seria o formulário da EIX-38 escolher a cidade
   de uma lista, mas isso é escopo da EIX-38 e decisão do Jean.
-- **Peso no bundle:** estimo algumas centenas de KB de JSON (5.570 linhas × 4 campos). Não medi,
-  pois não baixei o arquivo nesta etapa.
+- **Peso no bundle (medido na implementação):** o `municipios.json` original do `kelvins` tem
+  1,5 MB (9 colunas). Só com nome, latitude e longitude, agrupado por UF, ele cai para **190 KB**
+  (73 KB com gzip). É esse formato compacto que vai no app.
 - **Atualização:** município novo é raro, mas acontece. O dataset precisa ser trocado à mão quando
-  o IBGE criar um. O último push do `kelvins` foi em 2024. Na prática, o custo é baixo: trocar um
-  arquivo e rodar os testes.
+  o IBGE criar um. O último commit do `kelvins` é de dezembro de 2025, e o arquivo já tem os 5.571
+  municípios, incluindo Boa Esperança do Norte (MT), instalado em 2025. Na prática, o custo é baixo:
+  rodar o script que gera o arquivo compacto e os testes.
 - Coordenada é a da sede do município. Para uma linha reta entre cidades, isso basta.
 
 #### D) Serviço de geocodificação
@@ -161,10 +165,21 @@ arquivo cobre localidades e não serve direto.
   no mesmo PR (ADR 0004). Quem faz isso é o Jean.
 - Mais um estado de erro de rede para tratar e testar.
 
-## Recomendação técnica
+## Decisão
 
-> Esta é uma recomendação para orientar a conversa. **A decisão final é do Diogo e do Jean**, depois
-> que o Jean confirmar com o professor que o requisito existe.
+**B (MapLibre) + C (tabela do IBGE embarcada)**, a recomendação técnica abaixo, aceita pelo Diogo e
+pelo Jean em 2026-10-18, depois da confirmação do professor.
+
+- Pacote `@maplibre/maplibre-react-native` **11.5.0** (a `latest` em 2026-10-18; pede Expo ≥ 54,
+  React Native ≥ 0.80 e React ≥ 19.1, e o projeto tem SDK 57, RN 0.86 e React 19.2).
+- Tiles: estilo "positron" do OpenFreeMap (`https://tiles.openfreemap.org/styles/positron`), com a
+  URL numa constante única em `src/features/rotas/mapa/`.
+- Coordenadas: JSON compacto por UF em `src/features/rotas/mapa/`, gerado do `kelvins` por um script
+  versionado junto, com a licença MIT do dataset ao lado. A busca compara a cidade com a mesma regra
+  de `normaliza_cidade()` (`chaveCidade`, em `src/features/rotas/cidade.ts`).
+- Nenhuma migration: `rota` continua sem latitude e longitude.
+
+## Recomendação técnica (como foi proposta)
 
 **Coordenadas: C (IBGE embarcado).** É a recomendação mais firme deste ADR. Ela não exige chave,
 rede nem migration, e cobre o escopo da task (linha reta entre sedes de município). A geocodificação
@@ -181,18 +196,21 @@ legível"), ou se a conta de faturamento do Google não for problema, o `react-n
 escolha igualmente defensável. Ele tem mais exemplos e um tile com garantia do Google. O preço é
 gerenciar a chave e os SHA-1. As duas opções atendem a todos os critérios de aceite.
 
-## Dependências que seriam introduzidas
+## Dependências introduzidas
 
-**Nada é instalado nesta etapa.** A lista abaixo depende da escolha e só vale depois da confirmação
-do Jean (AGENTS.md §4).
+Instaladas só depois da confirmação do Jean (AGENTS.md §4).
 
-| Cenário | Pacote | Por quê |
-|---|---|---|
-| Opção A | `react-native-maps` (versão do `npx expo install`) | Mapa, marcador e linha. Config plugin com a chave |
-| Opção B | `@maplibre/maplibre-react-native` (v11) | Mapa, marcador e linha. Config plugin do Expo |
-| Opção C | nenhum pacote, só um arquivo JSON em `src/features/rotas/mapa/` | Coordenadas dos municípios |
+| Pacote | Por quê |
+|---|---|
+| `@maplibre/maplibre-react-native` 11.5.0 (dependency) | Mapa, marcadores e linha. Config plugin do Expo em `app.config.ts` |
+| `@types/geojson` (devDependency) | Peer dependency do MapLibre: tipos dos dados GeoJSON dos marcadores e da linha |
 
-## Consequências (se a recomendação for aceita)
+As coordenadas não trazem pacote: são um arquivo JSON em `src/features/rotas/mapa/`.
+
+O MapLibre é módulo nativo. **O development build precisa ser gerado de novo**, como nos ADRs 0003
+e 0004.
+
+## Consequências
 
 - Nenhuma variável nova no `.env`/`.env.example` e nenhum segredo no EAS.
 - `app.config.ts` ganha o plugin do MapLibre. É um arquivo listado na task.
@@ -204,13 +222,13 @@ do Jean (AGENTS.md §4).
   para a EIX-38 (decisão do Jean): escolher a cidade de uma lista vinda do mesmo JSON.
 - O JSON do IBGE precisa ser trocado quando surgir um município novo.
 
-## Pontos em aberto para o Jean
+## Pontos que estavam em aberto
 
-1. O professor confirma o requisito? Se não, este ADR vira **Rejeitado** e a task é cancelada.
-2. Provedor A ou B? Se for A: quem cria a conta de faturamento e a chave no projeto do Google Cloud?
-3. A EIX-38 vai manter a cidade como texto livre ou passar a usar uma lista?
-4. Com a opção C, `rota` não precisa de latitude/longitude. Confirma que nenhuma migration é
-   necessária?
+1. O professor confirmou o requisito (2026-10-18).
+2. Provedor: B (MapLibre). Sem conta de faturamento nem chave no Google Cloud.
+3. Cidade em texto livre ou lista: continua em aberto, fora do escopo da EIX-80. A EIX-38 entrou
+   com texto livre.
+4. Nenhuma migration: as coordenadas vêm do JSON, e `rota` não muda.
 
 ## Links
 
