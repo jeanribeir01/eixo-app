@@ -176,9 +176,9 @@ T4 → T5 → T6 → T7
 
 **Done when**:
 
-- [ ] Trecho e distância com vírgula; "Inativa" na rota inativa; "Editar" abre `/rotas/<id>/editar`
-- [ ] "Carregando rota"; erro com a mensagem do repositório e "Tentar novamente"; recarrega ao voltar ao foco
-- [ ] Gate check passes: `npx jest src/features/rotas --selectProjects app`
+- [x] Trecho e distância com vírgula; "Inativa" na rota inativa; "Editar" abre `/rotas/<id>/editar`
+- [x] "Carregando rota"; erro com a mensagem do repositório e "Tentar novamente"; recarrega ao voltar ao foco
+- [x] Gate check passes: `npx jest src/features/rotas --selectProjects app` (8 suítes, 112 testes; 9 novos)
 
 **Tests**: unit
 **Gate**: quick

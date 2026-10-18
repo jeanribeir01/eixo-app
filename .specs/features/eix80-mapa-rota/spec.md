@@ -118,16 +118,16 @@ A EIX-38 não criou tela de detalhe da rota. Esta task cria a tela de detalhe (d
 | MAPA-11 | P1: Mapa — AC11 (proporção, RNF02) | Execute | Implementing |
 | MAPA-12 | P1: Mapa — AC12 (estilo em constante) | Execute | Implementing |
 | MAPA-13 | P1: Detalhe — AC1 (lista abre o detalhe) | Tasks | Pending |
-| MAPA-14 | P1: Detalhe — AC2 (trecho, distância, mapa) | Tasks | Pending |
-| MAPA-15 | P1: Detalhe — AC3 (inativa) | Tasks | Pending |
-| MAPA-16 | P1: Detalhe — AC4 (Editar) | Tasks | Pending |
-| MAPA-17 | P1: Detalhe — AC5 (carregando) | Tasks | Pending |
-| MAPA-18 | P1: Detalhe — AC6 (erro da carga) | Tasks | Pending |
+| MAPA-14 | P1: Detalhe — AC2 (trecho, distância, mapa) | Execute | Implementing |
+| MAPA-15 | P1: Detalhe — AC3 (inativa) | Execute | Implementing |
+| MAPA-16 | P1: Detalhe — AC4 (Editar) | Execute | Implementing |
+| MAPA-17 | P1: Detalhe — AC5 (carregando) | Execute | Implementing |
+| MAPA-18 | P1: Detalhe — AC6 (erro da carga) | Execute | Implementing |
 | MAPA-19 | P1: Detalhe — AC7 (título e guard) | Tasks | Pending |
-| MAPA-20 | P1: Detalhe — AC8 (recarrega ao voltar) | Tasks | Pending |
+| MAPA-20 | P1: Detalhe — AC8 (recarrega ao voltar) | Execute | Implementing |
 | MAPA-21 | Edge: mesmo ponto | Execute | Implementing |
-| MAPA-22 | Edge: rota não encontrada | Tasks | Pending |
-| MAPA-23 | Edge: resto da tela usável sem mapa | Tasks | Pending |
+| MAPA-22 | Edge: rota não encontrada | Execute | Implementing |
+| MAPA-23 | Edge: resto da tela usável sem mapa | Execute | Implementing |
 
 **Coverage:** 23 total, 23 mapped to tasks, 0 unmapped
 
