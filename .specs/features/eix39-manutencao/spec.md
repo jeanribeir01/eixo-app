@@ -159,10 +159,10 @@ O gestor de frota não tem onde registrar a manutenção de um veículo: a tela 
 | Requirement ID | Story | Phase | Status |
 | --- | --- | --- | --- |
 | MAN-01 | P1: Registrar — AC1 | Tasks | Pending |
-| MAN-02 | P1: Registrar — AC2 | Tasks | Pending |
-| MAN-03 | P1: Registrar — AC3 | Tasks | Pending |
+| MAN-02 | P1: Registrar — AC2 | Tasks | Implementing |
+| MAN-03 | P1: Registrar — AC3 | Tasks | Implementing |
 | MAN-04 | P1: Registrar — AC4 | Tasks | Implementing |
-| MAN-05 | P1: Registrar — AC5 | Tasks | Pending |
+| MAN-05 | P1: Registrar — AC5 | Tasks | Implementing |
 | MAN-06 | P1: Registrar — AC6 | Tasks | Implementing |
 | MAN-07 | P1: Registrar — AC7 | Tasks | Implementing |
 | MAN-08 | P1: Registrar — AC8 | Tasks | Implementing |
@@ -170,15 +170,15 @@ O gestor de frota não tem onde registrar a manutenção de um veículo: a tela 
 | MAN-10 | P1: Registrar — AC10 | Tasks | Implementing |
 | MAN-11 | P1: Registrar — AC11 | Tasks | Implementing |
 | MAN-12 | P1: Registrar — AC12 | Tasks | Implementing |
-| MAN-13 | P1: Registrar — AC13 | Tasks | Pending |
-| MAN-14 | P1: Registrar — AC14 | Tasks | Pending |
+| MAN-13 | P1: Registrar — AC13 | Tasks | Implementing |
+| MAN-14 | P1: Registrar — AC14 | Tasks | Implementing |
 | MAN-15 | P1: Registrar — AC15 | Tasks | Pending |
-| MAN-16 | P1: Registrar — AC16 | Tasks | Pending |
+| MAN-16 | P1: Registrar — AC16 | Tasks | Implementing |
 | MAN-17 | P1: Concluir — AC1 | Tasks | Pending |
-| MAN-18 | P1: Concluir — AC2 | Tasks | Pending |
+| MAN-18 | P1: Concluir — AC2 | Tasks | Implementing |
 | MAN-19 | P1: Concluir — AC3 | Tasks | Pending |
-| MAN-20 | P1: Concluir — AC4 | Tasks | Pending |
-| MAN-21 | P1: Concluir — AC5 | Tasks | Pending |
+| MAN-20 | P1: Concluir — AC4 | Tasks | Implementing |
+| MAN-21 | P1: Concluir — AC5 | Tasks | Implementing |
 | MAN-22 | P1: Concluir — AC6 | Tasks | Pending |
 | MAN-23 | P1: Concluir — AC7 | Tasks | Pending |
 | MAN-24 | P1: Concluir — AC8 | Tasks | Pending |
@@ -192,11 +192,11 @@ O gestor de frota não tem onde registrar a manutenção de um veículo: a tela 
 | MAN-32 | P1: Formas ativas — AC5 | Tasks | Pending |
 | MAN-33 | P1: Detalhe — AC1 | Tasks | Pending |
 | MAN-34 | P1: Detalhe — AC2 | Tasks | Pending |
-| MAN-35 | P1: Detalhe — AC3 | Tasks | Pending |
+| MAN-35 | P1: Detalhe — AC3 | Tasks | Implementing |
 | MAN-36 | P1: Detalhe — AC4 | Tasks | Pending |
 | MAN-37 | P1: Detalhe — AC5 | Tasks | Pending |
 | MAN-38 | P1: Detalhe — AC6 | Tasks | Pending |
-| MAN-39 | Edge: códigos de erro das RPCs e resposta inválida | Tasks | Pending |
+| MAN-39 | Edge: códigos de erro das RPCs e resposta inválida | Tasks | Implementing |
 | MAN-40 | Edge: falha na carga das opções e nenhuma forma ativa | Tasks | Pending |
 | MAN-41 | Edge: R$ 1,13 sem resíduo de ponto flutuante | Tasks | Implementing |
 | MAN-42 | Edge: data de hoje às 23h30 | Tasks | Implementing |

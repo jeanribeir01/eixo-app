@@ -206,15 +206,15 @@ T5 → T9
 
 **Done when**:
 
-- [ ] RPC chamada com valor em reais (R$ 1,13 → `1.13`, L-005) e nenhum `insert`/`update` direto
-- [ ] `MN001`, `MN002`, `MN003`, `22023`, `23514`, `P0002` (nas duas RPCs), `42501`, código desconhecido e resposta inválida viram as mensagens da spec
-- [ ] Ordem da lista (abertas primeiro, data mais recente) e filtro de veículos cobertos
-- [ ] Gate check passes: `npx jest src/features/manutencao --selectProjects app`
+- [x] RPC chamada com valor em reais (R$ 1,13 → `1.13`, L-005) e nenhum `insert`/`update` direto
+- [x] `MN001`, `MN002`, `MN003`, `22023`, `23514`, `P0002` (nas duas RPCs), `42501`, código desconhecido e resposta inválida viram as mensagens da spec
+- [x] Ordem da lista (abertas primeiro, data mais recente) e filtro de veículos cobertos
+- [x] Gate check passes: `npx jest src/features/manutencao --selectProjects app`
 
 **Tests**: unit
 **Gate**: quick
 
-**Commit**: `feat(manutencao): repositório com RPCs, histórico e tradução de erros (EIX-39)`
+**Commit**: `feat(manutencao): repositório com RPCs e tradução de erros (EIX-39)`
 
 ---
 

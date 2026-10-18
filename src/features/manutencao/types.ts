@@ -10,3 +10,17 @@ export type Manutencao = Pick<
   Tables<'manutencao'>,
   'id' | 'veiculo_id' | 'descricao' | 'data_manutencao' | 'valor' | 'data_conclusao'
 >;
+
+// O que as telas recebem: valor em centavos inteiros (CLAUDE.md §5), nunca o `numeric` em reais.
+export type ManutencaoItem = Omit<Manutencao, 'valor'> & { valorCentavos: number };
+
+// Linha da lista de manutenções: a placa vem junto para o título "PLACA · descrição".
+export type ManutencaoComPlaca = ManutencaoItem & { placa: string };
+
+export type VeiculoResumo = Pick<Tables<'veiculo'>, 'id' | 'placa' | 'marca' | 'modelo' | 'status'>;
+
+// Detalhe do veículo (`/frota/<id>`): os dados dele e o histórico de manutenções.
+export type VeiculoComHistorico = VeiculoResumo & { manutencoes: ManutencaoItem[] };
+
+// Opção do seletor: só id e nome, que é o que a RPC `listar_formas_pagamento_ativas` devolve.
+export type FormaPagamentoOpcao = Pick<Tables<'forma_pagamento'>, 'id' | 'nome'>;
