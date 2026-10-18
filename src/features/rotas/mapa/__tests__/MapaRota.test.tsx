@@ -38,6 +38,7 @@ const mockDimensoes = useWindowDimensions as jest.MockedFunction<typeof useWindo
 // Coordenadas do municipios.json real, em [longitude, latitude].
 const CURITIBA = [-49.2646, -25.4195];
 const SAO_PAULO = [-46.6395, -23.5329];
+const JOINVILLE = [-48.8487, -26.3045];
 
 const curitibaSp = { cidade_origem: 'Curitiba', uf_origem: 'PR', cidade_destino: 'São Paulo', uf_destino: 'SP' } as const;
 
@@ -89,6 +90,19 @@ describe('MapaRota — com coordenadas', () => {
       CURITIBA[1],
       SAO_PAULO[0],
       SAO_PAULO[1],
+    ]);
+  });
+
+  // MAPA-02: com a origem a noroeste (Curitiba → Joinville), o sul e o norte vêm da latitude de cada
+  // ponto, não do mesmo canto da longitude. Pega uma caixa montada pelos cantos em vez de min/max.
+  it('enquadra certo com a origem a noroeste do destino', () => {
+    render(<MapaRota rota={{ cidade_origem: 'Curitiba', uf_origem: 'PR', cidade_destino: 'Joinville', uf_destino: 'SC' }} />);
+
+    expect(screen.getByTestId('maplibre-camera').props.initialViewState.bounds).toEqual([
+      CURITIBA[0],
+      JOINVILLE[1],
+      JOINVILLE[0],
+      CURITIBA[1],
     ]);
   });
 

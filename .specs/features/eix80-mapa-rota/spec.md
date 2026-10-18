@@ -87,7 +87,7 @@ A EIX-38 não criou tela de detalhe da rota. Esta task cria a tela de detalhe (d
 5. WHILE a rota está carregando the system SHALL mostrar o indicador com o rótulo "Carregando rota".
 6. IF a carga da rota falha THEN o sistema SHALL mostrar "Não foi possível carregar", a mensagem do repositório e o botão "Tentar novamente", que busca de novo.
 7. The system SHALL declarar o título "Rota" no header, em `app/(app)/_layout.tsx`, dentro do guard de Frota (Admin e Gestor de Frota).
-8. WHEN o usuário volta da edição para o detalhe THEN o sistema SHALL buscar a rota de novo, para mostrar o trecho e o mapa atualizados.
+8. WHEN o usuário volta da edição para o detalhe THEN o sistema SHALL buscar a rota de novo e mostrar o trecho novo; se o trecho mudou, o mapa SHALL ser montado de novo, voltar ao estado carregando e enquadrar o trecho novo.
 
 **Independent Test**: Tocar numa rota da lista, ver o trecho, a distância e o mapa; tocar em "Editar" e cair no formulário.
 

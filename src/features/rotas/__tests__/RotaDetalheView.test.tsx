@@ -100,6 +100,25 @@ describe('RotaDetalheView — sucesso', () => {
     expect(screen.getByText('Curitiba/PR → Joinville/SC')).toBeOnTheScreen();
     expect(screen.getByText('Destino: Joinville/SC')).toBeOnTheScreen();
   });
+
+  // MAPA-20: o enquadramento só vale na montagem do mapa. Trecho novo precisa remontar o mapa,
+  // voltar ao carregando e enquadrar o trecho novo, mesmo que o anterior já tivesse carregado.
+  it('trecho editado: remonta o mapa, volta ao carregando e enquadra o trecho novo', async () => {
+    await renderComRota();
+    fireEvent(screen.getByTestId('maplibre-map'), 'didFinishLoadingMap');
+    expect(screen.queryByLabelText('Carregando mapa')).not.toBeOnTheScreen();
+
+    mockBuscar.mockResolvedValue({ ok: true, data: { ...curitibaSp, cidade_destino: 'Joinville', uf_destino: 'SC' } });
+    await act(async () => {
+      mockAoFocar?.();
+    });
+
+    expect(screen.getByLabelText('Carregando mapa')).toBeOnTheScreen();
+    // Curitiba → Joinville no municipios.json: [oeste, sul, leste, norte].
+    expect(screen.getByTestId('maplibre-camera').props.initialViewState.bounds).toEqual([
+      -49.2646, -26.3045, -48.8487, -25.4195,
+    ]);
+  });
 });
 
 describe('RotaDetalheView — carregando e erro', () => {
