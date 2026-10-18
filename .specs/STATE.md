@@ -84,11 +84,11 @@
 
 ## Handoff
 
-- **Feature**: `.specs/features/eix77-navegacao-s5` (EIX-77, navegação da S5)
-- **Phase / Task**: concluída — T1..T7 + fix de guard; Verifier PASS (iteração 2, 13/13 mutantes mortos)
-- **Completed**: 58c8382..HEAD em `feat/eix-77-navegacao-s5`; lista de veículos em `/frota/veiculos` (não `frota/index`, que colide com a aba `/frota`)
-- **In-progress** (file:line): none
-- **Next step**: review do PR #34 (revisor: Diogo) → squash and merge → fechar a EIX-77 (quem fecha é o Jean) → EIX-78. Avisos já comentados na EIX-38, EIX-39, EIX-40 e EIX-79
-- **Blockers**: aprovação do PR
-- **Uncommitted files**: none
-- **Branch**: feat/eix-77-navegacao-s5 (no remoto, PR #34)
+- **Feature**: `.specs/features/eix79-ano-inativar` (EIX-79)
+- **Phase / Task**: T1..T6 concluídas; entrega por commit, push e PR autorizada explicitamente em 18/10/2026
+- **Completed**: ano obrigatório, null legado, tradução 23514, inativação condicional, preservação de Inativo e selecionáveis. Typecheck/lint verdes; nova execução de 900 testes app e 300 backend aprovada. Verifier independente e sensor 6/6 preservados de 16/10. Supabase isolado com Auth/RLS reais, quatro perfis e concorrência validados; APK instalado no Pixel 7 e smoke UI Admin executado (cadastro, edição, limites 1949/1950/2027, teclado/scroll, confirmação/cancelamento, Snackbar, filtros e persistência)
+- **In-progress** (file:line): `.specs/features/eix79-ano-inativar/validation.md` — evidências finais registradas; preparação da entrega
+- **Next step**: revisão de Jean no PR para main; aceite humano, tablet/TalkBack e observação visual do loading continuam pendentes, conforme relatório
+- **Blockers**: nenhum bloqueio de implementação; testes de dispositivo físico e aceite humano não executados
+- **Uncommitted files**: somente feature veiculos, testes RLS e artefatos desta especificação; arquivos locais de sandbox/build/env ignorados
+- **Branch**: feat/eix-79-us06-ano-inativar; base eff0160; Linear inalterado. Stack local em `%TEMP%/eixo-eix79-local`, build curto em `C:/eix79-build`; login local por flag existente no `.env.local`, sem bypass de código

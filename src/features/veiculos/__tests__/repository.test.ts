@@ -1,4 +1,4 @@
-import { atualizarVeiculo, buscarVeiculoPorId, criarVeiculo, listarVeiculos } from '../repository';
+import { atualizarVeiculo, buscarVeiculoPorId, criarVeiculo, inativarVeiculo, listarVeiculos, listarVeiculosSelecionaveis } from '../repository';
 import type { VeiculoInput } from '../types';
 
 // Nenhum teste chama o banco real: o client é trocado por um query builder falso (mesmo molde de
@@ -6,7 +6,7 @@ import type { VeiculoInput } from '../types';
 // devolve um builder que registra os métodos chamados, para afirmar sobre a query montada.
 type Resposta = { data: unknown; error: { code: string; message: string } | null };
 
-const METODOS = ['select', 'insert', 'update', 'delete', 'eq', 'or', 'order', 'limit', 'single', 'maybeSingle'] as const;
+const METODOS = ['select', 'insert', 'update', 'delete', 'eq', 'neq', 'in', 'or', 'order', 'limit', 'single', 'maybeSingle'] as const;
 type Metodo = (typeof METODOS)[number];
 type Builder = Record<Metodo, jest.Mock> & PromiseLike<Resposta>;
 
@@ -48,18 +48,78 @@ function responder(...respostas: Resposta[]): Builder[] {
 const ok = (data: unknown): Resposta => ({ data, error: null });
 const erro = (code: string): Resposta => ({ data: null, error: { code, message: `detalhe técnico ${code}` } });
 
-const COLUNAS = 'id, placa, marca, modelo, capacidade_carga, status';
+const COLUNAS = 'id, placa, marca, modelo, ano_fabricacao, capacidade_carga, status';
 
-const volvo = { id: '1', placa: 'ABC1234', marca: 'Volvo', modelo: 'FH 540', capacidade_carga: 12.5, status: 'Disponivel' };
-const scania = { id: '2', placa: 'DEF1G23', marca: 'Scania', modelo: 'R 450', capacidade_carga: 30, status: 'EmViagem' };
+const volvo = { id: '1', placa: 'ABC1234', marca: 'Volvo', modelo: 'FH 540', ano_fabricacao: 2020, capacidade_carga: 12.5, status: 'Disponivel' };
+const scania = { id: '2', placa: 'DEF1G23', marca: 'Scania', modelo: 'R 450', ano_fabricacao: null, capacidade_carga: 30, status: 'EmViagem' };
 
 function input(sobrescreve: Partial<VeiculoInput> = {}): VeiculoInput {
-  return { placa: 'ABC1234', marca: 'Volvo', modelo: 'FH 540', capacidade_carga: 12.5, status: 'Disponivel', ...sobrescreve };
+  return { placa: 'ABC1234', marca: 'Volvo', modelo: 'FH 540', ano_fabricacao: 2020, capacidade_carga: 12.5, status: 'Disponivel', ...sobrescreve };
 }
 
 describe('veiculos/repository', () => {
   beforeEach(() => {
     mockFrom.mockReset();
+  });
+
+  describe('inativarVeiculo', () => {
+    it('atualiza somente id disponível e nunca exclui (INA-01)', async () => {
+      const inativo = { ...volvo, status: 'Inativo' };
+      const [query] = responder(ok(inativo));
+      expect(await inativarVeiculo('1')).toEqual({ ok: true, data: inativo });
+      expect(mockFrom).toHaveBeenCalledWith('veiculo');
+      expect(query.update).toHaveBeenCalledWith({ status: 'Inativo' });
+      expect(query.eq).toHaveBeenCalledWith('id', '1');
+      expect(query.eq).toHaveBeenCalledWith('status', 'Disponivel');
+      expect(query.select).toHaveBeenCalledWith(COLUNAS);
+      expect(query.delete).not.toHaveBeenCalled();
+    });
+
+    it('zero linhas não anuncia sucesso (INA-02)', async () => {
+      responder(ok(null));
+      expect(await inativarVeiculo('1')).toEqual({
+        ok: false,
+        mensagem: 'Não foi possível inativar. O veículo pode não estar mais disponível ou você não tem permissão. Atualize a lista e tente novamente.',
+      });
+    });
+
+    it('traduz recusa de permissão (INA-09)', async () => {
+      responder(erro('42501'));
+      expect(await inativarVeiculo('1')).toEqual({ ok: false, mensagem: 'Você não tem permissão para alterar veículos.' });
+    });
+
+    it('traduz falha de rede e rejeita resposta inválida (INA-07)', async () => {
+      responder(erro('PGRST301'), ok({ ...volvo, status: 'Vendido' }));
+      expect(await inativarVeiculo('1')).toEqual({ ok: false, mensagem: 'Não foi possível inativar o veículo. Tente novamente.' });
+      expect(await inativarVeiculo('1')).toEqual({ ok: false, mensagem: 'Os dados recebidos são inválidos. Tente novamente.' });
+    });
+  });
+
+  describe('listarVeiculosSelecionaveis', () => {
+    it.each([
+      ['viagem', ['Disponivel']],
+      ['manutencao', ['Disponivel', 'EmManutencao']],
+    ] as const)('consulta lista permitida para %s sem Inativo/EmViagem (SEL-02/03/04)', async (finalidade, status) => {
+      const [query] = responder(ok([volvo]));
+      expect(await listarVeiculosSelecionaveis(finalidade)).toEqual({ ok: true, data: [volvo] });
+      expect(query.in).toHaveBeenCalledWith('status', status);
+      expect(query.order).toHaveBeenCalledWith('placa');
+      expect(query.limit).toHaveBeenCalled();
+      expect(query.select).toHaveBeenCalledWith(COLUNAS);
+    });
+
+    it('aceita manutenção já aberta e legado sem ano (SEL-03)', async () => {
+      const manutencao = { ...scania, status: 'EmManutencao' };
+      responder(ok([volvo, manutencao]));
+      expect(await listarVeiculosSelecionaveis('manutencao')).toEqual({ ok: true, data: [volvo, manutencao] });
+    });
+
+    it('trata vazio, erro e resposta inválida (SEL-04)', async () => {
+      responder(ok([]), erro('PGRST301'), ok([{ id: 'inválido' }]));
+      expect(await listarVeiculosSelecionaveis('viagem')).toEqual({ ok: true, data: [] });
+      expect(await listarVeiculosSelecionaveis('viagem')).toEqual({ ok: false, mensagem: 'Não foi possível carregar os veículos selecionáveis. Tente novamente.' });
+      expect(await listarVeiculosSelecionaveis('viagem')).toEqual({ ok: false, mensagem: 'Os dados recebidos são inválidos. Tente novamente.' });
+    });
   });
 
   describe('listarVeiculos', () => {
@@ -131,6 +191,10 @@ describe('veiculos/repository', () => {
   });
 
   describe('buscarVeiculoPorId', () => {
+    it('aceita ano null de cadastro legado (ANO-03)', async () => {
+      responder(ok(scania));
+      expect(await buscarVeiculoPorId('2')).toEqual({ ok: true, data: scania });
+    });
     it('devolve o veículo encontrado', async () => {
       const [query] = responder(ok(volvo));
 
@@ -156,6 +220,7 @@ describe('veiculos/repository', () => {
         placa: 'ABC1234',
         marca: 'Volvo',
         modelo: 'FH 540',
+        ano_fabricacao: 2020,
         capacidade_carga: 12.5,
         status: 'Disponivel',
       });
@@ -191,13 +256,34 @@ describe('veiculos/repository', () => {
   });
 
   describe('atualizarVeiculo', () => {
+    it('edição de ativo não reativa um veículo inativado em paralelo (ANO-06)', async () => {
+      const [query] = responder(ok(null));
+      expect(await atualizarVeiculo('1', input())).toEqual({ ok: false, mensagem: 'Veículo não encontrado.' });
+      expect(query.neq).toHaveBeenCalledWith('status', 'Inativo');
+    });
+
+    it('edição de inativo preserva status e não substitui o botão de inativar (ANO-06)', async () => {
+      const inativo = { ...volvo, status: 'Inativo' };
+      const [query] = responder(ok(inativo));
+      expect(await atualizarVeiculo('1', input({ status: 'Inativo' }))).toEqual({ ok: true, data: inativo });
+      expect(query.update).toHaveBeenCalledWith(expect.objectContaining({ status: 'Inativo' }));
+      expect(query.eq).toHaveBeenCalledWith('status', 'Inativo');
+    });
+
+    it.each(['veiculo_ano_fabricacao_minimo', 'ano_fabricacao 2028 maior que o permitido (2027)'])(
+      'traduz 23514 de ano: %s (ANO-05)', async (message) => {
+        responder({ data: null, error: { code: '23514', message } });
+        const resultado = await atualizarVeiculo('1', input({ ano_fabricacao: 1949 }));
+        expect(resultado).toEqual({ ok: false, campo: 'ano_fabricacao', mensagem: 'Ano de fabricação inválido. Informe um ano entre 1950 e o ano atual + 1.' });
+      },
+    );
     it('atualiza pelo id com a placa normalizada', async () => {
       const [query] = responder(ok({ ...volvo, modelo: 'FH 460' }));
 
       const resultado = await atualizarVeiculo('1', input({ placa: 'abc-1234', modelo: 'FH 460' }));
 
       expect(resultado).toEqual({ ok: true, data: { ...volvo, modelo: 'FH 460' } });
-      expect(query.update).toHaveBeenCalledWith(expect.objectContaining({ placa: 'ABC1234', modelo: 'FH 460' }));
+      expect(query.update).toHaveBeenCalledWith(expect.objectContaining({ placa: 'ABC1234', modelo: 'FH 460', ano_fabricacao: 2020 }));
       expect(query.eq).toHaveBeenCalledWith('id', '1');
       expect(query.delete).not.toHaveBeenCalled();
     });

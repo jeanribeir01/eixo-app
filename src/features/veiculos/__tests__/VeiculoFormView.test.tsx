@@ -20,12 +20,13 @@ jest.mock('../repository', () => ({
   buscarVeiculoPorId: jest.fn(),
 }));
 
-const volvo = { id: '9', placa: 'ABC1234', marca: 'Volvo', modelo: 'FH 540', capacidade_carga: 12.5, status: 'EmManutencao' };
+const volvo = { id: '9', placa: 'ABC1234', marca: 'Volvo', modelo: 'FH 540', ano_fabricacao: 2020, capacidade_carga: 12.5, status: 'EmManutencao' };
 
-function preencher({ placa = 'abc1234', marca = 'Volvo', modelo = 'FH 540', capacidade = '12,5' } = {}) {
+function preencher({ placa = 'abc1234', marca = 'Volvo', modelo = 'FH 540', capacidade = '12,5', ano = '2020' } = {}) {
   fireEvent.changeText(screen.getByLabelText('Placa'), placa);
   fireEvent.changeText(screen.getByLabelText('Marca'), marca);
   fireEvent.changeText(screen.getByLabelText('Modelo'), modelo);
+  fireEvent.changeText(screen.getByLabelText('Ano de Fabricação'), ano);
   fireEvent.changeText(screen.getByLabelText('Capacidade de carga (toneladas)'), capacidade);
 }
 
@@ -41,14 +42,14 @@ describe('VeiculoFormView', () => {
     (criarVeiculo as jest.Mock).mockReset();
     (atualizarVeiculo as jest.Mock).mockReset();
     (buscarVeiculoPorId as jest.Mock).mockReset();
-    jest.useFakeTimers();
+    jest.useFakeTimers().setSystemTime(new Date('2026-10-16T12:00:00Z'));
   });
 
   afterEach(() => {
     jest.useRealTimers();
   });
 
-  it('modo criar: renderiza só os campos que existem no banco e os 3 status', () => {
+  it('modo criar: renderiza ano e os 3 status ativos, sem opção Inativo', () => {
     render(<VeiculoFormView />);
 
     expect(screen.queryByText('Novo veículo')).not.toBeOnTheScreen();
@@ -64,7 +65,7 @@ describe('VeiculoFormView', () => {
     expect(screen.getByRole('tab', { name: 'Disponível' })).toBeOnTheScreen();
     expect(screen.getByRole('tab', { name: 'Em Viagem' })).toBeOnTheScreen();
     expect(screen.getByRole('tab', { name: 'Em Manutenção' })).toBeOnTheScreen();
-    expect(screen.queryByLabelText(/Ano/)).toBeNull();
+    expect(screen.getByLabelText('Ano de Fabricação')).toBeOnTheScreen();
     expect(screen.queryByRole('tab', { name: 'Inativo' })).toBeNull();
   });
 
@@ -108,6 +109,7 @@ describe('VeiculoFormView', () => {
       placa: 'ABC1234',
       marca: 'Volvo',
       modelo: 'FH 540',
+      ano_fabricacao: 2020,
       capacidade_carga: 12.5,
       status: 'EmManutencao',
     });
@@ -156,7 +158,76 @@ describe('VeiculoFormView', () => {
     expect(screen.queryByText('Editar veículo')).not.toBeOnTheScreen();
     expect(screen.getByLabelText('Placa').props.value).toBe('ABC-1234');
     expect(screen.getByLabelText('Capacidade de carga (toneladas)').props.value).toBe('12,5');
+    expect(screen.getByLabelText('Ano de Fabricação').props.value).toBe('2020');
     expect(screen.getByRole('tab', { name: 'Em Manutenção' })).toHaveProp('accessibilityState', { selected: true });
+  });
+
+  it.each(['', '1949', '2028'])('ano inválido %s impede envio (ANO-01/02)', async (ano) => {
+    render(<VeiculoFormView />);
+    preencher({ ano });
+    await salvar();
+    expect(screen.getByText(ano === '' ? 'Informe o ano de fabricação.' : 'Informe um ano entre 1950 e 2027.')).toBeOnTheScreen();
+    expect(criarVeiculo).not.toHaveBeenCalled();
+  });
+
+  it('edição de legado abre ano vazio e exige preenchimento (ANO-03/04)', async () => {
+    (buscarVeiculoPorId as jest.Mock).mockResolvedValue({ ok: true, data: { ...volvo, ano_fabricacao: null } });
+    (atualizarVeiculo as jest.Mock).mockResolvedValue({ ok: true, data: volvo });
+    render(<VeiculoFormView veiculoId="9" />);
+    const ano = await screen.findByLabelText('Ano de Fabricação');
+    expect(ano.props.value).toBe('');
+    await salvar();
+    expect(atualizarVeiculo).not.toHaveBeenCalled();
+    expect(screen.getByText('Informe o ano de fabricação.')).toBeOnTheScreen();
+    fireEvent.changeText(ano, '2020');
+    await salvar();
+    expect(atualizarVeiculo).toHaveBeenCalledWith('9', expect.objectContaining({ ano_fabricacao: 2020 }));
+  });
+
+  it('edição preserva Inativo sem oferecer reativação (ANO-06)', async () => {
+    const inativo = { ...volvo, status: 'Inativo' };
+    (buscarVeiculoPorId as jest.Mock).mockResolvedValue({ ok: true, data: inativo });
+    (atualizarVeiculo as jest.Mock).mockResolvedValue({ ok: true, data: inativo });
+    render(<VeiculoFormView veiculoId="9" />);
+    await screen.findByLabelText('Placa');
+    expect(screen.getByText('Inativo')).toBeOnTheScreen();
+    expect(screen.queryByRole('tab')).toBeNull();
+    fireEvent.changeText(screen.getByLabelText('Modelo'), 'FH 460');
+    await salvar();
+    expect(atualizarVeiculo).toHaveBeenCalledWith('9', expect.objectContaining({ status: 'Inativo', modelo: 'FH 460' }));
+  });
+
+  it('erro de ano do banco aparece no campo e na Snackbar (ANO-05)', async () => {
+    const mensagem = 'Ano de fabricação inválido. Informe um ano entre 1950 e o ano atual + 1.';
+    (criarVeiculo as jest.Mock).mockResolvedValue({ ok: false, campo: 'ano_fabricacao', mensagem });
+    render(<VeiculoFormView />);
+    preencher();
+    await salvar();
+    expect(screen.getAllByText(mensagem)).toHaveLength(2);
+    expect(mockBack).not.toHaveBeenCalled();
+  });
+
+  it('salvar pendente exibe loading e impede envio duplicado (ANO-04)', async () => {
+    let concluir: (value: unknown) => void = () => {};
+    (criarVeiculo as jest.Mock).mockReturnValue(new Promise((resolve) => { concluir = resolve; }));
+    render(<VeiculoFormView />);
+    preencher();
+    await salvar();
+    expect(screen.getByRole('button', { name: 'Salvar' })).toBeDisabled();
+    expect(screen.getByTestId('button-loading')).toBeOnTheScreen();
+    await salvar();
+    expect(criarVeiculo).toHaveBeenCalledTimes(1);
+    await act(async () => concluir({ ok: true, data: volvo }));
+    expect(screen.getByText('Veículo cadastrado.')).toBeOnTheScreen();
+  });
+
+  it('permite tentar novamente após falha na carga', async () => {
+    (buscarVeiculoPorId as jest.Mock)
+      .mockResolvedValueOnce({ ok: false, mensagem: 'Falha de rede.' })
+      .mockResolvedValueOnce({ ok: true, data: volvo });
+    render(<VeiculoFormView veiculoId="9" />);
+    fireEvent.press(await screen.findByRole('button', { name: 'Tentar novamente' }));
+    expect(await screen.findByLabelText('Ano de Fabricação')).toHaveProp('value', '2020');
   });
 
   it('modo editar: envia a atualização para o id certo', async () => {
