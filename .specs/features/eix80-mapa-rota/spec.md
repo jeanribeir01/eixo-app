@@ -117,7 +117,7 @@ A EIX-38 não criou tela de detalhe da rota. Esta task cria a tela de detalhe (d
 | MAPA-10 | P1: Mapa — AC10 (gestos desligados) | Execute | Implementing |
 | MAPA-11 | P1: Mapa — AC11 (proporção, RNF02) | Execute | Implementing |
 | MAPA-12 | P1: Mapa — AC12 (estilo em constante) | Execute | Implementing |
-| MAPA-13 | P1: Detalhe — AC1 (lista abre o detalhe) | Tasks | Pending |
+| MAPA-13 | P1: Detalhe — AC1 (lista abre o detalhe) | Execute | Implementing |
 | MAPA-14 | P1: Detalhe — AC2 (trecho, distância, mapa) | Execute | Implementing |
 | MAPA-15 | P1: Detalhe — AC3 (inativa) | Execute | Implementing |
 | MAPA-16 | P1: Detalhe — AC4 (Editar) | Execute | Implementing |

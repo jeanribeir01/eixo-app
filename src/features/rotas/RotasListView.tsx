@@ -137,7 +137,8 @@ export function RotasListView() {
             <ListItem
               title={trecho(item)}
               subtitle={subtitulo(item)}
-              onPress={() => router.push(`/rotas/${item.id}/editar`)}
+              // Abre o detalhe com o mapa (EIX-80); a edição fica no botão "Editar" de lá.
+              onPress={() => router.push(`/rotas/${item.id}`)}
               control={
                 <Switch
                   label="Ativa"

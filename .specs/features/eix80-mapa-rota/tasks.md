@@ -230,8 +230,8 @@ T4 → T5 → T6 → T7
 
 **Done when**:
 
-- [ ] Teste da linha espera `/rotas/r2`, com o comentário de que MAPA-13 substitui o ROTA-23
-- [ ] Gate check passes: `npm run typecheck && npm run lint && npm run test`
+- [x] Teste da linha espera `/rotas/r2`, com o comentário de que MAPA-13 substitui o ROTA-23
+- [x] Gate check passes: `npm run typecheck && npm run lint && npm run test` (app 975/975, supabase 298/298)
 
 **Tests**: unit
 **Gate**: build

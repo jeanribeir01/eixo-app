@@ -161,13 +161,14 @@ describe('RotasListView — carga', () => {
 });
 
 describe('RotasListView — linha', () => {
-  // ROTA-23
-  it('tocar na linha abre a edição da rota certa', async () => {
+  // MAPA-13 (EIX-80) substitui o ROTA-23: a linha abre o detalhe com o mapa; a edição sai do botão
+  // "Editar" do detalhe. Decidido com o usuário em 18/10/2026.
+  it('tocar na linha abre o detalhe da rota certa', async () => {
     await renderComLista();
 
     fireEvent.press(screen.getByRole('button', { name: TITULO_LONDRINA }));
 
-    expect(mockPush).toHaveBeenCalledWith('/rotas/r2/editar');
+    expect(mockPush).toHaveBeenCalledWith('/rotas/r2');
   });
 
   // ROTA-21
