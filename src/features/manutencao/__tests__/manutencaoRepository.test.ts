@@ -3,7 +3,6 @@ import {
   concluirManutencao,
   listarFormasPagamentoAtivas,
   listarManutencoes,
-  listarVeiculosSelecionaveis,
   registrarManutencao,
 } from '../manutencaoRepository';
 import type { ManutencaoInput } from '../schema';
@@ -13,7 +12,7 @@ import type { ManutencaoInput } from '../schema';
 // chamados; `supabase.rpc()` devolve a resposta da sua própria fila.
 type Resposta = { data: unknown; error: { code: string; message: string } | null };
 
-const METODOS = ['select', 'insert', 'update', 'delete', 'eq', 'neq', 'order', 'limit', 'single', 'maybeSingle'] as const;
+const METODOS = ['select', 'insert', 'update', 'delete', 'eq', 'is', 'not', 'order', 'limit', 'single', 'maybeSingle'] as const;
 type Metodo = (typeof METODOS)[number];
 type Builder = Record<Metodo, jest.Mock> & PromiseLike<Resposta>;
 
@@ -167,31 +166,53 @@ describe('concluirManutencao', () => {
 });
 
 describe('listarManutencoes', () => {
+  const COLUNAS_LISTA = 'id, veiculo_id, descricao, data_manutencao, valor, data_conclusao, veiculo(placa)';
+
   // MAN-18: abertas primeiro; em cada grupo, da data da manutenção mais recente para a mais antiga.
-  it('põe as abertas antes das concluídas, mantendo a data mais recente primeiro em cada grupo', async () => {
-    // O banco devolve por data decrescente, misturando abertas e concluídas.
-    const [query] = responder(
+  it('junta as abertas antes das concluídas, cada consulta já ordenada pelo banco', async () => {
+    // Uma resposta por consulta, na ordem das chamadas: primeiro as abertas, depois as concluídas.
+    const [abertas, concluidas] = responder(
+      ok([
+        linha('a1', '2026-10-16', null, { veiculo: { placa: 'ABC1234' } }),
+        linha('a2', '2026-10-05', null, { veiculo: { placa: 'BRA2E19' } }),
+      ]),
       ok([
         linha('c1', '2026-10-17', '2026-10-17T15:00:00Z', { veiculo: { placa: 'ABC1234' } }),
-        linha('a1', '2026-10-16', null, { veiculo: { placa: 'ABC1234' } }),
         linha('c2', '2026-10-10', '2026-10-18T09:00:00Z', { veiculo: { placa: 'BRA2E19' } }),
-        linha('a2', '2026-10-05', null, { veiculo: { placa: 'BRA2E19' } }),
       ]),
     );
 
     const resultado = await listarManutencoes();
 
     expect(resultado.ok && resultado.data.map((item) => item.id)).toEqual(['a1', 'a2', 'c1', 'c2']);
+    expect(mockFrom).toHaveBeenCalledTimes(2);
     expect(mockFrom).toHaveBeenCalledWith('manutencao');
-    expect(query.select).toHaveBeenCalledWith(
-      'id, veiculo_id, descricao, data_manutencao, valor, data_conclusao, veiculo(placa)',
+    expect(abertas.is).toHaveBeenCalledWith('data_conclusao', null);
+    expect(concluidas.not).toHaveBeenCalledWith('data_conclusao', 'is', null);
+    for (const query of [abertas, concluidas]) {
+      expect(query.select).toHaveBeenCalledWith(COLUNAS_LISTA);
+      // O `id` desempata a mesma data: a ordem não muda entre uma recarga e outra.
+      expect(query.order.mock.calls).toEqual([['data_manutencao', { ascending: false }], ['id']]);
+      expect(query.limit).toHaveBeenCalledWith(500);
+    }
+  });
+
+  // Uma manutenção aberta antiga não pode sumir atrás de 500 concluídas mais novas: o limite de
+  // cada grupo é separado, e as abertas vêm mesmo com a cota das concluídas cheia.
+  it('a aberta mais antiga aparece mesmo com as concluídas no limite', async () => {
+    const concluidas = Array.from({ length: 500 }, (_, indice) =>
+      linha(`c${indice}`, '2026-10-17', '2026-10-17T15:00:00Z', { veiculo: { placa: 'ABC1234' } }),
     );
-    expect(query.order).toHaveBeenCalledWith('data_manutencao', { ascending: false });
-    expect(query.limit).toHaveBeenCalledWith(500);
+    responder(ok([linha('antiga', '2025-01-10', null, { veiculo: { placa: 'BRA2E19' } })]), ok(concluidas));
+
+    const resultado = await listarManutencoes();
+
+    expect(resultado.ok && resultado.data[0].id).toBe('antiga');
+    expect(resultado.ok && resultado.data).toHaveLength(501);
   });
 
   it('entrega a placa e o valor em centavos, nunca o numeric em reais', async () => {
-    responder(ok([linha('a1', '2026-10-16', null, { veiculo: { placa: 'ABC1234' } })]));
+    responder(ok([linha('a1', '2026-10-16', null, { veiculo: { placa: 'ABC1234' } })]), ok([]));
 
     expect(await listarManutencoes()).toEqual({
       ok: true,
@@ -210,13 +231,17 @@ describe('listarManutencoes', () => {
   });
 
   it('lista vazia é sucesso, não erro', async () => {
-    responder(ok([]));
+    responder(ok([]), ok([]));
 
     expect(await listarManutencoes()).toEqual({ ok: true, data: [] });
   });
 
-  it('erro do Supabase vira mensagem em português', async () => {
-    responder(erro('PGRST301'));
+  // Um caso por consulta (lição L-025): testar só uma deixava passar a falha da outra.
+  it.each([
+    ['das abertas', [erro('PGRST301'), ok([])]],
+    ['das concluídas', [ok([]), erro('PGRST301')]],
+  ])('erro do Supabase na consulta %s vira mensagem em português', async (_consulta, respostas) => {
+    responder(...respostas);
 
     expect(await listarManutencoes()).toEqual({
       ok: false,
@@ -225,7 +250,7 @@ describe('listarManutencoes', () => {
   });
 
   it('resposta fora do formato esperado é rejeitada pelo Zod', async () => {
-    responder(ok([linha('a1', '2026-10-16', null, { veiculo: null })]));
+    responder(ok([linha('a1', '2026-10-16', null, { veiculo: null })]), ok([]));
 
     expect(await listarManutencoes()).toEqual({ ok: false, mensagem: MENSAGEM_DADOS_INVALIDOS });
   });
@@ -266,6 +291,19 @@ describe('buscarVeiculoComHistorico', () => {
     expect(query.eq).toHaveBeenCalledWith('id', 'v1');
   });
 
+  it('manutenções da mesma data saem sempre na mesma ordem, desempatadas pelo id', async () => {
+    responder(
+      ok({
+        ...veiculo,
+        manutencao: [linha('m2', '2026-10-16', null), linha('m3', '2026-10-01', null), linha('m1', '2026-10-16', null)],
+      }),
+    );
+
+    const resultado = await buscarVeiculoComHistorico('v1');
+
+    expect(resultado.ok && resultado.data.manutencoes.map((item) => item.id)).toEqual(['m1', 'm2', 'm3']);
+  });
+
   it('veículo sem manutenção devolve histórico vazio', async () => {
     responder(ok({ ...veiculo, manutencao: [] }));
 
@@ -292,29 +330,6 @@ describe('buscarVeiculoComHistorico', () => {
     responder(ok({ ...veiculo, status: 'Parado', manutencao: [] }));
 
     expect(await buscarVeiculoComHistorico('v1')).toEqual({ ok: false, mensagem: MENSAGEM_DADOS_INVALIDOS });
-  });
-});
-
-describe('listarVeiculosSelecionaveis', () => {
-  // MAN-02
-  it('lista só os veículos que não estão inativos, por placa', async () => {
-    const volvo = { id: 'v1', placa: 'ABC1234', marca: 'Volvo', modelo: 'FH 540', status: 'EmViagem' };
-    const [query] = responder(ok([volvo]));
-
-    expect(await listarVeiculosSelecionaveis()).toEqual({ ok: true, data: [volvo] });
-    expect(mockFrom).toHaveBeenCalledWith('veiculo');
-    expect(query.select).toHaveBeenCalledWith('id, placa, marca, modelo, status');
-    expect(query.neq).toHaveBeenCalledWith('status', 'Inativo');
-    expect(query.order).toHaveBeenCalledWith('placa');
-  });
-
-  it('erro do Supabase vira mensagem em português', async () => {
-    responder(erro('PGRST301'));
-
-    expect(await listarVeiculosSelecionaveis()).toEqual({
-      ok: false,
-      mensagem: 'Não foi possível carregar os veículos. Tente novamente.',
-    });
   });
 });
 

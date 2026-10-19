@@ -1,17 +1,16 @@
-import { useEffect, useState } from 'react';
+import { useCallback } from 'react';
 import { useRouter } from 'expo-router';
-import { ActivityIndicator, FlatList, StyleSheet } from 'react-native';
+import { ActivityIndicator, FlatList, RefreshControl, StyleSheet } from 'react-native';
 
 import { formatarPlaca } from '@/features/veiculos/placa';
 import { rotuloStatusVeiculo } from '@/features/veiculos/types';
 import { isoParaDataBR } from '@/lib/datas';
 import { formatarMoeda } from '@/lib/money';
-import { Card, Column, EmptyState, ListItem, Screen, Text, colors, spacing } from '@/ui';
+import { useDadosDaTela } from '@/lib/useDadosDaTela';
+import { Button, Card, Column, EmptyState, ListItem, Screen, Snackbar, Text, colors, spacing } from '@/ui';
 
 import { buscarVeiculoComHistorico } from './manutencaoRepository';
-import type { ManutencaoItem, VeiculoComHistorico } from './types';
-
-type Status = 'carregando' | 'pronto' | 'erro';
+import type { ManutencaoItem } from './types';
 
 // Situação em texto, nunca só por cor (CLAUDE.md §8).
 function subtitulo(manutencao: ManutencaoItem): string {
@@ -27,35 +26,13 @@ export type VeiculoDetalheViewProps = {
 // feature de manutenção porque o conteúdo é o histórico; os dados do veículo são o cabeçalho.
 export function VeiculoDetalheView({ veiculoId }: VeiculoDetalheViewProps) {
   const router = useRouter();
-  const [status, setStatus] = useState<Status>('carregando');
-  const [veiculo, setVeiculo] = useState<VeiculoComHistorico | null>(null);
-  const [erro, setErro] = useState<string | null>(null);
+  // O mesmo hook das listas: carrega ao abrir, recarrega ao voltar ao foco, tem pull-to-refresh e
+  // "Tentar novamente". Outro id é outra consulta, então a tela volta ao carregando.
+  const buscar = useCallback(() => buscarVeiculoComHistorico(veiculoId), [veiculoId]);
+  const tela = useDadosDaTela(buscar);
+  const veiculo = tela.dados;
 
-  useEffect(() => {
-    let cancelado = false;
-
-    async function carregar() {
-      setStatus('carregando');
-      const resultado = await buscarVeiculoComHistorico(veiculoId);
-      if (cancelado) return;
-
-      if (!resultado.ok) {
-        setErro(resultado.mensagem);
-        setStatus('erro');
-        return;
-      }
-      setVeiculo(resultado.data);
-      setStatus('pronto');
-    }
-
-    carregar();
-
-    return () => {
-      cancelado = true;
-    };
-  }, [veiculoId]);
-
-  if (status === 'carregando') {
+  if (tela.status === 'carregando') {
     return (
       <Screen align="center" underHeader>
         <ActivityIndicator size="small" color={colors.accent} accessibilityLabel="Carregando veículo" />
@@ -63,25 +40,44 @@ export function VeiculoDetalheView({ veiculoId }: VeiculoDetalheViewProps) {
     );
   }
 
-  if (status === 'erro' || !veiculo) {
+  if (tela.status === 'erro' || !veiculo) {
     return (
+      // As duas saídas: falha de rede se resolve tentando de novo; veículo que não existe (ou que o
+      // RLS esconde), só voltando.
       <Screen align="center" underHeader>
         <EmptyState
           title="Não foi possível carregar o veículo"
-          description={erro ?? undefined}
-          actionLabel="Voltar"
-          onAction={() => router.back()}
+          description={tela.erro ?? undefined}
+          actionLabel="Tentar novamente"
+          onAction={tela.recarregar}
         />
+        <Button label="Voltar" variant="ghost" onPress={() => router.back()} />
       </Screen>
     );
   }
 
   return (
     // O título "Veículo" fica no header; a placa aparece no cartão porque é dado, não título.
-    <Screen underHeader>
+    <Screen
+      underHeader
+      // Recarga que falha com o histórico já na tela: avisa sem apagar o que está ali.
+      overlay={
+        tela.feedbackErro ? (
+          <Snackbar message={tela.feedbackErro} tone="error" onDismiss={tela.limparFeedbackErro} />
+        ) : null
+      }
+    >
       <FlatList
         data={veiculo.manutencoes}
         keyExtractor={(manutencao) => manutencao.id}
+        refreshControl={
+          <RefreshControl
+            refreshing={tela.atualizando}
+            onRefresh={tela.puxarParaAtualizar}
+            colors={[colors.accent]}
+            tintColor={colors.accent}
+          />
+        }
         ListHeaderComponentStyle={styles.cabecalho}
         ListHeaderComponent={
           <Column gap="lg">

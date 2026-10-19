@@ -95,14 +95,6 @@ function paraItem({ valor, ...resto }: z.infer<typeof manutencaoSchema>): Manute
   return { ...resto, valorCentavos: reaisParaCentavos(valor) };
 }
 
-// O banco já devolve da data mais recente para a mais antiga; aqui só as abertas sobem para o
-// topo. O sort do JavaScript é estável, então a ordem de data se mantém dentro de cada grupo.
-// Não dá para pedir isso ao banco com `order('data_conclusao')`: as concluídas sairiam pela data
-// de conclusão, e a spec pede pela data da manutenção.
-function abertasPrimeiro<T extends ManutencaoItem>(itens: T[]): T[] {
-  return [...itens].sort((a, b) => Number(a.data_conclusao !== null) - Number(b.data_conclusao !== null));
-}
-
 export async function registrarManutencao(input: ManutencaoInput): Promise<Resultado<string>> {
   const { data, error } = await supabase.rpc('registrar_manutencao', {
     veiculo_id: input.veiculoId,
@@ -149,24 +141,41 @@ export async function concluirManutencao(id: string): Promise<Resultado<VeiculoR
   return { ok: true, data: parsed.data };
 }
 
+// Duas consultas, cada uma com o próprio limite: as abertas e as concluídas. Numa consulta só, o
+// limite cortaria pela data, e uma manutenção aberta antiga (veículo parado há meses) sumiria atrás
+// de 500 concluídas mais novas, sem ninguém conseguir concluí-la. Juntar as duas nessa ordem já
+// põe as abertas primeiro; dentro de cada grupo, da data da manutenção mais recente para a mais
+// antiga. O `id` desempata a mesma data, para a lista não trocar linhas de lugar a cada recarga.
 export async function listarManutencoes(): Promise<Resultado<ManutencaoComPlaca[]>> {
-  const { data, error } = await supabase
-    .from('manutencao')
-    .select(`${COLUNAS_MANUTENCAO}, veiculo(placa)`)
-    .order('data_manutencao', { ascending: false })
-    .limit(LIMITE_LISTA);
+  const colunas = `${COLUNAS_MANUTENCAO}, veiculo(placa)`;
+  const [abertas, concluidas] = await Promise.all([
+    supabase
+      .from('manutencao')
+      .select(colunas)
+      .is('data_conclusao', null)
+      .order('data_manutencao', { ascending: false })
+      .order('id')
+      .limit(LIMITE_LISTA),
+    supabase
+      .from('manutencao')
+      .select(colunas)
+      .not('data_conclusao', 'is', null)
+      .order('data_manutencao', { ascending: false })
+      .order('id')
+      .limit(LIMITE_LISTA),
+  ]);
 
-  if (error) {
-    return traduzirErro(error, { padrao: 'Não foi possível carregar as manutenções. Tente novamente.' });
-  }
+  const mensagens = { padrao: 'Não foi possível carregar as manutenções. Tente novamente.' };
+  if (abertas.error) return traduzirErro(abertas.error, mensagens);
+  if (concluidas.error) return traduzirErro(concluidas.error, mensagens);
 
-  const parsed = z.array(manutencaoComPlacaSchema).safeParse(data);
+  const parsed = z.array(manutencaoComPlacaSchema).safeParse([...abertas.data, ...concluidas.data]);
   if (!parsed.success) {
     return { ok: false, mensagem: MENSAGEM_DADOS_INVALIDOS };
   }
 
   const itens = parsed.data.map(({ veiculo, ...manutencao }) => ({ ...paraItem(manutencao), placa: veiculo.placa }));
-  return { ok: true, data: abertasPrimeiro(itens) };
+  return { ok: true, data: itens };
 }
 
 // Uma consulta só: o veículo com as manutenções dele (FK `manutencao.veiculo_id`).
@@ -192,32 +201,11 @@ export async function buscarVeiculoComHistorico(id: string): Promise<Resultado<V
 
   const { manutencao, ...veiculo } = parsed.data;
   // O histórico é só por data (mais recente primeiro): aqui abertas e concluídas ficam juntas.
+  // O `id` desempata a mesma data, como na lista.
   const manutencoes = manutencao
     .map(paraItem)
-    .sort((a, b) => b.data_manutencao.localeCompare(a.data_manutencao));
+    .sort((a, b) => b.data_manutencao.localeCompare(a.data_manutencao) || a.id.localeCompare(b.id));
   return { ok: true, data: { ...veiculo, manutencoes } };
-}
-
-// TODO(EIX-79): trocar pelo filtro de "selecionáveis" quando ele existir. Por enquanto, todo
-// veículo que não está inativo aparece; o que está em viagem é recusado pela RPC com MN001, e a
-// tela mostra o motivo.
-export async function listarVeiculosSelecionaveis(): Promise<Resultado<VeiculoResumo[]>> {
-  const { data, error } = await supabase
-    .from('veiculo')
-    .select('id, placa, marca, modelo, status')
-    .neq('status', 'Inativo')
-    .order('placa')
-    .limit(LIMITE_LISTA);
-
-  if (error) {
-    return traduzirErro(error, { padrao: 'Não foi possível carregar os veículos. Tente novamente.' });
-  }
-
-  const parsed = z.array(veiculoSchema).safeParse(data);
-  if (!parsed.success) {
-    return { ok: false, mensagem: MENSAGEM_DADOS_INVALIDOS };
-  }
-  return { ok: true, data: parsed.data };
 }
 
 // Pela RPC, não pela tabela: o Gestor de Frota não lê `forma_pagamento` direto (AD-013). A função

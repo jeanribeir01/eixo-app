@@ -16,7 +16,6 @@ O gestor de frota não tem onde registrar a manutenção de um veículo: a tela 
 | --- | --- |
 | Editar ou excluir manutenção | O banco só escreve `manutencao` pelas RPCs e não há RPC de edição (EIX-75); nenhum AC pede |
 | Hodômetro na manutenção | A coluna existe, mas nenhum AC pede e a RPC não recebe o valor |
-| Filtro definitivo de veículos selecionáveis | É da EIX-79; aqui fica o workaround `status <> 'Inativo'` com `TODO(EIX-79)` |
 | Mudar o toque da lista de Veículos (`VeiculosListView`) | Decidido com o usuário: o toque continua abrindo a edição; a entrada do detalhe é o "Ver veículo" da manutenção |
 | Abrir a RLS de `forma_pagamento` para o Gestor de Frota | Decidido com o usuário (opção b): RPC que devolve só id e nome das formas ativas |
 | Offline | O cadastro de manutenção é online-only; o offline obrigatório (RNF01) é viagem e hodômetro |
@@ -31,13 +30,13 @@ O gestor de frota não tem onde registrar a manutenção de um veículo: a tela 
 | Formas de pagamento para o Gestor | RPC nova `listar_formas_pagamento_ativas()`, `security definer`, devolvendo só `id` e `nome` das ativas, para Admin, Financeiro e Gestor de Frota; migration nova escrita nesta task e revisada pelo Jean | Opção (b) da sessão anterior; não abre a tabela inteira; autorizado em 18/10/2026 | y |
 | Motorista e a RPC de formas | Motorista recebe `42501` | CLAUDE.md §7: Motorista tem zero áreas financeiras | y |
 | Seletor de formas antes dos tipos regerados | A função do repositório lê `forma_pagamento` direto (`ativa = true`) até a migration estar na nuvem e os tipos regerados; a troca para a RPC é a última task, bloqueada até lá | Sem o tipo gerado, `supabase.rpc('listar_formas_pagamento_ativas')` não passa no typecheck, e `database.ts` nunca é editado à mão | y |
-| Veículos selecionáveis | `status <> 'Inativo'`, com `TODO(EIX-79)`; veículo em viagem aparece e a RPC recusa com `MN001` | Workaround aprovado; o AC pede a mensagem explicando o bloqueio | y |
+| Veículos selecionáveis | Contrato da EIX-79: `listarVeiculosSelecionaveis('manutencao')` de `src/features/veiculos/repository.ts` (Disponível e Em Manutenção) | O workaround `status <> 'Inativo'` valia até a EIX-79 entrar na `main`; trocado na revisão do PR #38 (19/10/2026). O `MN001` continua traduzido para a viagem que abre depois de a lista carregar | y |
 | `CampoData` e `CampoMoeda` | Movidos de `src/features/movimentacoes/components/` para `src/ui/`, com imports de Movimentações e Dívidas atualizados | Aprovado: a manutenção usa os dois e feature não importa de outra | y |
 | Detalhe do veículo | Rota `app/(app)/frota/[id]/index.tsx` (URL `/frota/<id>`), título "Veículo" em `app/(app)/_layout.tsx` | Aprovado; evita arquivo e pasta com o mesmo nome dinâmico ao lado de `frota/[id]/editar.tsx` | y |
 | Entrada do detalhe | Botão "Ver veículo" em cada linha da lista de manutenções | Aprovado em 18/10/2026 | y |
 | Textos do Snackbar de conclusão | "Manutenção concluída. Veículo disponível." / "Manutenção concluída. O veículo segue em manutenção por outra ordem aberta." | Aprovados os dois status; o texto exato é este, ajustável na revisão | y |
 | Valores iniciais do formulário | Data = hoje; Status do pagamento = Pendente | Mesmo padrão de Movimentações (Pendente) e o caso comum é registrar no dia do serviço | y |
-| Limite da descrição | 1 a 200 caracteres depois do trim | O banco não limita; 200 cabe numa ordem de serviço e evita texto sem teto | y |
+| Limite da descrição | 1 a 100 caracteres depois do trim | O banco não limita. A RPC grava "Manutenção <PLACA>: <descrição>" (20 caracteres de prefixo) na despesa, e Movimentações aceita 120: com 200, o Financeiro não conseguia salvar a despesa. Baixado de 200 na revisão do PR #38 (19/10/2026) | y |
 | Concluir sem diálogo de confirmação | O toque em "Concluir" conclui direto, com loading e Snackbar | Nenhum AC pede confirmação; a ação é a mesma de Categorias (switch direto) | y |
 | Ordem da lista | Em aberto primeiro; dentro de cada grupo, da data da manutenção mais recente para a mais antiga | Quem abre a tela quer ver o que está parado | y |
 
@@ -56,7 +55,7 @@ O gestor de frota não tem onde registrar a manutenção de um veículo: a tela 
 **Acceptance Criteria**:
 
 1. WHEN o usuário abre "Nova manutenção" THEN o sistema SHALL mostrar os campos Veículo, Data da manutenção, Descrição do serviço, Valor total, Forma de pagamento e Status do pagamento (Pago / Pendente).
-2. The system SHALL listar no seletor de Veículo só os veículos com status diferente de `Inativo`, no formato "PLACA · Marca Modelo".
+2. The system SHALL listar no seletor de Veículo só os veículos com status `Disponivel` ou `EmManutencao` (contrato `listarVeiculosSelecionaveis('manutencao')` da EIX-79), no formato "PLACA · Marca Modelo".
 3. The system SHALL listar no seletor de Forma de pagamento só as formas ativas.
 4. WHEN o formulário abre THEN o sistema SHALL preencher a Data da manutenção com a data de hoje no fuso do aparelho e o Status do pagamento com Pendente.
 5. WHEN o usuário salva uma manutenção válida THEN o sistema SHALL chamar `registrar_manutencao` com o valor em reais, mostrar "Manutenção registrada. O veículo está em manutenção." e voltar à lista.
@@ -66,13 +65,13 @@ O gestor de frota não tem onde registrar a manutenção de um veículo: a tela 
 9. IF o veículo não foi escolhido THEN o sistema SHALL bloquear o envio e mostrar "Escolha o veículo."
 10. IF a forma de pagamento não foi escolhida THEN o sistema SHALL bloquear o envio e mostrar "Escolha a forma de pagamento."
 11. IF a descrição está vazia depois do trim THEN o sistema SHALL bloquear o envio e mostrar "Descreva o serviço."
-12. IF a descrição passa de 200 caracteres depois do trim THEN o sistema SHALL bloquear o envio e mostrar "A descrição pode ter no máximo 200 caracteres."
+12. IF a descrição passa de 100 caracteres depois do trim THEN o sistema SHALL bloquear o envio e mostrar "A descrição pode ter no máximo 100 caracteres."
 13. IF a RPC recusa com `MN001` THEN o sistema SHALL mostrar o Snackbar "Veículo em viagem não pode entrar em manutenção. Feche a viagem antes."
 14. IF a RPC recusa com `22023` THEN o sistema SHALL mostrar o Snackbar "Forma de pagamento inativa. Escolha outra."
-15. WHILE o envio está em andamento the system SHALL mostrar loading no botão "Salvar" e ignorar novos toques.
+15. WHILE o envio está em andamento, e depois do sucesso até a tela fechar, the system SHALL mostrar loading no botão "Salvar" e ignorar novos toques.
 16. The system SHALL gravar manutenção, despesa e status do veículo só pela RPC `registrar_manutencao`, sem insert ou update direto em `manutencao`, `movimentacao` ou `veiculo`.
 
-**Independent Test**: Como Admin, registrar uma manutenção de R$ 1,13 num veículo Disponível, ver o Snackbar e a manutenção em aberto na lista; repetir num veículo Em Viagem e ver a mensagem do `MN001`.
+**Independent Test**: Como Admin, registrar uma manutenção de R$ 1,13 num veículo Disponível, ver o Snackbar e a manutenção em aberto na lista; conferir que um veículo Em Viagem não aparece no seletor.
 
 ---
 

@@ -2,9 +2,12 @@ import { act, fireEvent, render, screen } from '@testing-library/react-native';
 import { KeyboardAvoidingView, ScrollView } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
+import { listarVeiculosSelecionaveis } from '@/features/veiculos/repository';
+import type { Veiculo } from '@/features/veiculos/types';
+
 import { ManutencaoFormView } from '../ManutencaoFormView';
-import { listarFormasPagamentoAtivas, listarVeiculosSelecionaveis, registrarManutencao } from '../manutencaoRepository';
-import type { FormaPagamentoOpcao, VeiculoResumo } from '../types';
+import { listarFormasPagamentoAtivas, registrarManutencao } from '../manutencaoRepository';
+import type { FormaPagamentoOpcao } from '../types';
 
 // O runner do GitHub Actions é mais lento que a máquina local: o padrão de 5s estourava no CI.
 jest.setTimeout(15000);
@@ -15,8 +18,12 @@ jest.mock('expo-router', () => ({
   useRouter: () => ({ push: jest.fn(), back: mockBack }),
 }));
 
-jest.mock('../manutencaoRepository', () => ({
+// Os veículos vêm do contrato compartilhado da EIX-79, não do repositório da manutenção.
+jest.mock('@/features/veiculos/repository', () => ({
   listarVeiculosSelecionaveis: jest.fn(),
+}));
+
+jest.mock('../manutencaoRepository', () => ({
   listarFormasPagamentoAtivas: jest.fn(),
   registrarManutencao: jest.fn(),
 }));
@@ -28,9 +35,25 @@ const mockRegistrar = registrarManutencao as jest.MockedFunction<typeof registra
 // O Jest roda com TZ=America/Sao_Paulo (jest.global-setup.js): "hoje" no aparelho é 18/10/2026.
 const HOJE = new Date(2026, 9, 18, 10, 0);
 
-const veiculos: VeiculoResumo[] = [
-  { id: 'v1', placa: 'ABC1234', marca: 'Volvo', modelo: 'FH 540', status: 'Disponivel' },
-  { id: 'v2', placa: 'BRA2E19', marca: 'Scania', modelo: 'R 450', status: 'EmViagem' },
+const veiculos: Veiculo[] = [
+  {
+    id: 'v1',
+    placa: 'ABC1234',
+    marca: 'Volvo',
+    modelo: 'FH 540',
+    ano_fabricacao: 2020,
+    capacidade_carga: 30000,
+    status: 'Disponivel',
+  },
+  {
+    id: 'v2',
+    placa: 'BRA2E19',
+    marca: 'Scania',
+    modelo: 'R 450',
+    ano_fabricacao: 2022,
+    capacidade_carga: 25000,
+    status: 'EmManutencao',
+  },
 ];
 const formas: FormaPagamentoOpcao[] = [
   { id: 'f1', nome: 'Boleto' },
@@ -93,12 +116,14 @@ describe('ManutencaoFormView — campos', () => {
   });
 
   // MAN-02
-  it('o seletor de Veículo mostra "PLACA · Marca Modelo" dos veículos selecionáveis', async () => {
+  it('o seletor de Veículo mostra "PLACA · Marca Modelo" dos veículos selecionáveis para manutenção', async () => {
     await renderPronto();
 
     fireEvent.press(screen.getByRole('button', { name: 'Veículo' }));
 
+    // 'manutencao' = Disponível e Em Manutenção; veículo em viagem não chega ao seletor.
     expect(mockVeiculos).toHaveBeenCalledTimes(1);
+    expect(mockVeiculos).toHaveBeenCalledWith('manutencao');
     expect(screen.getByRole('button', { name: 'ABC-1234 · Volvo FH 540' })).toBeOnTheScreen();
     expect(screen.getByRole('button', { name: 'BRA2E19 · Scania R 450' })).toBeOnTheScreen();
   });
@@ -169,14 +194,15 @@ describe('ManutencaoFormView — salvar', () => {
   });
 
   // MAN-12
-  it('descrição com mais de 200 caracteres bloqueia o envio', async () => {
+  it('descrição com mais de 100 caracteres bloqueia o envio', async () => {
     await renderPronto();
 
     preencher();
-    fireEvent.changeText(screen.getByLabelText('Descrição do serviço'), 'a'.repeat(201));
+    expect(screen.getByLabelText('Descrição do serviço')).toHaveProp('maxLength', 100);
+    fireEvent.changeText(screen.getByLabelText('Descrição do serviço'), 'a'.repeat(101));
     await salvar();
 
-    expect(screen.getByText('A descrição pode ter no máximo 200 caracteres.')).toBeOnTheScreen();
+    expect(screen.getByText('A descrição pode ter no máximo 100 caracteres.')).toBeOnTheScreen();
     expect(mockRegistrar).not.toHaveBeenCalled();
   });
 
@@ -184,7 +210,7 @@ describe('ManutencaoFormView — salvar', () => {
   it.each([
     'Veículo em viagem não pode entrar em manutenção. Feche a viagem antes.',
     'Forma de pagamento inativa. Escolha outra.',
-  ])('recusa do banco mostra o Snackbar "%s" e não volta', async (mensagem) => {
+  ])('recusa do banco mostra o Snackbar "%s", libera o "Salvar" e não volta', async (mensagem) => {
     mockRegistrar.mockResolvedValue({ ok: false, mensagem });
     await renderPronto();
 
@@ -192,6 +218,8 @@ describe('ManutencaoFormView — salvar', () => {
     await salvar();
 
     expect(screen.getByRole('alert')).toHaveTextContent(mensagem);
+    // Depois da recusa o usuário corrige e tenta de novo.
+    expect(screen.getByRole('button', { name: 'Salvar' })).not.toBeDisabled();
     act(() => {
       jest.advanceTimersByTime(1200);
     });
@@ -199,7 +227,7 @@ describe('ManutencaoFormView — salvar', () => {
   });
 
   // MAN-15
-  it('enquanto salva, o "Salvar" fica em loading e ignora novos toques', async () => {
+  it('enquanto salva e depois do sucesso, o "Salvar" fica em loading e ignora novos toques', async () => {
     let concluir: (valor: Awaited<ReturnType<typeof registrarManutencao>>) => void = () => undefined;
     mockRegistrar.mockReturnValue(new Promise((resolve) => (concluir = resolve)));
     await renderPronto();
@@ -210,8 +238,13 @@ describe('ManutencaoFormView — salvar', () => {
     await salvar();
     expect(mockRegistrar).toHaveBeenCalledTimes(1);
 
+    // Depois do sucesso o botão continua em loading até a tela fechar: um segundo toque gravaria
+    // outra manutenção e outra despesa, porque o banco aceita duas ordens abertas no mesmo veículo.
     await act(async () => concluir({ ok: true, data: 'm1' }));
-    expect(screen.getByRole('button', { name: 'Salvar' })).not.toBeDisabled();
+    expect(screen.getByRole('alert')).toHaveTextContent('Manutenção registrada. O veículo está em manutenção.');
+    expect(screen.getByRole('button', { name: 'Salvar' })).toBeDisabled();
+    await salvar();
+    expect(mockRegistrar).toHaveBeenCalledTimes(1);
   });
 });
 
@@ -223,9 +256,9 @@ describe('ManutencaoFormView — carga das opções', () => {
       'dos veículos',
       () =>
         mockVeiculos
-          .mockResolvedValueOnce({ ok: false, mensagem: 'Não foi possível carregar os veículos. Tente novamente.' })
+          .mockResolvedValueOnce({ ok: false, mensagem: 'Não foi possível carregar os veículos selecionáveis. Tente novamente.' })
           .mockResolvedValueOnce({ ok: true, data: veiculos }),
-      'Não foi possível carregar os veículos. Tente novamente.',
+      'Não foi possível carregar os veículos selecionáveis. Tente novamente.',
       () => mockVeiculos,
     ],
     [

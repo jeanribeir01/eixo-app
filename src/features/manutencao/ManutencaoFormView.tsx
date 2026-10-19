@@ -4,9 +4,10 @@ import { ActivityIndicator } from 'react-native';
 import { z } from 'zod';
 
 import { formatarPlaca } from '@/features/veiculos/placa';
+import { listarVeiculosSelecionaveis } from '@/features/veiculos/repository';
 import { Button, CampoData, CampoMoeda, Column, EmptyState, Input, Screen, Select, Snackbar, Tabs, Text, colors } from '@/ui';
 
-import { listarFormasPagamentoAtivas, listarVeiculosSelecionaveis, registrarManutencao } from './manutencaoRepository';
+import { listarFormasPagamentoAtivas, registrarManutencao } from './manutencaoRepository';
 import { manutencaoSchema, valoresIniciais, type ManutencaoFormValues } from './schema';
 import type { FormaPagamentoOpcao, StatusPagamento, VeiculoResumo } from './types';
 
@@ -39,22 +40,26 @@ export function ManutencaoFormView() {
 
     async function carregar() {
       setStatus('carregando');
+      // Contrato da EIX-79: só Disponível e Em Manutenção. Veículo em viagem nem aparece; o MN001
+      // da RPC fica para a corrida em que a viagem abre depois de a lista carregar.
       const [resultadoVeiculos, resultadoFormas] = await Promise.all([
-        listarVeiculosSelecionaveis(),
+        listarVeiculosSelecionaveis('manutencao'),
         listarFormasPagamentoAtivas(),
       ]);
       if (cancelado) return;
 
-      const falha = !resultadoVeiculos.ok ? resultadoVeiculos : !resultadoFormas.ok ? resultadoFormas : null;
-      if (falha) {
-        setErroCarga(falha.mensagem);
+      if (!resultadoVeiculos.ok) {
+        setErroCarga(resultadoVeiculos.mensagem);
+        setStatus('erro');
+        return;
+      }
+      if (!resultadoFormas.ok) {
+        setErroCarga(resultadoFormas.mensagem);
         setStatus('erro');
         return;
       }
 
-      if (resultadoVeiculos.ok && resultadoFormas.ok) {
-        setOpcoes({ veiculos: resultadoVeiculos.data, formas: resultadoFormas.data });
-      }
+      setOpcoes({ veiculos: resultadoVeiculos.data, formas: resultadoFormas.data });
       setStatus('pronto');
     }
 
@@ -90,14 +95,16 @@ export function ManutencaoFormView() {
 
     setSalvando(true);
     const resposta = await registrarManutencao(resultado.data);
-    setSalvando(false);
 
     if (!resposta.ok) {
+      setSalvando(false);
       // Recusa do banco (veículo em viagem, forma inativa...) já vem traduzida pelo repositório.
       setFeedback({ mensagem: resposta.mensagem, tone: 'error' });
       return;
     }
 
+    // O botão continua em loading até a tela fechar, como em Dívidas: o banco aceita duas ordens
+    // abertas no mesmo veículo, então um segundo toque gravaria outra manutenção e outra despesa.
     // A RPC já parou o veículo e lançou a despesa: o texto avisa as duas coisas que o usuário não vê.
     setFeedback({ mensagem: 'Manutenção registrada. O veículo está em manutenção.', tone: 'success' });
   }
@@ -163,7 +170,7 @@ export function ManutencaoFormView() {
           placeholder="Ex.: Troca de pneus"
           value={valores.descricao}
           onChangeText={(texto) => alterar('descricao', texto)}
-          maxLength={200}
+          maxLength={100}
           error={erros.descricao}
         />
         <CampoMoeda

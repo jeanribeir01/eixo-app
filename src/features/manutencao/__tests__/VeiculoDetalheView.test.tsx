@@ -1,4 +1,5 @@
-import { fireEvent, render, screen } from '@testing-library/react-native';
+import { act, fireEvent, render, screen } from '@testing-library/react-native';
+import { RefreshControl } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { ListItem } from '@/ui';
@@ -12,9 +13,15 @@ jest.setTimeout(15000);
 
 const mockBack = jest.fn();
 
-jest.mock('expo-router', () => ({
-  useRouter: () => ({ push: jest.fn(), back: mockBack }),
-}));
+// Jest hoista jest.mock() acima dos imports: a fábrica só pode usar variáveis com prefixo "mock".
+jest.mock('expo-router', () => {
+  // eslint-disable-next-line @typescript-eslint/no-require-imports
+  const react = require('react');
+  return {
+    useRouter: () => ({ push: jest.fn(), back: mockBack }),
+    useFocusEffect: (callback: () => void) => react.useEffect(callback, [callback]),
+  };
+});
 
 jest.mock('../manutencaoRepository', () => ({
   buscarVeiculoComHistorico: jest.fn(),
@@ -101,5 +108,46 @@ describe('VeiculoDetalheView', () => {
     expect(screen.UNSAFE_getByType(SafeAreaView).props.edges).not.toContain('top');
     fireEvent.press(screen.getByRole('button', { name: 'Voltar' }));
     expect(mockBack).toHaveBeenCalledTimes(1);
+  });
+
+  // Falha de rede se resolve tentando de novo, sem precisar voltar à lista.
+  it('falha na carga mostra a mensagem e "Tentar novamente" carrega de novo', async () => {
+    mockBuscar
+      .mockResolvedValueOnce({ ok: false, mensagem: 'Não foi possível carregar o veículo. Tente novamente.' })
+      .mockResolvedValueOnce({ ok: true, data: volvo });
+    render(<VeiculoDetalheView veiculoId="v1" />);
+
+    expect(await screen.findByText('Não foi possível carregar o veículo. Tente novamente.')).toBeOnTheScreen();
+    expect(screen.getByRole('button', { name: 'Voltar' })).toBeOnTheScreen();
+    fireEvent.press(screen.getByRole('button', { name: 'Tentar novamente' }));
+
+    expect(await screen.findByText('ABC-1234')).toBeOnTheScreen();
+    expect(mockBuscar).toHaveBeenCalledTimes(2);
+  });
+
+  it('pull-to-refresh recarrega o histórico', async () => {
+    mockBuscar
+      .mockResolvedValueOnce({ ok: true, data: { ...volvo, manutencoes: [] } })
+      .mockResolvedValueOnce({ ok: true, data: volvo });
+    render(<VeiculoDetalheView veiculoId="v1" />);
+    expect(await screen.findByText('Nenhuma manutenção registrada para este veículo.')).toBeOnTheScreen();
+
+    await act(async () => screen.UNSAFE_getByType(RefreshControl).props.onRefresh());
+
+    expect(screen.getByText('Troca de pneus')).toBeOnTheScreen();
+    expect(mockBuscar).toHaveBeenCalledTimes(2);
+  });
+
+  it('recarga que falha com o histórico na tela mostra o Snackbar e mantém os dados', async () => {
+    mockBuscar
+      .mockResolvedValueOnce({ ok: true, data: volvo })
+      .mockResolvedValueOnce({ ok: false, mensagem: 'Não foi possível carregar o veículo. Tente novamente.' });
+    render(<VeiculoDetalheView veiculoId="v1" />);
+    await screen.findByText('ABC-1234');
+
+    await act(async () => screen.UNSAFE_getByType(RefreshControl).props.onRefresh());
+
+    expect(screen.getByRole('alert')).toHaveTextContent('Não foi possível carregar o veículo. Tente novamente.');
+    expect(screen.getByText('Troca de pneus')).toBeOnTheScreen();
   });
 });

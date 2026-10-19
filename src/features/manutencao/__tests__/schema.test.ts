@@ -95,11 +95,11 @@ describe('manutencaoSchema', () => {
     expect(mensagens({ ...valido, descricao: '   ' })).toEqual(['Descreva o serviço.']);
   });
 
-  // MAN-12
-  it('aceita até 200 caracteres depois do trim e recusa 201', () => {
-    expect(manutencaoSchema.safeParse({ ...valido, descricao: ` ${'a'.repeat(200)} ` }).success).toBe(true);
-    expect(mensagens({ ...valido, descricao: 'a'.repeat(201) })).toEqual([
-      'A descrição pode ter no máximo 200 caracteres.',
+  // MAN-12: 100 + o prefixo "Manutenção <PLACA>: " (20) cabe nos 120 da descrição de Movimentações.
+  it('aceita até 100 caracteres depois do trim e recusa 101', () => {
+    expect(manutencaoSchema.safeParse({ ...valido, descricao: ` ${'a'.repeat(100)} ` }).success).toBe(true);
+    expect(mensagens({ ...valido, descricao: 'a'.repeat(101) })).toEqual([
+      'A descrição pode ter no máximo 100 caracteres.',
     ]);
   });
 });

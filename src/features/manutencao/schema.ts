@@ -9,7 +9,9 @@ import { Constants } from '@/types/database';
 //
 // Os limites repetem os do banco (AD-008): `manutencao_valor_positivo` (valor > 0) e o trigger
 // `valida_data_manutencao` (data não futura), da migration 20261014000300_manutencao_rpc.sql.
-// O banco não limita a descrição; o teto de 200 é do app.
+// O banco não limita a descrição; o teto de 100 é do app e vem da despesa: a RPC grava
+// "Manutenção <PLACA>: <descrição>" em `movimentacao.descricao`, e o formulário de Movimentações
+// aceita no máximo 120. O prefixo tem 20 (11 + 7 da placa + 2), então sobram 100 para cá.
 export const manutencaoSchema = z.object({
   veiculoId: z.string({ error: 'Escolha o veículo.' }),
   dataManutencao: z
@@ -18,14 +20,16 @@ export const manutencaoSchema = z.object({
     .refine((texto) => dataBRParaISO(texto) !== null, 'Informe a data da manutenção.')
     .transform((texto) => dataBRParaISO(texto) ?? '')
     // ISO (AAAA-MM-DD) compara certo como texto. `hojeISO` usa o fuso do aparelho: às 23h30 em
-    // Brasília já é amanhã em UTC, e a manutenção de hoje não pode ser recusada. O banco faz o
-    // mesmo com o "hoje" de São Paulo.
+    // Brasília já é amanhã em UTC, e a manutenção de hoje não pode ser recusada. O banco usa o
+    // "hoje" de São Paulo, que é o mesmo dia para quase todo aparelho no Brasil. Num fuso adiantado
+    // (Fernando de Noronha, exterior), perto da meia-noite, a data passa aqui e o banco recusa com
+    // 23514; é aceito conscientemente (AC8 pede o fuso do aparelho).
     .refine((iso) => iso <= hojeISO(), 'A data da manutenção não pode ser futura.'),
   descricao: z
     .string()
     .trim()
     .min(1, 'Descreva o serviço.')
-    .max(200, 'A descrição pode ter no máximo 200 caracteres.'),
+    .max(100, 'A descrição pode ter no máximo 100 caracteres.'),
   // Centavos inteiros (CLAUDE.md §5: dinheiro nunca em float). O teto de numeric(12,2) não
   // precisa de regra aqui: o CampoMoeda já para em 12 dígitos.
   valorCentavos: z.number().int().min(1, 'Informe um valor maior que zero.'),

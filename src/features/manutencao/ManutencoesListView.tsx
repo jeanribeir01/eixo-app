@@ -47,27 +47,38 @@ export function ManutencoesListView() {
   const router = useRouter();
   // Carrega ao abrir e ao voltar do cadastro, sem a lista piscar (EIX-63).
   const tela = useDadosDaTela(listarManutencoes);
-  const [concluindoId, setConcluindoId] = useState<string | null>(null);
+  // Um conjunto, não um id só: com duas linhas concluindo ao mesmo tempo, a resposta da primeira
+  // não pode tirar o loading da segunda (nem liberar de novo o botão da primeira antes da hora).
+  const [concluindo, setConcluindo] = useState<ReadonlySet<string>>(new Set());
+  // Conclusões feitas nesta tela (id → quando). Uma recarga que saiu antes da RPC pode chegar
+  // depois dela com a linha ainda em aberto; a marca local vale até o banco devolver a conclusão.
+  const [concluidasAqui, setConcluidasAqui] = useState<Readonly<Record<string, string>>>({});
   const [feedback, setFeedback] = useState<Feedback | null>(null);
 
   async function handleConcluir(manutencao: ManutencaoComPlaca) {
-    setConcluindoId(manutencao.id);
+    setConcluindo((atuais) => new Set(atuais).add(manutencao.id));
     const resultado = await concluirManutencao(manutencao.id);
-    setConcluindoId(null);
+    setConcluindo((atuais) => {
+      const restantes = new Set(atuais);
+      restantes.delete(manutencao.id);
+      return restantes;
+    });
 
     if (!resultado.ok) {
       setFeedback({ mensagem: resultado.mensagem, tone: 'error' });
       return;
     }
 
-    // A linha fica onde está, marcada como concluída: mudá-la de lugar logo após o toque faria a
-    // lista "pular". Na próxima carga ela vai para o grupo das concluídas.
-    const concluidaEm = new Date().toISOString();
-    tela.atualizarDados((atuais) =>
-      atuais.map((item) => (item.id === manutencao.id ? { ...item, data_conclusao: concluidaEm } : item)),
-    );
+    setConcluidasAqui((atuais) => ({ ...atuais, [manutencao.id]: new Date().toISOString() }));
     setFeedback({ mensagem: mensagemDeConclusao(resultado.data), tone: 'success' });
   }
+
+  // A linha fica onde está, marcada como concluída: mudá-la de lugar logo após o toque faria a
+  // lista "pular". Na próxima carga ela vai para o grupo das concluídas.
+  const manutencoes = (tela.dados ?? []).map((item) => {
+    const concluidaEm = concluidasAqui[item.id];
+    return item.data_conclusao === null && concluidaEm ? { ...item, data_conclusao: concluidaEm } : item;
+  });
 
   // Um Snackbar só: o retorno da ação vem antes do aviso de recarga que falhou.
   const snackbar = feedback ?? (tela.feedbackErro ? { mensagem: tela.feedbackErro, tone: 'error' as const } : null);
@@ -106,7 +117,7 @@ export function ManutencoesListView() {
 
       {tela.status === 'pronto' && (
         <FlatList
-          data={tela.dados ?? []}
+          data={manutencoes}
           keyExtractor={(item) => item.id}
           style={styles.lista}
           contentContainerStyle={styles.espacoDoFab}
@@ -139,7 +150,7 @@ export function ManutencoesListView() {
                     <Button
                       label="Concluir"
                       variant="ghost"
-                      loading={concluindoId === item.id}
+                      loading={concluindo.has(item.id)}
                       onPress={() => handleConcluir(item)}
                     />
                   )}

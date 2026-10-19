@@ -1,4 +1,5 @@
 import { act, fireEvent, render, screen, within } from '@testing-library/react-native';
+import { RefreshControl } from 'react-native';
 
 import { ListItem, Skeleton } from '@/ui';
 
@@ -188,6 +189,54 @@ describe('ManutencoesListView — concluir', () => {
     expect(within(linha(TITULO_OLEO)).getByRole('button', { name: 'Concluir' })).not.toBeDisabled();
 
     await act(async () => terminar({ ok: true, data: 'Disponivel' }));
+  });
+
+  // MAN-22: cada linha tem o próprio loading. A resposta de uma não libera o botão da outra.
+  it('duas conclusões ao mesmo tempo: cada linha fica em loading até a própria resposta', async () => {
+    type RespostaConcluir = Awaited<ReturnType<typeof concluirManutencao>>;
+    const terminar: Record<string, (valor: RespostaConcluir) => void> = {};
+    mockConcluir.mockImplementation((id) => new Promise((resolve) => (terminar[id] = resolve)));
+    await renderComLista();
+
+    const concluir = (titulo: string) => within(linha(titulo)).getByRole('button', { name: 'Concluir' });
+    fireEvent.press(concluir(TITULO_PNEUS));
+    fireEvent.press(concluir(TITULO_OLEO));
+    expect(concluir(TITULO_PNEUS)).toBeDisabled();
+    expect(concluir(TITULO_OLEO)).toBeDisabled();
+
+    await act(async () => terminar.m2({ ok: true, data: 'Disponivel' }));
+
+    expect(within(linha(TITULO_OLEO)).queryByRole('button', { name: 'Concluir' })).not.toBeOnTheScreen();
+    // Pneus ainda espera a RPC: continua em loading e ignora o toque.
+    expect(concluir(TITULO_PNEUS)).toBeDisabled();
+    fireEvent.press(concluir(TITULO_PNEUS));
+    expect(mockConcluir).toHaveBeenCalledTimes(2);
+
+    await act(async () => terminar.m1({ ok: true, data: 'Disponivel' }));
+    expect(linha(TITULO_PNEUS).props.subtitle).toBe('16/10/2026 · R$ 1,13 · Concluída');
+  });
+
+  // Recarga que leu o banco antes da RPC e respondeu depois dela traz a linha ainda em aberto.
+  it('recarga atrasada não reabre a linha que acabou de ser concluída', async () => {
+    await renderComLista();
+    let terminarRecarga: (valor: Awaited<ReturnType<typeof listarManutencoes>>) => void = () => undefined;
+    mockListar.mockReturnValueOnce(new Promise((resolve) => (terminarRecarga = resolve)));
+    mockConcluir.mockResolvedValue({ ok: true, data: 'Disponivel' });
+
+    let recarga: Promise<void> = Promise.resolve();
+    act(() => {
+      recarga = screen.UNSAFE_getByType(RefreshControl).props.onRefresh();
+    });
+    await act(async () => {
+      fireEvent.press(within(linha(TITULO_OLEO)).getByRole('button', { name: 'Concluir' }));
+    });
+    await act(async () => {
+      terminarRecarga({ ok: true, data: manutencoes });
+      await recarga;
+    });
+
+    expect(linha(TITULO_OLEO).props.subtitle).toBe('05/10/2026 · R$ 450,00 · Concluída');
+    expect(within(linha(TITULO_OLEO)).queryByRole('button', { name: 'Concluir' })).not.toBeOnTheScreen();
   });
 
   // MAN-23
