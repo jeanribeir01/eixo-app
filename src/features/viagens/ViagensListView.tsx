@@ -20,6 +20,8 @@ import {
 } from '@/ui';
 
 import { calcularKmRodado, distanciaUltrapassaEstimativa, formatarHodometro, formatarKm } from './calculo';
+import { IndicadorSincronizacao } from './IndicadorSincronizacao';
+import { useSyncStore } from './syncStore';
 import type { StatusViagem, ViagemDetalhada } from './types';
 import { listarViagens } from './viagensRepository';
 
@@ -51,6 +53,7 @@ export function ViagensListView() {
     setErroMensagem(null);
 
     const resultado = await listarViagens();
+    useSyncStore.getState().atualizarStatus();
 
     if (!resultado.ok) {
       setErroMensagem(resultado.mensagem);
@@ -92,6 +95,9 @@ export function ViagensListView() {
       <Column gap="lg">
         {/* Aba não tem header nativo; o título fica no conteúdo (DESIGN_CYAN §7) */}
         <Text variant="heading">Viagens</Text>
+
+        {/* Indicador de offline e registos pendentes de sincronização */}
+        <IndicadorSincronizacao />
 
         {/* Filtro de status em pílulas */}
         <Tabs

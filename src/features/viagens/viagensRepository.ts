@@ -1,8 +1,11 @@
+import { and, desc, eq, gt, isNotNull, lt } from 'drizzle-orm';
+import type { BaseSQLiteDatabase } from 'drizzle-orm/sqlite-core';
 import { z } from 'zod';
 
+import { db } from '@/db/client';
+import * as schema from '@/db/schema';
 import { ehAcessoNegado, MENSAGEM_ACESSO_NEGADO } from '@/lib/errors';
-import { supabase } from '@/supabase/client';
-import { Constants, type Database } from '@/types/database';
+import { Constants } from '@/types/database';
 
 import type {
   CampoErroViagem,
@@ -15,6 +18,29 @@ import type {
   ViagemDetalhada,
   ViagensRepository,
 } from './types';
+
+export type ViagensDb = BaseSQLiteDatabase<'sync', unknown, typeof schema>;
+
+let dbAtual: ViagensDb = db as unknown as ViagensDb;
+
+export function setDb(instancia: ViagensDb): void {
+  dbAtual = instancia;
+}
+
+export function getDb(): ViagensDb {
+  return dbAtual;
+}
+
+export function gerarUUID(): string {
+  if (typeof globalThis.crypto?.randomUUID === 'function') {
+    return globalThis.crypto.randomUUID();
+  }
+  return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, (c) => {
+    const r = (Math.random() * 16) | 0;
+    const v = c === 'x' ? r : (r & 0x3) | 0x8;
+    return v.toString(16);
+  });
+}
 
 // Camada de acesso a dados isolada da tela (AGENTS.md §2.3, skill supabase-query).
 // As telas usam esta interface mantendo paridade exata com as colunas do banco,
@@ -77,6 +103,32 @@ export function traduzirErroBanco(error: ErroSupabase, mensagemPadrao: string): 
   }
 
   return { ok: false, mensagem: mensagemPadrao, codigo: error.code };
+}
+
+export function traduzirErroSqlite(error: unknown, mensagemPadrao: string): Falha {
+  const msg = error instanceof Error ? error.message : String(error);
+
+  if (
+    msg.includes('UNIQUE constraint failed: viagem.veiculo_id') ||
+    msg.includes('viagem_um_andamento_por_veiculo')
+  ) {
+    return {
+      ok: false,
+      mensagem: MENSAGENS_ERRO_VIAGEM.VG001,
+      campo: 'veiculo_id',
+      codigo: 'VG001',
+    };
+  }
+
+  if (msg.includes('FOREIGN KEY constraint failed')) {
+    return {
+      ok: false,
+      mensagem: 'Veículo ou rota não encontrada.',
+      codigo: '23503',
+    };
+  }
+
+  return { ok: false, mensagem: mensagemPadrao };
 }
 
 // Schemas Zod com validação rigorosa e mensagens amigáveis em português
@@ -172,93 +224,160 @@ function validarViagemDetalhada(data: unknown): Resultado<ViagemDetalhada> {
 }
 
 export async function listarViagens(filtro: FiltroViagens = {}): Promise<Resultado<ViagemDetalhada[]>> {
-  let query = supabase
-    .from('viagem')
-    .select(COLUNAS_DETALHADAS)
-    .order('data_inclusao', { ascending: false })
-    .limit(filtro.limite ?? 100);
+  try {
+    const database = getDb();
+    const condicoes = [];
 
-  if (filtro.status && filtro.status !== 'Todos') {
-    query = query.eq('status', filtro.status);
-  }
-
-  if (filtro.veiculo_id) {
-    query = query.eq('veiculo_id', filtro.veiculo_id);
-  }
-
-  if (filtro.motorista_id) {
-    query = query.eq('motorista_id', filtro.motorista_id);
-  }
-
-  const { data, error } = await query;
-
-  if (error) {
-    return traduzirErroBanco(error, 'Não foi possível carregar as viagens. Tente novamente.');
-  }
-
-  const viagens: ViagemDetalhada[] = [];
-  for (const item of data ?? []) {
-    const validado = validarViagemDetalhada(item);
-    if (!validado.ok) {
-      return validado;
+    if (filtro.status && filtro.status !== 'Todos') {
+      condicoes.push(eq(schema.viagem.status, filtro.status));
     }
-    viagens.push(validado.data);
-  }
+    if (filtro.veiculo_id) {
+      condicoes.push(eq(schema.viagem.veiculo_id, filtro.veiculo_id));
+    }
+    if (filtro.motorista_id) {
+      condicoes.push(eq(schema.viagem.motorista_id, filtro.motorista_id));
+    }
 
-  return { ok: true, data: viagens };
+    const query = database
+      .select({
+        viagem: schema.viagem,
+        veiculo: schema.veiculo,
+        rota: schema.rota,
+      })
+      .from(schema.viagem)
+      .leftJoin(schema.veiculo, eq(schema.viagem.veiculo_id, schema.veiculo.id))
+      .leftJoin(schema.rota, eq(schema.viagem.rota_id, schema.rota.id))
+      .orderBy(desc(schema.viagem.data_inclusao))
+      .limit(filtro.limite ?? 100);
+
+    const rows = condicoes.length > 0 ? query.where(and(...condicoes)).all() : query.all();
+
+    const viagens: ViagemDetalhada[] = [];
+    for (const item of rows) {
+      const detalhada: ViagemDetalhada = {
+        ...item.viagem,
+        veiculo: item.veiculo
+          ? {
+              id: item.veiculo.id,
+              placa: item.veiculo.placa,
+              marca: item.veiculo.marca,
+              modelo: item.veiculo.modelo,
+              status: item.veiculo.status,
+            }
+          : null,
+        rota: item.rota
+          ? {
+              id: item.rota.id,
+              cidade_origem: item.rota.cidade_origem,
+              uf_origem: item.rota.uf_origem,
+              cidade_destino: item.rota.cidade_destino,
+              uf_destino: item.rota.uf_destino,
+              distancia_estimada_km: item.rota.distancia_estimada_km,
+            }
+          : null,
+        motorista: null,
+      };
+
+      const validado = validarViagemDetalhada(detalhada);
+      if (!validado.ok) {
+        return validado;
+      }
+      viagens.push(validado.data);
+    }
+
+    return { ok: true, data: viagens };
+  } catch (error) {
+    return traduzirErroSqlite(error, 'Não foi possível carregar as viagens. Tente novamente.');
+  }
 }
 
 export async function buscarViagemPorId(id: string): Promise<Resultado<ViagemDetalhada>> {
-  const { data, error } = await supabase.from('viagem').select(COLUNAS_DETALHADAS).eq('id', id).maybeSingle();
+  try {
+    const database = getDb();
+    const row = database
+      .select({
+        viagem: schema.viagem,
+        veiculo: schema.veiculo,
+        rota: schema.rota,
+      })
+      .from(schema.viagem)
+      .leftJoin(schema.veiculo, eq(schema.viagem.veiculo_id, schema.veiculo.id))
+      .leftJoin(schema.rota, eq(schema.viagem.rota_id, schema.rota.id))
+      .where(eq(schema.viagem.id, id))
+      .get();
 
-  if (error) {
-    return traduzirErroBanco(error, 'Não foi possível carregar a viagem. Tente novamente.');
+    if (!row) {
+      return { ok: false, mensagem: 'Viagem não encontrada.' };
+    }
+
+    const viagemDetalhada: ViagemDetalhada = {
+      ...row.viagem,
+      veiculo: row.veiculo
+        ? {
+            id: row.veiculo.id,
+            placa: row.veiculo.placa,
+            marca: row.veiculo.marca,
+            modelo: row.veiculo.modelo,
+            status: row.veiculo.status,
+          }
+        : null,
+      rota: row.rota
+        ? {
+            id: row.rota.id,
+            cidade_origem: row.rota.cidade_origem,
+            uf_origem: row.rota.uf_origem,
+            cidade_destino: row.rota.cidade_destino,
+            uf_destino: row.rota.uf_destino,
+            distancia_estimada_km: row.rota.distancia_estimada_km,
+          }
+        : null,
+      motorista: null,
+    };
+
+    return validarViagemDetalhada(viagemDetalhada);
+  } catch (error) {
+    return traduzirErroSqlite(error, 'Não foi possível carregar a viagem. Tente novamente.');
   }
-
-  if (!data) {
-    return { ok: false, mensagem: 'Viagem não encontrada.' };
-  }
-
-  return validarViagemDetalhada(data);
 }
 
 export async function buscarUltimoHodometro(veiculo_id: string): Promise<Resultado<number | null>> {
-  const { data, error } = await supabase
-    .from('viagem')
-    .select('hodometro_final')
-    .eq('veiculo_id', veiculo_id)
-    .not('hodometro_final', 'is', null)
-    .order('hodometro_final', { ascending: false })
-    .limit(1);
+  try {
+    const database = getDb();
+    const row = database
+      .select({ hodometro_final: schema.viagem.hodometro_final })
+      .from(schema.viagem)
+      .where(and(eq(schema.viagem.veiculo_id, veiculo_id), isNotNull(schema.viagem.hodometro_final)))
+      .orderBy(desc(schema.viagem.hodometro_final))
+      .limit(1)
+      .get();
 
-  if (error) {
-    return traduzirErroBanco(error, 'Não foi possível consultar o último hodômetro do veículo.');
+    if (!row || row.hodometro_final === null) {
+      return { ok: true, data: null };
+    }
+
+    return { ok: true, data: Number(row.hodometro_final) };
+  } catch (error) {
+    return traduzirErroSqlite(error, 'Não foi possível consultar o último hodômetro do veículo.');
   }
-
-  if (!data || data.length === 0 || data[0]?.hodometro_final === null) {
-    return { ok: true, data: null };
-  }
-
-  return { ok: true, data: Number(data[0].hodometro_final) };
 }
 
 export async function buscarViagemEmAndamento(veiculo_id: string): Promise<Resultado<Viagem | null>> {
-  const { data, error } = await supabase
-    .from('viagem')
-    .select(COLUNAS_VIAGEM)
-    .eq('veiculo_id', veiculo_id)
-    .eq('status', 'EmAndamento')
-    .maybeSingle();
+  try {
+    const database = getDb();
+    const row = database
+      .select()
+      .from(schema.viagem)
+      .where(and(eq(schema.viagem.veiculo_id, veiculo_id), eq(schema.viagem.status, 'EmAndamento')))
+      .get();
 
-  if (error) {
-    return traduzirErroBanco(error, 'Não foi possível consultar as viagens do veículo.');
+    if (!row) {
+      return { ok: true, data: null };
+    }
+
+    return validarViagem(row);
+  } catch (error) {
+    return traduzirErroSqlite(error, 'Não foi possível consultar as viagens do veículo.');
   }
-
-  if (!data) {
-    return { ok: true, data: null };
-  }
-
-  return validarViagem(data);
 }
 
 export async function abrirViagem(input: NovaViagemInput): Promise<Resultado<Viagem>> {
@@ -272,30 +391,142 @@ export async function abrirViagem(input: NovaViagemInput): Promise<Resultado<Via
     };
   }
 
-  const payload: Database['public']['Tables']['viagem']['Insert'] = {
-    veiculo_id: input.veiculo_id,
-    rota_id: input.rota_id,
-    motorista_id: input.motorista_id,
-    hodometro_inicial: input.hodometro_inicial,
-    data_inicio: input.data_inicio ?? new Date().toISOString(),
-    status: 'EmAndamento',
-  };
+  const database = getDb();
 
-  if (input.id) {
-    payload.id = input.id;
+  try {
+    const resultado = database.transaction((tx) => {
+      // 1. Veículo em manutenção (VG002) ou inativo (VG003) no cache local
+      const veic = tx
+        .select()
+        .from(schema.veiculo)
+        .where(eq(schema.veiculo.id, input.veiculo_id))
+        .get();
+
+      if (veic) {
+        if (veic.status === 'EmManutencao') {
+          return {
+            ok: false as const,
+            mensagem: MENSAGENS_ERRO_VIAGEM.VG002,
+            campo: 'veiculo_id' as CampoErroViagem,
+            codigo: 'VG002',
+          };
+        }
+        if (veic.status === 'Inativo') {
+          return {
+            ok: false as const,
+            mensagem: MENSAGENS_ERRO_VIAGEM.VG003,
+            campo: 'veiculo_id' as CampoErroViagem,
+            codigo: 'VG003',
+          };
+        }
+      }
+
+      // 2. Veículo já possui viagem em andamento (VG001)
+      const emAndamento = tx
+        .select({ id: schema.viagem.id })
+        .from(schema.viagem)
+        .where(
+          and(
+            eq(schema.viagem.veiculo_id, input.veiculo_id),
+            eq(schema.viagem.status, 'EmAndamento'),
+          ),
+        )
+        .limit(1)
+        .get();
+
+      if (emAndamento) {
+        return {
+          ok: false as const,
+          mensagem: MENSAGENS_ERRO_VIAGEM.VG001,
+          campo: 'veiculo_id' as CampoErroViagem,
+          codigo: 'VG001',
+        };
+      }
+
+      // 3. Hodômetro inicial menor que o último final do veículo (VG004)
+      const ultimoHodometro = tx
+        .select({ hodometro_final: schema.viagem.hodometro_final })
+        .from(schema.viagem)
+        .where(
+          and(
+            eq(schema.viagem.veiculo_id, input.veiculo_id),
+            isNotNull(schema.viagem.hodometro_final),
+          ),
+        )
+        .orderBy(desc(schema.viagem.hodometro_final))
+        .limit(1)
+        .get();
+
+      if (
+        ultimoHodometro?.hodometro_final !== null &&
+        ultimoHodometro?.hodometro_final !== undefined
+      ) {
+        if (input.hodometro_inicial < Number(ultimoHodometro.hodometro_final)) {
+          return {
+            ok: false as const,
+            mensagem: MENSAGENS_ERRO_VIAGEM.VG004,
+            campo: 'hodometro_inicial' as CampoErroViagem,
+            codigo: 'VG004',
+          };
+        }
+      }
+
+      const id = input.id ?? gerarUUID();
+      const agora = new Date().toISOString();
+      const data_inicio = input.data_inicio ?? agora;
+
+      const novaViagemLocal: schema.NovaViagem = {
+        id,
+        veiculo_id: input.veiculo_id,
+        rota_id: input.rota_id,
+        motorista_id: input.motorista_id,
+        hodometro_inicial: input.hodometro_inicial,
+        hodometro_final: null,
+        data_inicio,
+        data_fim: null,
+        status: 'EmAndamento',
+        km_rodado: null,
+        data_inclusao: agora,
+        data_atualizacao: agora,
+      };
+
+      // REGRA CRÍTICA: km_rodado NUNCA entra no payload do outbox (erro 428C9 no Postgres)
+      const outboxPayload = {
+        id,
+        veiculo_id: input.veiculo_id,
+        rota_id: input.rota_id,
+        motorista_id: input.motorista_id,
+        hodometro_inicial: input.hodometro_inicial,
+        data_inicio,
+        status: 'EmAndamento',
+        data_inclusao: agora,
+        data_atualizacao: agora,
+      };
+
+      const outboxItem: schema.NovoOutboxItem = {
+        id: gerarUUID(),
+        entidade: 'viagem',
+        operacao: 'insert',
+        payload: JSON.stringify(outboxPayload),
+        tentativas: 0,
+        criado_em: agora,
+        ultimo_erro: null,
+      };
+
+      tx.insert(schema.viagem).values(novaViagemLocal).run();
+      tx.insert(schema.outbox).values(outboxItem).run();
+
+      return { ok: true as const, data: novaViagemLocal as Viagem };
+    });
+
+    if (!resultado.ok) {
+      return resultado;
+    }
+
+    return validarViagem(resultado.data);
+  } catch (error) {
+    return traduzirErroSqlite(error, 'Não foi possível abrir a viagem. Tente novamente.');
   }
-
-  const { data, error } = await supabase
-    .from('viagem')
-    .insert(payload)
-    .select(COLUNAS_VIAGEM)
-    .single();
-
-  if (error) {
-    return traduzirErroBanco(error, 'Não foi possível abrir a viagem. Tente novamente.');
-  }
-
-  return validarViagem(data);
 }
 
 export async function fecharViagem(id: string, input: FecharViagemInput): Promise<Resultado<Viagem>> {
@@ -309,49 +540,187 @@ export async function fecharViagem(id: string, input: FecharViagemInput): Promis
     };
   }
 
-  const payload = {
-    status: 'Finalizada' as const,
-    hodometro_final: input.hodometro_final,
-    data_fim: input.data_fim ?? new Date().toISOString(),
-  };
+  const database = getDb();
 
-  const { data, error } = await supabase.from('viagem').update(payload).eq('id', id).select(COLUNAS_VIAGEM).maybeSingle();
+  try {
+    const resultado = database.transaction((tx) => {
+      const viagemAtual = tx
+        .select()
+        .from(schema.viagem)
+        .where(eq(schema.viagem.id, id))
+        .get();
 
-  if (error) {
-    return traduzirErroBanco(error, 'Não foi possível fechar a viagem. Tente novamente.');
+      if (!viagemAtual) {
+        return { ok: false as const, mensagem: 'Viagem não encontrada.' };
+      }
+
+      if (viagemAtual.status !== 'EmAndamento') {
+        return {
+          ok: false as const,
+          mensagem: MENSAGENS_ERRO_VIAGEM.VG005,
+          campo: 'status' as CampoErroViagem,
+          codigo: 'VG005',
+        };
+      }
+
+      if (input.hodometro_final <= viagemAtual.hodometro_inicial) {
+        return {
+          ok: false as const,
+          mensagem: MENSAGENS_ERRO_VIAGEM['23514'],
+          campo: 'hodometro_final' as CampoErroViagem,
+          codigo: '23514',
+        };
+      }
+
+      const agora = new Date().toISOString();
+      const data_fim = input.data_fim ?? agora;
+      const km_rodado = input.hodometro_final - viagemAtual.hodometro_inicial;
+
+      tx.update(schema.viagem)
+        .set({
+          status: 'Finalizada',
+          hodometro_final: input.hodometro_final,
+          data_fim,
+          km_rodado,
+          data_atualizacao: agora,
+        })
+        .where(eq(schema.viagem.id, id))
+        .run();
+
+      // REGRA CRÍTICA: km_rodado NUNCA entra no payload do outbox (erro 428C9 no Postgres)
+      const outboxPayload = {
+        id,
+        status: 'Finalizada',
+        hodometro_final: input.hodometro_final,
+        data_fim,
+        data_atualizacao: agora,
+      };
+
+      const outboxItem: schema.NovoOutboxItem = {
+        id: gerarUUID(),
+        entidade: 'viagem',
+        operacao: 'update',
+        payload: JSON.stringify(outboxPayload),
+        tentativas: 0,
+        criado_em: agora,
+        ultimo_erro: null,
+      };
+
+      tx.insert(schema.outbox).values(outboxItem).run();
+
+      const viagemAtualizada: Viagem = {
+        ...viagemAtual,
+        status: 'Finalizada',
+        hodometro_final: input.hodometro_final,
+        data_fim,
+        km_rodado,
+        data_atualizacao: agora,
+      };
+
+      return { ok: true as const, data: viagemAtualizada };
+    });
+
+    if (!resultado.ok) {
+      return resultado;
+    }
+
+    return validarViagem(resultado.data);
+  } catch (error) {
+    return traduzirErroSqlite(error, 'Não foi possível fechar a viagem. Tente novamente.');
   }
-
-  if (!data) {
-    return { ok: false, mensagem: 'Viagem não encontrada.' };
-  }
-
-  return validarViagem(data);
 }
 
 export async function cancelarViagem(
   id: string,
   options?: { hodometro_final?: number | null },
 ): Promise<Resultado<Viagem>> {
-  const payload: Database['public']['Tables']['viagem']['Update'] = {
-    status: 'Cancelada',
-    data_fim: new Date().toISOString(),
-  };
+  const database = getDb();
 
-  if (options?.hodometro_final !== undefined) {
-    payload.hodometro_final = options.hodometro_final;
+  try {
+    const resultado = database.transaction((tx) => {
+      const viagemAtual = tx
+        .select()
+        .from(schema.viagem)
+        .where(eq(schema.viagem.id, id))
+        .get();
+
+      if (!viagemAtual) {
+        return { ok: false as const, mensagem: 'Viagem não encontrada.' };
+      }
+
+      if (viagemAtual.status !== 'EmAndamento') {
+        return {
+          ok: false as const,
+          mensagem: MENSAGENS_ERRO_VIAGEM.VG005,
+          campo: 'status' as CampoErroViagem,
+          codigo: 'VG005',
+        };
+      }
+
+      const agora = new Date().toISOString();
+      const data_fim = agora;
+      const hodometro_final =
+        options?.hodometro_final !== undefined ? options.hodometro_final : viagemAtual.hodometro_final;
+      const km_rodado =
+        hodometro_final !== null && hodometro_final !== undefined && hodometro_final > viagemAtual.hodometro_inicial
+          ? hodometro_final - viagemAtual.hodometro_inicial
+          : null;
+
+      tx.update(schema.viagem)
+        .set({
+          status: 'Cancelada',
+          hodometro_final,
+          data_fim,
+          km_rodado,
+          data_atualizacao: agora,
+        })
+        .where(eq(schema.viagem.id, id))
+        .run();
+
+      // REGRA CRÍTICA: km_rodado NUNCA entra no payload do outbox (erro 428C9 no Postgres)
+      const outboxPayload: Record<string, unknown> = {
+        id,
+        status: 'Cancelada',
+        data_fim,
+        data_atualizacao: agora,
+      };
+
+      if (options?.hodometro_final !== undefined) {
+        outboxPayload.hodometro_final = options.hodometro_final;
+      }
+
+      const outboxItem: schema.NovoOutboxItem = {
+        id: gerarUUID(),
+        entidade: 'viagem',
+        operacao: 'update',
+        payload: JSON.stringify(outboxPayload),
+        tentativas: 0,
+        criado_em: agora,
+        ultimo_erro: null,
+      };
+
+      tx.insert(schema.outbox).values(outboxItem).run();
+
+      const viagemAtualizada: Viagem = {
+        ...viagemAtual,
+        status: 'Cancelada',
+        hodometro_final,
+        data_fim,
+        km_rodado,
+        data_atualizacao: agora,
+      };
+
+      return { ok: true as const, data: viagemAtualizada };
+    });
+
+    if (!resultado.ok) {
+      return resultado;
+    }
+
+    return validarViagem(resultado.data);
+  } catch (error) {
+    return traduzirErroSqlite(error, 'Não foi possível cancelar a viagem. Tente novamente.');
   }
-
-  const { data, error } = await supabase.from('viagem').update(payload).eq('id', id).select(COLUNAS_VIAGEM).maybeSingle();
-
-  if (error) {
-    return traduzirErroBanco(error, 'Não foi possível cancelar a viagem. Tente novamente.');
-  }
-
-  if (!data) {
-    return { ok: false, mensagem: 'Viagem não encontrada.' };
-  }
-
-  return validarViagem(data);
 }
 
 export async function corrigirHodometroFinal(
@@ -368,22 +737,101 @@ export async function corrigirHodometroFinal(
     };
   }
 
-  const { data, error } = await supabase
-    .from('viagem')
-    .update({ hodometro_final: dados.hodometro_final })
-    .eq('id', id)
-    .select(COLUNAS_VIAGEM)
-    .maybeSingle();
+  const database = getDb();
 
-  if (error) {
-    return traduzirErroBanco(error, 'Não foi possível corrigir o hodômetro final. Tente novamente.');
+  try {
+    const resultado = database.transaction((tx) => {
+      const viagemAtual = tx
+        .select()
+        .from(schema.viagem)
+        .where(eq(schema.viagem.id, id))
+        .get();
+
+      if (!viagemAtual) {
+        return { ok: false as const, mensagem: 'Viagem não encontrada.' };
+      }
+
+      if (dados.hodometro_final <= viagemAtual.hodometro_inicial) {
+        return {
+          ok: false as const,
+          mensagem: MENSAGENS_ERRO_VIAGEM['23514'],
+          campo: 'hodometro_final' as CampoErroViagem,
+          codigo: '23514',
+        };
+      }
+
+      // VG007: hodometro final corrigido não pode ser maior que o inicial de viagem posterior
+      const viagemPosterior = tx
+        .select()
+        .from(schema.viagem)
+        .where(
+          and(
+            eq(schema.viagem.veiculo_id, viagemAtual.veiculo_id),
+            gt(schema.viagem.hodometro_inicial, viagemAtual.hodometro_inicial),
+            lt(schema.viagem.hodometro_inicial, dados.hodometro_final),
+          ),
+        )
+        .limit(1)
+        .get();
+
+      if (viagemPosterior) {
+        return {
+          ok: false as const,
+          mensagem: MENSAGENS_ERRO_VIAGEM.VG007,
+          campo: 'hodometro_final' as CampoErroViagem,
+          codigo: 'VG007',
+        };
+      }
+
+      const agora = new Date().toISOString();
+      const km_rodado = dados.hodometro_final - viagemAtual.hodometro_inicial;
+
+      tx.update(schema.viagem)
+        .set({
+          hodometro_final: dados.hodometro_final,
+          km_rodado,
+          data_atualizacao: agora,
+        })
+        .where(eq(schema.viagem.id, id))
+        .run();
+
+      // REGRA CRÍTICA: km_rodado NUNCA entra no payload do outbox (erro 428C9 no Postgres)
+      const outboxPayload = {
+        id,
+        hodometro_final: dados.hodometro_final,
+        data_atualizacao: agora,
+      };
+
+      const outboxItem: schema.NovoOutboxItem = {
+        id: gerarUUID(),
+        entidade: 'viagem',
+        operacao: 'update',
+        payload: JSON.stringify(outboxPayload),
+        tentativas: 0,
+        criado_em: agora,
+        ultimo_erro: null,
+      };
+
+      tx.insert(schema.outbox).values(outboxItem).run();
+
+      const viagemAtualizada: Viagem = {
+        ...viagemAtual,
+        hodometro_final: dados.hodometro_final,
+        km_rodado,
+        data_atualizacao: agora,
+      };
+
+      return { ok: true as const, data: viagemAtualizada };
+    });
+
+    if (!resultado.ok) {
+      return resultado;
+    }
+
+    return validarViagem(resultado.data);
+  } catch (error) {
+    return traduzirErroSqlite(error, 'Não foi possível corrigir o hodômetro final. Tente novamente.');
   }
-
-  if (!data) {
-    return { ok: false, mensagem: 'Viagem não encontrada.' };
-  }
-
-  return validarViagem(data);
 }
 
 export const viagensRepository: ViagensRepository = {
