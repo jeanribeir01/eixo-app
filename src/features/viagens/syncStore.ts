@@ -45,6 +45,8 @@ export const useSyncStore = create<SyncState>((set, get) => ({
     set({ sincronizando: true });
     try {
       await drenarOutboxViagens();
+    } catch {
+      // Ignora erro inesperado durante drenagem automática
     } finally {
       set({ sincronizando: false });
       get().atualizarStatus();

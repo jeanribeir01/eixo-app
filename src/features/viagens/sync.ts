@@ -105,6 +105,16 @@ export async function drenarOutboxViagens(
   const limite = opcoes.limite ?? 50;
   const maxTentativas = opcoes.maxTentativas ?? 5;
 
+  if (!database || typeof database.select !== 'function') {
+    return {
+      total: 0,
+      sincronizados: 0,
+      falhas: 0,
+      conflitos: 0,
+      itens: [],
+    };
+  }
+
   const itens = database
     .select()
     .from(schema.outbox)
@@ -313,6 +323,10 @@ export async function sincronizarSeConectado(
 export function obterStatusOutboxViagens(
   database: ViagensDb = getDb(),
 ): { pendentes: number; comErro: number; conflitos: number } {
+  if (!database || typeof database.select !== 'function') {
+    return { pendentes: 0, comErro: 0, conflitos: 0 };
+  }
+
   const itens = database
     .select({
       id: schema.outbox.id,

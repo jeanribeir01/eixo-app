@@ -1,5 +1,7 @@
 import { fireEvent, render, screen } from '@testing-library/react-native';
 
+import * as syncModule from '../sync';
+import { useSyncStore } from '../syncStore';
 import { ViagensListView } from '../ViagensListView';
 import * as repo from '../viagensRepository';
 
@@ -128,5 +130,61 @@ describe('ViagensListView', () => {
     fireEvent.press(fab);
 
     expect(mockPush).toHaveBeenCalledWith('/viagens/nova');
+  });
+
+  it('exibe indicador visual de offline e registros pendentes de sincronização', async () => {
+    jest.spyOn(syncModule, 'obterStatusOutboxViagens').mockReturnValue({
+      pendentes: 2,
+      comErro: 0,
+      conflitos: 0,
+    });
+
+    useSyncStore.setState({
+      isOnline: false,
+      pendentes: 2,
+      comErro: 0,
+      conflitos: 0,
+      sincronizando: false,
+    });
+
+    jest.spyOn(repo, 'listarViagens').mockResolvedValue({
+      ok: true,
+      data: mockViagens,
+    });
+
+    render(<ViagensListView />);
+
+    await screen.findByText('BRA2E19 • Actros');
+
+    expect(screen.getByTestId('indicador-sincronizacao')).toBeTruthy();
+    expect(screen.getByText('offline')).toBeTruthy();
+    expect(screen.getByText('2 registos a aguardar sincronização')).toBeTruthy();
+  });
+
+  it('não exibe indicador de sincronização se estiver online e sem pendências', async () => {
+    jest.spyOn(syncModule, 'obterStatusOutboxViagens').mockReturnValue({
+      pendentes: 0,
+      comErro: 0,
+      conflitos: 0,
+    });
+
+    useSyncStore.setState({
+      isOnline: true,
+      pendentes: 0,
+      comErro: 0,
+      conflitos: 0,
+      sincronizando: false,
+    });
+
+    jest.spyOn(repo, 'listarViagens').mockResolvedValue({
+      ok: true,
+      data: mockViagens,
+    });
+
+    render(<ViagensListView />);
+
+    await screen.findByText('BRA2E19 • Actros');
+
+    expect(screen.queryByTestId('indicador-sincronizacao')).toBeNull();
   });
 });

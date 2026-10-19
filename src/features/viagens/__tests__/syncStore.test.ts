@@ -83,8 +83,9 @@ describe('syncStore e startNetworkSyncListener', () => {
 
     // Simula a internet voltando (offline -> online)
     expect(callbackListener).not.toBeNull();
-    if (callbackListener) {
-      await callbackListener({ isConnected: true, isInternetReachable: true });
+    const listener = callbackListener as unknown as (estado: { isConnected: boolean; isInternetReachable: boolean }) => Promise<void>;
+    if (listener) {
+      await listener({ isConnected: true, isInternetReachable: true });
     }
 
     expect(useSyncStore.getState().isOnline).toBe(true);

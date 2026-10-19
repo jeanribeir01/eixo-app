@@ -4,18 +4,40 @@ import { ActivityIndicator, StyleSheet, View } from 'react-native';
 import { Badge, Card, Column, Text, colors, spacing } from '@/ui';
 import { useSyncStore } from './syncStore';
 
-export function IndicadorSincronizacao() {
-  const isOnline = useSyncStore((state) => state.isOnline);
-  const pendentes = useSyncStore((state) => state.pendentes);
-  const sincronizando = useSyncStore((state) => state.sincronizando);
+export type IndicadorSincronizacaoProps = {
+  isOnline?: boolean;
+  pendentes?: number;
+  conflitos?: number;
+  sincronizando?: boolean;
+  atualizarAoMontar?: boolean;
+};
+
+export function IndicadorSincronizacao({
+  isOnline: isOnlineProp,
+  pendentes: pendentesProp,
+  conflitos: conflitosProp,
+  sincronizando: sincronizandoProp,
+  atualizarAoMontar = true,
+}: IndicadorSincronizacaoProps = {}) {
+  const storeOnline = useSyncStore((state) => state.isOnline);
+  const storePendentes = useSyncStore((state) => state.pendentes);
+  const storeConflitos = useSyncStore((state) => state.conflitos);
+  const storeSincronizando = useSyncStore((state) => state.sincronizando);
   const atualizarStatus = useSyncStore((state) => state.atualizarStatus);
 
-  useEffect(() => {
-    atualizarStatus();
-  }, [atualizarStatus]);
+  const isOnline = isOnlineProp ?? storeOnline;
+  const pendentes = pendentesProp ?? storePendentes;
+  const conflitos = conflitosProp ?? storeConflitos;
+  const sincronizando = sincronizandoProp ?? storeSincronizando;
 
-  // Se estiver online e sem itens pendentes na outbox, não ocupa espaço visual
-  if (isOnline && pendentes === 0 && !sincronizando) {
+  useEffect(() => {
+    if (atualizarAoMontar && pendentesProp === undefined && isOnlineProp === undefined) {
+      atualizarStatus();
+    }
+  }, [atualizarAoMontar, pendentesProp, isOnlineProp, atualizarStatus]);
+
+  // Se estiver online, sem itens pendentes na outbox e sem conflitos, não ocupa espaço visual
+  if (isOnline && pendentes === 0 && conflitos === 0 && !sincronizando) {
     return null;
   }
 
@@ -25,7 +47,12 @@ export function IndicadorSincronizacao() {
       : undefined;
 
   return (
-    <View testID="indicador-sincronizacao" accessibilityRole="status">
+    <View
+      testID="indicador-sincronizacao"
+      accessible
+      accessibilityRole="summary"
+      accessibilityLiveRegion="polite"
+    >
       <Card>
         <Column gap="xs">
           <View style={styles.linha}>
@@ -49,6 +76,14 @@ export function IndicadorSincronizacao() {
           {!isOnline && pendentes === 0 && (
             <Text variant="bodySm" tone="muted">
               As operações serão guardadas no dispositivo e enviadas quando a internet voltar.
+            </Text>
+          )}
+
+          {conflitos > 0 && (
+            <Text variant="bodySm" tone="muted">
+              {conflitos === 1
+                ? '1 conflito detectado (aguardando revisão do gestor).'
+                : `${conflitos} conflitos detectados (aguardando revisão do gestor).`}
             </Text>
           )}
         </Column>
