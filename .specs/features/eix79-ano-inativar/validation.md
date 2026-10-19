@@ -1,139 +1,151 @@
-# Validation: EIX-79 PASS
+# EIX-79 · Ano de fabricação e inativação — Validação
 
-**Date**: 2026-10-16
-**Verifier**: independent subagent; implementation author and verifier are different agents.
+## Validation: EIX-79 — PASS
+
+**Data**: 2026-10-16
+**Verifier**: sub-agente independente (autor ≠ verificador)
 **Spec**: `.specs/features/eix79-ano-inativar/spec.md`
-**Diff**: baseline `eff0160` against the uncommitted working tree on `feat/eix-79-us06-ano-inativar`.
+**Diff**: base `eff0160` contra a árvore de trabalho ainda sem commit em `feat/eix-79-us06-ano-inativar`.
 
-19/19 acceptance criteria have traceable evidence. No blocking implementation gap, security regression, or surviving mutant was found. PASS covers automated verification and static review. Device UAT remains pending.
+Os 19 critérios de aceite têm evidência rastreável. Não foram encontradas lacuna de implementação bloqueante, regressão de segurança nem mutante sobrevivente. O PASS cobre a verificação automatizada e a revisão estática. O teste de aceite em dispositivo continua pendente.
 
-## Task Completion
+## Conclusão das tasks
 
-T1-T5 were implemented and independently reviewed through schema, repository, and view tests. T6 is verified by this report. No commit, push, PR, or Linear update was performed by the verifier. The verifier changed no implementation or test file. This report is its only working-tree write.
+T1 a T5 foram implementadas e revisadas de forma independente pelos testes de schema, repositório e telas. A T6 é verificada por este relatório. O Verifier não fez commit, push, PR nem atualização no Linear, e não alterou nenhum arquivo de implementação ou de teste. Este relatório é a única escrita dele na árvore de trabalho.
 
-## Spec-Anchored Acceptance Criteria
+## Critérios de aceite contra a spec
 
-All paths below identify real assertions. COLUNAS explicitly includes ano_fabricacao; scania is the fixture with a null year. For parameterized selectable-vehicle tests, status is the exact expected whitelist for the purpose. Ellipses indicate omitted surrounding object fields, rather than a literal source expression.
+Todos os caminhos abaixo apontam para asserções reais. `COLUNAS` inclui `ano_fabricacao` explicitamente; `scania` é o fixture com ano nulo. Nos testes parametrizados de veículos selecionáveis, `status` é a lista exata de status permitidos para a finalidade. Reticências indicam campos omitidos do objeto, e não uma expressão literal do código.
 
-| AC | Spec-defined expected outcome | file:line and assertion evidence | Result |
+| AC | Resultado esperado pela spec | Evidência (arquivo:linha e asserção) | Resultado |
 | --- | --- | --- | --- |
-| ANO-01 | Integer year from 1950 through current Sao Paulo year + 1 | `src/features/veiculos/__tests__/schema.test.ts:36` `expect(...ano_fabricacao).toBe(1950)`; line 37 `.toBe(2027)`; line 41 `.toEqual(['Informe um ano entre 1950 e 2027.'])`; lines 54/56 reject 2028 before the Sao Paulo year rollover and accept it afterward | PASS |
-| ANO-02 | Required numeric integer; Portuguese field error | `src/features/veiculos/__tests__/schema.test.ts:45` `expect(mensagens(...)).toEqual(...)` asserts the exact required-year message for blank/undefined/null; line 49 asserts the exact integer-year message; `src/features/veiculos/__tests__/VeiculoFormView.test.tsx:169` `expect(screen.getByText(...)).toBeOnTheScreen()` and line 170 `expect(criarVeiculo).not.toHaveBeenCalled()` | PASS |
-| ANO-03 | Read selects and validates year, accepting null | `src/features/veiculos/__tests__/repository.test.ts:133` `expect(query.select).toHaveBeenCalledWith(COLUNAS)`; line 196 `expect(await buscarVeiculoPorId('2')).toEqual({ ok: true, data: scania })` | PASS |
-| ANO-04 | Create and update persist the supplied year | `src/features/veiculos/__tests__/repository.test.ts:219` `expect(query.insert).toHaveBeenCalledWith({...ano_fabricacao:2020...})`; line 286 `expect(query.update).toHaveBeenCalledWith(expect.objectContaining({...ano_fabricacao:2020}))`; `src/features/veiculos/__tests__/VeiculoFormView.test.tsx:184` `expect(atualizarVeiculo).toHaveBeenCalledWith('9', expect.objectContaining({ ano_fabricacao: 2020 }))` | PASS |
-| ANO-05 | Year-related 23514 maps to the year field and Portuguese year message; plate errors remain intact | `src/features/veiculos/__tests__/repository.test.ts:277` `expect(resultado).toEqual({ok:false,campo:'ano_fabricacao',mensagem:...})` asserts the exact Portuguese year error; lines 247/248 assert plate field and plate message; `src/features/veiculos/__tests__/VeiculoFormView.test.tsx:206` `expect(screen.getAllByText(mensagem)).toHaveLength(2)` | PASS |
-| ANO-06 | Inactive status remains unchanged, without status-changing options | `src/features/veiculos/__tests__/VeiculoFormView.test.tsx:194` `expect(screen.queryByRole('tab')).toBeNull()` and line 197 `expect(atualizarVeiculo).toHaveBeenCalledWith('9',expect.objectContaining({status:'Inativo',modelo:'FH 460'}))`; `src/features/veiculos/__tests__/repository.test.ts:262` asserts `.neq('status','Inativo')`, line 270 asserts `.eq('status','Inativo')` | PASS |
-| INA-01 | Conditional UPDATE by id and Disponivel sets Inativo, without DELETE | `src/features/veiculos/__tests__/repository.test.ts:71` `expect(query.update).toHaveBeenCalledWith({status:'Inativo'})`; lines 72/73 assert id/status predicates; line 75 `expect(query.delete).not.toHaveBeenCalled()`; `supabase/tests/rls.test.ts:267` verifies persisted status by role and prior status | PASS |
-| INA-02 | Zero updated rows returns the specified Portuguese error, without false success | `src/features/veiculos/__tests__/repository.test.ts:80` `expect(await inativarVeiculo('1')).toEqual({ok:false,mensagem:...})` asserts the entire exact message from the spec; `src/features/veiculos/__tests__/VeiculosListView.test.tsx:123` `expect(screen.queryByText(...)).toBeNull()` excludes the success message | PASS |
-| INA-03 | Pending operation shows loading and prevents duplicate submission | `src/features/veiculos/__tests__/VeiculosListView.test.tsx:105` `.toBeDisabled()`; line 106 `expect(screen.getByTestId('button-loading')).toBeOnTheScreen()`; line 108 `expect(inativarVeiculo).toHaveBeenCalledTimes(1)` | PASS |
-| INA-04 | Native Alert includes Cancelar and a destructive confirmation | `src/features/veiculos/__tests__/VeiculosListView.test.tsx:56` `expect(alerta).toHaveBeenCalledWith(...,expect.stringContaining('ABC-1234'),[...style:'cancel',...style:'destructive',onPress:expect.any(Function)])` | PASS |
-| INA-05 | Cancellation preserves the vehicle and does not call the repository | `src/features/veiculos/__tests__/VeiculosListView.test.tsx:61` `expect(inativarVeiculo).not.toHaveBeenCalled()`; line 62 asserts the plate remains visible. The native cancel button has no mutation callback | PASS |
-| INA-06 | Success reloads using the current filter and shows success Snackbar | `src/features/veiculos/__tests__/VeiculosListView.test.tsx:76` asserts the exact success message is visible; line 77 asserts the Inativo badge; lines 92/94 remove the plate under the Disponivel filter and require `toHaveBeenLastCalledWith({busca:undefined,status:'Disponivel'})` | PASS |
-| INA-07 | Failure preserves the vehicle and shows an error Snackbar | `src/features/veiculos/__tests__/VeiculosListView.test.tsx:121` `expect(screen.getByText(...)).toBeOnTheScreen()` asserts the returned error; line 122 asserts the plate remains visible and line 123 excludes success | PASS |
-| INA-08 | No Inativar button for EmViagem, EmManutencao, or Inativo | `src/features/veiculos/__tests__/VeiculosListView.test.tsx:133` `expect(screen.queryByRole('button',{name:'Inativar'})).toBeNull()` for all three statuses | PASS |
-| INA-09 | Existing guards and Admin/Fleet Manager write policies remain intact | `supabase/tests/rls.test.ts:264` `expect(resultado.rows).toEqual(atualiza ? [{status:'Inativo'}] : [])`; line 267 `expect(persistido.rows[0]!.status).toBe(atualiza ? 'Inativo' : status)` across four roles and four statuses; line 296 `expect(deleteVeiculo.rows).toHaveLength(0)`; unchanged guard in `app/(app)/_layout.tsx:37` and `src/navigation/menu.ts:71` | PASS |
-| SEL-01 | Inativo filter queries Inativo and keeps the native header | `src/features/veiculos/__tests__/VeiculosListView.test.tsx:142` `expect(listarVeiculos).toHaveBeenLastCalledWith({busca:undefined,status:'Inativo'})`; line 140 `.props.horizontal).toBe(true)`; lines 168/169 exclude duplicated branding from content; native title remains in `app/(app)/_layout.tsx:39` | PASS |
-| SEL-02 | Trip selection queries only Disponivel | `src/features/veiculos/__tests__/repository.test.ts:105` `expect(query.in).toHaveBeenCalledWith('status',status)` with `['Disponivel']` for viagem | PASS |
-| SEL-03 | Maintenance selection queries Disponivel and EmManutencao | `src/features/veiculos/__tests__/repository.test.ts:105` `.toHaveBeenCalledWith('status',status)` with `['Disponivel','EmManutencao']`; line 114 `expect(await listarVeiculosSelecionaveis('manutencao')).toEqual({ok:true,data:[volvo,manutencao]})` | PASS |
-| SEL-04 | Selectable queries exclude Inativo/EmViagem without changing consumers | `src/features/veiculos/__tests__/repository.test.ts:105` asserts exact whitelists; lines 119-121 assert empty/error/invalid-response handling. Diff does not change EIX-39/40 consumers | PASS |
+| ANO-01 | Ano inteiro de 1950 até o ano atual de São Paulo + 1 | `src/features/veiculos/__tests__/schema.test.ts:36` `expect(...ano_fabricacao).toBe(1950)`; linha 37 `.toBe(2027)`; linha 41 `.toEqual(['Informe um ano entre 1950 e 2027.'])`; linhas 54/56 recusam 2028 antes da virada do ano em São Paulo e aceitam depois dela | PASS |
+| ANO-02 | Ano obrigatório, numérico e inteiro; erro no campo em português | `src/features/veiculos/__tests__/schema.test.ts:45` `expect(mensagens(...)).toEqual(...)` confere a mensagem exata de ano obrigatório para vazio/undefined/null; a linha 49 confere a mensagem exata de ano inteiro; `src/features/veiculos/__tests__/VeiculoFormView.test.tsx:169` `expect(screen.getByText(...)).toBeOnTheScreen()` e a linha 170 `expect(criarVeiculo).not.toHaveBeenCalled()` | PASS |
+| ANO-03 | A leitura seleciona e valida o ano, aceitando null | `src/features/veiculos/__tests__/repository.test.ts:133` `expect(query.select).toHaveBeenCalledWith(COLUNAS)`; linha 196 `expect(await buscarVeiculoPorId('2')).toEqual({ ok: true, data: scania })` | PASS |
+| ANO-04 | Criar e atualizar gravam o ano informado | `src/features/veiculos/__tests__/repository.test.ts:219` `expect(query.insert).toHaveBeenCalledWith({...ano_fabricacao:2020...})`; linha 298 `expect(query.update).toHaveBeenCalledWith(expect.objectContaining({...ano_fabricacao:2020}))`; `src/features/veiculos/__tests__/VeiculoFormView.test.tsx:184` `expect(atualizarVeiculo).toHaveBeenCalledWith('9', expect.objectContaining({ ano_fabricacao: 2020 }))` | PASS |
+| ANO-05 | Erro 23514 de ano vai para o campo de ano com mensagem em português; erros de placa continuam iguais | `src/features/veiculos/__tests__/repository.test.ts:289` `expect(resultado).toEqual({ok:false,campo:'ano_fabricacao',mensagem:...})` confere a mensagem exata em português; as linhas 247/248 conferem campo e mensagem da placa; `src/features/veiculos/__tests__/VeiculoFormView.test.tsx:206` `expect(screen.getAllByText(mensagem)).toHaveLength(2)` | PASS |
+| ANO-06 | O status Inativo não muda e o formulário não oferece opções de status | `src/features/veiculos/__tests__/VeiculoFormView.test.tsx:194` `expect(screen.queryByRole('tab')).toBeNull()` e a linha 197 `expect(atualizarVeiculo).toHaveBeenCalledWith('9',expect.objectContaining({status:'Inativo',modelo:'FH 460'}))`; `src/features/veiculos/__tests__/repository.test.ts:265` confere `.neq('status','Inativo')` e a linha 282 confere `.eq('status','Inativo')` | PASS |
+| INA-01 | UPDATE condicional por id e status Disponivel grava Inativo, sem DELETE | `src/features/veiculos/__tests__/repository.test.ts:71` `expect(query.update).toHaveBeenCalledWith({status:'Inativo'})`; as linhas 72/73 conferem os filtros de id e status; linha 75 `expect(query.delete).not.toHaveBeenCalled()`; `supabase/tests/rls.test.ts:267` confere o status gravado por perfil e por status anterior | PASS |
+| INA-02 | Nenhuma linha atualizada devolve o erro em português da spec, sem falso sucesso | `src/features/veiculos/__tests__/repository.test.ts:80` `expect(await inativarVeiculo('1')).toEqual({ok:false,mensagem:...})` confere a mensagem exata da spec; `src/features/veiculos/__tests__/VeiculosListView.test.tsx:123` `expect(screen.queryByText(...)).toBeNull()` descarta a mensagem de sucesso | PASS |
+| INA-03 | Operação pendente mostra loading e impede envio duplicado | `src/features/veiculos/__tests__/VeiculosListView.test.tsx:105` `.toBeDisabled()`; linha 106 `expect(screen.getByTestId('button-loading')).toBeOnTheScreen()`; linha 108 `expect(inativarVeiculo).toHaveBeenCalledTimes(1)` | PASS |
+| INA-04 | O Alert nativo tem Cancelar e uma confirmação destrutiva | `src/features/veiculos/__tests__/VeiculosListView.test.tsx:56` `expect(alerta).toHaveBeenCalledWith(...,expect.stringContaining('ABC-1234'),[...style:'cancel',...style:'destructive',onPress:expect.any(Function)])` | PASS |
+| INA-05 | Cancelar preserva o veículo e não chama o repositório | `src/features/veiculos/__tests__/VeiculosListView.test.tsx:61` `expect(inativarVeiculo).not.toHaveBeenCalled()`; a linha 62 confere que a placa continua visível. O botão Cancelar nativo não tem callback de mutação | PASS |
+| INA-06 | Sucesso recarrega com o filtro atual e mostra a Snackbar de sucesso | `src/features/veiculos/__tests__/VeiculosListView.test.tsx:76` confere a mensagem exata de sucesso; a linha 77 confere o badge Inativo; as linhas 92/94 tiram a placa da lista sob o filtro Disponível e exigem `toHaveBeenLastCalledWith({busca:undefined,status:'Disponivel'})` | PASS |
+| INA-07 | Falha preserva o veículo e mostra a Snackbar de erro | `src/features/veiculos/__tests__/VeiculosListView.test.tsx:121` `expect(screen.getByText(...)).toBeOnTheScreen()` confere o erro devolvido; a linha 122 confere que a placa continua visível e a linha 123 descarta o sucesso | PASS |
+| INA-08 | Sem botão Inativar para EmViagem, EmManutencao ou Inativo | `src/features/veiculos/__tests__/VeiculosListView.test.tsx:133` `expect(screen.queryByRole('button',{name:'Inativar'})).toBeNull()` para os três status | PASS |
+| INA-09 | Guards e policies de escrita de Admin/Gestor de Frota continuam intactos | `supabase/tests/rls.test.ts:264` `expect(resultado.rows).toEqual(atualiza ? [{status:'Inativo'}] : [])`; linha 267 `expect(persistido.rows[0]!.status).toBe(atualiza ? 'Inativo' : status)` para quatro perfis e quatro status; linha 296 `expect(deleteVeiculo.rows).toHaveLength(0)`; guard inalterado em `app/(app)/_layout.tsx:37` e `src/navigation/menu.ts:71` | PASS |
+| SEL-01 | O filtro Inativo consulta Inativo e mantém o header nativo | `src/features/veiculos/__tests__/VeiculosListView.test.tsx:142` `expect(listarVeiculos).toHaveBeenLastCalledWith({busca:undefined,status:'Inativo'})`; linha 140 `.props.horizontal).toBe(true)`; as linhas 168/169 descartam marca repetida no conteúdo; o título nativo continua em `app/(app)/_layout.tsx:39` | PASS |
+| SEL-02 | A seleção para viagem consulta só Disponivel | `src/features/veiculos/__tests__/repository.test.ts:105` `expect(query.in).toHaveBeenCalledWith('status',status)` com `['Disponivel']` para viagem | PASS |
+| SEL-03 | A seleção para manutenção consulta Disponivel e EmManutencao | `src/features/veiculos/__tests__/repository.test.ts:105` `.toHaveBeenCalledWith('status',status)` com `['Disponivel','EmManutencao']`; linha 114 `expect(await listarVeiculosSelecionaveis('manutencao')).toEqual({ok:true,data:[volvo,manutencao]})` | PASS |
+| SEL-04 | As consultas de selecionáveis excluem Inativo/EmViagem sem mudar os consumidores | `src/features/veiculos/__tests__/repository.test.ts:105` confere as listas exatas; as linhas 119-121 conferem vazio, erro e resposta inválida. O diff não altera consumidores da EIX-39/40 | PASS |
 
-No spec-precision gap was identified. Where the spec defines an exact message, assertions match that message. Other criteria require a Portuguese message or observable state, and tests target those outcomes.
+Nenhuma falta de precisão na spec foi encontrada. Onde a spec define a mensagem exata, as asserções conferem essa mensagem. Os demais critérios pedem mensagem em português ou estado observável, e os testes miram esses resultados.
 
-## Edge Cases
+## Edge cases
 
-- Sao Paulo year rollover after schema import: `src/features/veiculos/__tests__/schema.test.ts:54` and line 56.
-- Legacy null opens blank, prevents save, and allows year completion: `src/features/veiculos/__tests__/VeiculoFormView.test.tsx:178`, lines 180/184.
-- Concurrent edit cannot reactivate an inactive vehicle: `src/features/veiculos/__tests__/repository.test.ts:261`, line 262. Editing an inactive vehicle also requires an already inactive record, lines 268-270.
-- Zero rows returns the exact specified message: `src/features/veiculos/__tests__/repository.test.ts:80`.
-- Load retry: `src/features/veiculos/__tests__/VeiculoFormView.test.tsx:230` `.toHaveProp('value','2020')`.
-- Five horizontally scrollable filters: `src/features/veiculos/__tests__/VeiculosListView.test.tsx:140` `.props.horizontal).toBe(true)`.
+- Virada do ano em São Paulo depois de importar o schema: `src/features/veiculos/__tests__/schema.test.ts:54` e linha 56.
+- Veículo antigo com ano nulo abre o campo vazio, impede salvar e permite completar o ano: `src/features/veiculos/__tests__/VeiculoFormView.test.tsx:178`, linhas 180/184.
+- Edição concorrente não reativa um veículo inativado: `src/features/veiculos/__tests__/repository.test.ts:259`, linhas 263/265. Editar um veículo inativo também exige que o registro já esteja inativo, linhas 280-282.
+- Nenhuma linha atualizada devolve a mensagem exata da spec: `src/features/veiculos/__tests__/repository.test.ts:80`.
+- Tentar novamente após falha na carga: `src/features/veiculos/__tests__/VeiculoFormView.test.tsx:230` `.toHaveProp('value','2020')`.
+- Cinco filtros com rolagem horizontal: `src/features/veiculos/__tests__/VeiculosListView.test.tsx:140` `.props.horizontal).toBe(true)`.
 
-## Gate Check
+## Gate
 
-Required gate: `npm run typecheck; npm run lint; npm run test` (Windows: npm.cmd).
+Gate exigido: `npm run typecheck; npm run lint; npm run test` (no Windows: `npm.cmd`).
 
-Typecheck and lint exited 0, executed and confirmed by the orchestrator. The verifier inspected `%TEMP%/eix79-tests-final.log`: lines 1872/1873 show 89 suites and 900 app tests; lines 1925/1926 show 16 suites and 300 Supabase tests. Total: 1200 passed, zero failed, zero skipped. Pre-feature baseline reported by the orchestrator: 861 app and 296 Supabase; delta +39/+4 = +43 tests. Diff review found no deleted tests or weakened assertions to accommodate a failure. Existing assertions requiring absence of the year were updated for the approved behavior.
+Typecheck e lint saíram com código 0, executados e confirmados pelo orquestrador. O Verifier conferiu o log local da execução final (não versionado): 89 suítes e 900 testes do app; 16 suítes e 300 testes do Supabase. Total: 1200 aprovados, zero falhas, zero ignorados. Linha de base antes da feature, informada pelo orquestrador: 861 testes do app e 296 do Supabase; diferença de +39/+4 = +43 testes. A revisão do diff não encontrou teste apagado nem asserção enfraquecida para acomodar falha. As asserções que exigiam a ausência do ano foram atualizadas para o comportamento aprovado.
 
-## Discrimination Sensor
+## Sensor de discriminação
 
-Isolated copy of `src/features/veiculos` at `C:/Users/gabri/AppData/Local/Temp/eix79-sensor-alwuzt9n`. Jest used the original workspace rootDir and aliases, roots restricted to the copied feature, and modulePaths pointing to existing node_modules. No dependencies were installed. No junction or stash was used. The unmutated copy passed 5 suites and 92 tests, exit 0.
+Cópia isolada de `src/features/veiculos` numa pasta temporária fora do repositório. O Jest usou o rootDir e os aliases do workspace original, com `roots` restrito à feature copiada e `modulePaths` apontando para o `node_modules` existente. Nenhuma dependência foi instalada, e não foram usados junction nem stash. A cópia sem mutação passou em 5 suítes e 92 testes, com código de saída 0.
 
-Sensor command: `node <workspace>/node_modules/jest/bin/jest.js --config <scratch>/jest.json --runInBand --silent <target-test>`.
+Comando do sensor: `node <workspace>/node_modules/jest/bin/jest.js --config <scratch>/jest.json --runInBand --silent <teste-alvo>`.
 
-| Isolated semantic mutation | Source | Discriminating assertion | Actual outcome |
+As linhas de código-fonte abaixo apontam para a versão atual de `repository.ts`; as mutações foram aplicadas nos mesmos trechos em 16/10.
+
+| Mutação semântica isolada | Código-fonte | Asserção que discrimina | Resultado obtido |
 | --- | --- | --- | --- |
-| Accept 1949: `ano < 1950` becomes `ano < 1949` | `src/features/veiculos/schema.ts:42` | schema.test.ts:41 | Killed, exit 1; 1 failed, 18 passed |
-| Accept an additional upper-bound year: `ano > maximo` becomes `ano > maximo + 1` | `src/features/veiculos/schema.ts:42` | schema.test.ts:41/54 | Killed, exit 1; 2 failed, 17 passed |
-| Replace Disponivel guard with EmViagem | `src/features/veiculos/repository.ts:180` | repository.test.ts:73 | Killed, exit 1; 1 failed, 29 passed |
-| Replace UPDATE Inativo payload with Disponivel | `src/features/veiculos/repository.ts:178` | repository.test.ts:71 | Killed, exit 1; 1 failed, 29 passed |
-| Include Inativo in the viagem whitelist | `src/features/veiculos/repository.ts:197` | repository.test.ts:105 | Killed, exit 1; 1 failed, 29 passed |
-| Convert Inativo to Disponivel when loading the form | `src/features/veiculos/VeiculoFormView.tsx:77` | VeiculoFormView.test.tsx:193 | Killed, exit 1; 1 failed, 19 passed |
+| Aceitar 1949: `ano < 1950` vira `ano < 1949` | `src/features/veiculos/schema.ts:42` | schema.test.ts:41 | Morto, saída 1; 1 falhou, 18 passaram |
+| Aceitar um ano a mais no limite superior: `ano > maximo` vira `ano > maximo + 1` | `src/features/veiculos/schema.ts:42` | schema.test.ts:41/54 | Morto, saída 1; 2 falharam, 17 passaram |
+| Trocar a guarda Disponivel por EmViagem | `src/features/veiculos/repository.ts:189` | repository.test.ts:73 | Morto, saída 1; 1 falhou, 29 passaram |
+| Trocar o payload Inativo do UPDATE por Disponivel | `src/features/veiculos/repository.ts:187` | repository.test.ts:71 | Morto, saída 1; 1 falhou, 29 passaram |
+| Incluir Inativo na lista de viagem | `src/features/veiculos/repository.ts:206` | repository.test.ts:105 | Morto, saída 1; 1 falhou, 29 passaram |
+| Converter Inativo em Disponivel ao carregar o formulário | `src/features/veiculos/VeiculoFormView.tsx:77` | VeiculoFormView.test.tsx:193 | Morto, saída 1; 1 falhou, 19 passaram |
 
-**Sensor depth**: six semantic mutations, including status integrity.
-**Result**: PASS, 6 injected, 6 killed, 0 survived. All kills resulted from assertion failures, rather than configuration or module-loading errors. Initial scratch configuration attempts had dependency-resolution errors; those attempts were not counted as mutations or kills. A green baseline preceded all six valid mutations.
+**Profundidade do sensor**: seis mutações semânticas, incluindo a integridade do status.
+**Resultado do sensor**: 6 injetadas, 6 mortas, 0 sobreviventes. Todas morreram por falha de asserção, e não por erro de configuração ou de carregamento de módulo. As primeiras tentativas de configurar a cópia tiveram erros de resolução de dependência; essas tentativas não contam como mutação nem como morte. Uma execução verde de base precedeu as seis mutações válidas.
 
-Real-tree `git status --porcelain` was captured before and after the sensor and compared byte for byte: `STATUS_IDENTICAL True`. The scratch was removed after validating its absolute path under TEMP and confirming no ReparsePoint existed. The real implementation tree was never mutated. This report was written only after comparison and cleanup.
+O `git status --porcelain` da árvore real foi capturado antes e depois do sensor e comparado byte a byte: idêntico. A pasta temporária foi removida depois de validar que o caminho absoluto estava dentro da pasta temporária do sistema e de confirmar que não havia ReparsePoint. A árvore real de implementação nunca foi alterada. Este relatório só foi escrito depois da comparação e da limpeza.
 
-## Code Quality and Security
+## Qualidade de código e segurança
 
-Reviewed diff: nine feature files and test additions only in supabase/tests/rls.test.ts. No changes to src/ui, migrations, CI, dependencies, or out-of-scope consumers. Types derive from generated database types. No any was introduced. Existing primitives and tokens were reused without a new button or hardcoded visual color, spacing, or size. Flex/flexGrow are layout properties, not new visual token values. Loading, empty, error, and action feedback states are covered. No unrelated refactor was identified.
+Diff revisado: nove arquivos da feature e testes novos apenas em `supabase/tests/rls.test.ts`. Nenhuma mudança em `src/ui`, migrations, CI, dependências ou consumidores fora do escopo. Os tipos vêm dos tipos gerados do banco. Nenhum `any` foi introduzido. Primitivos e tokens existentes foram reutilizados, sem botão novo e sem cor, espaçamento ou tamanho visual hardcoded. `flex`/`flexGrow` são propriedades de layout, não valores novos de token visual. Os estados de carregando, vazio, erro e feedback de ação estão cobertos. Nenhuma refatoração sem relação com a task foi identificada.
 
-RLS remains enabled. Database tests verify Admin/Fleet Manager updates and rejected Financeiro/Motorista writes, including persisted state and prohibited DELETE. Availability is checked atomically in the UPDATE predicate. Navigation guards and native headers remain intact. Technical database errors are translated before reaching the interface. Guidelines reviewed: AGENTS.md, DESIGN_CYAN.md, and tlc-spec-driven coding-principles.md.
+O RLS continua ativo. Os testes de banco conferem que Admin e Gestor de Frota atualizam e que Financeiro e Motorista têm a escrita recusada, incluindo o estado gravado e o DELETE proibido. A disponibilidade é checada de forma atômica no filtro do UPDATE. Guards de navegação e headers nativos continuam intactos. Erros técnicos do banco são traduzidos antes de chegar à interface. Diretrizes revisadas: `AGENTS.md`, `DESIGN_CYAN.md` e `coding-principles.md` da skill tlc-spec-driven.
 
-Layer coverage: schema bounds/validation; repository payloads, guards, failures, responses, and filters; views render/happy/edge/error behavior; actual backend role authorization. No new route was added. Changed tests map to ACs, listed edge cases, or preserved prior behavior. No unclaimed new test was identified.
+Cobertura por camada: limites e validação do schema; payloads, guardas, falhas, respostas e filtros do repositório; render, caminho feliz, edge cases e erros das telas; autorização real por perfil no backend. Nenhuma rota nova foi criada. Os testes alterados correspondem a ACs, a edge cases listados ou à preservação de comportamento anterior. Nenhum teste novo sem critério correspondente foi identificado.
 
-## Ranked Gaps and Manual Review
+## Lacunas e revisão manual
 
-No implementation gap requiring a fix was identified. Device UAT was not performed by the verifier. Manually review Android numeric keyboard and scrolling, native Alert cancellation/confirmation, Snackbar behavior, control accessibility, and filters on small phones/tablets. These are limits of device/visual verification, not evidence of a failing automated criterion.
+Nenhuma lacuna de implementação que exija correção foi identificada. O Verifier não fez teste de aceite em dispositivo. Revisar manualmente: teclado numérico e rolagem no Android, cancelamento e confirmação do Alert nativo, comportamento da Snackbar, acessibilidade dos controles e filtros em celular pequeno e tablet. São limites da verificação visual e em dispositivo, e não evidência de critério automatizado falhando.
 
-## Traceability and Closure
+## Rastreabilidade
 
-ANO-01 through ANO-06, INA-01 through INA-09, and SEL-01 through SEL-04 are verified here. The orchestrator owns spec/state table updates because the verifier was authorized to write only this report. No grounded failure, surviving mutant, or spec deviation requires a lesson or fix task. The deterministic validate_state.py gate previously returned zero errors for this report's verdict/evidence; the encoding-only rewrite does not change the verification result. No test or sensor was rerun for the rewrite.
+ANO-01 a ANO-06, INA-01 a INA-09 e SEL-01 a SEL-04 estão verificados aqui. O orquestrador atualiza as tabelas da spec e do STATE, porque o Verifier só tinha autorização para escrever este relatório. Nenhuma falha comprovada, mutante sobrevivente ou desvio da spec exige lição ou task de correção. O gate determinístico `validate_state.py` já tinha retornado zero erros para o veredito e as evidências deste relatório; a regravação apenas de codificação não muda o resultado da verificação. Nenhum teste ou sensor foi executado de novo por causa dessa regravação.
 
-## Delivery verification — 2026-10-18
+## Verificação da entrega — 2026-10-18
 
-The user authorized local infrastructure installation, commit, push and a PR for Jean Ribeiro. The preceding independent review and mutation results are historical evidence from 2026-10-16; no new mutation run is claimed.
+O usuário autorizou a instalação de infraestrutura local, o commit, o push e um PR para o Jean Ribeiro. A revisão independente e os resultados de mutação anteriores são evidência histórica de 16/10; não se declara nova execução de mutação.
 
-### Automated checks executed
+### Checagens automatizadas executadas
 
-- `npm.cmd run typecheck`: exit 0.
-- `npm.cmd run lint`: exit 0.
-- `npx.cmd jest --selectProjects app --runInBand`: exit 0, 89 suites, 900 tests passed. Evidence: local ignored log `.expo/eix79-app-final.log`.
-- `node --experimental-vm-modules node_modules/jest/bin/jest.js --selectProjects supabase --runInBand`: exit 0, 16 suites, 300 tests passed. Evidence: `.expo/eix79-db-serial.log`.
-- Initial `npm run test` failed four transient Snackbar assertions in unrelated modules while native compilation was running. An initial serial retry failed one Categorias assertion; its isolated 15-test suite and the subsequent complete 900-test run passed without changing tests or production code. These earlier failures are retained in local logs rather than reported as passes.
-- `git diff --check`: exit 0. No implementation changes were needed during this delivery verification.
+- `npm.cmd run typecheck`: saída 0.
+- `npm.cmd run lint`: saída 0.
+- `npx.cmd jest --selectProjects app --runInBand`: saída 0, 89 suítes, 900 testes aprovados. Evidência em log local não versionado.
+- `node --experimental-vm-modules node_modules/jest/bin/jest.js --selectProjects supabase --runInBand`: saída 0, 16 suítes, 300 testes aprovados. Evidência em log local não versionado.
+- O primeiro `npm run test` teve quatro falhas transitórias de Snackbar em módulos sem relação com a feature, enquanto a compilação nativa rodava em paralelo. Uma primeira repetição em série falhou numa asserção de Categorias; a suíte isolada dela (15 testes) e a execução completa seguinte dos 900 testes passaram, sem alterar teste nem código de produção. Essas falhas ficaram registradas nos logs locais, e não foram reportadas como aprovadas.
+- `git diff --check`: saída 0. Nenhuma mudança de implementação foi necessária nesta verificação da entrega.
 
-### Live local backend checks executed
+### Checagens com backend local executadas
 
-WSL 3.0.3, WSL2 Linux kernel, Docker Engine 29.8.2 (Linux containers), Supabase CLI 2.121.0 and JDK 17 were available. GitHub CLI was installed from its official winget package. The existing migrations were copied unchanged to `%TEMP%/eixo-eix79-local/supabase/migrations`; the sandbox has its own project ID `eixo-eix79-local`, no linked remote project and no project seeds. All migrations applied successfully.
+Estavam disponíveis WSL 3.0.3, kernel Linux do WSL2, Docker Engine 29.8.2 (contêineres Linux), Supabase CLI 2.121.0 e JDK 17. O GitHub CLI foi instalado pelo pacote oficial do winget. As migrations existentes foram copiadas sem alteração para um diretório de trabalho separado, fora do repositório; esse ambiente tem project ID próprio, nenhum projeto remoto vinculado e nenhum seed do projeto. Todas as migrations foram aplicadas com sucesso.
 
-A local verification script, `.expo/eix79-api-check.cjs` (ignored, not part of delivery), used the public anon key and real password sessions against Auth/REST. It verified four fictional approved profiles; Admin writes; Gestor creation and year editing; rejected Financeiro/Motorista updates; rejected years 1949/2028 and accepted 1950/2027/2020; legacy null year; four status filters; conditional refusal for EmViagem/EmManutencao/Inativo; concurrent Admin/Gestor inactivation with exactly one updated row; persisted inactive state; rejected physical deletion with the row preserved. RLS remained enabled. These are API integration checks, not Android UI checks.
+Um script de verificação local (fora da entrega) usou a chave anon pública e sessões reais com senha contra Auth/REST. Ele verificou: quatro perfis fictícios aprovados; escrita do Admin; criação e edição de ano pelo Gestor; atualizações recusadas para Financeiro e Motorista; anos 1949/2028 recusados e 1950/2027/2020 aceitos; ano nulo legado; os quatro filtros de status; recusa condicional para EmViagem/EmManutencao/Inativo; inativação concorrente de Admin e Gestor com exatamente uma linha atualizada; estado inativo gravado; exclusão física recusada, com a linha preservada. O RLS continuou ativo. São checagens de integração pela API, e não checagens de interface no Android.
 
-`adb shell` sent an HTTP request from the emulator to `10.0.2.2:54321/auth/v1/health`, receiving HTTP 200. The running AVD is `Eixo_API36_Play`, device profile `pixel_7`, API 36, 1080×2400 at density 420.
+Um `adb shell` fez uma requisição HTTP do emulador para `10.0.2.2:54321/auth/v1/health` e recebeu HTTP 200. O emulador usado tem perfil `pixel_7`, API 36, 1080×2400 com densidade 420.
 
-### Local reproduction
+### Reprodução local
 
-Create a separate Supabase work directory with the copied migrations and config, a unique project ID and an empty `db.seed.sql_paths`. Run `npx supabase start --workdir <sandbox>`. Create fictional users through the local Auth admin API, then assign profiles and Ativo status in the sandbox database only. Keep administrative keys in the setup process; never place them in Expo variables.
+Crie um diretório de trabalho do Supabase separado, com as migrations e a config copiadas, um project ID único e `db.seed.sql_paths` vazio. Rode `npx supabase start --workdir <sandbox>`. Crie usuários fictícios pela API admin do Auth local e depois atribua perfil e status Ativo apenas no banco do sandbox. Mantenha as chaves administrativas no processo de preparação; nunca as coloque em variáveis do Expo.
 
-The existing email/password login is enabled reversibly through ignored `.env.local`: `EXPO_PUBLIC_LOGIN_EMAIL_HABILITADO=true`, local API URL `http://10.0.2.2:54321`, local public anon key, and a non-secret placeholder Google web client ID. No fake auth or source-code bypass was introduced. The original env file was backed up locally. The development build uses Metro on port 8081 with `adb reverse tcp:8081 tcp:8081`.
+O login por e-mail e senha que já existe é habilitado de forma reversível pelo `.env.local`, que é ignorado pelo Git: `EXPO_PUBLIC_LOGIN_EMAIL_HABILITADO=true`, URL da API local `http://10.0.2.2:54321`, chave anon pública local e um client ID web do Google de exemplo, sem segredo. Não foi introduzida autenticação falsa nem desvio no código. O arquivo de env original foi copiado como backup local. O development build usa o Metro na porta 8081 com `adb reverse tcp:8081 tcp:8081`.
 
-The first native build hit Ninja's Windows 260-character path limit under OneDrive. A virtual drive still yielded mixed canonical paths in autolinking. An isolated copy at `C:/eix79-build` is used to avoid changing repository configuration. Native caches, local accounts, env values and build workspaces are excluded from the delivered diff.
+O primeiro build nativo bateu no limite de 260 caracteres de caminho do Ninja no Windows, dentro do OneDrive. Um drive virtual ainda gerou caminhos canônicos misturados no autolinking. Por isso o build nativo roda numa cópia isolada em caminho curto, fora do repositório, sem mudar a configuração do projeto. Caches nativos, contas locais, valores de env e diretórios de build ficaram fora do diff entregue.
 
-### Android interaction and visual checks executed
+### Checagens de interação e visuais no Android executadas
 
-The development APK built successfully in `C:/eix79-build` (`BUILD SUCCESSFUL`, 519 tasks) and was installed on `Eixo_API36_Play`. The installed package is `com.eixocerto.app`. Metro serves the original source tree; the build copy is only a workaround for native path length. Use `npx expo run:android --device Eixo_API36_Play --no-bundler` in the short build directory, run `npx expo start --dev-client --lan --max-workers 2` in the source directory, then open the development client through port 8081 forwarded with ADB. Local log: `.expo/eix79-build-copy.log`.
+O APK de desenvolvimento foi compilado com sucesso na cópia de caminho curto (`BUILD SUCCESSFUL`, 519 tasks) e instalado no emulador. O pacote instalado é `com.eixocerto.app`. O Metro serve a árvore de código original; a cópia de build só contorna o limite de tamanho de caminho nativo. Na cópia de build, use `npx expo run:android --device <nome do AVD> --no-bundler`; no diretório do código, rode `npx expo start --dev-client --lan --max-workers 2`; depois abra o development client pela porta 8081 redirecionada com o ADB.
 
-The agent interacted with the emulator through ADB and inspected UIAutomator output and screenshots. This is an emulator UI smoke test, not human manual acceptance:
+O agente interagiu com o emulador pelo ADB e conferiu a saída do UIAutomator e capturas de tela. Isto é um smoke test de interface no emulador, e não aceite manual humano:
 
-- Real Admin email/password login completed. Navigation through Frota → Veículos loaded the local records.
-- New vehicle form: number keyboard appeared for Ano de Fabricação; scrolling made Salvar reachable with the keyboard open. Year 1949 displayed `Informe um ano entre 1950 e 2027.` and did not save. Replacing it with 2027 created the vehicle and displayed `Veículo cadastrado.`
-- Reopening Editar loaded 2027. Saving 1950 displayed `Veículo atualizado.` Reopening after inactivation still showed 1950, proving the saved value survived navigation and reloading.
-- Disponível filter showed the created vehicle. Inativar displayed a native confirmation with its plate and historical-data explanation. Cancelar returned to the list with the vehicle still present. Confirming a second attempt removed it from Disponível and displayed `Veículo inativado.`
-- Horizontal filter scrolling exposed Inativo. Selecting it and scrolling the results showed the inactivated vehicle. Editing it displayed status Inativo as plain text, with no status-changing tabs.
-- The numeric keyboard and inactive edit layout were visually inspected on Pixel 7. Evidence is kept locally in ignored `.expo/eix79-keyboard.png`, `eix79-inactive.png`, and XML snapshots `eix79-invalid.xml`, `eix79-edit.xml`, `eix79-confirm.xml`, `eix79-cancel.xml`, `eix79-inactivated.xml`, `eix79-inactive-filter.xml`, `eix79-inactive-edit.xml`.
+- O login real do Admin por e-mail e senha funcionou. A navegação Frota → Veículos carregou os registros locais.
+- Formulário de novo veículo: o teclado numérico apareceu no Ano de Fabricação, e a rolagem deixou o Salvar alcançável com o teclado aberto. O ano 1949 mostrou `Informe um ano entre 1950 e 2027.` e não salvou. Trocar por 2027 criou o veículo e mostrou `Veículo cadastrado.`
+- Reabrir o Editar carregou 2027. Salvar 1950 mostrou `Veículo atualizado.` Reabrir depois da inativação ainda mostrou 1950, o que prova que o valor gravado sobreviveu à navegação e à recarga.
+- O filtro Disponível mostrou o veículo criado. Inativar abriu uma confirmação nativa com a placa e a explicação sobre o histórico. Cancelar voltou para a lista com o veículo ainda presente. Confirmar numa segunda tentativa tirou o veículo do filtro Disponível e mostrou `Veículo inativado.`
+- A rolagem horizontal dos filtros revelou o Inativo. Selecioná-lo e rolar os resultados mostrou o veículo inativado. Editá-lo mostrou o status Inativo como texto simples, sem abas para mudar o status.
+- O teclado numérico e o layout de edição de inativo foram conferidos visualmente no Pixel 7. As capturas de tela e os snapshots XML do UIAutomator ficaram guardados localmente, fora do repositório.
 
-No feature defect was found. A first-use Gboard handwriting tutorial intercepted early automation attempts; it was dismissed and stylus handwriting disabled temporarily for the test, without changing app code.
+Nenhum defeito da feature foi encontrado. Um tutorial de escrita à mão do Gboard, que aparece no primeiro uso, interceptou as primeiras tentativas de automação; ele foi fechado e a escrita com caneta foi desativada temporariamente para o teste, sem mudar o código do app.
 
-### Remaining verification limits
+### Limites da verificação
 
-The pending-operation spinner was too brief for reliable visual inspection on the local network; loading/duplicate-submission coverage is automated, not claimed as manually observed. Required/decimal/non-numeric/upper-bound errors and API failure feedback are covered by Jest; the emulator smoke test specifically exercised the lower-bound error and successful boundary values. Gestor and the two blocked roles were exercised through real Auth/REST sessions, not through separate Android login sessions. Concurrency was exercised through concurrent real REST calls. Tablet/small-phone layout, TalkBack, human acceptance and physical-device testing remain unexecuted. The PR should retain these distinctions for review.
+O spinner da operação pendente foi rápido demais para uma inspeção visual confiável na rede local; a cobertura de loading e de envio duplicado é automatizada, e não se declara observação manual. Os erros de ano obrigatório, decimal, não numérico e acima do limite, além do feedback de falha da API, são cobertos pelo Jest; o smoke test no emulador exercitou especificamente o erro do limite inferior e os valores-limite aceitos. O Gestor e os dois perfis bloqueados foram exercitados por sessões reais de Auth/REST, e não por logins separados no Android. A concorrência foi exercitada por chamadas REST reais simultâneas. Layout em tablet e celular pequeno, TalkBack, aceite humano e teste em dispositivo físico continuam sem execução. O PR deve manter essas distinções para a revisão.
+
+## Ajuste da revisão — 2026-10-18
+
+Na revisão do PR #39, a edição de um veículo inativado em outra sessão enquanto o formulário estava aberto mostrava "Veículo não encontrado.". O bloqueio estava certo (a edição não reativa o veículo), mas a mensagem não explicava o motivo.
+
+- `src/features/veiculos/repository.ts:169`: quando o UPDATE de um veículo ativo não altera nenhuma linha, o repositório relê o veículo. Se ele está Inativo, devolve `Este veículo foi inativado enquanto você editava. Volte à lista e abra o cadastro de novo.`; nos demais casos, continua `Veículo não encontrado.`.
+- `src/features/veiculos/__tests__/repository.test.ts:259` confere a mensagem nova e a releitura pelo id, sem segundo UPDATE; a linha 270 confere que a edição de um inativo sem linha atualizada não relê o status; a linha 309 confere que, sem veículo na releitura, a mensagem continua `Veículo não encontrado.`.
+- O edge case correspondente da spec foi atualizado. O sensor de discriminação não foi executado de novo para este ajuste.

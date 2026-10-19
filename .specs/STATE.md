@@ -91,4 +91,4 @@
 - **Next step**: revisão de Jean no PR para main; aceite humano, tablet/TalkBack e observação visual do loading continuam pendentes, conforme relatório
 - **Blockers**: nenhum bloqueio de implementação; testes de dispositivo físico e aceite humano não executados
 - **Uncommitted files**: somente feature veiculos, testes RLS e artefatos desta especificação; arquivos locais de sandbox/build/env ignorados
-- **Branch**: feat/eix-79-us06-ano-inativar; base eff0160; Linear inalterado. Stack local em `%TEMP%/eixo-eix79-local`, build curto em `C:/eix79-build`; login local por flag existente no `.env.local`, sem bypass de código
+- **Branch**: feat/eix-79-us06-ano-inativar; base eff0160; Linear inalterado. Supabase local e build nativo em diretórios separados, fora do repositório; login local pela flag que já existe no `.env.local`, sem desvio no código
