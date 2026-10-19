@@ -88,6 +88,14 @@
 - **Trade-off**: O Gestor passa a ver os nomes das formas ativas (Pix, Boleto…), que não são dado financeiro sensível. A categoria "Manutenção" não precisou da mesma exceção, porque a RPC a acha sozinha como `security definer`.
 - **Scope**: `supabase/migrations/20261018000100_forma_pagamento_select_gestor.sql`, `supabase/tests/rls_perfis.test.ts` (RLS-06, RLS-17), EIX-39.
 - **Date**: 2026-10-18
+- **Status**: superseded by AD-013
+
+### AD-013
+- **Decision**: O Gestor de Frota vê as formas de pagamento ativas só pela RPC `listar_formas_pagamento_ativas()` (`security definer`, devolve `id` e `nome`). A policy `forma_pagamento_select_gestor` da AD-011 sai por migration nova, e o Gestor volta a ver zero linhas de `forma_pagamento` direto na tabela (RLS-06 da EIX-32). Substitui a AD-011.
+- **Reason**: A RPC era a opção combinada para a EIX-39 (opção b da spec) antes do PR #37. As duas soluções juntas na `main` quebravam o CI do PR #38: um teste exigia que o Gestor lesse a tabela, o outro que não lesse. A RPC expõe só o que o seletor precisa e mantém a regra "Gestor não tem área financeira" sem exceção na tabela.
+- **Trade-off**: Depois do `db push` das migrations 20261018000200 e 20261018000300, o seletor do Gestor fica vazio até `listarFormasPagamentoAtivas` chamar a RPC (T9 da EIX-39). Por isso a T9 entra no mesmo PR, antes do merge. A nuvem guarda a policy criada e removida no histórico de migrations.
+- **Scope**: `supabase/migrations/20261018000200_formas_pagamento_ativas.sql`, `supabase/migrations/20261018000300_remove_forma_pagamento_select_gestor.sql`, `supabase/tests/rls_perfis.test.ts` (RLS-06), `.specs/features/eix32-rls/spec.md` (RLS-06, RLS-17), EIX-39. Número 013 porque a AD-012 já está no PR da EIX-80.
+- **Date**: 2026-10-18
 - **Status**: active
 
 ## Handoff
@@ -98,8 +106,8 @@
 - **Phase / Task**: T1..T8 concluídas; Verifier PASS (iteração 2, 16/16 mutantes mortos, `validation.md`). T9 bloqueada
 - **Completed**: e42962d..HEAD em `feat/eix-39-us06b-manutencao` (RPC `listar_formas_pagamento_ativas`, CampoData/CampoMoeda em `src/ui`, schema, repositório, formulário, detalhe `/frota/[id]` e lista)
 - **In-progress** (file:line): none
-- **Next step**: Jean aplica `20261018000200_formas_pagamento_ativas.sql` (`npx supabase db push`) e regera `src/types/database.ts` → T9: `listarFormasPagamentoAtivas` em `src/features/manutencao/manutencaoRepository.ts` passa para `supabase.rpc('listar_formas_pagamento_ativas')` → conferência curta do Verifier → merge
-- **Blockers**: db push + tipos regerados (esta máquina não tem a Supabase CLI vinculada). Até lá o Gestor de Frota vê o seletor de formas vazio
+- **Next step**: Jean aplica `20261018000200_formas_pagamento_ativas.sql` e `20261018000300_remove_forma_pagamento_select_gestor.sql` (`npx supabase db push`, AD-013) e regera `src/types/database.ts` → T9: `listarFormasPagamentoAtivas` em `src/features/manutencao/manutencaoRepository.ts` passa para `supabase.rpc('listar_formas_pagamento_ativas')` → conferência curta do Verifier → merge
+- **Blockers**: db push + tipos regerados (esta máquina não tem a Supabase CLI vinculada). Hoje o seletor do Gestor funciona pela policy do #37; depois do push ele fica vazio até a T9, que entra neste PR antes do merge
 - **Uncommitted files**: none
 - **Branch**: feat/eix-39-us06b-manutencao
 
