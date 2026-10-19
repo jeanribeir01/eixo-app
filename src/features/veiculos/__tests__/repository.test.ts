@@ -256,10 +256,22 @@ describe('veiculos/repository', () => {
   });
 
   describe('atualizarVeiculo', () => {
-    it('edição de ativo não reativa um veículo inativado em paralelo (ANO-06)', async () => {
-      const [query] = responder(ok(null));
-      expect(await atualizarVeiculo('1', input())).toEqual({ ok: false, mensagem: 'Veículo não encontrado.' });
+    it('edição de ativo não reativa um veículo inativado em paralelo e explica o motivo (ANO-06)', async () => {
+      const [query, releitura] = responder(ok(null), ok({ ...volvo, status: 'Inativo' }));
+      expect(await atualizarVeiculo('1', input())).toEqual({
+        ok: false,
+        mensagem: 'Este veículo foi inativado enquanto você editava. Volte à lista e abra o cadastro de novo.',
+      });
       expect(query.neq).toHaveBeenCalledWith('status', 'Inativo');
+      expect(releitura.update).not.toHaveBeenCalled();
+      expect(releitura.eq).toHaveBeenCalledWith('id', '1');
+    });
+
+    it('edição de inativo sem linha atualizada não relê o status', async () => {
+      responder(ok(null));
+
+      expect(await atualizarVeiculo('1', input({ status: 'Inativo' }))).toEqual({ ok: false, mensagem: 'Veículo não encontrado.' });
+      expect(mockFrom).toHaveBeenCalledTimes(1);
     });
 
     it('edição de inativo preserva status e não substitui o botão de inativar (ANO-06)', async () => {
@@ -294,8 +306,8 @@ describe('veiculos/repository', () => {
       expect(await atualizarVeiculo('2', input())).toMatchObject({ ok: false, campo: 'placa' });
     });
 
-    it('sem linha atualizada vira "Veículo não encontrado."', async () => {
-      responder(ok(null));
+    it('sem linha atualizada e sem veículo na releitura vira "Veículo não encontrado."', async () => {
+      responder(ok(null), ok(null));
 
       expect(await atualizarVeiculo('x', input())).toEqual({ ok: false, mensagem: 'Veículo não encontrado.' });
     });

@@ -22,6 +22,7 @@ const LIMITE_LISTA = 500;
 const MENSAGEM_PLACA_DUPLICADA = 'Já existe um veículo cadastrado com essa placa.';
 const MENSAGEM_PLACA_INVALIDA = 'Placa inválida. Use o formato AAA-1234 ou o padrão Mercosul AAA1A23.';
 const MENSAGEM_NAO_ENCONTRADO = 'Veículo não encontrado.';
+const MENSAGEM_INATIVADO_DURANTE_EDICAO = 'Este veículo foi inativado enquanto você editava. Volte à lista e abra o cadastro de novo.';
 const MENSAGEM_DADOS_INVALIDOS = 'Os dados recebidos são inválidos. Tente novamente.';
 
 // Dado externo não é confiável só porque o TypeScript compilou: a resposta passa pelo Zod.
@@ -162,8 +163,16 @@ export async function atualizarVeiculo(id: string, input: VeiculoInput): Promise
   if (error) {
     return traduzirErro(error, 'Não foi possível atualizar o veículo. Tente novamente.');
   }
-  // Sem linha: o id não existe ou o RLS não deixou este perfil alterar. Para a tela, "não encontrado".
+  // Sem linha: o id não existe, o RLS não deixou este perfil alterar ou o veículo foi inativado
+  // em outra sessão depois de o formulário carregar (o filtro de status acima barrou a escrita).
+  // Só o último caso tem mensagem própria; para saber se foi ele, relê o status atual.
   if (!data) {
+    if (input.status !== 'Inativo') {
+      const atual = await buscarVeiculoPorId(id);
+      if (atual.ok && atual.data.status === 'Inativo') {
+        return { ok: false, mensagem: MENSAGEM_INATIVADO_DURANTE_EDICAO };
+      }
+    }
     return { ok: false, mensagem: MENSAGEM_NAO_ENCONTRADO };
   }
 

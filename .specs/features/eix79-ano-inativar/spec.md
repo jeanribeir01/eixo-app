@@ -82,7 +82,7 @@ Como gestor quero retirar um veículo disponível de circulação sem apagar seu
 
 - WHEN o ano muda em São Paulo com o schema já importado THEN a validação SHALL usar o novo limite.
 - IF o veículo legado tem ano null THEN o formulário SHALL abrir vazio e exigir preenchimento para salvar.
-- IF o veículo é inativado em outra sessão após carregar o formulário THEN a atualização SHALL falhar sem reativá-lo; edição com status Inativo só atualiza registro que já está Inativo.
+- IF o veículo é inativado em outra sessão após carregar o formulário THEN a atualização SHALL falhar sem reativá-lo e informar que o veículo foi inativado durante a edição; edição com status Inativo só atualiza registro que já está Inativo.
 - IF a inativação não encontra veículo disponível THEN o retorno SHALL ser "Não foi possível inativar. O veículo pode não estar mais disponível ou você não tem permissão. Atualize a lista e tente novamente.".
 - IF a carga do formulário falha THEN a tela SHALL permitir tentar novamente.
 - WHILE os cinco filtros são exibidos a lista SHALL permitir rolagem horizontal em larguras pequenas.
