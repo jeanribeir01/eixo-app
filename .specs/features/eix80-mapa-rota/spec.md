@@ -105,29 +105,29 @@ A EIX-38 não criou tela de detalhe da rota. Esta task cria a tela de detalhe (d
 
 | Requirement ID | Story | Phase | Status |
 | --- | --- | --- | --- |
-| MAPA-01 | P1: Mapa — AC1 (marcadores e linha) | Execute | Implementing |
-| MAPA-02 | P1: Mapa — AC2 (enquadramento) | Execute | Implementing |
-| MAPA-03 | P1: Mapa — AC3 (busca no dataset) | Execute | Implementing |
-| MAPA-04 | P1: Mapa — AC4 (cores dos tokens) | Execute | Implementing |
-| MAPA-05 | P1: Mapa — AC5 (legenda) | Execute | Implementing |
-| MAPA-06 | P1: Mapa — AC6 (carregando) | Execute | Implementing |
-| MAPA-07 | P1: Mapa — AC7 (erro do mapa) | Execute | Implementing |
-| MAPA-08 | P1: Mapa — AC8 (tentar novamente) | Execute | Implementing |
-| MAPA-09 | P1: Mapa — AC9 (sem coordenadas) | Execute | Implementing |
-| MAPA-10 | P1: Mapa — AC10 (gestos desligados) | Execute | Implementing |
-| MAPA-11 | P1: Mapa — AC11 (proporção, RNF02) | Execute | Implementing |
-| MAPA-12 | P1: Mapa — AC12 (estilo em constante) | Execute | Implementing |
-| MAPA-13 | P1: Detalhe — AC1 (lista abre o detalhe) | Execute | Implementing |
-| MAPA-14 | P1: Detalhe — AC2 (trecho, distância, mapa) | Execute | Implementing |
-| MAPA-15 | P1: Detalhe — AC3 (inativa) | Execute | Implementing |
-| MAPA-16 | P1: Detalhe — AC4 (Editar) | Execute | Implementing |
-| MAPA-17 | P1: Detalhe — AC5 (carregando) | Execute | Implementing |
-| MAPA-18 | P1: Detalhe — AC6 (erro da carga) | Execute | Implementing |
-| MAPA-19 | P1: Detalhe — AC7 (título e guard) | Execute | Implementing |
-| MAPA-20 | P1: Detalhe — AC8 (recarrega ao voltar) | Execute | Implementing |
-| MAPA-21 | Edge: mesmo ponto | Execute | Implementing |
-| MAPA-22 | Edge: rota não encontrada | Execute | Implementing |
-| MAPA-23 | Edge: resto da tela usável sem mapa | Execute | Implementing |
+| MAPA-01 | P1: Mapa — AC1 (marcadores e linha) | Execute | ✅ Verified |
+| MAPA-02 | P1: Mapa — AC2 (enquadramento) | Execute | ✅ Verified |
+| MAPA-03 | P1: Mapa — AC3 (busca no dataset) | Execute | ✅ Verified |
+| MAPA-04 | P1: Mapa — AC4 (cores dos tokens) | Execute | ✅ Verified |
+| MAPA-05 | P1: Mapa — AC5 (legenda) | Execute | ✅ Verified |
+| MAPA-06 | P1: Mapa — AC6 (carregando) | Execute | ✅ Verified |
+| MAPA-07 | P1: Mapa — AC7 (erro do mapa) | Execute | ✅ Verified |
+| MAPA-08 | P1: Mapa — AC8 (tentar novamente) | Execute | ✅ Verified |
+| MAPA-09 | P1: Mapa — AC9 (sem coordenadas) | Execute | ✅ Verified |
+| MAPA-10 | P1: Mapa — AC10 (gestos desligados) | Execute | ✅ Verified |
+| MAPA-11 | P1: Mapa — AC11 (proporção, RNF02) | Execute | ✅ Verified |
+| MAPA-12 | P1: Mapa — AC12 (estilo em constante) | Execute | ✅ Verified |
+| MAPA-13 | P1: Detalhe — AC1 (lista abre o detalhe) | Execute | ✅ Verified |
+| MAPA-14 | P1: Detalhe — AC2 (trecho, distância, mapa) | Execute | ✅ Verified |
+| MAPA-15 | P1: Detalhe — AC3 (inativa) | Execute | ✅ Verified |
+| MAPA-16 | P1: Detalhe — AC4 (Editar) | Execute | ✅ Verified |
+| MAPA-17 | P1: Detalhe — AC5 (carregando) | Execute | ✅ Verified |
+| MAPA-18 | P1: Detalhe — AC6 (erro da carga) | Execute | ✅ Verified |
+| MAPA-19 | P1: Detalhe — AC7 (título e guard) | Execute | ✅ Verified |
+| MAPA-20 | P1: Detalhe — AC8 (recarrega ao voltar) | Execute | ✅ Verified |
+| MAPA-21 | Edge: mesmo ponto | Execute | ✅ Verified |
+| MAPA-22 | Edge: rota não encontrada | Execute | ✅ Verified |
+| MAPA-23 | Edge: resto da tela usável sem mapa | Execute | ✅ Verified |
 
 **Coverage:** 23 total, 23 mapped to tasks, 0 unmapped
 
