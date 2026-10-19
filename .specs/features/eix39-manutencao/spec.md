@@ -189,7 +189,7 @@ O gestor de frota não tem onde registrar a manutenção de um veículo: a tela 
 | MAN-29 | P1: Formas ativas — AC2 | Tasks | Verified |
 | MAN-30 | P1: Formas ativas — AC3 | Tasks | Verified |
 | MAN-31 | P1: Formas ativas — AC4 | Tasks | Verified |
-| MAN-32 | P1: Formas ativas — AC5 | Tasks | Pending |
+| MAN-32 | P1: Formas ativas — AC5 | Tasks | Verified |
 | MAN-33 | P1: Detalhe — AC1 | Tasks | Verified |
 | MAN-34 | P1: Detalhe — AC2 | Tasks | Verified |
 | MAN-35 | P1: Detalhe — AC3 | Tasks | Verified |

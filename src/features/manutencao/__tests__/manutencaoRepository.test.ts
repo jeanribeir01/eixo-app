@@ -319,27 +319,37 @@ describe('listarVeiculosSelecionaveis', () => {
 });
 
 describe('listarFormasPagamentoAtivas', () => {
-  // MAN-03 (provisório até a T9 trocar pela RPC)
-  it('lista só id e nome das formas ativas, por nome', async () => {
+  // MAN-03, MAN-32: o filtro de ativas e a ordem por nome moram na RPC (provados no PGlite).
+  it('chama listar_formas_pagamento_ativas e não lê a tabela direto', async () => {
     const formas = [
       { id: 'f1', nome: 'Boleto' },
       { id: 'f2', nome: 'Pix' },
     ];
-    const [query] = responder(ok(formas));
+    mockRpc.mockResolvedValue(ok(formas));
 
     expect(await listarFormasPagamentoAtivas()).toEqual({ ok: true, data: formas });
-    expect(mockFrom).toHaveBeenCalledWith('forma_pagamento');
-    expect(query.select).toHaveBeenCalledWith('id, nome');
-    expect(query.eq).toHaveBeenCalledWith('ativa', true);
-    expect(query.order).toHaveBeenCalledWith('nome');
+    expect(mockRpc).toHaveBeenCalledWith('listar_formas_pagamento_ativas');
+    expect(mockFrom).not.toHaveBeenCalled();
   });
 
   it('erro do Supabase vira mensagem em português', async () => {
-    responder(erro('PGRST301'));
+    mockRpc.mockResolvedValue(erro('PGRST301'));
 
     expect(await listarFormasPagamentoAtivas()).toEqual({
       ok: false,
       mensagem: 'Não foi possível carregar as formas de pagamento. Tente novamente.',
     });
+  });
+
+  it('42501 da RPC vira mensagem de acesso negado', async () => {
+    mockRpc.mockResolvedValue(erro('42501'));
+
+    expect(await listarFormasPagamentoAtivas()).toEqual({ ok: false, mensagem: MENSAGEM_ACESSO_NEGADO });
+  });
+
+  it('resposta fora do formato vira mensagem de dados inválidos', async () => {
+    mockRpc.mockResolvedValue(ok([{ id: 1 }]));
+
+    expect(await listarFormasPagamentoAtivas()).toEqual({ ok: false, mensagem: MENSAGEM_DADOS_INVALIDOS });
   });
 });

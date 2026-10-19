@@ -1,12 +1,12 @@
 # EIX-39 · US06-b Manutenção — Validation
 
-**Date**: 2026-10-18
+**Date**: 2026-10-19
 **Spec**: `.specs/features/eix39-manutencao/spec.md`
-**Diff range**: `eff0160..6c72ffa` (`e42962d` docs … `6c72ffa` correção do teste), branch `feat/eix-39-us06b-manutencao`
-**Iteração**: 2 do loop de correção (iteração 1: FAIL por M16/MAN-40, em `eff0160..ff9ac6a`)
+**Diff range**: `d23b9f8..working tree (T9, não commitada)` — `src/features/manutencao/manutencaoRepository.ts` e `src/features/manutencao/__tests__/manutencaoRepository.test.ts`. Iterações anteriores: `eff0160..6c72ffa`, branch `feat/eix-39-us06b-manutencao`
+**Iteração**: 3 (T9 / MAN-32). Iteração 1: FAIL por M16/MAN-40 (`eff0160..ff9ac6a`). Iteração 2: PASS (`6c72ffa`)
 **Verifier**: sub-agente independente (autor ≠ verificador)
 
-**Verdict**: PASS ✅ — iteração 2. O único gap da iteração 1 (M16, MAN-40: falha na carga dos veículos sem teste) foi corrigido em `6c72ffa`, só no teste; nenhum código de produção mudou (`git diff --stat ff9ac6a..6c72ffa`: 1 arquivo de teste).
+**Verdict**: PASS ✅ — iteração 3. A T9 troca o select direto em `forma_pagamento` pela RPC `listar_formas_pagamento_ativas`. O teste prova a chamada `rpc` e que `from()` não é chamado. Os 7 mutantes novos (M17–M22) morreram. O gate passa. Falta o commit e o teste manual com o Gestor de Frota, que ficam com o humano.
 
 ---
 
@@ -23,7 +23,7 @@
 | T7 | ✅ Done | `c6a16eb` detalhe + rota `/frota/[id]` |
 | T8 | ✅ Done | `ff9ac6a` lista |
 | Fix 1 | ✅ Done | `6c72ffa` teste de MAN-40 com as duas fontes |
-| T9 | ⏸️ Bloqueada | Depende de `supabase db push` + regerar `database.ts` (revisor). Fora desta verificação |
+| T9 | 🟡 Implementada, aguardando commit | Pré-requisito cumprido: tipos regerados em `d23b9f8` (`src/types/database.ts:474`). Código e teste no working tree, sem commit. Teste manual com o Gestor de Frota **não feito** (fica com o humano) |
 
 ---
 
@@ -37,7 +37,7 @@ Caminhos de teste abreviados: `F` = `src/features/manutencao/__tests__/`, `DB` =
 | --- | --- | --- | --- |
 | MAN-01 | Campos Veículo, Data, Descrição, Valor total, Forma de pagamento, Status (Pago/Pendente) | `F/ManutencaoFormView.test.tsx:81-87` - `findByRole('button',{name:'Veículo'})`, `getByLabelText('Data da manutenção')`, `'Descrição do serviço'`, `'Valor total'`, `getByRole('button',{name:'Forma de pagamento'})`, `getByRole('tab',{name:'Pendente'})` / `'Pago'` | ✅ PASS |
 | MAN-02 | Só status ≠ `Inativo`; rótulo "PLACA · Marca Modelo" | `F/manutencaoRepository.test.ts:307` - `expect(query.neq).toHaveBeenCalledWith('status','Inativo')`; `F/ManutencaoFormView.test.tsx:102-103` - `getByRole('button',{name:'ABC-1234 · Volvo FH 540'})` | ✅ PASS (nota: a placa sai formatada por `formatarPlaca`, ex. `ABC-1234`; o padrão do app) |
-| MAN-03 | Só formas ativas | `F/manutencaoRepository.test.ts:333` - `expect(query.eq).toHaveBeenCalledWith('ativa', true)`; `F/ManutencaoFormView.test.tsx:113-114` | ✅ PASS (provisório até a T9) |
+| MAN-03 | Só formas ativas | Cadeia em três elos. (1) Banco: `DB:29` semeia `Cheque` inativa e `DB:52` - `expect(resultado.rows).toEqual(ATIVAS_EM_ORDEM.map(...))` (Cheque fora). (2) Repositório chama essa RPC e devolve o resultado sem mexer: `F/manutencaoRepository.test.ts:331` - `expect(mockRpc).toHaveBeenCalledWith('listar_formas_pagamento_ativas')`, `:330` - `toEqual({ ok: true, data: formas })`. (3) Tela mostra o que o repositório devolve: `F/ManutencaoFormView.test.tsx:112-114` | ✅ PASS (iteração 3: o filtro saiu do app e mora na RPC; M1 e M17/M18/M22 provam os três elos) |
 | MAN-04 | Data = hoje no fuso do aparelho; status = Pendente | `F/schema.test.ts:32-39` - `expect(valoresIniciais()).toEqual({... dataManutencao:'18/10/2026', statusPagamento:'Pendente'})` às 23h30; `F/ManutencaoFormView.test.tsx:82,86` - `toHaveProp('value','18/10/2026')`, `tab Pendente toBeSelected()` | ✅ PASS |
 | MAN-05 | `registrar_manutencao` com valor em reais; Snackbar "Manutenção registrada. O veículo está em manutenção."; volta à lista | `F/manutencaoRepository.test.ts:104-112` - `toHaveBeenCalledWith('registrar_manutencao',{... valor:1.13 ...})`; `F/ManutencaoFormView.test.tsx:128-141` - payload completo, `getByRole('alert')).toHaveTextContent('Manutenção registrada. O veículo está em manutenção.')`, `mockBack toHaveBeenCalledTimes(1)` | ✅ PASS |
 | MAN-06 | Vazio ou zero → "Informe um valor maior que zero." | `F/schema.test.ts:58` - `toEqual(['Informe um valor maior que zero.'])`; `F/ManutencaoFormView.test.tsx:154,156` (campo vazio = 0) - `getByText(...)`, `mockRegistrar not.toHaveBeenCalled()` | ✅ PASS |
@@ -76,7 +76,7 @@ Caminhos de teste abreviados: `F` = `src/features/manutencao/__tests__/`, `DB` =
 | MAN-29 | Motorista ou não Ativo → `42501` | `DB:60` (Motorista), `DB:69` (Bloqueado, AguardandoAprovacao), `DB:77` (anon) - `toBe('42501')` | ✅ PASS |
 | MAN-30 | `revoke` de public/anon, `grant` a authenticated | `DB:88` - `has_function_privilege` → `toEqual([{anon:false, authenticated:true}])` (L-006) | ✅ PASS |
 | MAN-31 | `forma_pagamento_select` intacta | `DB:99` - select direto do Gestor `toEqual([])`; a migration não toca policy | ✅ PASS |
-| MAN-32 | Seletor via `supabase.rpc(...)` | — | ⏸️ Pendente (bloqueado na T9, fora desta verificação) |
+| MAN-32 | Seletor via `supabase.rpc('listar_formas_pagamento_ativas')` | `F/manutencaoRepository.test.ts:331` - `expect(mockRpc).toHaveBeenCalledWith('listar_formas_pagamento_ativas')`; `:332` - `expect(mockFrom).not.toHaveBeenCalled()`; erro: `:338` (mensagem padrão), `:347` (42501 → `MENSAGEM_ACESSO_NEGADO`), `:353` (Zod → `MENSAGEM_DADOS_INVALIDOS`). Única chamada do seletor: `src/features/manutencao/ManutencaoFormView.tsx:44` | ✅ PASS (iteração 3; teste manual com o Gestor pendente) |
 
 ### P1: Detalhe do veículo
 
@@ -98,7 +98,7 @@ Caminhos de teste abreviados: `F` = `src/features/manutencao/__tests__/`, `DB` =
 | MAN-41 | R$ 1,13 → `1.13` | `F/manutencaoRepository.test.ts:109` - `valor: 1.13` em `toHaveBeenCalledWith` (L-005) | ✅ PASS |
 | MAN-42 | Hoje às 23h30 SP é aceito | `F/schema.test.ts:5,72-75` - relógio fixo em 18/10 23h30 com `TZ=America/Sao_Paulo` (L-001) | ✅ PASS |
 
-**Status**: ✅ 41/41 requisitos verificáveis com evidência completa; MAN-32 pendente (T9, fora desta verificação).
+**Status**: ✅ 42/42 requisitos com evidência completa (iteração 3 inclui MAN-32). As citações de `F/manutencaoRepository.test.ts` anteriores à linha 321 não mudaram: o diff da T9 só toca o `describe('listarFormasPagamentoAtivas')`.
 
 ---
 
@@ -125,8 +125,22 @@ Scratch: `git worktree` em `<scratchpad>/eix39-sensor` (iteração 1, M1–M16 e
 | M15 | `src/features/manutencao/ManutencaoFormView.tsx:102` | Snackbar de sucesso com tom de erro (não volta) | ✅ Killed (MAN-05) |
 | M16 | `ManutencaoFormView.tsx:48` | Ignora a falha de `listarVeiculosSelecionaveis` (`const falha = !resultadoFormas.ok ? resultadoFormas : null`) | ✅ Killed na iteração 2 (1 failed / 72: "falha na carga dos veículos…"). Na iteração 1 sobreviveu (71/71) → Fix 1 |
 
-**Sensor depth**: P0 (dinheiro, data, autorização no banco) — 16 mutações manuais
-**Result**: 16/16 killed — PASS ✅
+### Iteração 3 (T9, working tree não commitado)
+
+Sem `git worktree` (a mudança não está em HEAD) e sem `git stash`. Cópia do original em `<scratchpad>/manutencaoRepository.orig.ts`; cada mutante foi escrito no arquivo real, rodou `npx jest src/features/manutencao --selectProjects app` (baseline: 5 suítes, 74 testes verdes) e o arquivo foi restaurado da cópia num `finally`. Depois: `cmp` do arquivo com a cópia igual, `git status --porcelain` e `git diff` iguais ao baseline capturado antes do sensor.
+
+| # | File:line | Description | Killed? |
+| - | --------- | ----------- | ------- |
+| M17 | `manutencaoRepository.ts:226` | Nome da RPC → `listar_formas_pagamento` | ✅ Killed (1 failed / 74: `:331`) |
+| M18 | `manutencaoRepository.ts:226` | Volta ao `from('forma_pagamento').select('id, nome').eq('ativa', true).order('nome')` | ✅ Killed (4 failed / 74: os 4 testes do describe) |
+| M19a | `manutencaoRepository.ts:228-230` | Remove o ramo `if (error)` | ✅ Killed (2 failed / 74: `:338`, `:347`) |
+| M19b | `manutencaoRepository.ts:229` | Mensagem padrão → "Não foi possível carregar os dados. Tente novamente." | ✅ Killed (1 failed / 74: `:338`) |
+| M20 | `manutencaoRepository.ts:232-236` | Remove o `safeParse` e devolve `data` cru | ✅ Killed (1 failed / 74: `:353`) |
+| M21 | `manutencaoRepository.ts:229` | Ignora `traduzirErro` (42501 cai na mensagem padrão) | ✅ Killed (1 failed / 74: `:347`) |
+| M22 | `manutencaoRepository.ts:236` | Inverte a lista devolvida (o app mexendo na ordem que a RPC define) | ✅ Killed (1 failed / 74: `:330`) |
+
+**Sensor depth**: P0 (dinheiro, data, autorização no banco) — 16 mutações manuais nas iterações 1–2, mais 7 na iteração 3
+**Result**: 23/23 killed — PASS ✅
 
 ---
 
@@ -162,8 +176,9 @@ Scratch: `git worktree` em `<scratchpad>/eix39-sensor` (iteração 1, M1–M16 e
 ## Gate Check
 
 - **Gate command**: `npm run typecheck && npm run lint && npm run test`
-- **typecheck**: exit 0
-- **lint**: exit 0
+- **Iteração 3** (`d23b9f8` + working tree da T9): `typecheck` exit 0; `lint` exit 0; `test` exit 0 — projeto `app` 97 suítes / **1057 testes**; projeto `supabase` 17 suítes / **311 testes**; 0 falhas, 0 skipped. A alta frente à iteração 2 vem do merge de `origin/main` (`8858ca5`, EIX-79) e dos commits `f018a79..d23b9f8`; na pasta `manutencao`, 74 testes (72 da iteração 2 + 2 novos no describe de formas: 42501 e resposta inválida). O aviso "worker process has failed to exit gracefully" no projeto `app` não falha o gate
+- **typecheck** (iteração 2): exit 0
+- **lint** (iteração 2): exit 0
 - **test** (iteração 2, em `6c72ffa`): exit 0 — projeto `app` 93 suítes / **936 testes** passaram; projeto `supabase` 17 suítes / **305 testes** passaram; 0 falhas, 0 skipped (iteração 1: 935 + 305; +1 = o novo caso do `it.each` de MAN-40)
 - **Test count before feature**: não medido; o diff remove `placeholders.test.tsx` (2 testes do placeholder da EIX-77, substituído pelas telas reais) e move `CampoData`/`CampoMoeda` tests sem alterar asserções
 - **Delta**: +5 arquivos de teste novos (72 testes na pasta `manutencao` após a iteração 2 + 9 no PGlite) e linhas novas em 2 testes de rota
@@ -189,21 +204,23 @@ Proposta (o Verifier não edita `spec.md`):
 
 | Requirement | Previous Status | New Status |
 | ----------- | --------------- | ---------- |
-| MAN-01 a MAN-31, MAN-33 a MAN-42 | Implementing | ✅ Verified |
-| MAN-32 | Pending | ⏸️ Pending (T9 bloqueada) |
+| MAN-01 a MAN-31, MAN-33 a MAN-42 | Verified | ✅ Verified (sem regressão na iteração 3) |
+| MAN-32 | Pending | ✅ Verified (iteração 3; depende do commit da T9 e do teste manual com o Gestor) |
 
 ---
 
 ## Summary
 
-**Overall**: ✅ Ready (iteração 2)
+**Overall**: ✅ Ready (iteração 3), condicionado ao commit da T9 e ao teste manual com o Gestor de Frota
 
-**Spec-anchored check**: 41/41 requisitos verificáveis com evidência completa; 0 spec-precision gaps; MAN-32 fora (T9)
-**Sensor**: 16/16 mutações mortas
-**Gate**: typecheck ✅, lint ✅, 936 + 305 testes verdes (iteração 2)
+**Spec-anchored check**: 42/42 requisitos com evidência completa; 0 spec-precision gaps
+**Sensor**: 23/23 mutações mortas (M17–M22 novas na iteração 3)
+**Gate**: typecheck ✅, lint ✅, 1057 + 311 testes verdes (iteração 3)
+
+**Iteração 3**: o seletor de formas usa `supabase.rpc('listar_formas_pagamento_ativas')` e não lê mais a tabela. A prova de "só ativas" (MAN-03) passou do teste do repositório para a cadeia RPC no PGlite (`DB:52`) → chamada da RPC sem transformar o resultado (`F/manutencaoRepository.test.ts:330-331`) → tela (`F/ManutencaoFormView.test.tsx:112-114`).
 
 **What works**: RPC de formas ativas (filtro, ordem, perfil, status, grants), conversão de centavos sem resíduo, data no fuso local às 23h30, reagrupamento da lista, textos de conclusão, loading por linha, tradução de todos os códigos de erro, detalhe do veículo e roteamento por perfil.
 
 **Issues found**: nenhum pendente. Fix 1 (iteração 1) resolvido em `6c72ffa`. Lição L-025 registrada na iteração 1.
 
-**Next steps**: T9 (db push + tipos regerados) pelo revisor; depois, verificar MAN-32.
+**Next steps**: commitar a T9 (`feat(manutencao): formas de pagamento pela RPC listar_formas_pagamento_ativas (EIX-39)`); teste manual com um Gestor de Frota (seletor lista as formas ativas e o registro salva); marcar MAN-32 como Verified no `spec.md`.

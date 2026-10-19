@@ -220,16 +220,10 @@ export async function listarVeiculosSelecionaveis(): Promise<Resultado<VeiculoRe
   return { ok: true, data: parsed.data };
 }
 
-// TODO(EIX-39, T9): trocar pelo `supabase.rpc('listar_formas_pagamento_ativas')` quando a migration
-// 20261018000200 estiver na nuvem e os tipos regerados. Enquanto isso, o select direto só
-// funciona para Admin e Financeiro: a policy `forma_pagamento_select` devolve lista vazia ao
-// Gestor de Frota.
+// Pela RPC, não pela tabela: o Gestor de Frota não lê `forma_pagamento` direto (AD-013). A função
+// (migration 20261018000200) devolve só id e nome das formas ativas, já ordenadas por nome.
 export async function listarFormasPagamentoAtivas(): Promise<Resultado<FormaPagamentoOpcao[]>> {
-  const { data, error } = await supabase
-    .from('forma_pagamento')
-    .select('id, nome')
-    .eq('ativa', true)
-    .order('nome');
+  const { data, error } = await supabase.rpc('listar_formas_pagamento_ativas');
 
   if (error) {
     return traduzirErro(error, { padrao: 'Não foi possível carregar as formas de pagamento. Tente novamente.' });
