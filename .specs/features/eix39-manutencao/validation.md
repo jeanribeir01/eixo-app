@@ -108,7 +108,7 @@ Scratch: `git worktree` em `<scratchpad>/eix39-sensor` (iteração 1, M1–M16 e
 
 | # | File:line | Description | Killed? |
 | - | --------- | ----------- | ------- |
-| M1 | `supabase/migrations/20261018000100_formas_pagamento_ativas.sql:33` | Remove `where f.ativa` | ✅ Killed (3 testes MAN-28) |
+| M1 | `supabase/migrations/20261018000200_formas_pagamento_ativas.sql:33` | Remove `where f.ativa` | ✅ Killed (3 testes MAN-28) |
 | M2 | `...formas_pagamento_ativas.sql:24` | Motorista incluído na checagem de perfil | ✅ Killed (MAN-29) |
 | M3 | `...formas_pagamento_ativas.sql:39` | Remove `revoke ... from public, anon` | ✅ Killed (MAN-30) |
 | M4 | `...formas_pagamento_ativas.sql:34` | Remove `order by f.nome` | ✅ Killed (MAN-28) |

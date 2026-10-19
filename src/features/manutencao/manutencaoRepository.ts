@@ -221,7 +221,7 @@ export async function listarVeiculosSelecionaveis(): Promise<Resultado<VeiculoRe
 }
 
 // TODO(EIX-39, T9): trocar pelo `supabase.rpc('listar_formas_pagamento_ativas')` quando a migration
-// 20261018000100 estiver na nuvem e os tipos regerados. Enquanto isso, o select direto só
+// 20261018000200 estiver na nuvem e os tipos regerados. Enquanto isso, o select direto só
 // funciona para Admin e Financeiro: a policy `forma_pagamento_select` devolve lista vazia ao
 // Gestor de Frota.
 export async function listarFormasPagamentoAtivas(): Promise<Resultado<FormaPagamentoOpcao[]>> {

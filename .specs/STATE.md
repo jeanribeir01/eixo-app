@@ -98,7 +98,7 @@
 - **Phase / Task**: T1..T8 concluídas; Verifier PASS (iteração 2, 16/16 mutantes mortos, `validation.md`). T9 bloqueada
 - **Completed**: e42962d..HEAD em `feat/eix-39-us06b-manutencao` (RPC `listar_formas_pagamento_ativas`, CampoData/CampoMoeda em `src/ui`, schema, repositório, formulário, detalhe `/frota/[id]` e lista)
 - **In-progress** (file:line): none
-- **Next step**: Jean aplica `20261018000100_formas_pagamento_ativas.sql` (`npx supabase db push`) e regera `src/types/database.ts` → T9: `listarFormasPagamentoAtivas` em `src/features/manutencao/manutencaoRepository.ts` passa para `supabase.rpc('listar_formas_pagamento_ativas')` → conferência curta do Verifier → merge
+- **Next step**: Jean aplica `20261018000200_formas_pagamento_ativas.sql` (`npx supabase db push`) e regera `src/types/database.ts` → T9: `listarFormasPagamentoAtivas` em `src/features/manutencao/manutencaoRepository.ts` passa para `supabase.rpc('listar_formas_pagamento_ativas')` → conferência curta do Verifier → merge
 - **Blockers**: db push + tipos regerados (esta máquina não tem a Supabase CLI vinculada). Até lá o Gestor de Frota vê o seletor de formas vazio
 - **Uncommitted files**: none
 - **Branch**: feat/eix-39-us06b-manutencao

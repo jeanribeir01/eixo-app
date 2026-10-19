@@ -1,5 +1,5 @@
 /** @jest-environment node */
-// Testes da migration 20261018000100_formas_pagamento_ativas.sql — EIX-39 (US06-b).
+// Testes da migration 20261018000200_formas_pagamento_ativas.sql — EIX-39 (US06-b).
 // O Gestor de Frota escolhe a forma de pagamento da manutenção sem ganhar leitura da tabela
 // `forma_pagamento`: a RPC devolve só id e nome das ativas, e a policy da tabela não muda.
 

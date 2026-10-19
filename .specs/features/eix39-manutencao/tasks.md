@@ -89,7 +89,7 @@ T5 → T9
 ### T1: RPC `listar_formas_pagamento_ativas`
 
 **What**: Migration nova com a função `security definer` que devolve `id` e `nome` das formas ativas para Admin, Financeiro e Gestor de Frota, com revoke/grant, e o teste PGlite dela.
-**Where**: `supabase/migrations/20261018000100_formas_pagamento_ativas.sql`
+**Where**: `supabase/migrations/20261018000200_formas_pagamento_ativas.sql`
 **Depends on**: None
 **Reuses**: `supabase/migrations/20261014000300_manutencao_rpc.sql` (checagem de perfil, `search_path`, revoke/grant), `supabase/tests/manutencao.test.ts` e `supabase/tests/helpers/db.ts`
 **Requirement**: MAN-28, MAN-29, MAN-30, MAN-31
