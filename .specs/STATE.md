@@ -103,11 +103,11 @@
 ### EIX-39 — US06-b Manutenção
 
 - **Feature**: `.specs/features/eix39-manutencao` (EIX-39, US06-b Manutenção)
-- **Phase / Task**: T1..T8 concluídas; Verifier PASS (iteração 2, 16/16 mutantes mortos, `validation.md`). T9 bloqueada
-- **Completed**: e42962d..HEAD em `feat/eix-39-us06b-manutencao` (RPC `listar_formas_pagamento_ativas`, CampoData/CampoMoeda em `src/ui`, schema, repositório, formulário, detalhe `/frota/[id]` e lista)
+- **Phase / Task**: T1..T9 concluídas; Verifier PASS (iteração 3, 23/23 mutantes mortos, `validation.md`). Teste manual do Gestor de Frota feito em 2026-10-19
+- **Completed**: e42962d..HEAD em `feat/eix-39-us06b-manutencao` (RPC `listar_formas_pagamento_ativas`, CampoData/CampoMoeda em `src/ui`, schema, repositório, formulário, detalhe `/frota/[id]`, lista e seletor de formas pela RPC em `b2c4a16`)
 - **In-progress** (file:line): none
-- **Next step**: Jean aplica `20261018000200_formas_pagamento_ativas.sql` e `20261018000300_remove_forma_pagamento_select_gestor.sql` (`npx supabase db push`, AD-013) e regera `src/types/database.ts` → T9: `listarFormasPagamentoAtivas` em `src/features/manutencao/manutencaoRepository.ts` passa para `supabase.rpc('listar_formas_pagamento_ativas')` → conferência curta do Verifier → merge
-- **Blockers**: db push + tipos regerados (esta máquina não tem a Supabase CLI vinculada). Hoje o seletor do Gestor funciona pela policy do #37; depois do push ele fica vazio até a T9, que entra neste PR antes do merge
+- **Next step**: abrir/atualizar o PR, aprovação de outro dev e Squash and merge
+- **Blockers**: none
 - **Uncommitted files**: none
 - **Branch**: feat/eix-39-us06b-manutencao
 

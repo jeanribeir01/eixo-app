@@ -318,7 +318,7 @@ T5 → T9
 
 - [x] Pré-requisito externo: migration da T1 aplicada na nuvem e `src/types/database.ts` regerado com a função
 - [x] Teste do repositório prova a chamada `rpc` e nenhum `from('forma_pagamento')`
-- [ ] Teste manual com Gestor de Frota: seletor lista as formas ativas e o registro salva
+- [x] Teste manual com Gestor de Frota: seletor lista as formas ativas e o registro salva
 - [x] Gate check passes: `npm run typecheck && npm run lint && npm run test`
 
 **Tests**: unit
