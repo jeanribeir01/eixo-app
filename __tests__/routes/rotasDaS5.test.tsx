@@ -6,6 +6,7 @@ import VeiculosRoute from '../../app/(app)/frota/veiculos';
 import ManutencoesRoute from '../../app/(app)/manutencoes/index';
 import NovaManutencaoRoute from '../../app/(app)/manutencoes/nova';
 import EditarRotaRoute from '../../app/(app)/rotas/[id]/editar';
+import RotaDetalheRoute from '../../app/(app)/rotas/[id]/index';
 import RotasRoute from '../../app/(app)/rotas/index';
 import NovaRotaRoute from '../../app/(app)/rotas/nova';
 import FecharViagemRoute from '../../app/(app)/viagens/[id]/fechar';
@@ -22,6 +23,7 @@ jest.mock('expo-router', () => ({ useLocalSearchParams: () => ({ id: 'id-1' }) }
 jest.mock('@/features/veiculos/VeiculosListView', () => ({ VeiculosListView: mockStub('VeiculosListView') }));
 jest.mock('@/features/rotas/RotasListView', () => ({ RotasListView: mockStub('RotasListView') }));
 jest.mock('@/features/rotas/RotaFormView', () => ({ RotaFormView: mockStub('RotaFormView') }));
+jest.mock('@/features/rotas/RotaDetalheView', () => ({ RotaDetalheView: mockStub('RotaDetalheView') }));
 jest.mock('@/features/manutencao/ManutencoesListView', () => ({ ManutencoesListView: mockStub('ManutencoesListView') }));
 jest.mock('@/features/manutencao/ManutencaoFormView', () => ({ ManutencaoFormView: mockStub('ManutencaoFormView') }));
 jest.mock('@/features/viagens/ViagensListView', () => ({ ViagensListView: mockStub('ViagensListView') }));
@@ -33,6 +35,7 @@ describe('rotas da S5 renderizam a view da feature (NAV5-11)', () => {
     ['frota/veiculos', VeiculosRoute, 'VeiculosListView {}'],
     ['rotas/index', RotasRoute, 'RotasListView {}'],
     ['rotas/nova', NovaRotaRoute, 'RotaFormView {}'],
+    ['rotas/[id]/index', RotaDetalheRoute, 'RotaDetalheView {"id":"id-1"}'],
     ['rotas/[id]/editar', EditarRotaRoute, 'RotaFormView {"rotaId":"id-1"}'],
     ['manutencoes/index', ManutencoesRoute, 'ManutencoesListView {}'],
     ['manutencoes/nova', NovaManutencaoRoute, 'ManutencaoFormView {}'],

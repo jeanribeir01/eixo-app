@@ -3,7 +3,7 @@
   "promote_threshold": 2,
   "window_days": 45,
   "quarantine_threshold": 2,
-  "next_id": 25,
+  "next_id": 28,
   "lessons": [
     {
       "id": "L-001",
@@ -442,6 +442,60 @@
       ],
       "created": "2026-10-16T11:41:56Z",
       "last_seen": "2026-10-16T11:41:56Z"
+    },
+    {
+      "id": "L-025",
+      "key": "surviving_mutant::test a bounding box with points on both diagonals so min max per axis is proven not just one corner ordering",
+      "text": "Test a bounding box with points on both diagonals so min/max per axis is proven, not just one corner ordering",
+      "signal": "surviving_mutant",
+      "scope": "maps",
+      "status": "candidate",
+      "features": [
+        "eix80-mapa-rota"
+      ],
+      "recurrence": 1,
+      "harmful": 0,
+      "evidence": [
+        "M2 src/features/rotas/mapa/MapaRota.tsx:53 (maps)"
+      ],
+      "created": "2026-10-18T19:24:16Z",
+      "last_seen": "2026-10-18T19:24:16Z"
+    },
+    {
+      "id": "L-026",
+      "key": "surviving_mutant::when a key forces a remount because a prop only applies on mount assert the remount itself not just the re rendered text",
+      "text": "When a key forces a remount because a prop only applies on mount, assert the remount itself, not just the re-rendered text",
+      "signal": "surviving_mutant",
+      "scope": "screens",
+      "status": "candidate",
+      "features": [
+        "eix80-mapa-rota"
+      ],
+      "recurrence": 1,
+      "harmful": 0,
+      "evidence": [
+        "M16 src/features/rotas/RotaDetalheView.tsx:68 (screens)"
+      ],
+      "created": "2026-10-18T19:24:16Z",
+      "last_seen": "2026-10-18T19:24:16Z"
+    },
+    {
+      "id": "L-027",
+      "key": "spec_precision_gap::state in the spec what an updated map or chart must show after reload not just that it is updated",
+      "text": "State in the spec what an updated map or chart must show after reload, not just that it is updated",
+      "signal": "spec_precision_gap",
+      "scope": "spec",
+      "status": "candidate",
+      "features": [
+        "eix80-mapa-rota"
+      ],
+      "recurrence": 1,
+      "harmful": 0,
+      "evidence": [
+        "MAPA-20 src/features/rotas/__tests__/RotaDetalheView.test.tsx:91 (spec)"
+      ],
+      "created": "2026-10-18T19:24:16Z",
+      "last_seen": "2026-10-18T19:24:16Z"
     }
   ]
 }

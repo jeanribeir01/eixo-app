@@ -156,6 +156,24 @@ Seen once or not yet corroborated. Tracked, not trusted.
 - evidence: spec.md Edge Cases 1 vs NAV5-07/NAV5-10 (navigation, specs)
 - last seen: 2026-10-16T11:41:56Z
 
+### L-025 - Test a bounding box with points on both diagonals so min/max per axis is proven, not just one corner ordering
+- signal: `surviving_mutant` · recurrence: 1 feature(s) · scope: `maps` · harmful: 0
+- features: eix80-mapa-rota
+- evidence: M2 src/features/rotas/mapa/MapaRota.tsx:53 (maps)
+- last seen: 2026-10-18T19:24:16Z
+
+### L-026 - When a key forces a remount because a prop only applies on mount, assert the remount itself, not just the re-rendered text
+- signal: `surviving_mutant` · recurrence: 1 feature(s) · scope: `screens` · harmful: 0
+- features: eix80-mapa-rota
+- evidence: M16 src/features/rotas/RotaDetalheView.tsx:68 (screens)
+- last seen: 2026-10-18T19:24:16Z
+
+### L-027 - State in the spec what an updated map or chart must show after reload, not just that it is updated
+- signal: `spec_precision_gap` · recurrence: 1 feature(s) · scope: `spec` · harmful: 0
+- features: eix80-mapa-rota
+- evidence: MAPA-20 src/features/rotas/__tests__/RotaDetalheView.test.tsx:91 (spec)
+- last seen: 2026-10-18T19:24:16Z
+
 ## Quarantined (failed when applied - ignore)
 
 A confirmed lesson that recurred alongside failure. Kept for the maintainer to review.
