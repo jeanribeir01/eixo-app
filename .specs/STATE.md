@@ -82,7 +82,17 @@
 - **Date**: 2026-10-16
 - **Status**: active
 
+### AD-011
+- **Decision**: O Gestor de Frota lê `forma_pagamento`, só as linhas com `ativa = true`, por uma policy própria (`forma_pagamento_select_gestor`). Continua sem gravar `forma_pagamento` e sem ler `movimentacao`, `divida` e `categoria`. Revê, só para `forma_pagamento`, a decisão da EIX-32 de bloquear o Gestor em todas as tabelas financeiras (RLS-06).
+- **Reason**: O formulário da US06-b (EIX-39) exige Forma de Pagamento, e quem registra manutenção é o Gestor (`registrar_manutencao` aceita Admin e Gestor). Com a policy da EIX-27, o seletor do Gestor vinha vazio. Mostrar só as ativas é o que o seletor precisa; forma inativa a RPC já recusa com `22023`.
+- **Trade-off**: O Gestor passa a ver os nomes das formas ativas (Pix, Boleto…), que não são dado financeiro sensível. A categoria "Manutenção" não precisou da mesma exceção, porque a RPC a acha sozinha como `security definer`.
+- **Scope**: `supabase/migrations/20261018000100_forma_pagamento_select_gestor.sql`, `supabase/tests/rls_perfis.test.ts` (RLS-06, RLS-17), EIX-39.
+- **Date**: 2026-10-18
+- **Status**: active
+
 ## Handoff
+
+### EIX-39 — US06-b Manutenção
 
 - **Feature**: `.specs/features/eix39-manutencao` (EIX-39, US06-b Manutenção)
 - **Phase / Task**: T1..T8 concluídas; Verifier PASS (iteração 2, 16/16 mutantes mortos, `validation.md`). T9 bloqueada
@@ -92,3 +102,14 @@
 - **Blockers**: db push + tipos regerados (esta máquina não tem a Supabase CLI vinculada). Até lá o Gestor de Frota vê o seletor de formas vazio
 - **Uncommitted files**: none
 - **Branch**: feat/eix-39-us06b-manutencao
+
+### EIX-79 — ano e inativação de veículos
+
+- **Feature**: `.specs/features/eix79-ano-inativar` (EIX-79)
+- **Phase / Task**: T1..T6 concluídas; entrega por commit, push e PR autorizada explicitamente em 18/10/2026
+- **Completed**: ano obrigatório, null legado, tradução 23514, inativação condicional, preservação de Inativo e selecionáveis. Typecheck/lint verdes; nova execução de 900 testes app e 300 backend aprovada. Verifier independente e sensor 6/6 preservados de 16/10. Supabase isolado com Auth/RLS reais, quatro perfis e concorrência validados; APK instalado no Pixel 7 e smoke UI Admin executado (cadastro, edição, limites 1949/1950/2027, teclado/scroll, confirmação/cancelamento, Snackbar, filtros e persistência)
+- **In-progress** (file:line): `.specs/features/eix79-ano-inativar/validation.md` — evidências finais registradas; preparação da entrega
+- **Next step**: revisão de Jean no PR para main; aceite humano, tablet/TalkBack e observação visual do loading continuam pendentes, conforme relatório
+- **Blockers**: nenhum bloqueio de implementação; testes de dispositivo físico e aceite humano não executados
+- **Uncommitted files**: somente feature veiculos, testes RLS e artefatos desta especificação; arquivos locais de sandbox/build/env ignorados
+- **Branch**: feat/eix-79-us06-ano-inativar; base eff0160; Linear inalterado. Supabase local e build nativo em diretórios separados, fora do repositório; login local pela flag que já existe no `.env.local`, sem desvio no código

@@ -1,14 +1,15 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useFocusEffect, useRouter } from 'expo-router';
-import { ActivityIndicator, FlatList } from 'react-native';
+import { ActivityIndicator, Alert, FlatList, ScrollView } from 'react-native';
 
-import { Badge, Button, Column, EmptyState, Input, ListItem, Screen, Tabs, Text, colors, type BadgeTone } from '@/ui';
+import { Badge, Button, Column, EmptyState, Input, ListItem, Screen, Snackbar, Tabs, Text, colors, type BadgeTone } from '@/ui';
 
 import { formatarPlaca } from './placa';
-import { listarVeiculos } from './repository';
+import { inativarVeiculo, listarVeiculos } from './repository';
 import { STATUS_VEICULO, rotuloStatusVeiculo, type StatusVeiculo, type Veiculo } from './types';
 
 type Status = 'carregando' | 'pronto' | 'erro';
+type Feedback = { mensagem: string; tone: 'success' | 'error' };
 
 // Chip por status (critério da US06). Vermelho/verde são reservados para entrada/saída
 // financeira (DESIGN_CYAN §1, CLAUDE.md §8), então "Em Manutenção" fica neutro; o rótulo
@@ -42,6 +43,9 @@ export function VeiculosListView() {
   const [busca, setBusca] = useState('');
   const [buscaAplicada, setBuscaAplicada] = useState('');
   const [filtroStatus, setFiltroStatus] = useState<string>(TODOS);
+  const [inativandoId, setInativandoId] = useState<string | null>(null);
+  const [feedback, setFeedback] = useState<Feedback | null>(null);
+  const operacaoPendente = useRef(false);
   // Descarta respostas fora de ordem: se o usuário troca o filtro rápido, só a última vale.
   const ultimaRequisicao = useRef(0);
 
@@ -69,6 +73,38 @@ export function VeiculosListView() {
     setStatus('pronto');
   }, [buscaAplicada, filtroStatus]);
 
+  // A confirmação pode permanecer aberta enquanto a busca/filtro muda.
+  const carregarAtual = useRef(carregar);
+  useEffect(() => {
+    carregarAtual.current = carregar;
+  }, [carregar]);
+
+  async function inativar(veiculo: Veiculo) {
+    if (operacaoPendente.current) return;
+    operacaoPendente.current = true;
+    setInativandoId(veiculo.id);
+    try {
+      const resultado = await inativarVeiculo(veiculo.id);
+      if (!resultado.ok) {
+        setFeedback({ mensagem: resultado.mensagem, tone: 'error' });
+        return;
+      }
+      setFeedback({ mensagem: 'Veículo inativado.', tone: 'success' });
+      await carregarAtual.current();
+    } finally {
+      operacaoPendente.current = false;
+      setInativandoId(null);
+    }
+  }
+
+  function confirmarInativacao(veiculo: Veiculo) {
+    if (operacaoPendente.current) return;
+    Alert.alert('Inativar veículo?', `${formatarPlaca(veiculo.placa)} deixará de aparecer nas seleções de viagens e manutenções. O histórico será preservado.`, [
+      { text: 'Cancelar', style: 'cancel' },
+      { text: 'Inativar', style: 'destructive', onPress: () => inativar(veiculo) },
+    ]);
+  }
+
   // Recarrega ao voltar da criação/edição (a tela não desmonta na pilha) e quando busca/filtro mudam.
   useFocusEffect(
     useCallback(() => {
@@ -80,7 +116,7 @@ export function VeiculosListView() {
 
   return (
     // Tela interna, aberta pelo hub de Frota (EIX-77): o título "Veículos" vem do header nativo.
-    <Screen underHeader>
+    <Screen underHeader overlay={feedback && <Snackbar message={feedback.mensagem} tone={feedback.tone} onDismiss={() => setFeedback(null)} />}>
       <Input
         label="Buscar"
         placeholder="Buscar por placa ou modelo"
@@ -90,7 +126,9 @@ export function VeiculosListView() {
         autoCorrect={false}
       />
 
-      <Tabs options={opcoesFiltro} value={filtroStatus} onChange={setFiltroStatus} accessibilityLabel="Filtrar por status" />
+      <ScrollView horizontal style={{ flexGrow: 0 }} keyboardShouldPersistTaps="handled">
+        <Tabs options={opcoesFiltro} value={filtroStatus} onChange={setFiltroStatus} accessibilityLabel="Filtrar por status" />
+      </ScrollView>
 
       {/* Único elemento cyan preenchido da tela: a ação primária (DESIGN_CYAN §1). */}
       <Button label="Novo veículo" onPress={() => router.push('/frota/novo')} />
@@ -136,8 +174,9 @@ export function VeiculosListView() {
                     variant="ghost"
                     onPress={() => router.push(`/frota/${item.id}/editar`)}
                   />
-                  {/* TODO(EIX-37): botão "Inativar" (soft delete) — o status "Inativo" já existe
-                      no banco desde a EIX-56. */}
+                  {item.status === 'Disponivel' && (
+                    <Button label="Inativar" variant="ghost" onPress={() => confirmarInativacao(item)} loading={inativandoId === item.id} disabled={inativandoId !== null} />
+                  )}
                 </Column>
               </Column>
             </ListItem>

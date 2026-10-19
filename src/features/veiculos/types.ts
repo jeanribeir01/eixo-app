@@ -4,15 +4,14 @@ import type { Enums, Tables } from '@/types/database';
 // tabela na mão (AGENTS.md §2.2, CLAUDE.md §12).
 //
 // "Inativo" (soft delete do veículo) entrou no enum pela migration da EIX-56.
-// TODO(EIX-37): incluir "Inativo" em STATUS_VEICULO quando o botão Inativar existir.
 export type StatusVeiculo = Enums<'status_veiculo'>;
 
-// TODO(EIX-37): a coluna `ano_fabricacao` já existe (EIX-56); falta incluí-la aqui, no schema Zod
-// e no formulário.
 // Só as colunas que a tela usa; data_inclusao/data_atualizacao ficam no banco.
-export type Veiculo = Pick<Tables<'veiculo'>, 'id' | 'placa' | 'marca' | 'modelo' | 'capacidade_carga' | 'status'>;
+export type Veiculo = Pick<Tables<'veiculo'>, 'id' | 'placa' | 'marca' | 'modelo' | 'ano_fabricacao' | 'capacidade_carga' | 'status'>;
 
-export type VeiculoInput = Pick<Veiculo, 'placa' | 'marca' | 'modelo' | 'capacidade_carga' | 'status'>;
+export type VeiculoInput = Pick<Veiculo, 'placa' | 'marca' | 'modelo' | 'capacidade_carga' | 'status'> & {
+  ano_fabricacao: NonNullable<Veiculo['ano_fabricacao']>;
+};
 
 export type FiltroVeiculos = {
   busca?: string; // compara com placa (normalizada) e modelo, sem diferenciar maiúsculas/minúsculas
@@ -27,5 +26,5 @@ export const rotuloStatusVeiculo: Record<StatusVeiculo, string> = {
   Inativo: 'Inativo',
 };
 
-// Ordem fixa usada nos filtros e no formulário.
-export const STATUS_VEICULO: StatusVeiculo[] = ['Disponivel', 'EmViagem', 'EmManutencao'];
+// O formulário tem opções próprias: inativação exige botão e confirmação.
+export const STATUS_VEICULO: StatusVeiculo[] = ['Disponivel', 'EmViagem', 'EmManutencao', 'Inativo'];
