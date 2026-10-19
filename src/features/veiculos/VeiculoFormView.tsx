@@ -10,12 +10,12 @@ import { atualizarVeiculo, buscarVeiculoPorId, criarVeiculo } from './repository
 import { veiculoSchema } from './schema';
 import { STATUS_VEICULO, rotuloStatusVeiculo, type StatusVeiculo } from './types';
 
-type Campo = 'placa' | 'marca' | 'modelo' | 'capacidade_carga' | 'status';
+type Campo = 'placa' | 'marca' | 'modelo' | 'ano_fabricacao' | 'capacidade_carga' | 'status';
 type Erros = Partial<Record<Campo, string>>;
 type Feedback = { mensagem: string; tone: 'success' | 'error' };
 type StatusCarga = 'carregando' | 'pronto' | 'erro';
 
-const opcoesStatus = STATUS_VEICULO.map((status) => ({ label: rotuloStatusVeiculo[status], value: status }));
+const opcoesStatus = STATUS_VEICULO.filter((status) => status !== 'Inativo').map((status) => ({ label: rotuloStatusVeiculo[status], value: status }));
 
 // Placa tem 7 caracteres nos dois formatos; o hífen da antiga é o 8º, só visual.
 const TAMANHO_PLACA = 7;
@@ -45,11 +45,13 @@ export function VeiculoFormView({ veiculoId }: VeiculoFormViewProps) {
   const [placa, setPlaca] = useState('');
   const [marca, setMarca] = useState('');
   const [modelo, setModelo] = useState('');
+  const [anoFabricacao, setAnoFabricacao] = useState('');
   const [capacidade, setCapacidade] = useState('');
   const [statusVeiculo, setStatusVeiculo] = useState<StatusVeiculo>('Disponivel');
   const [erros, setErros] = useState<Erros>({});
   const [salvando, setSalvando] = useState(false);
   const [feedback, setFeedback] = useState<Feedback | null>(null);
+  const [tentativa, setTentativa] = useState(0);
 
   useEffect(() => {
     if (!veiculoId) return;
@@ -70,6 +72,7 @@ export function VeiculoFormView({ veiculoId }: VeiculoFormViewProps) {
       setPlaca(formatarPlaca(resultado.data.placa));
       setMarca(resultado.data.marca);
       setModelo(resultado.data.modelo);
+      setAnoFabricacao(resultado.data.ano_fabricacao === null ? '' : String(resultado.data.ano_fabricacao));
       setCapacidade(capacidadeParaTexto(resultado.data.capacidade_carga));
       setStatusVeiculo(resultado.data.status);
       setStatus('pronto');
@@ -80,13 +83,15 @@ export function VeiculoFormView({ veiculoId }: VeiculoFormViewProps) {
     return () => {
       cancelado = true;
     };
-  }, [veiculoId]);
+  }, [veiculoId, tentativa]);
 
   async function handleSalvar() {
+    if (salvando) return;
     const resultado = veiculoSchema.safeParse({
       placa,
       marca,
       modelo,
+      ano_fabricacao: anoFabricacao,
       capacidade_carga: capacidade,
       status: statusVeiculo,
     });
@@ -97,6 +102,7 @@ export function VeiculoFormView({ veiculoId }: VeiculoFormViewProps) {
         placa: fieldErrors.placa?.[0],
         marca: fieldErrors.marca?.[0],
         modelo: fieldErrors.modelo?.[0],
+        ano_fabricacao: fieldErrors.ano_fabricacao?.[0],
         capacidade_carga: fieldErrors.capacidade_carga?.[0],
         status: fieldErrors.status?.[0],
       });
@@ -138,7 +144,8 @@ export function VeiculoFormView({ veiculoId }: VeiculoFormViewProps) {
   if (status === 'erro') {
     return (
       <Screen align="center" underHeader>
-        <EmptyState title="Não foi possível carregar o veículo" description={erroCarga ?? undefined} actionLabel="Voltar" onAction={() => router.back()} />
+        <EmptyState title="Não foi possível carregar o veículo" description={erroCarga ?? undefined} actionLabel="Tentar novamente" onAction={() => setTentativa((atual) => atual + 1)} />
+        <Button label="Voltar" variant="ghost" onPress={() => router.back()} />
       </Screen>
     );
   }
@@ -162,8 +169,7 @@ export function VeiculoFormView({ veiculoId }: VeiculoFormViewProps) {
         />
         <Input label="Marca" placeholder="Ex.: Volvo" value={marca} onChangeText={setMarca} error={erros.marca} />
         <Input label="Modelo" placeholder="Ex.: FH 540" value={modelo} onChangeText={setModelo} error={erros.modelo} />
-        {/* TODO(EIX-37): campo "Ano de Fabricação" (1950 até ano atual + 1) depende de uma migration
-            que ainda não existe — a tabela `veiculo` não tem a coluna `ano_fabricacao`. */}
+        <Input label="Ano de Fabricação" placeholder="Ex.: 2020" value={anoFabricacao} onChangeText={setAnoFabricacao} keyboardType="number-pad" error={erros.ano_fabricacao} />
         <Input
           label="Capacidade de carga (toneladas)"
           placeholder="Ex.: 12,5"
@@ -177,13 +183,16 @@ export function VeiculoFormView({ veiculoId }: VeiculoFormViewProps) {
           <Text variant="bodySm" tone="body" weight="medium">
             Status
           </Text>
-          {/* TODO(EIX-37): "Inativo" já existe no enum (EIX-56); fica fora das opções até o botão Inativar. */}
-          <Tabs
-            options={opcoesStatus}
-            value={statusVeiculo}
-            onChange={(valor) => setStatusVeiculo(valor as StatusVeiculo)}
-            accessibilityLabel="Status do veículo"
-          />
+          {statusVeiculo === 'Inativo' ? (
+            <Text>Inativo</Text>
+          ) : (
+            <Tabs
+              options={opcoesStatus}
+              value={statusVeiculo}
+              onChange={(valor) => setStatusVeiculo(valor as StatusVeiculo)}
+              accessibilityLabel="Status do veículo"
+            />
+          )}
           {!!erros.status && (
             <Text accessibilityRole="alert" variant="bodySm">
               {erros.status}

@@ -1,7 +1,8 @@
-import { fireEvent, render, screen, waitFor } from '@testing-library/react-native';
+import { act, fireEvent, render, screen, waitFor } from '@testing-library/react-native';
+import { Alert, ScrollView } from 'react-native';
 
 import { VeiculosListView } from '../VeiculosListView';
-import { listarVeiculos } from '../repository';
+import { inativarVeiculo, listarVeiculos } from '../repository';
 
 // O runner do GitHub Actions é mais lento que a máquina local: o padrão de 5s estourava no CI.
 jest.setTimeout(15000);
@@ -21,6 +22,7 @@ jest.mock('expo-router', () => {
 
 jest.mock('../repository', () => ({
   listarVeiculos: jest.fn(),
+  inativarVeiculo: jest.fn(),
 }));
 
 const veiculosMock = [
@@ -29,9 +31,116 @@ const veiculosMock = [
 ];
 
 describe('VeiculosListView', () => {
+  let alerta: jest.SpyInstance;
   beforeEach(() => {
     mockPush.mockReset();
     (listarVeiculos as jest.Mock).mockReset();
+    (inativarVeiculo as jest.Mock).mockReset();
+    alerta = jest.spyOn(Alert, 'alert').mockImplementation(() => {});
+  });
+
+  afterEach(() => alerta.mockRestore());
+
+  async function confirmar() {
+    await act(async () => {
+      const botoes = alerta.mock.calls[alerta.mock.calls.length - 1][2];
+      botoes.find((botao: { text: string }) => botao.text === 'Inativar').onPress();
+    });
+  }
+
+  it('confirma antes de inativar e cancelar não altera dados (INA-04/05)', async () => {
+    (listarVeiculos as jest.Mock).mockResolvedValue({ ok: true, data: veiculosMock });
+    render(<VeiculosListView />);
+    await screen.findByText('ABC-1234');
+    fireEvent.press(screen.getByRole('button', { name: 'Inativar' }));
+    expect(alerta).toHaveBeenCalledWith('Inativar veículo?', expect.stringContaining('ABC-1234'), [
+      expect.objectContaining({ text: 'Cancelar', style: 'cancel' }),
+      expect.objectContaining({ text: 'Inativar', style: 'destructive', onPress: expect.any(Function) }),
+    ]);
+    // Cancelar fecha apenas o diálogo nativo; não há mutação antes de confirmar.
+    expect(inativarVeiculo).not.toHaveBeenCalled();
+    expect(screen.getByText('ABC-1234')).toBeOnTheScreen();
+  });
+
+  it('sucesso atualiza status e mostra Snackbar (INA-06)', async () => {
+    const inativo = { ...veiculosMock[0], status: 'Inativo' };
+    (listarVeiculos as jest.Mock)
+      .mockResolvedValueOnce({ ok: true, data: veiculosMock })
+      .mockResolvedValue({ ok: true, data: [inativo, veiculosMock[1]] });
+    (inativarVeiculo as jest.Mock).mockResolvedValue({ ok: true, data: inativo });
+    render(<VeiculosListView />);
+    await screen.findByText('ABC-1234');
+    fireEvent.press(screen.getByRole('button', { name: 'Inativar' }));
+    await confirmar();
+    expect(inativarVeiculo).toHaveBeenCalledWith('1');
+    expect(screen.getByText('Veículo inativado.')).toBeOnTheScreen();
+    expect(screen.getAllByText('Inativo')).toHaveLength(2);
+    expect(screen.queryByRole('button', { name: 'Inativar' })).toBeNull();
+  });
+
+  it('respeita filtro Disponível ao atualizar após inativar (INA-06)', async () => {
+    (listarVeiculos as jest.Mock).mockResolvedValue({ ok: true, data: [veiculosMock[0]] });
+    (inativarVeiculo as jest.Mock).mockResolvedValue({ ok: true, data: { ...veiculosMock[0], status: 'Inativo' } });
+    render(<VeiculosListView />);
+    await screen.findByText('ABC-1234');
+    fireEvent.press(screen.getByRole('tab', { name: 'Disponível' }));
+    await waitFor(() => expect(listarVeiculos).toHaveBeenLastCalledWith({ busca: undefined, status: 'Disponivel' }));
+    await screen.findByRole('button', { name: 'Inativar' });
+    (listarVeiculos as jest.Mock).mockResolvedValue({ ok: true, data: [] });
+    fireEvent.press(screen.getByRole('button', { name: 'Inativar' }));
+    await confirmar();
+    expect(screen.queryByText('ABC-1234')).toBeNull();
+    expect(screen.getByText('Nenhum veículo encontrado')).toBeOnTheScreen();
+    expect(listarVeiculos).toHaveBeenLastCalledWith({ busca: undefined, status: 'Disponivel' });
+  });
+
+  it('pendente exibe loading e impede confirmação repetida (INA-03)', async () => {
+    let concluir: (value: unknown) => void = () => {};
+    (listarVeiculos as jest.Mock).mockResolvedValue({ ok: true, data: veiculosMock });
+    (inativarVeiculo as jest.Mock).mockReturnValue(new Promise((resolve) => { concluir = resolve; }));
+    render(<VeiculosListView />);
+    await screen.findByText('ABC-1234');
+    fireEvent.press(screen.getByRole('button', { name: 'Inativar' }));
+    await confirmar();
+    expect(screen.getByRole('button', { name: 'Inativar' })).toBeDisabled();
+    expect(screen.getByTestId('button-loading')).toBeOnTheScreen();
+    await confirmar();
+    expect(inativarVeiculo).toHaveBeenCalledTimes(1);
+    await act(async () => concluir({ ok: false, mensagem: 'Falha de rede.' }));
+    expect(screen.getByText('Falha de rede.')).toBeOnTheScreen();
+    expect(screen.getByRole('button', { name: 'Inativar' })).not.toBeDisabled();
+  });
+
+  it('falha ou concorrência preserva veículo e mostra erro (INA-02/07)', async () => {
+    (listarVeiculos as jest.Mock).mockResolvedValue({ ok: true, data: veiculosMock });
+    (inativarVeiculo as jest.Mock).mockResolvedValue({ ok: false, mensagem: 'Veículo não está mais disponível.' });
+    render(<VeiculosListView />);
+    await screen.findByText('ABC-1234');
+    fireEvent.press(screen.getByRole('button', { name: 'Inativar' }));
+    await confirmar();
+    expect(screen.getByText('Veículo não está mais disponível.')).toBeOnTheScreen();
+    expect(screen.getByText('ABC-1234')).toBeOnTheScreen();
+    expect(screen.queryByText('Veículo inativado.')).toBeNull();
+  });
+
+  it('não oferece inativação para ocupado ou inativo (INA-08)', async () => {
+    (listarVeiculos as jest.Mock).mockResolvedValue({ ok: true, data: [
+      { ...veiculosMock[0], status: 'EmViagem' }, veiculosMock[1],
+      { ...veiculosMock[0], id: '3', placa: 'GHI1234', status: 'Inativo' },
+    ] });
+    render(<VeiculosListView />);
+    await screen.findByText('ABC-1234');
+    expect(screen.queryByRole('button', { name: 'Inativar' })).toBeNull();
+  });
+
+  it('filtra Inativo e mantém filtros roláveis em telas pequenas (SEL-01)', async () => {
+    (listarVeiculos as jest.Mock).mockResolvedValue({ ok: true, data: [] });
+    render(<VeiculosListView />);
+    await screen.findByText('Nenhum veículo cadastrado');
+    expect(screen.UNSAFE_getByType(ScrollView).props.horizontal).toBe(true);
+    fireEvent.press(screen.getByRole('tab', { name: 'Inativo' }));
+    await waitFor(() => expect(listarVeiculos).toHaveBeenLastCalledWith({ busca: undefined, status: 'Inativo' }));
+    expect(await screen.findByText('Nenhum veículo encontrado')).toBeOnTheScreen();
   });
 
   it('mostra carregando e depois a lista com placa mascarada, capacidade e chip de status', async () => {

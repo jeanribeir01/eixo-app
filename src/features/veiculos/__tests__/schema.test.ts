@@ -1,12 +1,10 @@
 import { veiculoSchema } from '../schema';
 
-// TODO(EIX-37): testes de "ano inválido" (antes de 1950 / depois do ano atual + 1) entram junto com
-// o campo Ano de Fabricação, que depende de uma migration que ainda não existe.
-
 const inputValido = {
   placa: 'ABC-1234',
   marca: 'Volvo',
   modelo: 'FH 540',
+  ano_fabricacao: '2020',
   capacidade_carga: '12,5',
   status: 'Disponivel',
 };
@@ -17,14 +15,45 @@ function mensagens(input: Record<string, unknown>): string[] {
 }
 
 describe('veiculoSchema', () => {
+  beforeEach(() => {
+    jest.useFakeTimers().setSystemTime(new Date('2026-10-16T12:00:00Z'));
+  });
+
+  afterEach(() => jest.useRealTimers());
+
   it('aceita um veículo válido, normaliza a placa antiga e converte a capacidade com vírgula', () => {
     expect(veiculoSchema.parse(inputValido)).toEqual({
       placa: 'ABC1234',
       marca: 'Volvo',
       modelo: 'FH 540',
+      ano_fabricacao: 2020,
       capacidade_carga: 12.5,
       status: 'Disponivel',
     });
+  });
+
+  it('ano: aceita os limites 1950 e ano atual + 1 (ANO-01)', () => {
+    expect(veiculoSchema.parse({ ...inputValido, ano_fabricacao: '1950' }).ano_fabricacao).toBe(1950);
+    expect(veiculoSchema.parse({ ...inputValido, ano_fabricacao: '2027' }).ano_fabricacao).toBe(2027);
+  });
+
+  it.each(['1949', '2028'])('ano: rejeita %s fora dos limites (ANO-01)', (ano) => {
+    expect(mensagens({ ...inputValido, ano_fabricacao: ano })).toEqual(['Informe um ano entre 1950 e 2027.']);
+  });
+
+  it.each(['', '   ', undefined, null])('ano: exige preenchimento %s (ANO-02)', (ano) => {
+    expect(mensagens({ ...inputValido, ano_fabricacao: ano })).toEqual(['Informe o ano de fabricação.']);
+  });
+
+  it.each(['abc', '2020.5', '2020,5'])('ano: rejeita valor não inteiro %s (ANO-02)', (ano) => {
+    expect(mensagens({ ...inputValido, ano_fabricacao: ano })).toEqual(['Informe um ano inteiro.']);
+  });
+
+  it('ano: recalcula limite em São Paulo mesmo após importar o schema (ANO-01)', () => {
+    jest.setSystemTime(new Date('2027-01-01T02:59:59Z'));
+    expect(veiculoSchema.safeParse({ ...inputValido, ano_fabricacao: '2028' }).success).toBe(false);
+    jest.setSystemTime(new Date('2027-01-01T03:00:00Z'));
+    expect(veiculoSchema.parse({ ...inputValido, ano_fabricacao: '2028' }).ano_fabricacao).toBe(2028);
   });
 
   it('aceita placa no padrão Mercosul e salva sem espaço e em maiúscula', () => {
