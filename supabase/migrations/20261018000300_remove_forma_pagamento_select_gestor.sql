@@ -1,0 +1,16 @@
+-- EIX-39 (US06-b): remove a policy `forma_pagamento_select_gestor`
+-- (20261018000100_forma_pagamento_select_gestor.sql, PR #37). Ela e a RPC
+-- `listar_formas_pagamento_ativas` (20261018000200_formas_pagamento_ativas.sql) resolviam o mesmo
+-- problema: o seletor de Forma de Pagamento do Gestor de Frota vinha vazio no formulário de
+-- manutenção. A equipe ficou com a RPC (AD-013, que substitui a AD-011): ela devolve só `id` e
+-- `nome` das formas ativas e não abre a tabela. Com a policy removida, o Gestor volta a ver zero
+-- linhas de `forma_pagamento`, como nas outras tabelas financeiras (RLS-06 da EIX-32).
+--
+-- Migration nova em vez de apagar a do #37: aquela já foi aplicada na nuvem.
+--
+-- Esta versão vem depois da 20261018000200 de propósito: num `db push` a RPC nasce antes de a
+-- policy sair. Mesmo assim, o seletor do app só volta a funcionar para o Gestor quando
+-- `listarFormasPagamentoAtivas` passar a chamar a RPC (T9 da EIX-39, depois de regerar os tipos).
+--
+-- Sem `if exists`: se a policy não estiver onde deveria, a migration falha em vez de passar calada.
+drop policy forma_pagamento_select_gestor on forma_pagamento;

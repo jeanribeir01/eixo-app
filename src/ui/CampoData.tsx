@@ -1,9 +1,13 @@
 import { DateTimePickerAndroid } from '@react-native-community/datetimepicker';
 import { Platform, Pressable, StyleSheet, View } from 'react-native';
 
-import { Button, Column, Input, Text, spacing } from '@/ui';
-
 import { dataBRParaISO, dataLocalISO, hojeISO, isoParaDataBR, mascararData } from '@/lib/datas';
+
+import { Button } from './Button';
+import { Column } from './Column';
+import { Input } from './Input';
+import { Text } from './Text';
+import { spacing } from './tokens';
 
 type CampoDataProps = {
   label: string;
@@ -23,7 +27,7 @@ function dataInicial(value: string): Date {
 
 // No Android o campo abre o calendário nativo (EIX-65); no iOS continua a máscara, porque o app é só
 // Android nesta fase (AD-003). Nos dois, o atalho "Hoje" fica: é o caso mais comum ao lançar um pagamento.
-// As props não mudam, então os formulários de Movimentação e Dívida usam o campo sem edição.
+// Mora em src/ui (EIX-39) porque Movimentação, Dívida e Manutenção usam o mesmo campo.
 export function CampoData({ label, value, onChange, error }: CampoDataProps) {
   const botaoHoje = (
     <Column align="start">

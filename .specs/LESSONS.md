@@ -156,6 +156,12 @@ Seen once or not yet corroborated. Tracked, not trusted.
 - evidence: spec.md Edge Cases 1 vs NAV5-07/NAV5-10 (navigation, specs)
 - last seen: 2026-10-16T11:41:56Z
 
+### L-025 - When a screen loads several sources in parallel, test the failure of each source separately, not only one of them
+- signal: `surviving_mutant` · recurrence: 1 feature(s) · scope: `forms, screens` · harmful: 0
+- features: eix39-manutencao
+- evidence: M16 src/features/manutencao/ManutencaoFormView.tsx:48 (MAN-40) (forms, screens)
+- last seen: 2026-10-18T18:34:15Z
+
 ## Quarantined (failed when applied - ignore)
 
 A confirmed lesson that recurred alongside failure. Kept for the maintainer to review.

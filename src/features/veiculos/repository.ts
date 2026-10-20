@@ -9,15 +9,11 @@ import type { FiltroVeiculos, Veiculo, VeiculoInput } from './types';
 // Camada de acesso a dados isolada da tela (AGENTS.md §2.3, skill supabase-query): as telas só
 // conhecem estas funções e o formato de resultado abaixo, nunca o Supabase. A autorização
 // (escrita só para Admin e Gestor de Frota) é decidida pelas policies de RLS da tabela `veiculo`.
-//
-// TODO(EIX-37): falta "inativar" (soft delete — veículo com viagens no histórico nunca é apagado).
-// O valor "Inativo" já existe no enum (EIX-56): entra aqui um `inativarVeiculo(id)` fazendo
-// `update({ status: 'Inativo' })` — nunca `.delete()`, que o RLS rejeita desde a EIX-56.
 
 // `campo` diz à tela em qual input mostrar a mensagem (ex.: placa duplicada aparece na Placa).
-export type Resultado<T> = { ok: true; data: T } | { ok: false; mensagem: string; campo?: 'placa' };
+export type Resultado<T> = { ok: true; data: T } | { ok: false; mensagem: string; campo?: 'placa' | 'ano_fabricacao' };
 
-const COLUNAS = 'id, placa, marca, modelo, capacidade_carga, status';
+const COLUNAS = 'id, placa, marca, modelo, ano_fabricacao, capacidade_carga, status';
 
 // O limite só impede uma resposta sem teto (skill supabase-query); a frota de uma transportadora
 // cabe com folga nele.
@@ -26,6 +22,7 @@ const LIMITE_LISTA = 500;
 const MENSAGEM_PLACA_DUPLICADA = 'Já existe um veículo cadastrado com essa placa.';
 const MENSAGEM_PLACA_INVALIDA = 'Placa inválida. Use o formato AAA-1234 ou o padrão Mercosul AAA1A23.';
 const MENSAGEM_NAO_ENCONTRADO = 'Veículo não encontrado.';
+const MENSAGEM_INATIVADO_DURANTE_EDICAO = 'Este veículo foi inativado enquanto você editava. Volte à lista e abra o cadastro de novo.';
 const MENSAGEM_DADOS_INVALIDOS = 'Os dados recebidos são inválidos. Tente novamente.';
 
 // Dado externo não é confiável só porque o TypeScript compilou: a resposta passa pelo Zod.
@@ -35,6 +32,7 @@ const veiculoSchema = z.object({
   placa: z.string(),
   marca: z.string(),
   modelo: z.string(),
+  ano_fabricacao: z.number().int().nullable(),
   capacidade_carga: z.number(),
   status: z.enum(Constants.public.Enums.status_veiculo),
 });
@@ -47,8 +45,11 @@ function traduzirErro(error: ErroSupabase, mensagemPadrao: string): Falha {
   // 23505 = unique_violation. A única unique da tabela é `veiculo_placa_unique`; como a placa
   // chega normalizada, "ABC-1234" e "abc1234" batem na mesma linha e caem aqui.
   if (error.code === '23505') return { ok: false, mensagem: MENSAGEM_PLACA_DUPLICADA, campo: 'placa' };
-  // 23514 = check_violation em `veiculo_placa_normalizada`. Não deveria acontecer (o schema
-  // normaliza antes), mas se acontecer o usuário vê a mensagem certa no campo certo.
+  // Check e trigger do ano compartilham 23514 com a placa. A mensagem técnica só é
+  // inspecionada para identificar o campo; nunca segue para a interface.
+  if (error.code === '23514' && error.message?.includes('ano_fabricacao')) {
+    return { ok: false, campo: 'ano_fabricacao', mensagem: 'Ano de fabricação inválido. Informe um ano entre 1950 e o ano atual + 1.' };
+  }
   if (error.code === '23514') return { ok: false, mensagem: MENSAGEM_PLACA_INVALIDA, campo: 'placa' };
   // 42501 = insufficient_privilege: a policy de RLS recusou a escrita para este perfil.
   if (error.code === '42501') return { ok: false, mensagem: 'Você não tem permissão para alterar veículos.' };
@@ -70,6 +71,7 @@ function paraBanco(input: VeiculoInput): VeiculoInput {
     placa: normalizarPlaca(input.placa),
     marca: input.marca.trim(),
     modelo: input.modelo.trim(),
+    ano_fabricacao: input.ano_fabricacao,
     capacidade_carga: input.capacidade_carga,
     status: input.status,
   };
@@ -149,20 +151,63 @@ export async function criarVeiculo(input: VeiculoInput): Promise<Resultado<Veicu
 }
 
 export async function atualizarVeiculo(id: string, input: VeiculoInput): Promise<Resultado<Veiculo>> {
-  const { data, error } = await supabase
+  let query = supabase
     .from('veiculo')
     .update(paraBanco(input))
-    .eq('id', id)
-    .select(COLUNAS)
-    .maybeSingle();
+    .eq('id', id);
+  // Edição não inativa nem reativa: isso também protege um formulário antigo
+  // cujo veículo foi inativado em outra sessão depois de carregar.
+  query = input.status === 'Inativo' ? query.eq('status', 'Inativo') : query.neq('status', 'Inativo');
+  const { data, error } = await query.select(COLUNAS).maybeSingle();
 
   if (error) {
     return traduzirErro(error, 'Não foi possível atualizar o veículo. Tente novamente.');
   }
-  // Sem linha: o id não existe ou o RLS não deixou este perfil alterar. Para a tela, "não encontrado".
+  // Sem linha: o id não existe, o RLS não deixou este perfil alterar ou o veículo foi inativado
+  // em outra sessão depois de o formulário carregar (o filtro de status acima barrou a escrita).
+  // Só o último caso tem mensagem própria; para saber se foi ele, relê o status atual.
   if (!data) {
+    if (input.status !== 'Inativo') {
+      const atual = await buscarVeiculoPorId(id);
+      if (atual.ok && atual.data.status === 'Inativo') {
+        return { ok: false, mensagem: MENSAGEM_INATIVADO_DURANTE_EDICAO };
+      }
+    }
     return { ok: false, mensagem: MENSAGEM_NAO_ENCONTRADO };
   }
 
   return validarVeiculo(data);
+}
+
+export async function inativarVeiculo(id: string): Promise<Resultado<Veiculo>> {
+  // Guarda no mesmo UPDATE: uma viagem pode ter começado depois de a lista carregar.
+  // O RLS continua decidindo quem pode escrever. Sem DELETE, histórico é preservado.
+  const { data, error } = await supabase
+    .from('veiculo')
+    .update({ status: 'Inativo' })
+    .eq('id', id)
+    .eq('status', 'Disponivel')
+    .select(COLUNAS)
+    .maybeSingle();
+
+  if (error) return traduzirErro(error, 'Não foi possível inativar o veículo. Tente novamente.');
+  if (!data) {
+    return {
+      ok: false,
+      mensagem: 'Não foi possível inativar. O veículo pode não estar mais disponível ou você não tem permissão. Atualize a lista e tente novamente.',
+    };
+  }
+  return validarVeiculo(data);
+}
+
+// Contrato compartilhado com EIX-39/EIX-40. Uma lista permitida no banco exclui
+// inativos antes do limite de resultados, sem esconder veículos do histórico.
+export async function listarVeiculosSelecionaveis(finalidade: 'viagem' | 'manutencao'): Promise<Resultado<Veiculo[]>> {
+  const status = finalidade === 'viagem' ? ['Disponivel'] as const : ['Disponivel', 'EmManutencao'] as const;
+  const { data, error } = await supabase.from('veiculo').select(COLUNAS).in('status', status).order('placa').limit(LIMITE_LISTA);
+
+  if (error) return traduzirErro(error, 'Não foi possível carregar os veículos selecionáveis. Tente novamente.');
+  const parsed = z.array(veiculoSchema).safeParse(data);
+  if (!parsed.success) return { ok: false, mensagem: MENSAGEM_DADOS_INVALIDOS };
+  return { ok: true, data: parsed.data };
 }
