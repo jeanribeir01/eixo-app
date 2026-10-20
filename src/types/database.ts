@@ -471,6 +471,13 @@ export type Database = {
         Returns: string
       }
       excluir_divida: { Args: { id: string }; Returns: Json }
+      listar_formas_pagamento_ativas: {
+        Args: never
+        Returns: {
+          id: string
+          nome: string
+        }[]
+      }
       normaliza_cidade: { Args: { cidade: string }; Returns: string }
       registrar_manutencao: {
         Args: {

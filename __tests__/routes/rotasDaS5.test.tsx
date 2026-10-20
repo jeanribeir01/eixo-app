@@ -2,6 +2,7 @@ import { render, screen } from '@testing-library/react-native';
 import { Text } from 'react-native';
 
 import ViagensRoute from '../../app/(app)/(tabs)/viagens';
+import VeiculoDetalheRoute from '../../app/(app)/frota/[id]/index';
 import VeiculosRoute from '../../app/(app)/frota/veiculos';
 import ManutencoesRoute from '../../app/(app)/manutencoes/index';
 import NovaManutencaoRoute from '../../app/(app)/manutencoes/nova';
@@ -24,6 +25,7 @@ jest.mock('@/features/rotas/RotasListView', () => ({ RotasListView: mockStub('Ro
 jest.mock('@/features/rotas/RotaFormView', () => ({ RotaFormView: mockStub('RotaFormView') }));
 jest.mock('@/features/manutencao/ManutencoesListView', () => ({ ManutencoesListView: mockStub('ManutencoesListView') }));
 jest.mock('@/features/manutencao/ManutencaoFormView', () => ({ ManutencaoFormView: mockStub('ManutencaoFormView') }));
+jest.mock('@/features/manutencao/VeiculoDetalheView', () => ({ VeiculoDetalheView: mockStub('VeiculoDetalheView') }));
 jest.mock('@/features/viagens/ViagensListView', () => ({ ViagensListView: mockStub('ViagensListView') }));
 jest.mock('@/features/viagens/AbrirViagemView', () => ({ AbrirViagemView: mockStub('AbrirViagemView') }));
 jest.mock('@/features/viagens/FecharViagemView', () => ({ FecharViagemView: mockStub('FecharViagemView') }));
@@ -36,6 +38,8 @@ describe('rotas da S5 renderizam a view da feature (NAV5-11)', () => {
     ['rotas/[id]/editar', EditarRotaRoute, 'RotaFormView {"rotaId":"id-1"}'],
     ['manutencoes/index', ManutencoesRoute, 'ManutencoesListView {}'],
     ['manutencoes/nova', NovaManutencaoRoute, 'ManutencaoFormView {}'],
+    // Detalhe do veículo com o histórico (EIX-39, MAN-33).
+    ['frota/[id]/index', VeiculoDetalheRoute, 'VeiculoDetalheView {"veiculoId":"id-1"}'],
     ['(tabs)/viagens', ViagensRoute, 'ViagensListView {}'],
     ['viagens/nova', AbrirViagemRoute, 'AbrirViagemView {}'],
     ['viagens/[id]/fechar', FecharViagemRoute, 'FecharViagemView {"viagemId":"id-1"}'],
