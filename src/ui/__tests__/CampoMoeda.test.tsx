@@ -1,6 +1,6 @@
 import { fireEvent, render, screen } from '@testing-library/react-native';
 
-import { CampoMoeda } from '../components/CampoMoeda';
+import { CampoMoeda } from '../CampoMoeda';
 
 describe('CampoMoeda (MOV-03)', () => {
   it('digitar 1234 devolve 1234 centavos', () => {

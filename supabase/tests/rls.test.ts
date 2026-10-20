@@ -244,6 +244,30 @@ describe('migration rls: policies por perfil', () => {
   });
 
   // EIX-56: veículo deixou de ter delete físico; sai de circulação com status Inativo.
+  it.each([
+    ['Admin', '79000000-0000-0000-0000-000000000001', 'EIX7901', true],
+    ['Gestor de Frota', '79000000-0000-0000-0000-000000000002', 'EIX7902', true],
+    ['Financeiro', '79000000-0000-0000-0000-000000000003', 'EIX7903', false],
+    ['Motorista', '79000000-0000-0000-0000-000000000004', 'EIX7904', false],
+  ] as const)('EIX-79: update condicional respeita status e RLS de %s (INA-01/09)', async (perfil, id, placa, permitido) => {
+    const veiculo = await comoSuperuser(db, (tx) => tx.query<{ id: string }>(
+      `insert into veiculo (placa, marca, modelo, capacidade_carga) values ($1, 'Volvo', 'FH', 12) returning id`, [placa],
+    ));
+    const alvo = veiculo.rows[0]!.id;
+    for (const status of ['Disponivel', 'EmViagem', 'EmManutencao', 'Inativo'] as const) {
+      await comoSuperuser(db, (tx) => tx.query('update veiculo set status = $1 where id = $2', [status, alvo]));
+      const atualiza = permitido && status === 'Disponivel';
+      await comoUsuario(db, { id, perfil }, async (tx) => {
+        const resultado = await tx.query<{ status: string }>(
+          `update veiculo set status = 'Inativo' where id = $1 and status = 'Disponivel' returning status`, [alvo],
+        );
+        expect(resultado.rows).toEqual(atualiza ? [{ status: 'Inativo' }] : []);
+      });
+      const persistido = await comoSuperuser(db, (tx) => tx.query<{ status: string }>('select status from veiculo where id = $1', [alvo]));
+      expect(persistido.rows[0]!.status).toBe(atualiza ? 'Inativo' : status);
+    }
+  });
+
   it('admin e gestor de frota inativam veiculo, mas o delete afeta 0 linhas', async () => {
     const perfis = [
       { perfil: 'Admin', id: '40000000-0000-0000-0000-000000000002', placa: 'INA1A23' },

@@ -4,9 +4,11 @@ import { Constants } from '@/types/database';
 
 import { isPlacaValida, normalizarPlaca } from './placa';
 
-// TODO(EIX-37): o critério de aceite pede Ano de Fabricação (entre 1950 e ano atual + 1), mas a
-// coluna `ano_fabricacao` não existe na tabela `veiculo`. Depende de uma migration que ainda não
-// existe — o campo e a validação entram aqui quando ela for aplicada e os tipos regerados.
+// Mesmos limites de 20261014000100_veiculo_ano_inativo.sql, inclusive o fuso no réveillon.
+// Calculado ao validar: o app pode continuar aberto durante a virada do ano.
+export function anoMaximoFabricacao(): number {
+  return Number(new Intl.DateTimeFormat('en-US', { year: 'numeric', timeZone: 'America/Sao_Paulo' }).format(new Date())) + 1;
+}
 
 // O campo de capacidade é texto na tela: aceita vírgula decimal ("12,5"), que é como o usuário
 // brasileiro digita. Vazio vira NaN para cair na mensagem "Informe...".
@@ -29,6 +31,18 @@ export const veiculoSchema = z.object({
     .refine((valor) => isPlacaValida(valor), 'Placa inválida. Use o formato AAA-1234 ou o padrão Mercosul AAA1A23.'),
   marca: z.string('Informe a marca.').trim().min(1, 'Informe a marca.').max(60, 'A marca pode ter no máximo 60 caracteres.'),
   modelo: z.string('Informe o modelo.').trim().min(1, 'Informe o modelo.').max(60, 'O modelo pode ter no máximo 60 caracteres.'),
+  ano_fabricacao: z
+    .string('Informe o ano de fabricação.')
+    .trim()
+    .min(1, 'Informe o ano de fabricação.')
+    .transform((valor) => Number(valor))
+    .pipe(z.number('Informe um ano inteiro.').int('Informe um ano inteiro.'))
+    .superRefine((ano, ctx) => {
+      const maximo = anoMaximoFabricacao();
+      if (ano < 1950 || ano > maximo) {
+        ctx.addIssue({ code: 'custom', message: `Informe um ano entre 1950 e ${maximo}.` });
+      }
+    }),
   capacidade_carga: z
     .string('Informe a capacidade de carga.')
     .transform(textoParaNumero)

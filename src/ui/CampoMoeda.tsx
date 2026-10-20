@@ -1,6 +1,6 @@
-import { Input } from '@/ui';
-
 import { digitosParaCentavos, formatarMoeda } from '@/lib/money';
+
+import { Input } from './Input';
 
 type CampoMoedaProps = {
   label: string;
@@ -11,6 +11,7 @@ type CampoMoedaProps = {
 
 // Campo "estilo caixa eletrônico": o usuário só digita números e eles entram pela direita
 // (1 → R$ 0,01, 12 → R$ 0,12, 1234 → R$ 12,34). O estado é sempre centavos inteiros.
+// Mora em src/ui (EIX-39) porque Movimentação, Dívida e Manutenção usam o mesmo campo.
 export function CampoMoeda({ label, valorCentavos, onChange, error }: CampoMoedaProps) {
   return (
     <Input

@@ -88,15 +88,36 @@
 - **Trade-off**: O Gestor passa a ver os nomes das formas ativas (Pix, Boleto…), que não são dado financeiro sensível. A categoria "Manutenção" não precisou da mesma exceção, porque a RPC a acha sozinha como `security definer`.
 - **Scope**: `supabase/migrations/20261018000100_forma_pagamento_select_gestor.sql`, `supabase/tests/rls_perfis.test.ts` (RLS-06, RLS-17), EIX-39.
 - **Date**: 2026-10-18
+- **Status**: superseded by AD-013
+
+### AD-013
+- **Decision**: O Gestor de Frota vê as formas de pagamento ativas só pela RPC `listar_formas_pagamento_ativas()` (`security definer`, devolve `id` e `nome`). A policy `forma_pagamento_select_gestor` da AD-011 sai por migration nova, e o Gestor volta a ver zero linhas de `forma_pagamento` direto na tabela (RLS-06 da EIX-32). Substitui a AD-011.
+- **Reason**: A RPC era a opção combinada para a EIX-39 (opção b da spec) antes do PR #37. As duas soluções juntas na `main` quebravam o CI do PR #38: um teste exigia que o Gestor lesse a tabela, o outro que não lesse. A RPC expõe só o que o seletor precisa e mantém a regra "Gestor não tem área financeira" sem exceção na tabela.
+- **Trade-off**: Depois do `db push` das migrations 20261018000200 e 20261018000300, o seletor do Gestor fica vazio até `listarFormasPagamentoAtivas` chamar a RPC (T9 da EIX-39). Por isso a T9 entra no mesmo PR, antes do merge. A nuvem guarda a policy criada e removida no histórico de migrations.
+- **Scope**: `supabase/migrations/20261018000200_formas_pagamento_ativas.sql`, `supabase/migrations/20261018000300_remove_forma_pagamento_select_gestor.sql`, `supabase/tests/rls_perfis.test.ts` (RLS-06), `.specs/features/eix32-rls/spec.md` (RLS-06, RLS-17), EIX-39. Número 013 porque a AD-012 já está no PR da EIX-80.
+- **Date**: 2026-10-18
 - **Status**: active
 
 ## Handoff
 
-- **Feature**: `.specs/features/eix77-navegacao-s5` (EIX-77, navegação da S5)
-- **Phase / Task**: concluída — T1..T7 + fix de guard; Verifier PASS (iteração 2, 13/13 mutantes mortos)
-- **Completed**: 58c8382..HEAD em `feat/eix-77-navegacao-s5`; lista de veículos em `/frota/veiculos` (não `frota/index`, que colide com a aba `/frota`)
+### EIX-39 — US06-b Manutenção
+
+- **Feature**: `.specs/features/eix39-manutencao` (EIX-39, US06-b Manutenção)
+- **Phase / Task**: T1..T9 concluídas; Verifier PASS (iteração 3, 23/23 mutantes mortos, `validation.md`). Teste manual do Gestor de Frota feito em 2026-10-19
+- **Completed**: e42962d..HEAD em `feat/eix-39-us06b-manutencao` (RPC `listar_formas_pagamento_ativas`, CampoData/CampoMoeda em `src/ui`, schema, repositório, formulário, detalhe `/frota/[id]`, lista e seletor de formas pela RPC em `b2c4a16`)
 - **In-progress** (file:line): none
-- **Next step**: review do PR #34 (revisor: Diogo) → squash and merge → fechar a EIX-77 (quem fecha é o Jean) → EIX-78. Avisos já comentados na EIX-38, EIX-39, EIX-40 e EIX-79
-- **Blockers**: aprovação do PR
+- **Next step**: abrir/atualizar o PR, aprovação de outro dev e Squash and merge
+- **Blockers**: none
 - **Uncommitted files**: none
-- **Branch**: feat/eix-77-navegacao-s5 (no remoto, PR #34)
+- **Branch**: feat/eix-39-us06b-manutencao
+
+### EIX-79 — ano e inativação de veículos
+
+- **Feature**: `.specs/features/eix79-ano-inativar` (EIX-79)
+- **Phase / Task**: T1..T6 concluídas; entrega por commit, push e PR autorizada explicitamente em 18/10/2026
+- **Completed**: ano obrigatório, null legado, tradução 23514, inativação condicional, preservação de Inativo e selecionáveis. Typecheck/lint verdes; nova execução de 900 testes app e 300 backend aprovada. Verifier independente e sensor 6/6 preservados de 16/10. Supabase isolado com Auth/RLS reais, quatro perfis e concorrência validados; APK instalado no Pixel 7 e smoke UI Admin executado (cadastro, edição, limites 1949/1950/2027, teclado/scroll, confirmação/cancelamento, Snackbar, filtros e persistência)
+- **In-progress** (file:line): `.specs/features/eix79-ano-inativar/validation.md` — evidências finais registradas; preparação da entrega
+- **Next step**: revisão de Jean no PR para main; aceite humano, tablet/TalkBack e observação visual do loading continuam pendentes, conforme relatório
+- **Blockers**: nenhum bloqueio de implementação; testes de dispositivo físico e aceite humano não executados
+- **Uncommitted files**: somente feature veiculos, testes RLS e artefatos desta especificação; arquivos locais de sandbox/build/env ignorados
+- **Branch**: feat/eix-79-us06-ano-inativar; base eff0160; Linear inalterado. Supabase local e build nativo em diretórios separados, fora do repositório; login local pela flag que já existe no `.env.local`, sem desvio no código

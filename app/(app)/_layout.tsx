@@ -39,6 +39,8 @@ export default function AppLayout() {
         <Stack.Screen name="frota/veiculos" options={{ title: 'Veículos' }} />
         <Stack.Screen name="frota/novo" options={{ title: 'Novo veículo' }} />
         <Stack.Screen name="frota/[id]/editar" options={{ title: 'Editar veículo' }} />
+        {/* Detalhe com o histórico de manutenções (US06-b): aberto pelo "Ver veículo" da lista de manutenções. */}
+        <Stack.Screen name="frota/[id]/index" options={{ title: 'Veículo' }} />
         {/* Rotas (US07) e Manutenções (US06-b): mesmos perfis do RLS de `rota` e da RPC de manutenção. */}
         <Stack.Screen name="rotas/index" options={{ title: 'Rotas' }} />
         <Stack.Screen name="rotas/nova" options={{ title: 'Nova rota' }} />

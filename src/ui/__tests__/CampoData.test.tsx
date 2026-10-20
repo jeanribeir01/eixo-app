@@ -2,7 +2,7 @@ import { DateTimePickerAndroid, type AndroidNativeProps } from '@react-native-co
 import { fireEvent, render, screen } from '@testing-library/react-native';
 import { Platform } from 'react-native';
 
-import { CampoData } from '../components/CampoData';
+import { CampoData } from '../CampoData';
 
 jest.mock('@react-native-community/datetimepicker', () => ({ DateTimePickerAndroid: { open: jest.fn() } }));
 
