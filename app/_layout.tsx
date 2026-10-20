@@ -7,6 +7,7 @@ import { useEffect } from 'react';
 import { configureGoogleSignIn } from '@/features/auth/googleAuth';
 import { carregarPerfil, limparPerfil, useProfile } from '@/features/auth/profileStore';
 import { startSessionSync, useSessionStore } from '@/features/auth/sessionStore';
+import { startNetworkSyncListener } from '@/features/viagens/syncStore';
 import { db } from '@/db/client';
 import migrations from '@/db/migrations/migrations';
 import { EmptyState, fontAssets, Screen } from '@/ui';
@@ -23,7 +24,13 @@ export default function RootLayout() {
 
   useEffect(() => {
     configureGoogleSignIn();
-    return startSessionSync();
+    const unsubscribeSession = startSessionSync();
+    const unsubscribeNetwork = startNetworkSyncListener();
+
+    return () => {
+      unsubscribeSession();
+      unsubscribeNetwork();
+    };
   }, []);
 
   // Perfil acompanha a conta logada: carrega no login e é descartado no logout, para a

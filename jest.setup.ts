@@ -27,3 +27,8 @@ jest.mock('@/db/client', () => ({ db: {} }));
 jest.mock('drizzle-orm/expo-sqlite/migrator', () => ({
   useMigrations: jest.fn(() => ({ success: true, error: undefined })),
 }));
+jest.mock('expo-network', () => ({
+  getNetworkStateAsync: jest.fn().mockResolvedValue({ isConnected: true, isInternetReachable: true }),
+  addNetworkStateListener: jest.fn().mockReturnValue({ remove: jest.fn() }),
+}));
+
