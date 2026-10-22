@@ -4,9 +4,8 @@ import { AbrirViagemView } from '../AbrirViagemView';
 import { FecharViagemView } from '../FecharViagemView';
 import { ViagensListView } from '../ViagensListView';
 
-// Placeholders da EIX-77 (NAV5-13): a EIX-40 troca estas telas pelas reais. Até lá, cada uma diz o que
-// vai fazer, com o ícone do módulo e sem nenhum botão.
-describe('placeholders de Viagens (EIX-77)', () => {
+// Placeholders da EIX-77 (NAV5-13): a EIX-40 substituiu estas telas pelas telas reais de US08.
+describe.skip('placeholders de Viagens (EIX-77) - substituído pela EIX-40', () => {
   it.each([
     ['lista (aba)', <ViagensListView key="lista" />, 'Viagens', 'Abertura e fechamento de viagens com o hodômetro, mesmo sem internet.'],
     ['abrir', <AbrirViagemView key="abrir" />, 'Hodômetro inicial', 'Veículo, rota, motorista e hodômetro inicial da viagem.'],
