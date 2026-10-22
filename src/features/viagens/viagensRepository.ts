@@ -1,9 +1,14 @@
-import { z } from 'zod';
-
 import { ehAcessoNegado, MENSAGEM_ACESSO_NEGADO } from '@/lib/errors';
 import { supabase } from '@/supabase/client';
-import { Constants, type Database } from '@/types/database';
+import type { Database } from '@/types/database';
 
+import {
+  abrirViagemSchema,
+  corrigirHodometroFinalSchema,
+  fecharViagemSchema,
+  viagemDetalhadaSchema,
+  viagemSchema,
+} from './schema';
 import type {
   CampoErroViagem,
   CorrigirHodometroFinalInput,
@@ -29,45 +34,133 @@ export const COLUNAS_DETALHADAS =
   'rota:rota_id (id, cidade_origem, uf_origem, cidade_destino, uf_destino, distancia_estimada_km), ' +
   'motorista:usuario!viagem_motorista_id_fkey (id, nome, email)';
 
-// Mensagens amigáveis para cada erro do banco (EIX-76 / migration 20261015000100_viagem_regras.sql).
-// O texto técnico do banco ou SQLSTATE nunca é exposto diretamente ao usuário.
+// Mensagens amigáveis para cada erro do banco (EIX-76 / migrations 20260924000300_frota.sql e
+// 20261015000100_viagem_regras.sql). O texto técnico do banco ou SQLSTATE nunca é exposto
+// diretamente ao usuário.
 export const MENSAGENS_ERRO_VIAGEM = {
   VG001: 'Este veículo já está em uma viagem em andamento.',
-  '23505': 'Este veículo já está em uma viagem em andamento.',
   VG002: 'Veículo em manutenção não pode sair em viagem.',
   VG003: 'Veículo inativo não pode sair em viagem.',
   VG004: 'O hodômetro inicial não pode ser menor que o último hodômetro final do veículo.',
   VG005: 'Viagem encerrada não pode ser alterada.',
   VG006: 'O veículo de uma viagem não pode ser trocado.',
   VG007: 'O hodômetro final corrigido não pode ser maior que o hodômetro inicial de uma viagem posterior.',
-  '23514': 'O hodômetro final deve ser maior que o hodômetro inicial.',
+  '23505': 'Não foi possível salvar a viagem: registro duplicado.',
+  '23514': 'Os dados do hodômetro são inválidos.',
   '42501': MENSAGEM_ACESSO_NEGADO,
   '428C9': 'A quilometragem rodada é calculada automaticamente e não pode ser informada.',
 } as const;
 
+// 23505 e 23514 são códigos genéricos do Postgres. O nome da constraint que falhou vem no
+// texto técnico do erro; ele é usado só para escolher a mensagem e o campo, nunca é exibido.
+// As constraints estão em supabase/migrations/20260924000300_frota.sql (checks de hodômetro) e
+// supabase/migrations/20261015000100_viagem_regras.sql (índice de viagem em andamento).
+//
+// Um mapa só (código, mensagem e campo) evita que uma constraint nova entre no texto do erro
+// sem ganhar mensagem ou campo em uma das estruturas antigas.
+type DetalheConstraintViagem = {
+  codigo: '23505' | '23514';
+  mensagem: string;
+  campo: CampoErroViagem | undefined;
+};
+
+const CONSTRAINTS_VIAGEM = {
+  viagem_pkey: {
+    codigo: '23505',
+    mensagem: 'Já existe uma viagem com este identificador.',
+    campo: undefined,
+  },
+  viagem_um_andamento_por_veiculo: {
+    codigo: '23505',
+    mensagem: 'Este veículo já está em uma viagem em andamento.',
+    campo: 'veiculo_id',
+  },
+  viagem_hodometro_inicial_nao_negativo: {
+    codigo: '23514',
+    mensagem: 'O hodômetro inicial não pode ser negativo.',
+    campo: 'hodometro_inicial',
+  },
+  viagem_hodometro_final_maior: {
+    codigo: '23514',
+    mensagem: 'O hodômetro final deve ser maior que o hodômetro inicial.',
+    campo: 'hodometro_final',
+  },
+  viagem_finalizada_tem_hodometro_final: {
+    codigo: '23514',
+    mensagem: 'Informe o hodômetro final para concluir a viagem.',
+    campo: 'hodometro_final',
+  },
+} as const satisfies Record<string, DetalheConstraintViagem>;
+
+type NomeConstraintViagem = keyof typeof CONSTRAINTS_VIAGEM;
+
+// Exportado para os testes conferirem o texto que chega ao usuário sem conhecer o mapa interno.
+export const MENSAGENS_ERRO_CONSTRAINT_VIAGEM = Object.fromEntries(
+  Object.entries(CONSTRAINTS_VIAGEM).map(([nome, detalhe]) => [nome, detalhe.mensagem]),
+) as { [K in NomeConstraintViagem]: (typeof CONSTRAINTS_VIAGEM)[K]['mensagem'] };
+
 export const CAMPOS_ERRO_VIAGEM: Record<string, CampoErroViagem> = {
   VG001: 'veiculo_id',
-  '23505': 'veiculo_id',
   VG002: 'veiculo_id',
   VG003: 'veiculo_id',
   VG004: 'hodometro_inicial',
   VG005: 'status',
   VG006: 'veiculo_id',
   VG007: 'hodometro_final',
-  '23514': 'hodometro_final',
 };
 
-type ErroSupabase = { code: string; message?: string };
+type ErroSupabase = { code: string; message?: string; details?: string };
 type Falha = Extract<Resultado<never>, { ok: false }>;
 
-export function traduzirErroBanco(error: ErroSupabase, mensagemPadrao: string): Falha {
-  const codigo = error.code as keyof typeof MENSAGENS_ERRO_VIAGEM;
+function nomeDaConstraint(
+  error: ErroSupabase,
+  codigo: '23505' | '23514',
+): NomeConstraintViagem | null {
+  const texto = `${error.message ?? ''} ${error.details ?? ''}`;
+  return (
+    (Object.keys(CONSTRAINTS_VIAGEM) as NomeConstraintViagem[]).find(
+      (nome) => CONSTRAINTS_VIAGEM[nome].codigo === codigo && texto.includes(nome),
+    ) ?? null
+  );
+}
 
+function falhaDaConstraint(nome: NomeConstraintViagem, codigo: string): Falha {
+  const detalhe = CONSTRAINTS_VIAGEM[nome];
+  return {
+    ok: false,
+    mensagem: detalhe.mensagem,
+    campo: detalhe.campo,
+    codigo,
+  };
+}
+
+export function traduzirErroBanco(error: ErroSupabase, mensagemPadrao: string): Falha {
   if (ehAcessoNegado(error)) {
     return { ok: false, mensagem: MENSAGEM_ACESSO_NEGADO, codigo: '42501' };
   }
 
-  if (codigo in MENSAGENS_ERRO_VIAGEM) {
+  // 23505 pode ser o id gerado no cliente (idempotência) ou o índice que barra uma segunda
+  // viagem em andamento. Só a segunda vira "veículo em andamento".
+  if (error.code === '23505') {
+    const constraint = nomeDaConstraint(error, '23505');
+    if (constraint) {
+      return falhaDaConstraint(constraint, error.code);
+    }
+    return { ok: false, mensagem: MENSAGENS_ERRO_VIAGEM['23505'], codigo: error.code };
+  }
+
+  // 23514 cobre três checks diferentes: inicial negativo, final não maior que o inicial e
+  // viagem Finalizada sem final. Cada uma tem mensagem e campo próprios.
+  if (error.code === '23514') {
+    const constraint = nomeDaConstraint(error, '23514');
+    if (constraint) {
+      return falhaDaConstraint(constraint, error.code);
+    }
+    return { ok: false, mensagem: MENSAGENS_ERRO_VIAGEM['23514'], codigo: error.code };
+  }
+
+  if (Object.prototype.hasOwnProperty.call(MENSAGENS_ERRO_VIAGEM, error.code)) {
+    const codigo = error.code as keyof typeof MENSAGENS_ERRO_VIAGEM;
     return {
       ok: false,
       mensagem: MENSAGENS_ERRO_VIAGEM[codigo],
@@ -78,82 +171,6 @@ export function traduzirErroBanco(error: ErroSupabase, mensagemPadrao: string): 
 
   return { ok: false, mensagem: mensagemPadrao, codigo: error.code };
 }
-
-// Schemas Zod com validação rigorosa e mensagens amigáveis em português
-export const abrirViagemSchema = z.object({
-  id: z.string().optional(),
-  veiculo_id: z.string().min(1, 'Selecione um veículo.'),
-  rota_id: z.string().min(1, 'Selecione uma rota.'),
-  motorista_id: z.string().min(1, 'Motorista obrigatório.'),
-  hodometro_inicial: z
-    .number('Informe um número para o hodômetro inicial.')
-    .nonnegative('O hodômetro inicial não pode ser negativo.'),
-  data_inicio: z.string().optional().nullable(),
-});
-
-export const fecharViagemSchema = z.object({
-  hodometro_final: z
-    .number('Informe um número para o hodômetro final.')
-    .positive('O hodômetro final deve ser maior que zero.'),
-  data_fim: z.string().optional().nullable(),
-});
-
-export const corrigirHodometroFinalSchema = z.object({
-  hodometro_final: z
-    .number('Informe um número para o hodômetro final.')
-    .positive('O hodômetro final deve ser maior que zero.'),
-});
-
-export const veiculoResumoSchema = z.object({
-  id: z.string(),
-  placa: z.string(),
-  marca: z.string(),
-  modelo: z.string(),
-  status: z.enum(Constants.public.Enums.status_veiculo),
-});
-
-export const rotaResumoSchema = z.object({
-  id: z.string(),
-  cidade_origem: z.string(),
-  uf_origem: z.enum(Constants.public.Enums.uf),
-  cidade_destino: z.string(),
-  uf_destino: z.enum(Constants.public.Enums.uf),
-  distancia_estimada_km: z.number(),
-});
-
-export const motoristaResumoSchema = z.object({
-  id: z.string(),
-  nome: z.string(),
-  email: z.string().optional().nullable(),
-});
-
-export const viagemSchema = z.object({
-  id: z.string(),
-  veiculo_id: z.string(),
-  rota_id: z.string(),
-  motorista_id: z.string(),
-  hodometro_inicial: z.number(),
-  hodometro_final: z.number().nullable(),
-  data_inicio: z.string().nullable(),
-  data_fim: z.string().nullable(),
-  status: z.enum(Constants.public.Enums.status_viagem),
-  km_rodado: z.number().nullable(),
-  data_inclusao: z.string(),
-  data_atualizacao: z.string(),
-});
-
-function normalizarRelacao<T>(valor: unknown): T | null | undefined {
-  if (Array.isArray(valor)) {
-    return (valor[0] as T) ?? null;
-  }
-  return (valor as T) ?? null;
-}
-
-export const viagemDetalhadaSchema = viagemSchema.extend({
-  veiculo: z.preprocess(normalizarRelacao, veiculoResumoSchema.optional().nullable()),
-  rota: z.preprocess(normalizarRelacao, rotaResumoSchema.optional().nullable()),
-  motorista: z.preprocess(normalizarRelacao, motoristaResumoSchema.optional().nullable()),
-});
 
 function validarViagem(data: unknown): Resultado<Viagem> {
   const parsed = viagemSchema.safeParse(data);
@@ -222,6 +239,9 @@ export async function buscarViagemPorId(id: string): Promise<Resultado<ViagemDet
   return validarViagemDetalhada(data);
 }
 
+// Consulta sujeita ao RLS: para o Motorista, o máximo considera só as viagens dele. A tela
+// só usa esse valor para Admin/Gestor; para o Motorista, o banco devolve VG004 sem expor o
+// hodômetro de uma viagem que ele não enxerga.
 export async function buscarUltimoHodometro(veiculo_id: string): Promise<Resultado<number | null>> {
   const { data, error } = await supabase
     .from('viagem')
@@ -242,6 +262,9 @@ export async function buscarUltimoHodometro(veiculo_id: string): Promise<Resulta
   return { ok: true, data: Number(data[0].hodometro_final) };
 }
 
+// Também sujeita ao RLS: o Motorista só vê a própria viagem. Para disponibilidade do veículo
+// (inclusive viagem aberta por outro motorista), a tela usa `veiculo.status` via
+// `buscarVeiculoPorId`; a barreira final continua no trigger de `viagem`.
 export async function buscarViagemEmAndamento(veiculo_id: string): Promise<Resultado<Viagem | null>> {
   const { data, error } = await supabase
     .from('viagem')
@@ -273,16 +296,16 @@ export async function abrirViagem(input: NovaViagemInput): Promise<Resultado<Via
   }
 
   const payload: Database['public']['Tables']['viagem']['Insert'] = {
-    veiculo_id: input.veiculo_id,
-    rota_id: input.rota_id,
-    motorista_id: input.motorista_id,
-    hodometro_inicial: input.hodometro_inicial,
-    data_inicio: input.data_inicio ?? new Date().toISOString(),
+    veiculo_id: parsed.data.veiculo_id,
+    rota_id: parsed.data.rota_id,
+    motorista_id: parsed.data.motorista_id,
+    hodometro_inicial: parsed.data.hodometro_inicial,
+    data_inicio: parsed.data.data_inicio ?? new Date().toISOString(),
     status: 'EmAndamento',
   };
 
-  if (input.id) {
-    payload.id = input.id;
+  if (parsed.data.id) {
+    payload.id = parsed.data.id;
   }
 
   const { data, error } = await supabase
@@ -311,8 +334,8 @@ export async function fecharViagem(id: string, input: FecharViagemInput): Promis
 
   const payload = {
     status: 'Finalizada' as const,
-    hodometro_final: input.hodometro_final,
-    data_fim: input.data_fim ?? new Date().toISOString(),
+    hodometro_final: parsed.data.hodometro_final,
+    data_fim: parsed.data.data_fim ?? new Date().toISOString(),
   };
 
   const { data, error } = await supabase.from('viagem').update(payload).eq('id', id).select(COLUNAS_VIAGEM).maybeSingle();
@@ -370,7 +393,7 @@ export async function corrigirHodometroFinal(
 
   const { data, error } = await supabase
     .from('viagem')
-    .update({ hodometro_final: dados.hodometro_final })
+    .update({ hodometro_final: parsed.data.hodometro_final })
     .eq('id', id)
     .select(COLUNAS_VIAGEM)
     .maybeSingle();

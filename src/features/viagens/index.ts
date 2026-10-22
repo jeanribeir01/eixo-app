@@ -1,4 +1,5 @@
 export * from './types';
+export * from './schema';
 export * from './viagensRepository';
 export * from './calculo';
 export { ViagensListView } from './ViagensListView';
