@@ -1,19 +1,18 @@
 import {
   abrirViagemComUltimoHodometroSchema,
   abrirViagemSchema,
-  corrigirHodometroFinalSchema,
   fecharViagemFormSchema,
   fecharViagemSchema,
 } from '../schema';
 import {
   abrirViagem,
   buscarUltimoHodometro,
-  buscarViagemEmAndamento,
   buscarViagemPorId,
-  cancelarViagem,
-  corrigirHodometroFinal,
   fecharViagem,
+  listarMotoristasAtivos,
+  listarRotasAtivas,
   listarViagens,
+  MENSAGEM_VIAGEM_NAO_ABERTA,
   MENSAGENS_ERRO_CONSTRAINT_VIAGEM,
   MENSAGENS_ERRO_VIAGEM,
   traduzirErroBanco,
@@ -352,14 +351,6 @@ describe('viagensRepository', () => {
         expect(resultado.error.issues[0]?.message).toBe(mensagem);
       }
     });
-
-    it('valida correção de hodômetro final', () => {
-      const resultadoValido = corrigirHodometroFinalSchema.safeParse({ hodometro_final: 12500 });
-      expect(resultadoValido.success).toBe(true);
-
-      const resultadoInvalido = corrigirHodometroFinalSchema.safeParse({ hodometro_final: -10 });
-      expect(resultadoInvalido.success).toBe(false);
-    });
   });
 
   describe('Operações do Repositório', () => {
@@ -447,6 +438,16 @@ describe('viagensRepository', () => {
         }),
       );
       expect(builder.eq).toHaveBeenCalledWith('id', 'v1');
+      expect(builder.eq).toHaveBeenCalledWith('status', 'EmAndamento');
+    });
+
+    it('fecharViagem não regrava viagem já encerrada por outra pessoa', async () => {
+      // Com o filtro de status, o update não acha linha e o PostgREST devolve null.
+      responder(ok(null));
+
+      const resultado = await fecharViagem('v1', { hodometro_final: 15300 });
+
+      expect(resultado).toEqual({ ok: false, mensagem: MENSAGEM_VIAGEM_NAO_ABERTA, campo: 'status' });
     });
 
     it('fecharViagem trata erro 23514 quando hodômetro final é menor ou igual ao inicial', async () => {
@@ -472,37 +473,6 @@ describe('viagensRepository', () => {
         mensagem: MENSAGENS_ERRO_VIAGEM.VG005,
         campo: 'status',
         codigo: 'VG005',
-      });
-    });
-
-    it('cancelarViagem atualiza status para Cancelada', async () => {
-      const viagemCancelada = { ...viagemBase, status: 'Cancelada' as const };
-      const [builder] = responder(ok(viagemCancelada));
-
-      const resultado = await cancelarViagem('v1');
-
-      expect(resultado).toEqual({ ok: true, data: viagemCancelada });
-      expect(builder.update).toHaveBeenCalledWith(
-        expect.objectContaining({
-          status: 'Cancelada',
-        }),
-      );
-    });
-
-    it('corrigirHodometroFinal atualiza hodometro_final e trata VG007', async () => {
-      const viagemCorrigida = { ...viagemBase, hodometro_final: 10500 };
-      responder(ok(viagemCorrigida));
-
-      const sucesso = await corrigirHodometroFinal('v1', { hodometro_final: 10500 });
-      expect(sucesso).toEqual({ ok: true, data: viagemCorrigida });
-
-      responder(erro('VG007'));
-      const falha = await corrigirHodometroFinal('v1', { hodometro_final: 11000 });
-      expect(falha).toEqual({
-        ok: false,
-        mensagem: MENSAGENS_ERRO_VIAGEM.VG007,
-        campo: 'hodometro_final',
-        codigo: 'VG007',
       });
     });
 
@@ -534,14 +504,31 @@ describe('viagensRepository', () => {
       expect(resultado).toEqual({ ok: true, data: null });
     });
 
-    it('buscarViagemEmAndamento retorna a viagem aberta ou null se disponível', async () => {
-      responder(ok(viagemBase));
-      const emAndamento = await buscarViagemEmAndamento('veic-1');
-      expect(emAndamento).toEqual({ ok: true, data: viagemBase });
+    it('listarRotasAtivas filtra as rotas ativas no banco', async () => {
+      const [builder] = responder(ok([viagemDetalhada.rota]));
 
-      responder(ok(null));
-      const livre = await buscarViagemEmAndamento('veic-livre');
-      expect(livre).toEqual({ ok: true, data: null });
+      const resultado = await listarRotasAtivas();
+
+      expect(resultado).toEqual({ ok: true, data: [viagemDetalhada.rota] });
+      expect(mockFrom).toHaveBeenCalledWith('rota');
+      expect(builder.eq).toHaveBeenCalledWith('ativa', true);
+    });
+
+    it('listarMotoristasAtivos filtra perfil Motorista e status Ativo no banco', async () => {
+      const [builder] = responder(
+        ok([{ id: 'mot-2', nome: 'João Motorista', email: 'joao@x.com', perfil: { nome: 'Motorista' } }]),
+      );
+
+      const resultado = await listarMotoristasAtivos();
+
+      expect(resultado).toEqual({
+        ok: true,
+        data: [{ id: 'mot-2', nome: 'João Motorista', email: 'joao@x.com' }],
+      });
+      expect(mockFrom).toHaveBeenCalledWith('usuario');
+      expect(builder.select).toHaveBeenCalledWith(expect.stringContaining('perfil_id!inner'));
+      expect(builder.eq).toHaveBeenCalledWith('status', 'Ativo');
+      expect(builder.eq).toHaveBeenCalledWith('perfil.nome', 'Motorista');
     });
 
     it('listarViagens aplica filtros de status e veículo e formata lista', async () => {
@@ -562,11 +549,10 @@ describe('viagensRepository', () => {
       expect(repo.listarViagens).toBe(listarViagens);
       expect(repo.buscarViagemPorId).toBe(buscarViagemPorId);
       expect(repo.buscarUltimoHodometro).toBe(buscarUltimoHodometro);
-      expect(repo.buscarViagemEmAndamento).toBe(buscarViagemEmAndamento);
+      expect(repo.listarRotasAtivas).toBe(listarRotasAtivas);
+      expect(repo.listarMotoristasAtivos).toBe(listarMotoristasAtivos);
       expect(repo.abrirViagem).toBe(abrirViagem);
       expect(repo.fecharViagem).toBe(fecharViagem);
-      expect(repo.cancelarViagem).toBe(cancelarViagem);
-      expect(repo.corrigirHodometroFinal).toBe(corrigirHodometroFinal);
     });
   });
 });

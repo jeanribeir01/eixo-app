@@ -1,21 +1,25 @@
+import { z } from 'zod';
+
 import { ehAcessoNegado, MENSAGEM_ACESSO_NEGADO } from '@/lib/errors';
 import { supabase } from '@/supabase/client';
 import type { Database } from '@/types/database';
 
 import {
   abrirViagemSchema,
-  corrigirHodometroFinalSchema,
   fecharViagemSchema,
+  motoristaResumoSchema,
+  rotaResumoSchema,
   viagemDetalhadaSchema,
   viagemSchema,
 } from './schema';
 import type {
   CampoErroViagem,
-  CorrigirHodometroFinalInput,
   FecharViagemInput,
   FiltroViagens,
+  MotoristaResumo,
   NovaViagemInput,
   Resultado,
+  RotaResumo,
   Viagem,
   ViagemDetalhada,
   ViagensRepository,
@@ -33,6 +37,11 @@ export const COLUNAS_DETALHADAS =
   'veiculo:veiculo_id (id, placa, marca, modelo, status), ' +
   'rota:rota_id (id, cidade_origem, uf_origem, cidade_destino, uf_destino, distancia_estimada_km), ' +
   'motorista:usuario!viagem_motorista_id_fkey (id, nome, email)';
+
+// Seletores do formulário de abertura: cadastro pequeno por natureza; o limite só impede uma
+// resposta sem teto (skill supabase-query). Os filtros vão para o banco para o limite valer
+// sobre o que a tela mostra, e não sobre a tabela inteira.
+const LIMITE_SELETOR = 500;
 
 // Mensagens amigáveis para cada erro do banco (EIX-76 / migrations 20260924000300_frota.sql e
 // 20261015000100_viagem_regras.sql). O texto técnico do banco ou SQLSTATE nunca é exposto
@@ -108,6 +117,8 @@ export const CAMPOS_ERRO_VIAGEM: Record<string, CampoErroViagem> = {
   VG006: 'veiculo_id',
   VG007: 'hodometro_final',
 };
+
+export const MENSAGEM_VIAGEM_NAO_ABERTA = 'Esta viagem já foi encerrada ou não foi encontrada.';
 
 type ErroSupabase = { code: string; message?: string; details?: string };
 type Falha = Extract<Resultado<never>, { ok: false }>;
@@ -262,26 +273,50 @@ export async function buscarUltimoHodometro(veiculo_id: string): Promise<Resulta
   return { ok: true, data: Number(data[0].hodometro_final) };
 }
 
-// Também sujeita ao RLS: o Motorista só vê a própria viagem. Para disponibilidade do veículo
-// (inclusive viagem aberta por outro motorista), a tela usa `veiculo.status` via
-// `buscarVeiculoPorId`; a barreira final continua no trigger de `viagem`.
-export async function buscarViagemEmAndamento(veiculo_id: string): Promise<Resultado<Viagem | null>> {
+// Só rotas ativas: uma rota desativada some do seletor, mas continua nas viagens antigas.
+export async function listarRotasAtivas(): Promise<Resultado<RotaResumo[]>> {
   const { data, error } = await supabase
-    .from('viagem')
-    .select(COLUNAS_VIAGEM)
-    .eq('veiculo_id', veiculo_id)
-    .eq('status', 'EmAndamento')
-    .maybeSingle();
+    .from('rota')
+    .select('id, cidade_origem, uf_origem, cidade_destino, uf_destino, distancia_estimada_km')
+    .eq('ativa', true)
+    .order('cidade_origem')
+    .order('cidade_destino')
+    .limit(LIMITE_SELETOR);
 
   if (error) {
-    return traduzirErroBanco(error, 'Não foi possível consultar as viagens do veículo.');
+    return traduzirErroBanco(error, 'Não foi possível carregar as rotas. Tente novamente.');
   }
 
-  if (!data) {
-    return { ok: true, data: null };
+  const parsed = z.array(rotaResumoSchema).safeParse(data);
+  if (!parsed.success) {
+    return { ok: false, mensagem: 'Os dados das rotas recebidos são inválidos.' };
   }
 
-  return validarViagem(data);
+  return { ok: true, data: parsed.data };
+}
+
+// Motoristas ativos para o Admin/Gestor escolher o responsável. O `!inner` faz o filtro de
+// perfil valer sobre a linha de `usuario` (sem ele, o PostgREST só esvaziaria a relação).
+// O RLS de `usuario` deixa Admin e Gestor de Frota lerem todos (20260924000500_rls.sql).
+export async function listarMotoristasAtivos(): Promise<Resultado<MotoristaResumo[]>> {
+  const { data, error } = await supabase
+    .from('usuario')
+    .select('id, nome, email, perfil:perfil_id!inner(nome)')
+    .eq('status', 'Ativo')
+    .eq('perfil.nome', 'Motorista')
+    .order('nome')
+    .limit(LIMITE_SELETOR);
+
+  if (error) {
+    return traduzirErroBanco(error, 'Não foi possível carregar os motoristas. Tente novamente.');
+  }
+
+  const parsed = z.array(motoristaResumoSchema).safeParse(data);
+  if (!parsed.success) {
+    return { ok: false, mensagem: 'Os dados dos motoristas recebidos são inválidos.' };
+  }
+
+  return { ok: true, data: parsed.data };
 }
 
 export async function abrirViagem(input: NovaViagemInput): Promise<Resultado<Viagem>> {
@@ -338,72 +373,24 @@ export async function fecharViagem(id: string, input: FecharViagemInput): Promis
     data_fim: parsed.data.data_fim ?? new Date().toISOString(),
   };
 
-  const { data, error } = await supabase.from('viagem').update(payload).eq('id', id).select(COLUNAS_VIAGEM).maybeSingle();
+  // Só fecha o que ainda está em andamento. Sem esse filtro, o Admin/Gestor com a tela aberta
+  // "fecharia" de novo uma viagem que o motorista já fechou: o trigger aceita isso como correção
+  // do hodômetro final e a leitura do motorista e a data_fim seriam trocadas sem aviso.
+  const { data, error } = await supabase
+    .from('viagem')
+    .update(payload)
+    .eq('id', id)
+    .eq('status', 'EmAndamento')
+    .select(COLUNAS_VIAGEM)
+    .maybeSingle();
 
   if (error) {
     return traduzirErroBanco(error, 'Não foi possível fechar a viagem. Tente novamente.');
   }
 
+  // Nenhuma linha: a viagem não existe, o RLS a esconde ou ela já foi encerrada.
   if (!data) {
-    return { ok: false, mensagem: 'Viagem não encontrada.' };
-  }
-
-  return validarViagem(data);
-}
-
-export async function cancelarViagem(
-  id: string,
-  options?: { hodometro_final?: number | null },
-): Promise<Resultado<Viagem>> {
-  const payload: Database['public']['Tables']['viagem']['Update'] = {
-    status: 'Cancelada',
-    data_fim: new Date().toISOString(),
-  };
-
-  if (options?.hodometro_final !== undefined) {
-    payload.hodometro_final = options.hodometro_final;
-  }
-
-  const { data, error } = await supabase.from('viagem').update(payload).eq('id', id).select(COLUNAS_VIAGEM).maybeSingle();
-
-  if (error) {
-    return traduzirErroBanco(error, 'Não foi possível cancelar a viagem. Tente novamente.');
-  }
-
-  if (!data) {
-    return { ok: false, mensagem: 'Viagem não encontrada.' };
-  }
-
-  return validarViagem(data);
-}
-
-export async function corrigirHodometroFinal(
-  id: string,
-  dados: CorrigirHodometroFinalInput,
-): Promise<Resultado<Viagem>> {
-  const parsed = corrigirHodometroFinalSchema.safeParse(dados);
-  if (!parsed.success) {
-    const issue = parsed.error.issues[0];
-    return {
-      ok: false,
-      mensagem: issue?.message ?? 'Hodômetro final inválido.',
-      campo: 'hodometro_final',
-    };
-  }
-
-  const { data, error } = await supabase
-    .from('viagem')
-    .update({ hodometro_final: parsed.data.hodometro_final })
-    .eq('id', id)
-    .select(COLUNAS_VIAGEM)
-    .maybeSingle();
-
-  if (error) {
-    return traduzirErroBanco(error, 'Não foi possível corrigir o hodômetro final. Tente novamente.');
-  }
-
-  if (!data) {
-    return { ok: false, mensagem: 'Viagem não encontrada.' };
+    return { ok: false, mensagem: MENSAGEM_VIAGEM_NAO_ABERTA, campo: 'status' };
   }
 
   return validarViagem(data);
@@ -413,9 +400,8 @@ export const viagensRepository: ViagensRepository = {
   listarViagens,
   buscarViagemPorId,
   buscarUltimoHodometro,
-  buscarViagemEmAndamento,
+  listarRotasAtivas,
+  listarMotoristasAtivos,
   abrirViagem,
   fecharViagem,
-  cancelarViagem,
-  corrigirHodometroFinal,
 };

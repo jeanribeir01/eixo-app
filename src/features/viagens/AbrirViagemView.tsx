@@ -4,9 +4,6 @@ import { ActivityIndicator, StyleSheet, View } from 'react-native';
 import { z } from 'zod';
 
 import { useProfile } from '@/features/auth/profileStore';
-import { listarRotas } from '@/features/rotas/rotasRepository';
-import type { RotaComViagens } from '@/features/rotas/types';
-import { listarUsuarios } from '@/features/usuarios/usuariosRepository';
 import { buscarVeiculoPorId, listarVeiculosSelecionaveis } from '@/features/veiculos/repository';
 import { rotuloStatusVeiculo, type Veiculo } from '@/features/veiculos/types';
 import {
@@ -26,7 +23,14 @@ import {
 
 import { formatarHodometro, parseHodometro } from './calculo';
 import { abrirViagemComUltimoHodometroSchema } from './schema';
-import { MENSAGENS_ERRO_VIAGEM, abrirViagem, buscarUltimoHodometro } from './viagensRepository';
+import type { MotoristaResumo, RotaResumo } from './types';
+import {
+  MENSAGENS_ERRO_VIAGEM,
+  abrirViagem,
+  buscarUltimoHodometro,
+  listarMotoristasAtivos,
+  listarRotasAtivas,
+} from './viagensRepository';
 
 type ErrosFormulario = {
   veiculo_id?: string;
@@ -55,14 +59,19 @@ export function AbrirViagemView() {
 
   const [carregandoDados, setCarregandoDados] = useState(true);
   const [erroCarregamento, setErroCarregamento] = useState<string | null>(null);
+  // "Tentar novamente" só incrementa este número; o efeito de carga roda de novo por causa dele,
+  // sem depender de a rota remontar a tela.
+  const [tentativaCarga, setTentativaCarga] = useState(0);
 
   const [veiculos, setVeiculos] = useState<Veiculo[]>([]);
-  const [rotas, setRotas] = useState<RotaComViagens[]>([]);
-  const [motoristas, setMotoristas] = useState<SelectOption[]>([]);
+  const [rotas, setRotas] = useState<RotaResumo[]>([]);
+  const [motoristas, setMotoristas] = useState<MotoristaResumo[]>([]);
 
   const [veiculoId, setVeiculoId] = useState<string | null>(null);
   const [rotaId, setRotaId] = useState<string | null>(null);
-  const [motoristaId, setMotoristaId] = useState<string | null>(usuario?.id ?? null);
+  // Sem padrão para Admin/Gestor: o responsável é escolhido de propósito, senão a validação
+  // "Motorista obrigatório" nunca dispararia e a viagem ficaria no nome do gestor.
+  const [motoristaId, setMotoristaId] = useState<string | null>(null);
   const [hodometroInicial, setHodometroInicial] = useState('');
   const [ultimoHodometroVeiculo, setUltimoHodometroVeiculo] = useState<number | null>(null);
 
@@ -73,70 +82,39 @@ export function AbrirViagemView() {
   const ehMotorista = usuario?.perfil === 'Motorista';
   const ehAdminOuGestor = usuario?.perfil === 'Admin' || usuario?.perfil === 'Gestor de Frota';
 
-  // Carrega listas de veículos, rotas e motoristas
+  // Carrega veículos, rotas e (Admin/Gestor) motoristas em paralelo.
   useEffect(() => {
     let cancelado = false;
 
     async function carregarAuxiliares() {
-      setCarregandoDados(true);
-      setErroCarregamento(null);
-
       // "viagem" só devolve veículo Disponível: inativo e em manutenção nem aparecem, e o
       // trigger do banco continua sendo a barreira para a corrida com outra abertura.
-      const [resVeiculos, resRotas] = await Promise.all([
+      // O Motorista não consulta `usuario`: ele é sempre o próprio responsável (RLS de viagem).
+      const [resVeiculos, resRotas, resMotoristas] = await Promise.all([
         listarVeiculosSelecionaveis('viagem'),
-        listarRotas(),
+        listarRotasAtivas(),
+        ehAdminOuGestor ? listarMotoristasAtivos() : Promise.resolve(null),
       ]);
 
       if (cancelado) return;
 
-      if (!resVeiculos.ok) {
-        setErroCarregamento(resVeiculos.mensagem);
+      function falhar(mensagem: string) {
+        setErroCarregamento(mensagem);
         setCarregandoDados(false);
-        return;
       }
 
-      if (!resRotas.ok) {
-        setErroCarregamento(resRotas.mensagem);
-        setCarregandoDados(false);
-        return;
-      }
+      if (!resVeiculos.ok) return falhar(resVeiculos.mensagem);
+      if (!resRotas.ok) return falhar(resRotas.mensagem);
+      if (resMotoristas && !resMotoristas.ok) return falhar(resMotoristas.mensagem);
 
       setVeiculos(resVeiculos.data);
-      // Apenas rotas ativas para seleção
-      setRotas(resRotas.data.filter((r) => r.ativa));
+      setRotas(resRotas.data);
 
-      // Se for Motorista, fixa nele mesmo (regra RLS-04 do banco)
       if (ehMotorista && usuario) {
-        setMotoristas([{ value: usuario.id, label: usuario.nome, description: usuario.email }]);
+        setMotoristas([{ id: usuario.id, nome: usuario.nome, email: usuario.email }]);
         setMotoristaId(usuario.id);
-      } else if (ehAdminOuGestor && usuario) {
-        // Admin/Gestor abre viagem para motoristas, mas não os exibe como opção. O próprio
-        // usuário continua na lista para ser o padrão, já que o RLS permite abrir para si.
-        const resUsuarios = await listarUsuarios();
-
-        if (cancelado) return;
-
-        if (!resUsuarios.ok) {
-          setErroCarregamento(resUsuarios.mensagem);
-          setCarregandoDados(false);
-          return;
-        }
-
-        const opcoes = resUsuarios.data
-          .filter(
-            (u) =>
-              u.status === 'Ativo' &&
-              (u.perfil.nome === 'Motorista' || u.id === usuario.id),
-          )
-          .map((u) => ({
-            value: u.id,
-            label: u.nome,
-            description: u.email,
-          }));
-
-        setMotoristas(opcoes);
-        setMotoristaId(usuario.id);
+      } else if (resMotoristas) {
+        setMotoristas(resMotoristas.data);
       }
 
       setCarregandoDados(false);
@@ -149,7 +127,15 @@ export function AbrirViagemView() {
       // Uma resposta de veículo ainda em voo não pode voltar depois de a tela sair.
       requisicaoVeiculoRef.current += 1;
     };
-  }, [ehAdminOuGestor, ehMotorista, usuario]);
+  }, [ehAdminOuGestor, ehMotorista, usuario, tentativaCarga]);
+
+  // A primeira carga já começa em "carregando" (estado inicial); a nova tentativa volta a tela
+  // para o loading e dispara o efeito de novo.
+  function recarregarAuxiliares() {
+    setCarregandoDados(true);
+    setErroCarregamento(null);
+    setTentativaCarga((atual) => atual + 1);
+  }
 
   // Ao selecionar um veículo, confere a disponibilidade e (Admin/Gestor) o último hodômetro.
   async function aoSelecionarVeiculo(id: string) {
@@ -192,9 +178,19 @@ export function AbrirViagemView() {
     const resHodometro = await buscarUltimoHodometro(id);
     if (requisicao !== requisicaoVeiculoRef.current) return;
 
-    if (resHodometro.ok && resHodometro.data !== null) {
-      setUltimoHodometroVeiculo(resHodometro.data);
-      setHodometroInicial(String(resHodometro.data));
+    if (!resHodometro.ok) {
+      // Sem o valor, a checagem do mínimo no app fica de fora: avisa, e o banco (VG004)
+      // continua barrando um hodômetro que regride.
+      setFeedback({ mensagem: resHodometro.mensagem, tone: 'error' });
+      return;
+    }
+
+    if (resHodometro.data !== null) {
+      const ultimo = resHodometro.data;
+      setUltimoHodometroVeiculo(ultimo);
+      // Só sugere se o campo ainda está vazio: o que o usuário digitou enquanto a consulta
+      // voltava não é apagado.
+      setHodometroInicial((atual) => (atual === '' ? String(ultimo) : atual));
     }
   }
 
@@ -263,6 +259,29 @@ export function AbrirViagemView() {
     description: `Distância estimada: ${r.distancia_estimada_km} km`,
   }));
 
+  const opcoesMotoristas: SelectOption[] = motoristas.map((m) => ({
+    value: m.id,
+    label: m.nome,
+    description: m.email ?? undefined,
+  }));
+
+  // Estado vazio: sem veículo, rota ou motorista não há viagem para abrir, e um seletor vazio
+  // não explica o porquê (AGENTS.md §2.1).
+  const vazio =
+    veiculos.length === 0
+      ? {
+          titulo: 'Nenhum veículo disponível',
+          descricao: 'Todos os veículos estão em viagem, em manutenção ou inativos.',
+        }
+      : rotas.length === 0
+        ? { titulo: 'Nenhuma rota ativa', descricao: 'Cadastre ou reative uma rota para abrir a viagem.' }
+        : opcoesMotoristas.length === 0
+          ? {
+              titulo: 'Nenhum motorista ativo',
+              descricao: 'Libere um usuário com o perfil Motorista para abrir a viagem.',
+            }
+          : null;
+
   return (
     <Screen
       scroll
@@ -283,7 +302,15 @@ export function AbrirViagemView() {
           title="Erro ao carregar dados"
           description={erroCarregamento}
           actionLabel="Tentar novamente"
-          onAction={() => router.replace('/viagens/nova')}
+          onAction={recarregarAuxiliares}
+        />
+      ) : vazio ? (
+        <EmptyState
+          icon="viagens"
+          title={vazio.titulo}
+          description={vazio.descricao}
+          actionLabel="Atualizar"
+          onAction={recarregarAuxiliares}
         />
       ) : (
         <Column gap="lg">
@@ -318,7 +345,7 @@ export function AbrirViagemView() {
               <Select
                 label="Motorista"
                 placeholder="Selecione o motorista"
-                options={motoristas}
+                options={opcoesMotoristas}
                 value={motoristaId}
                 disabled={ehMotorista}
                 onChange={(valor) => {

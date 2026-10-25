@@ -17,12 +17,11 @@ import {
   Text,
   colors,
   spacing,
-  type BadgeTone,
   type TabOption,
 } from '@/ui';
 
 import { calcularKmRodado, distanciaUltrapassaEstimativa, formatarHodometro, formatarKm } from './calculo';
-import type { StatusViagem } from './types';
+import { rotuloStatusViagem, type StatusViagem } from './types';
 import { listarViagens } from './viagensRepository';
 
 type FiltroStatus = StatusViagem | 'Todos';
@@ -30,15 +29,9 @@ type FiltroStatus = StatusViagem | 'Todos';
 const opcoesFiltro: TabOption[] = [
   { label: 'Todas', value: 'Todos' },
   { label: 'Em andamento', value: 'EmAndamento' },
-  { label: 'Finalizadas', value: 'Finalizada' },
+  { label: 'Concluídas', value: 'Finalizada' },
   { label: 'Canceladas', value: 'Cancelada' },
 ];
-
-const badgePorStatus: Record<StatusViagem, { label: string; tone: BadgeTone }> = {
-  EmAndamento: { label: 'Em andamento', tone: 'neutral' },
-  Finalizada: { label: 'Finalizada', tone: 'neutral' },
-  Cancelada: { label: 'Cancelada', tone: 'neutral' },
-};
 
 export function ViagensListView() {
   const router = useRouter();
@@ -125,7 +118,6 @@ export function ViagensListView() {
           renderItem={({ item }) => {
             // Passo 3.1: Cálculo offline km_rodado ?? (hodometro_final - hodometro_inicial)
             const kmRodado = calcularKmRodado(item);
-            const statusConfig = badgePorStatus[item.status];
             // Passo 3.3: Aviso visual se ultrapassar muito a estimativa da rota
             const distanciaExcessiva = distanciaUltrapassaEstimativa(
               kmRodado,
@@ -140,7 +132,7 @@ export function ViagensListView() {
                     <Text variant="body" weight="medium">
                       {item.veiculo ? `${item.veiculo.placa} • ${item.veiculo.modelo}` : 'Veículo'}
                     </Text>
-                    <Badge label={statusConfig.label} tone={statusConfig.tone} />
+                    <Badge label={rotuloStatusViagem[item.status]} tone="neutral" />
                   </View>
 
                   {/* Trecho da rota */}

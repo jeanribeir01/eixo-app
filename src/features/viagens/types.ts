@@ -7,6 +7,14 @@ export type Uf = Enums<'uf'>;
 // Linha exata da tabela `viagem` no banco (snake_case, paridade 1:1 com schema e tipos gerados)
 export type Viagem = Tables<'viagem'>;
 
+// O banco guarda "Finalizada", mas o critério de aceite da US08 exibe "Concluída"
+// (mesmo padrão de `rotuloStatusVeiculo`). Um mapa só, para lista e fechamento não divergirem.
+export const rotuloStatusViagem: Record<StatusViagem, string> = {
+  EmAndamento: 'Em andamento',
+  Finalizada: 'Concluída',
+  Cancelada: 'Cancelada',
+};
+
 // Resumo do veículo acoplado à viagem
 export type VeiculoResumo = {
   id: string;
@@ -56,11 +64,6 @@ export type FecharViagemInput = {
   data_fim?: string | null;
 };
 
-// Dados para correção do hodômetro final (Admin / Gestor)
-export type CorrigirHodometroFinalInput = {
-  hodometro_final: number;
-};
-
 // Filtro de listagem
 export type FiltroViagens = {
   status?: StatusViagem | 'Todos';
@@ -88,9 +91,8 @@ export interface ViagensRepository {
   listarViagens(filtro?: FiltroViagens): Promise<Resultado<ViagemDetalhada[]>>;
   buscarViagemPorId(id: string): Promise<Resultado<ViagemDetalhada>>;
   buscarUltimoHodometro(veiculo_id: string): Promise<Resultado<number | null>>;
-  buscarViagemEmAndamento(veiculo_id: string): Promise<Resultado<Viagem | null>>;
+  listarRotasAtivas(): Promise<Resultado<RotaResumo[]>>;
+  listarMotoristasAtivos(): Promise<Resultado<MotoristaResumo[]>>;
   abrirViagem(dados: NovaViagemInput): Promise<Resultado<Viagem>>;
   fecharViagem(id: string, dados: FecharViagemInput): Promise<Resultado<Viagem>>;
-  cancelarViagem(id: string, options?: { hodometro_final?: number | null }): Promise<Resultado<Viagem>>;
-  corrigirHodometroFinal(id: string, dados: CorrigirHodometroFinalInput): Promise<Resultado<Viagem>>;
 }

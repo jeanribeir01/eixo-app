@@ -72,12 +72,6 @@ export const fecharViagemFormSchema = fecharViagemSchema
     }
   });
 
-export const corrigirHodometroFinalSchema = z.object({
-  hodometro_final: z
-    .number('Informe um número para o hodômetro final.')
-    .positive('O hodômetro final deve ser maior que zero.'),
-});
-
 // Schemas de leitura: validam o que volta do PostgREST, inclusive as relações que podem vir
 // como objeto ou array (dependendo da cardinalidade que o PostgREST infere).
 export const veiculoResumoSchema = z.object({
