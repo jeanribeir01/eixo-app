@@ -1,11 +1,12 @@
 import { useCallback, useState } from 'react';
 import { useRouter } from 'expo-router';
-import { Alert, FlatList, RefreshControl, StyleSheet } from 'react-native';
+import { Alert, RefreshControl, StyleSheet } from 'react-native';
 
 import { isoParaDataBR, nomeDoMes } from '@/lib/datas';
 import { formatarMoeda } from '@/lib/money';
 import { useDadosDaTela } from '@/lib/useDadosDaTela';
 import {
+  List,
   Button,
   Column,
   EmptyState,
@@ -163,7 +164,7 @@ export function MovimentacoesListView() {
       )}
 
       {tela.status === 'pronto' && (
-        <FlatList
+        <List
           data={filtradas}
           keyExtractor={(item) => item.id}
           style={styles.lista}

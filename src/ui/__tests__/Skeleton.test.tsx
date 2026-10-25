@@ -1,10 +1,12 @@
 import { act, render, screen, waitFor } from '@testing-library/react-native';
 import { AccessibilityInfo, StyleSheet } from 'react-native';
+import * as Reanimated from 'react-native-reanimated';
 
 import { Skeleton } from '../Skeleton';
 import { colors, radius, spacing } from '../tokens';
 
 describe('Skeleton', () => {
+  beforeEach(() => jest.mocked(Reanimated.useReducedMotion).mockReturnValue(false));
   afterEach(() => jest.restoreAllMocks());
 
   it('pulsa entre 1 e 0,5 e volta a 1 em ciclo de 1 segundo (ANI-01)', async () => {
@@ -18,6 +20,7 @@ describe('Skeleton', () => {
   });
 
   it('sem animação até conhecer a preferência e com remover animações ligado (ANI-01)', async () => {
+    jest.spyOn(Reanimated, 'useReducedMotion').mockReturnValue(true);
     let resolvePreference: (value: boolean) => void = () => {};
     jest.spyOn(AccessibilityInfo, 'isReduceMotionEnabled').mockReturnValue(new Promise((resolve) => { resolvePreference = resolve; }));
     render(<Skeleton accessibilityLabel="Carregando" />);
@@ -31,7 +34,8 @@ describe('Skeleton', () => {
     let changePreference: (value: boolean) => void = () => {};
     jest.spyOn(AccessibilityInfo, 'isReduceMotionEnabled').mockResolvedValue(false);
     const remove = jest.fn();
-    jest.spyOn(AccessibilityInfo, 'addEventListener').mockImplementation((_event, handler) => {
+    const subscribe = jest.spyOn(AccessibilityInfo, 'addEventListener') as unknown as jest.SpyInstance<{ remove: () => void }, [string, (value: boolean) => void]>;
+    subscribe.mockImplementation((_event, handler) => {
       changePreference = handler;
       return { remove };
     });

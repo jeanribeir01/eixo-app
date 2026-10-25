@@ -1,11 +1,15 @@
 import { useContext, type ReactNode } from 'react';
-import { Platform, Pressable, StyleSheet, View } from 'react-native';
+import { Platform, Pressable, StyleSheet, View, type PressableStateCallbackType } from 'react-native';
+import Animated from 'react-native-reanimated';
 
 import { Icon } from './Icon';
 import type { IconName } from './icons';
 import { ListSectionContext } from './ListSection';
 import { Text } from './Text';
 import { colors, spacing, touchTarget } from './tokens';
+import { useListTransition } from './useListTransition';
+
+const AnimatedPressable = Animated.createAnimatedComponent(Pressable);
 
 export type ListItemProps = {
   // Linha padrão: título, subtítulo, ícone à esquerda e algo à direita (valor, switch, badge).
@@ -28,6 +32,7 @@ export type ListItemProps = {
 // reage com o ripple do Android na cor da hairline; o opacity 0.6 fica para os botões.
 export function ListItem({ title, subtitle, icon, trailing, onPress, accessibilityLabel, control, children }: ListItemProps) {
   const dentroDeSecao = useContext(ListSectionContext);
+  const transition = useListTransition();
   const estiloItem = [styles.item, dentroDeSecao && styles.itemEmSecao];
 
   const conteudo =
@@ -53,7 +58,7 @@ export function ListItem({ title, subtitle, icon, trailing, onPress, accessibili
     // A borda da linha fica no contêiner; a área tocável e o controle são irmãos dentro dele.
     const estiloArea = [styles.area, dentroDeSecao && styles.areaEmSecao];
     return (
-      <View style={[...estiloItem, styles.comControle]}>
+      <Animated.View layout={transition} style={[...estiloItem, styles.comControle]}>
         {onPress ? (
           <Pressable
             accessibilityRole="button"
@@ -68,25 +73,26 @@ export function ListItem({ title, subtitle, icon, trailing, onPress, accessibili
           <View style={estiloArea}>{conteudo}</View>
         )}
         <View style={dentroDeSecao && styles.controleEmSecao}>{control}</View>
-      </View>
+      </Animated.View>
     );
   }
 
   if (!onPress) {
-    return <View style={estiloItem}>{conteudo}</View>;
+    return <Animated.View layout={transition} style={estiloItem}>{conteudo}</Animated.View>;
   }
 
   return (
-    <Pressable
+    <AnimatedPressable
+      layout={transition}
       accessibilityRole="button"
       accessibilityLabel={accessibilityLabel ?? title}
       onPress={onPress}
       android_ripple={{ color: colors.border }}
       // No Android o ripple já é o feedback; no iOS, que não tem ripple, a linha escurece de leve.
-      style={({ pressed }) => [...estiloItem, pressed && Platform.OS === 'ios' && styles.pressedIos]}
+      style={({ pressed }: PressableStateCallbackType) => [...estiloItem, pressed && Platform.OS === 'ios' && styles.pressedIos]}
     >
       {conteudo}
-    </Pressable>
+    </AnimatedPressable>
   );
 }
 

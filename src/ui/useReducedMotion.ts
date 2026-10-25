@@ -1,9 +1,11 @@
 import { useEffect, useState } from 'react';
 import { AccessibilityInfo } from 'react-native';
+import { useReducedMotion as useInitialReducedMotion } from 'react-native-reanimated';
 
-// Até conhecer a preferência, mantém a interface parada. Também responde à troca com o app aberto.
+// Preferência nativa inicial e alterações com o app aberto, inclusive ao voltar dos ajustes.
 export function useReducedMotion() {
-  const [reduced, setReduced] = useState(true);
+  const initialReduced = useInitialReducedMotion();
+  const [reduced, setReduced] = useState(initialReduced);
 
   useEffect(() => {
     let active = true;

@@ -5,7 +5,10 @@ process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY = 'anon-key-de-teste';
 process.env.EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID = 'web-client-id-de-teste.apps.googleusercontent.com';
 
 // Worklets nativos não existem no Jest; os mocks oficiais preservam as props visíveis dos componentes.
-jest.mock('react-native-reanimated', () => jest.requireActual<typeof import('react-native-reanimated')>('react-native-reanimated/mock'));
+jest.mock('react-native-reanimated', () => ({
+  ...jest.requireActual<typeof import('react-native-reanimated')>('react-native-reanimated/mock'),
+  useReducedMotion: jest.fn(() => false),
+}));
 
 // expo-symbols desenha o ícone com fonte nativa (Material Symbols) ou view nativa (SF Symbols), o que
 // não existe no Jest. O mock troca por um Text vazio, como o próprio expo-symbols faz no Android, que
