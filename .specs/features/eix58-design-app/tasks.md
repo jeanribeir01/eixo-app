@@ -1333,9 +1333,9 @@ T49
 
 **Done when**:
 
-- [ ] Teste com largura 800: duas colunas; 412: uma
+- [x] Teste com largura 800: duas colunas; 412: uma
 - [ ] Prints a 360, 412 e 800 sem rolagem horizontal
-- [ ] Gate check passes: `npm run typecheck && npm run lint && npm run test`
+- [x] Gate check passes: `npm run typecheck && npm run lint && npm run test`
 
 **Tests**: unit
 **Gate**: build

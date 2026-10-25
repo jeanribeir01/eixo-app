@@ -1,8 +1,7 @@
 import { render, screen } from '@testing-library/react-native';
 import { HeaderHeightContext } from 'expo-router/react-navigation';
-import { KeyboardAvoidingView, ScrollView, StyleSheet, Text } from 'react-native';
+import { KeyboardAvoidingView, ScrollView, StyleSheet, Text, useWindowDimensions } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { useWindowDimensions } from 'react-native';
 
 import { FAB_ALTURA_RESERVADA } from '../FAB';
 import { Screen } from '../Screen';
