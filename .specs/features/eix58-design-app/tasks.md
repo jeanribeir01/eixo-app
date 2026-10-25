@@ -1284,6 +1284,7 @@ T49
 **Done when**:
 
 - [x] Teste: primeira montagem sem `entering`; reduced motion respeitado
+- [x] Release em emulador de dois núcleos: incluir/remover sem entrada e respeitar a preferência; iniciar com remover animações ligado e desligar com o app aberto preserva as posições (correção do snapshot de `ReduceMotion.System`, evidência em `validation.md`)
 - [x] Gate check passes: `npm run typecheck && npm run lint && npm run test`
 
 **Tests**: unit

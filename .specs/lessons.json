@@ -3,7 +3,7 @@
   "promote_threshold": 2,
   "window_days": 45,
   "quarantine_threshold": 2,
-  "next_id": 26,
+  "next_id": 27,
   "lessons": [
     {
       "id": "L-001",
@@ -460,6 +460,24 @@
       ],
       "created": "2026-10-18T18:34:15Z",
       "last_seen": "2026-10-18T18:34:15Z"
+    },
+    {
+      "id": "L-026",
+      "key": "ac_gap::quando o hook acompanha reducemotionchanged controle a presenca da animacao pelo valor atual e evite somar reducemotion system do reanimated que usa o snapshot inicial confira ligar e desligar a preferencia em release",
+      "text": "Quando o hook acompanha reduceMotionChanged, controle a presença da animação pelo valor atual e evite somar ReduceMotion.System do Reanimated, que usa o snapshot inicial; confira ligar e desligar a preferência em release.",
+      "signal": "ac_gap",
+      "scope": "src/ui motion acessibilidade",
+      "status": "candidate",
+      "features": [
+        "eix58-design-app"
+      ],
+      "recurrence": 1,
+      "harmful": 0,
+      "evidence": [
+        "validation.md: EIX-68 iteração 2, preferência alterada em runtime (src/ui motion acessibilidade)"
+      ],
+      "created": "2026-10-25T18:48:52Z",
+      "last_seen": "2026-10-25T18:48:52Z"
     }
   ]
 }

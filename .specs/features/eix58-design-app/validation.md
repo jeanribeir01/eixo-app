@@ -158,3 +158,91 @@ These are proposed statuses; the verifier does not edit `spec.md`.
 
 **Completion gate**: `validate_state.py eix58-design-app --root C:\dev\eixo-app` exits 0 ("0 error(s) across [eix58-design-app]").
 **Lessons**: no new lesson. This round is a clean PASS. The residual device-only items are the same signals already recorded for this feature in L-014 and L-016, and re-recording within the same feature does not add recurrence. L-009..L-018 stay candidates: the fixes applied them successfully, which calls for no penalize, and pruning would delete history.
+
+---
+
+# EIX-68 · Motion contido (T41–T42), revisão independente
+
+**Date**: 2026-10-25
+**Diff range**: `95c001a..d4a2a7b`
+**Verifier**: independent sub-agent (author ≠ verifier)
+**Verdict**: PASS nos critérios automatizáveis de ANI-01. O aceite completo da issue depende da conferência exigida em release no emulador modesto, conduzida separadamente pelo implementador. Esta revisão não atesta execução nativa.
+
+## Spec-Anchored Acceptance Criteria — EIX-68
+
+| Critério | Resultado esperado da spec | Evidência exata | Resultado |
+| --- | --- | --- | --- |
+| ANI-01 AC1: incluir/remover linha | Reflow Reanimated ≤250 ms | `src/ui/__tests__/ListMotion.test.tsx:23`: `expect(duration).toHaveBeenCalledWith(200)`; linhas 27–31 afirmam presença/remoção de B e manutenção de `itemLayoutAnimation`. `src/ui/List.tsx:10` aplica a transição à célula da lista virtualizada. | PASS configuração; execução nativa depende de release |
+| ANI-01 AC2: pulso do Skeleton | Opacidade 1 → 0,5 → 1 em 1000 ms, repetição infinita | `src/ui/__tests__/Skeleton.test.tsx:15`: `toMatchObject({ animationName: { from: { opacity: 1 }, '50%': { opacity: 0.5 }, to: { opacity: 1 } }, animationDuration: 1000, animationIterationCount: 'infinite' })` | PASS configuração; execução nativa depende de release |
+| ANI-01 AC3: remover animações | Sem pulso e sem layout animado enquanto a preferência está ativa | `src/ui/__tests__/ListMotion.test.tsx:68`: `expect(...props.itemLayoutAnimation).toBeUndefined()`; linhas 69/74/75 também afirmam ausência na linha e após evento de preferência. `src/ui/__tests__/Skeleton.test.tsx:27`, `:29`, `:45`: `expect(...animationName).toBeUndefined()`; linhas 30/46 afirmam opacidade 1. | PASS |
+| ANI-01 AC4 / T42: sem entrada inicial ou repetida | Sem `entering` e sem `exiting` na montagem e remount da lista | `src/ui/__tests__/ListMotion.test.tsx:40`: `expect(list.props.skipEnteringExitingAnimations).toBe(true)`; linhas 41–45 afirmam `entering`/`exiting` indefinidos na lista e linhas; linhas 48–52 repetem depois de desmontar/montar. Nenhuma rota ou animação de entrada de tela foi adicionada no diff. | PASS |
+
+Os testes novos mapeiam aos quatro ACs; os testes anteriores de aparência e interação foram preservados. O mock oficial de Reanimated não executa worklets, portanto não mede frames nem comprova a duração física no dispositivo. A API instalada em `node_modules/react-native-reanimated/src/component/FlatList.tsx` confirma que `itemLayoutAnimation` é aplicado ao contêiner de célula, e que `skipEnteringExitingAnimations` suprime entrada/saída de montagem sem suprimir layout.
+
+## Gate Check — EIX-68
+
+- Implementador executou typecheck e lint com exit 0 e a suíte completa: 98 suites / 1069 testes app e 17 suites / 311 testes Supabase, sem falhas e sem skips.
+- Verifier executou, no scratch limpo, `npx jest --selectProjects app --runTestsByPath src/ui/__tests__/ListMotion.test.tsx src/ui/__tests__/Skeleton.test.tsx src/ui/__tests__/ListItem.test.tsx --runInBand`: **3 suites / 20 testes passaram**, 0 falhas, 0 skips.
+- Uma tentativa adicional de repetir os gates foi interrompida por redundância; o resultado acima é da execução final completa, com as fontes restauradas.
+- A issue usa uma dependência nativa nova e APIs de UI thread: o build release e a conferência em emulador são um gate separado, que não pode ser substituído pelo Jest.
+
+## Discrimination Sensor — EIX-68
+
+Scratch dedicado `C:/eix68-verify`, detached em `d4a2a7b`, com junction para dependências existentes. Cada mutação foi aplicada individualmente, executada e revertida antes da seguinte. Nenhuma fonte da árvore real foi alterada.
+
+| Mutação | Local | Falha observada | Resultado |
+| --- | --- | --- | --- |
+| M1: ignorar reduced motion e sempre retornar transition | `src/ui/useListTransition.ts:13` | `ListMotion.test.tsx:68`, recebeu `{}` em vez de `undefined`; 1 falhou / 2 passaram | Killed |
+| M2: pulso mínimo 0,8 em vez de 0,5 | `src/ui/Skeleton.tsx:31` | `Skeleton.test.tsx:15`, objeto de keyframes divergiu do valor 0,5; 1 falhou / 4 passaram | Killed |
+| M3: acrescentar entering na lista | `src/ui/List.tsx:10` | `ListMotion.test.tsx:41`, recebeu `{}` em vez de `undefined`; 1 falhou / 2 passaram | Killed |
+
+**Sensor result**: **3/3 killed, 0 survived**. Logs locais em `C:/eix68-verifier-evidence/`. Scratch e junction removidos; o arquivo `node_modules/react/package.json` da árvore real continua presente. `git status --porcelain` real estava vazio antes e depois do sensor. Só este relatório foi alterado ao registrar o resultado.
+
+## Pendências da iteração 1 — EIX-68 (histórico, resolvidas abaixo)
+
+- Conferir pulso, inclusão, remoção e nova visita em build release, no emulador de perfil modesto.
+- Conferir a preferência Android ligada antes de abrir e alterada com o app aberto. A revisão indicou ao implementador um risco a conferir: Reanimated mantém um snapshot inicial em `ReducedMotionManager`, enquanto o hook local escuta mudanças. O caso iniciar com a preferência ligada e depois desligá-la precisa de evidência nativa, pois o mock não representa o manager nativo.
+- A validação humana continua com o usuário; nenhuma issue foi encerrada.
+
+**Lessons**: nenhuma nova. Os três mutantes foram mortos; não houve falha comprovada, sobrevivente, desvio de spec ou lacuna de precisão. A execução release permanece explicitamente pendente, sem resultado inventado.
+
+## EIX-68 — Revalidação da preferência alterada em runtime (iteração 2)
+
+**Verdict**: PASS na correção automatizável; a repetição nativa com a correção ainda é conduzida pelo implementador. A versão anterior apresentou uma falha real em release, portanto o PASS automatizado da iteração 1 não era aceite completo da issue.
+
+**Falha confirmada pelo implementador**: iniciar o release com `transition_animation_scale=0` e depois alterar para `1` deixou a lista travada/inconsistente apesar de o contador do probe mudar. Evidências locais: `C:/eix68-build/evidence/restored.mp4` e `restored-video.png`. O Verifier inspecionou o screenshot; o diagnóstico temporal do vídeo e a operação nativa foram reportados pelo implementador.
+
+**Causa conferida independentemente**: `node_modules/react-native-reanimated/src/ReducedMotion.ts:17` captura a preferência inicial em `IS_REDUCED_MOTION_ENABLED_IN_SYSTEM`; `ReducedMotionManager` deriva desse snapshot. A transição usava `ReduceMotion.System`, somando essa decisão estática à decisão atualizada do hook do projeto.
+
+**Correção revisada**: `src/ui/useListTransition.ts:13` usa `.reduceMotion(ReduceMotion.Never)`. O guard em `:14`, `return reduced ? undefined : transition`, continua removendo a animação quando a preferência atual está ligada. Assim, há uma única decisão sobre acessibilidade, mantida pelo hook que ouve `reduceMotionChanged`. Não se trata de ignorar a preferência do usuário.
+
+**Cobertura de regressão**: `src/ui/__tests__/ListMotion.test.tsx:73`, `expect(reduceMotion).toHaveBeenCalledWith(ReduceMotion.Never)`, depois do evento `handler(false)` com preferência inicial true; linhas 69–70 e 77–78 continuam afirmando transições indefinidas quando a preferência está ligada. A asserção antiga sobre `System` verificava uma escolha de implementação sem exigir esse modo na spec; substituí-la preserva o AC e evita codificar o defeito.
+
+**Gate independente**: a cópia limpa dos dois arquivos corrigidos em scratch `C:/eix68-verify-fix` passou os **3/3 testes de ListMotion**, 0 falhas e 0 skips. Logs preservados em `C:/eix68-verifier-evidence/fixed-baseline.log`.
+
+**Sensor M4**: reverter apenas `.reduceMotion(Never)` para `.reduceMotion(System)` no scratch foi **killed**: 2 testes falharam / 1 passou, incluindo a regressão em `ListMotion.test.tsx:73`. Log `C:/eix68-verifier-evidence/mutation4-system.log`. Total acumulado **4/4 mutantes mortos**. Scratch e junction removidos. O porcelain da árvore real permaneceu exatamente com os mesmos três arquivos modificados antes/depois do sensor (`validation.md`, `useListTransition.ts`, `ListMotion.test.tsx`); nenhuma fonte real foi modificada pelo Verifier.
+
+**Gate nativo restante**: repetir no release corrigido o fluxo desligar/ligar/desligar a preferência com o app aberto, além dos demais cenários já planejados. O implementador registrará o resultado, sem atribuir essa execução ao Verifier.
+
+## EIX-68 — Resultado final da conferência release corrigida
+
+**Verdict: PASS.** A implementação corrigida tem cobertura automatizada, sensor **4/4 killed** e evidência nativa dos primitivos em release. As pendências de release das iterações anteriores estão resolvidas pelos registros abaixo. O defeito anterior e sua correção permanecem no histórico.
+
+**Ambiente reportado pelo implementador**: emulador Android API 36, dois núcleos, `MemTotal=2532304 kB` (aproximadamente 2,4 GiB; o comando solicitou 1536 MB, mas este foi o valor efetivo observado). Build release com `BuildConfig.DEBUG=false`. APK do probe: `C:/eix68-build/evidence/fixed-probe.apk`. O probe usa os primitivos reais `Skeleton`, `List` e `ListItem`, com inclusão/remoção automática. A operação do Android, a compilação e a coleta foram feitas pelo implementador; o Verifier revisou os artefatos e reproduziu a análise dos vídeos.
+
+| Cenário | Evidência e resultado |
+| --- | --- |
+| Iniciar com remover animações ligado | `fixed-reduced.mp4`: análise refeita pelo Verifier com `analyze-video.py` decodificou 540 amostras a 60 Hz, **zero posições intermediárias** do marcador B. Os únicos repousos foram 602 e 728 px; mudanças entre repousos em uma amostra (16,7 ms), sem transição gradual. |
+| Desligar a preferência com o mesmo processo aberto | `fixed-restored.mp4`: análise refeita decodificou 648 amostras, **30 intermediárias** em quatro transições. `transition-bounds.py` reproduz limites observados de **133,3 / 150,0 / 100,0 / 183,3 ms**, todos abaixo de 250 ms. O token de duração continua 200 ms. Os dois repousos voltaram a ocorrer, corrigindo o travamento anterior. |
+| Integridade da lista depois de reativar | Verifier inspecionou `fixed-restored-08.png`: linhas A, B e C presentes, sem desaparecimento de C. O contador do probe e a alternância dos repousos confirmam que a lista continuou mudando. |
+| Skeleton sem movimento no início e ao ativar com app aberto | `fixed-reduced-start-pixels.json`: depois de passar o splash/canvas inicial, todas as amostras do Skeleton são RGB `[232,230,229]`; `fixed-reduced-live-pixels.json`: todas as 16 amostras são `[232,230,229]`. |
+| Skeleton volta a pulsar quando a preferência é desligada | `fixed-restored-pixels.json` registra variação de `[232,230,229]` a `[241,240,239]`; screenshots confirmam alternância visual. Os endpoints de opacidade 1/0,5 e ciclo de 1000 ms são afirmados exatamente pelo teste `Skeleton.test.tsx:15–18`. |
+| Entrada inicial e nova visita | Teste discriminante `ListMotion.test.tsx:35–52` confirma ausência de `entering`/`exiting` em montagem e remount; o diff não adiciona animação de entrada nas telas de rotina. |
+
+Os tempos observados vêm da gravação reamostrada a 60 Hz e indicam a janela visível de deslocamento entre repousos; não são medição de FPS nem benchmark geral. A evidência release cobre os primitivos reais no probe isolado. **Não foi alegada navegação manual nem execução das rotinas de negócio no app completo**, cujo APK release foi compilado separadamente com sucesso segundo o implementador (`C:/eix68-build/release-app-build.log`, `evidence/eixo-app-release.apk`); o smoke de inicialização do app completo é registrado separadamente. A validação humana e a revisão do PR continuam com o usuário; a issue permanece aberta.
+
+**Lessons**: a falha real da iteração 1 gerou a candidata **L-026** via `lessons.py`. Não há novo sinal a registrar depois da correção.
+
+### Smoke de inicialização do app completo (implementador)
+
+O APK completo abriu a tela de login, registrada em `C:/eix68-build/evidence/app-startup.png`, sem crash nativo. O build usa o `.env.local` existente, com backend local: a restauração da sessão anterior do emulador registrou `AuthRetryableFetchError`, pois HTTP para `10.0.2.2` é bloqueado pela política de rede do release, e depois exibiu o login. Não foi feito login nem alterada a política de rede; este APK de ensaio não comprova fluxos autenticados nem é artefato de deploy. Os testes de motion em release usaram o probe isolado, sem backend, conforme descrito acima.

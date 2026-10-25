@@ -21,7 +21,7 @@ describe('Movimento das listas (ANI-01)', () => {
     await waitFor(() => expect(screen.UNSAFE_getByType(Animated.FlatList).props.itemLayoutAnimation).toBeDefined());
     const transition = screen.UNSAFE_getByType(Animated.FlatList).props.itemLayoutAnimation;
     expect(duration).toHaveBeenCalledWith(200);
-    expect(reduceMotion).toHaveBeenCalledWith(ReduceMotion.System);
+    expect(reduceMotion).toHaveBeenCalledWith(ReduceMotion.Never);
 
     rerender(<List data={[{ id: 'B' }, { id: 'A' }]} renderItem={renderItem} keyExtractor={keyExtractor} />);
     expect(screen.getByText('B')).toBeOnTheScreen();
@@ -55,6 +55,7 @@ describe('Movimento das listas (ANI-01)', () => {
   it('remover animações desliga layout da lista e da linha, inclusive ao mudar a preferência', async () => {
     jest.spyOn(Reanimated, 'useReducedMotion').mockReturnValue(true);
     jest.spyOn(AccessibilityInfo, 'isReduceMotionEnabled').mockResolvedValue(true);
+    const reduceMotion = jest.spyOn(LinearTransition, 'reduceMotion');
     const handlers = new Set<(value: boolean) => void>();
     const subscribe = jest.spyOn(AccessibilityInfo, 'addEventListener') as unknown as jest.SpyInstance<
       { remove: () => void }, [string, (value: boolean) => void]
@@ -68,6 +69,8 @@ describe('Movimento das listas (ANI-01)', () => {
     expect(screen.UNSAFE_getByType(Animated.FlatList).props.itemLayoutAnimation).toBeUndefined();
     for (const row of screen.UNSAFE_getAllByType(Animated.View)) expect(row.props.layout).toBeUndefined();
     act(() => handlers.forEach((handler) => handler(false)));
+    // Ao reativar, a preferência inicial true do Reanimated não pode suprimir a transição.
+    expect(reduceMotion).toHaveBeenCalledWith(ReduceMotion.Never);
     expect(screen.UNSAFE_getByType(Animated.FlatList).props.itemLayoutAnimation).toBeDefined();
     expect(screen.UNSAFE_getAllByType(Animated.View).some((row) => row.props.layout !== undefined)).toBe(true);
     act(() => handlers.forEach((handler) => handler(true)));

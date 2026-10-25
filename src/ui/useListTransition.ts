@@ -9,6 +9,7 @@ export function useListTransition() {
   const transition = useMemo(() => LinearTransition
     .duration(motion.listDuration)
     .easing(Easing.bezier(0.77, 0, 0.175, 1))
-    .reduceMotion(ReduceMotion.System), []);
+    // O hook acompanha a preferência atual; System conserva o snapshot de inicialização do Reanimated.
+    .reduceMotion(ReduceMotion.Never), []);
   return reduced ? undefined : transition;
 }

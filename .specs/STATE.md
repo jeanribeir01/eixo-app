@@ -100,24 +100,14 @@
 
 ## Handoff
 
-### EIX-39 — US06-b Manutenção
+### EIX-68 — Motion contido
 
-- **Feature**: `.specs/features/eix39-manutencao` (EIX-39, US06-b Manutenção)
-- **Phase / Task**: T1..T9 concluídas; Verifier PASS (iteração 3, 23/23 mutantes mortos, `validation.md`). Teste manual do Gestor de Frota feito em 2026-10-19
-- **Completed**: e42962d..HEAD em `feat/eix-39-us06b-manutencao` (RPC `listar_formas_pagamento_ativas`, CampoData/CampoMoeda em `src/ui`, schema, repositório, formulário, detalhe `/frota/[id]`, lista e seletor de formas pela RPC em `b2c4a16`)
-- **In-progress** (file:line): none
-- **Next step**: abrir/atualizar o PR, aprovação de outro dev e Squash and merge
-- **Blockers**: none
-- **Uncommitted files**: none
-- **Branch**: feat/eix-39-us06b-manutencao
-
-### EIX-79 — ano e inativação de veículos
-
-- **Feature**: `.specs/features/eix79-ano-inativar` (EIX-79)
-- **Phase / Task**: T1..T6 concluídas; entrega por commit, push e PR autorizada explicitamente em 18/10/2026
-- **Completed**: ano obrigatório, null legado, tradução 23514, inativação condicional, preservação de Inativo e selecionáveis. Typecheck/lint verdes; nova execução de 900 testes app e 300 backend aprovada. Verifier independente e sensor 6/6 preservados de 16/10. Supabase isolado com Auth/RLS reais, quatro perfis e concorrência validados; APK instalado no Pixel 7 e smoke UI Admin executado (cadastro, edição, limites 1949/1950/2027, teclado/scroll, confirmação/cancelamento, Snackbar, filtros e persistência)
-- **In-progress** (file:line): `.specs/features/eix79-ano-inativar/validation.md` — evidências finais registradas; preparação da entrega
-- **Next step**: revisão de Jean no PR para main; aceite humano, tablet/TalkBack e observação visual do loading continuam pendentes, conforme relatório
-- **Blockers**: nenhum bloqueio de implementação; testes de dispositivo físico e aceite humano não executados
-- **Uncommitted files**: somente feature veiculos, testes RLS e artefatos desta especificação; arquivos locais de sandbox/build/env ignorados
-- **Branch**: feat/eix-79-us06-ano-inativar; base eff0160; Linear inalterado. Supabase local e build nativo em diretórios separados, fora do repositório; login local pela flag que já existe no `.env.local`, sem desvio no código
+- **Feature**: `.specs/features/eix58-design-app`, fase 12, T41–T42 / ANI-01
+- **Phase / Task**: implementação concluída; revisão independente PASS; validação humana posterior pelo usuário
+- **Completed**: Skeleton com pulso 1 → 0,5 → 1 em 1000 ms (`2c8d4d8`); transições de célula/linha em 200 ms, sem entering/exiting (`d4a2a7b`); correção do snapshot de movimento do Reanimated ao alterar a preferência com o app aberto, testes e evidências na entrega atual
+- **Validation**: typecheck e lint exit 0; 1069 testes app + 311 Supabase verdes; sensor independente 4/4 mutações detectadas; release dos componentes conferido em emulador Android API 36 de dois núcleos; build release do app completo passou. Evidências e APK locais em `C:/eix68-build/evidence/`; relatório em `validation.md`
+- **In-progress**: nenhum código pendente
+- **Next step**: Gabriel validar os fluxos reais e o aspecto visual; abrir PR para revisão de Jean e usar Squash and merge após aprovação
+- **Blockers**: nenhum bloqueio técnico; aceite humano continua pendente por decisão do usuário
+- **Uncommitted files**: nenhum após o commit da entrega; artefatos de build/probe ficam fora do repositório
+- **Branch**: `feat/eix-68-design-motion`; Linear não encerrado; sem push, merge ou alterações de dados de produção
