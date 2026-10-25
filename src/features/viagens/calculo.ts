@@ -36,6 +36,29 @@ export function formatarHodometro(valor: number | null | undefined): string {
 }
 
 /**
+ * Lê o hodômetro digitado no padrão brasileiro: ponto separa milhar e vírgula separa decimal.
+ * "15.000" e "15.000,5" precisam virar 15000 e 15000.5 — `Number(texto.replace(',', '.'))`
+ * transformava o primeiro em 15 e o segundo em NaN.
+ */
+export function parseHodometro(valor: string): number | null {
+  const texto = valor.trim();
+  if (!texto) return null;
+
+  // Com vírgula, todo ponto é separador de milhar (ex.: "1.234.567,8").
+  // Sem vírgula, "15.000" também é milhar; "15000.5" continua aceito como decimal.
+  const normalizado = texto.includes(',')
+    ? texto.replace(/\./g, '').replace(',', '.')
+    : /^\d{1,3}(\.\d{3})+$/.test(texto)
+      ? texto.replace(/\./g, '')
+      : texto;
+
+  if (!/^\d+(\.\d+)?$/.test(normalizado)) return null;
+
+  const numero = Number(normalizado);
+  return Number.isFinite(numero) ? numero : null;
+}
+
+/**
  * Aviso Visual (Passo 3.3):
  * Detecta se a distância rodada calculada ultrapassa significativamente a estimativa da rota.
  * Tolerância padrão: 20% acima da distância estimada.

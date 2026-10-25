@@ -3,7 +3,7 @@
   "promote_threshold": 2,
   "window_days": 45,
   "quarantine_threshold": 2,
-  "next_id": 25,
+  "next_id": 26,
   "lessons": [
     {
       "id": "L-001",
@@ -442,6 +442,24 @@
       ],
       "created": "2026-10-16T11:41:56Z",
       "last_seen": "2026-10-16T11:41:56Z"
+    },
+    {
+      "id": "L-025",
+      "key": "surviving_mutant::when a screen loads several sources in parallel test the failure of each source separately not only one of them",
+      "text": "When a screen loads several sources in parallel, test the failure of each source separately, not only one of them",
+      "signal": "surviving_mutant",
+      "scope": "forms, screens",
+      "status": "candidate",
+      "features": [
+        "eix39-manutencao"
+      ],
+      "recurrence": 1,
+      "harmful": 0,
+      "evidence": [
+        "M16 src/features/manutencao/ManutencaoFormView.tsx:48 (MAN-40) (forms, screens)"
+      ],
+      "created": "2026-10-18T18:34:15Z",
+      "last_seen": "2026-10-18T18:34:15Z"
     }
   ]
 }

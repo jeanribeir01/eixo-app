@@ -1,48 +1,146 @@
-import { eq } from 'drizzle-orm';
-
-import * as schema from '@/db/schema';
-import { criarBancoDeTeste, type BancoDeTeste } from '@/db/testing';
-import type { NovaViagemInput, ViagensRepository } from '../types';
+import {
+  abrirViagemComUltimoHodometroSchema,
+  abrirViagemSchema,
+  fecharViagemFormSchema,
+  fecharViagemSchema,
+} from '../schema';
 import {
   abrirViagem,
-  abrirViagemSchema,
   buscarUltimoHodometro,
-  buscarViagemEmAndamento,
   buscarViagemPorId,
-  cancelarViagem,
-  corrigirHodometroFinal,
-  corrigirHodometroFinalSchema,
   fecharViagem,
-  fecharViagemSchema,
+  listarMotoristasAtivos,
+  listarRotasAtivas,
   listarViagens,
+  MENSAGEM_VIAGEM_NAO_ABERTA,
+  MENSAGENS_ERRO_CONSTRAINT_VIAGEM,
   MENSAGENS_ERRO_VIAGEM,
-  setDb,
   traduzirErroBanco,
-  traduzirErroSqlite,
   viagensRepository,
-  type ViagensDb,
 } from '../viagensRepository';
+import type { NovaViagemInput, ViagensRepository } from '../types';
 
-const AGORA = '2026-10-18T10:00:00.000Z';
-const VEICULO_ID = '00000000-0000-7000-8000-000000000001';
-const VEICULO_MANUTENCAO_ID = '00000000-0000-7000-8000-000000000002';
-const VEICULO_INATIVO_ID = '00000000-0000-7000-8000-000000000003';
-const ROTA_ID = '00000000-0000-7000-8000-000000000004';
-const MOTORISTA_ID = '00000000-0000-7000-8000-000000000005';
-const VIAGEM_ID = '00000000-0000-7000-8000-000000000006';
+type Resposta = { data: unknown; error: { code: string; message: string } | null };
+
+const METODOS = [
+  'select',
+  'insert',
+  'update',
+  'delete',
+  'eq',
+  'not',
+  'order',
+  'limit',
+  'single',
+  'maybeSingle',
+] as const;
+type Metodo = (typeof METODOS)[number];
+type Builder = Record<Metodo, jest.Mock> & PromiseLike<Resposta>;
+
+const mockFrom = jest.fn();
+
+jest.mock('@/supabase/client', () => ({
+  supabase: { from: (...args: unknown[]) => mockFrom(...args) },
+}));
+
+function criarBuilder(resposta: Resposta): Builder {
+  const metodos = {} as Record<Metodo, jest.Mock>;
+  const builder: Builder = Object.assign(metodos, {
+    then: <R1, R2>(
+      onFulfilled?: ((valor: Resposta) => R1 | PromiseLike<R1>) | null,
+      onRejected?: ((motivo: unknown) => R2 | PromiseLike<R2>) | null,
+    ) => Promise.resolve(resposta).then(onFulfilled, onRejected),
+  });
+
+  for (const metodo of METODOS) {
+    metodos[metodo] =
+      metodo === 'single' || metodo === 'maybeSingle'
+        ? jest.fn(() => Promise.resolve(resposta))
+        : jest.fn(() => builder);
+  }
+
+  return builder;
+}
+
+function responder(...respostas: Resposta[]): Builder[] {
+  const builders = respostas.map(criarBuilder);
+  const fila = [...builders];
+  mockFrom.mockImplementation(() => {
+    const proximo = fila.shift();
+    if (!proximo) throw new Error('from() chamado mais vezes que o esperado');
+    return proximo;
+  });
+  return builders;
+}
+
+const ok = (data: unknown): Resposta => ({ data, error: null });
+const erro = (code: string, message = `detalhe ${code}`): Resposta => ({
+  data: null,
+  error: { code, message },
+});
+
+function erroDeConstraint(code: '23505' | '23514', constraint: string): Resposta {
+  return erro(
+    code,
+    code === '23505'
+      ? `duplicate key value violates unique constraint "${constraint}"`
+      : `new row for relation "viagem" violates check constraint "${constraint}"`,
+  );
+}
+
+const viagemBase = {
+  id: 'v1',
+  veiculo_id: 'veic-1',
+  rota_id: 'rota-1',
+  motorista_id: 'mot-1',
+  hodometro_inicial: 10000,
+  hodometro_final: null,
+  data_inicio: '2026-10-18T10:00:00Z',
+  data_fim: null,
+  status: 'EmAndamento' as const,
+  km_rodado: null,
+  data_inclusao: '2026-10-18T10:00:00Z',
+  data_atualizacao: '2026-10-18T10:00:00Z',
+};
+
+const viagemDetalhada = {
+  ...viagemBase,
+  veiculo: {
+    id: 'veic-1',
+    placa: 'ABC1D23',
+    marca: 'Scania',
+    modelo: 'R450',
+    status: 'EmViagem' as const,
+  },
+  rota: {
+    id: 'rota-1',
+    cidade_origem: 'São Paulo',
+    uf_origem: 'SP' as const,
+    cidade_destino: 'Curitiba',
+    uf_destino: 'PR' as const,
+    distancia_estimada_km: 400,
+  },
+  motorista: {
+    id: 'mot-1',
+    nome: 'Carlos da Silva',
+    email: 'carlos@transportadora.com',
+  },
+};
 
 describe('viagensRepository', () => {
-  describe('Mapeamento de erros do banco (VG001 a VG007 e 23514)', () => {
+  beforeEach(() => {
+    jest.clearAllMocks();
+  });
+
+  describe('Mapeamento de erros do banco (VG001 a VG007)', () => {
     it.each([
       ['VG001', MENSAGENS_ERRO_VIAGEM.VG001, 'veiculo_id'],
-      ['23505', MENSAGENS_ERRO_VIAGEM['23505'], 'veiculo_id'],
       ['VG002', MENSAGENS_ERRO_VIAGEM.VG002, 'veiculo_id'],
       ['VG003', MENSAGENS_ERRO_VIAGEM.VG003, 'veiculo_id'],
       ['VG004', MENSAGENS_ERRO_VIAGEM.VG004, 'hodometro_inicial'],
       ['VG005', MENSAGENS_ERRO_VIAGEM.VG005, 'status'],
       ['VG006', MENSAGENS_ERRO_VIAGEM.VG006, 'veiculo_id'],
       ['VG007', MENSAGENS_ERRO_VIAGEM.VG007, 'hodometro_final'],
-      ['23514', MENSAGENS_ERRO_VIAGEM['23514'], 'hodometro_final'],
       ['428C9', MENSAGENS_ERRO_VIAGEM['428C9'], undefined],
     ])('mapeia código %s para mensagem amigável e campo correspondente', (code, mensagemEsperada, campoEsperado) => {
       const resultado = traduzirErroBanco({ code }, 'Erro padrão');
@@ -70,14 +168,77 @@ describe('viagensRepository', () => {
         codigo: '99999',
       });
     });
+  });
 
-    it('traduzirErroSqlite mapeia unique constraint do SQLite para VG001', () => {
-      const erroUnique = new Error('UNIQUE constraint failed: viagem.veiculo_id');
-      expect(traduzirErroSqlite(erroUnique, 'Falha')).toEqual({
+  describe('Diferenciação de 23505 e 23514 pela constraint', () => {
+    it('23505 do índice de viagem em andamento vira "veículo em andamento"', () => {
+      const resposta = erroDeConstraint('23505', 'viagem_um_andamento_por_veiculo');
+      const resultado = traduzirErroBanco(resposta.error!, 'Erro padrão');
+
+      expect(resultado).toEqual({
         ok: false,
-        mensagem: MENSAGENS_ERRO_VIAGEM.VG001,
+        mensagem: MENSAGENS_ERRO_CONSTRAINT_VIAGEM.viagem_um_andamento_por_veiculo,
         campo: 'veiculo_id',
-        codigo: 'VG001',
+        codigo: '23505',
+      });
+    });
+
+    it('23505 da chave primária não vira "veículo em andamento"', () => {
+      const resposta = erroDeConstraint('23505', 'viagem_pkey');
+      const resultado = traduzirErroBanco(resposta.error!, 'Erro padrão');
+
+      expect(resultado).toEqual({
+        ok: false,
+        mensagem: MENSAGENS_ERRO_CONSTRAINT_VIAGEM.viagem_pkey,
+        codigo: '23505',
+      });
+    });
+
+    it('23505 sem constraint identificada usa o fallback de registro duplicado', () => {
+      const resultado = traduzirErroBanco({ code: '23505', message: 'detalhe técnico' }, 'Erro padrão');
+
+      expect(resultado).toEqual({
+        ok: false,
+        mensagem: MENSAGENS_ERRO_VIAGEM['23505'],
+        codigo: '23505',
+      });
+    });
+
+    it.each([
+      [
+        'viagem_hodometro_inicial_nao_negativo',
+        MENSAGENS_ERRO_CONSTRAINT_VIAGEM.viagem_hodometro_inicial_nao_negativo,
+        'hodometro_inicial',
+      ],
+      [
+        'viagem_hodometro_final_maior',
+        MENSAGENS_ERRO_CONSTRAINT_VIAGEM.viagem_hodometro_final_maior,
+        'hodometro_final',
+      ],
+      [
+        'viagem_finalizada_tem_hodometro_final',
+        MENSAGENS_ERRO_CONSTRAINT_VIAGEM.viagem_finalizada_tem_hodometro_final,
+        'hodometro_final',
+      ],
+    ] as const)('23514 da constraint %s tem mensagem e campo próprios', (constraint, mensagemEsperada, campoEsperado) => {
+      const resposta = erroDeConstraint('23514', constraint);
+      const resultado = traduzirErroBanco(resposta.error!, 'Erro padrão');
+
+      expect(resultado).toEqual({
+        ok: false,
+        mensagem: mensagemEsperada,
+        campo: campoEsperado,
+        codigo: '23514',
+      });
+    });
+
+    it('23514 sem constraint identificada usa o fallback de hodômetro inválido', () => {
+      const resultado = traduzirErroBanco({ code: '23514', message: 'detalhe técnico' }, 'Erro padrão');
+
+      expect(resultado).toEqual({
+        ok: false,
+        mensagem: MENSAGENS_ERRO_VIAGEM['23514'],
+        codigo: '23514',
       });
     });
   });
@@ -133,178 +294,102 @@ describe('viagensRepository', () => {
       expect(resultadoNegativo.success).toBe(false);
     });
 
-    it('valida correção de hodômetro final', () => {
-      const resultadoValido = corrigirHodometroFinalSchema.safeParse({ hodometro_final: 12500 });
-      expect(resultadoValido.success).toBe(true);
+    it.each([9999, 10000])(
+      'rejeita no formulário o final menor ou igual ao inicial (%s) usando a mensagem do schema',
+      (hodometroFinal) => {
+        const resultado = fecharViagemFormSchema.safeParse({
+          hodometro_inicial: 10000,
+          hodometro_final: hodometroFinal,
+        });
 
-      const resultadoInvalido = corrigirHodometroFinalSchema.safeParse({ hodometro_final: -10 });
-      expect(resultadoInvalido.success).toBe(false);
+        expect(resultado.success).toBe(false);
+        if (!resultado.success) {
+          expect(resultado.error.issues[0]?.message).toBe(
+            'O hodômetro final deve ser maior que o inicial (10.000 km).',
+          );
+        }
+      },
+    );
+
+    it('bloqueia o inicial menor que o último final no schema contextual e aceita o igual', () => {
+      const base = {
+        veiculo_id: 'veic-1',
+        rota_id: 'rota-1',
+        motorista_id: 'mot-1',
+      };
+
+      const menor = abrirViagemComUltimoHodometroSchema(15000).safeParse({
+        ...base,
+        hodometro_inicial: 14000,
+      });
+      expect(menor.success).toBe(false);
+      if (!menor.success) {
+        expect(menor.error.issues[0]?.message).toBe(
+          'O hodômetro inicial não pode ser menor que o último final (15.000 km).',
+        );
+        expect(menor.error.issues[0]?.path).toEqual(['hodometro_inicial']);
+      }
+
+      const igual = abrirViagemComUltimoHodometroSchema(15000).safeParse({
+        ...base,
+        hodometro_inicial: 15000,
+      });
+      expect(igual.success).toBe(true);
+    });
+
+    it.each([
+      ['data_inicio', { ...{ veiculo_id: 'veic-1', rota_id: 'rota-1', motorista_id: 'mot-1', hodometro_inicial: 1000 }, data_inicio: '' }, 'Data de início inválida.'],
+      ['data_fim', { hodometro_final: 1000, data_fim: '' }, 'Data de fim inválida.'],
+    ] as const)('rejeita %s vazia no schema', (campo, input, mensagem) => {
+      const resultado =
+        campo === 'data_inicio'
+          ? abrirViagemSchema.safeParse(input)
+          : fecharViagemSchema.safeParse(input);
+
+      expect(resultado.success).toBe(false);
+      if (!resultado.success) {
+        expect(resultado.error.issues[0]?.message).toBe(mensagem);
+      }
     });
   });
 
-  describe('Operações do Repositório (SQLite Real + Outbox Transaction)', () => {
-    let banco: BancoDeTeste;
+  describe('Operações do Repositório', () => {
+    it('abrirViagem envia colunas corretas sem km_rodado e retorna viagem criada', async () => {
+      const [builder] = responder(ok(viagemBase));
 
-    beforeEach(() => {
-      banco = criarBancoDeTeste();
-      setDb(banco.db as unknown as ViagensDb);
-
-      // Seed veiculos
-      banco.db
-        .insert(schema.veiculo)
-        .values([
-          {
-            id: VEICULO_ID,
-            placa: 'ABC1D23',
-            marca: 'Scania',
-            modelo: 'R450',
-            capacidade_carga: 30,
-            status: 'Disponivel',
-            data_inclusao: AGORA,
-            data_atualizacao: AGORA,
-          },
-          {
-            id: VEICULO_MANUTENCAO_ID,
-            placa: 'MAN1D23',
-            marca: 'Volvo',
-            modelo: 'FH540',
-            capacidade_carga: 30,
-            status: 'EmManutencao',
-            data_inclusao: AGORA,
-            data_atualizacao: AGORA,
-          },
-          {
-            id: VEICULO_INATIVO_ID,
-            placa: 'INA1D23',
-            marca: 'Mercedes',
-            modelo: 'Actros',
-            capacidade_carga: 25,
-            status: 'Inativo',
-            data_inclusao: AGORA,
-            data_atualizacao: AGORA,
-          },
-        ])
-        .run();
-
-      // Seed rota
-      banco.db
-        .insert(schema.rota)
-        .values({
-          id: ROTA_ID,
-          cidade_origem: 'Recife',
-          cidade_destino: 'Salvador',
-          uf_origem: 'PE',
-          uf_destino: 'BA',
-          distancia_estimada_km: 800,
-          data_inclusao: AGORA,
-          data_atualizacao: AGORA,
-        })
-        .run();
-    });
-
-    afterEach(() => {
-      banco.fechar();
-    });
-
-    it('abrirViagem grava na tabela viagem e na fila outbox na mesma transação sem km_rodado', async () => {
       const input: NovaViagemInput = {
-        id: VIAGEM_ID,
-        veiculo_id: VEICULO_ID,
-        rota_id: ROTA_ID,
-        motorista_id: MOTORISTA_ID,
+        veiculo_id: 'veic-1',
+        rota_id: 'rota-1',
+        motorista_id: 'mot-1',
         hodometro_inicial: 10000,
       };
 
       const resultado = await abrirViagem(input);
 
-      expect(resultado.ok).toBe(true);
-      if (!resultado.ok) return;
-
-      expect(resultado.data).toMatchObject({
-        id: VIAGEM_ID,
-        veiculo_id: VEICULO_ID,
-        rota_id: ROTA_ID,
-        motorista_id: MOTORISTA_ID,
-        hodometro_inicial: 10000,
-        hodometro_final: null,
-        status: 'EmAndamento',
-        km_rodado: null,
-      });
-
-      // Verifica tabela local viagem
-      const viagemNoBanco = banco.db.select().from(schema.viagem).where(eq(schema.viagem.id, VIAGEM_ID)).get();
-      expect(viagemNoBanco).toBeDefined();
-      expect(viagemNoBanco?.status).toBe('EmAndamento');
-
-      // Verifica fila outbox
-      const outboxItems = banco.db.select().from(schema.outbox).all();
-      expect(outboxItems).toHaveLength(1);
-      const outboxItem = outboxItems[0];
-      expect(outboxItem?.entidade).toBe('viagem');
-      expect(outboxItem?.operacao).toBe('insert');
-      expect(outboxItem?.tentativas).toBe(0);
-
-      // REGRA CRÍTICA: km_rodado NUNCA no payload da outbox
-      const payload = JSON.parse(outboxItem?.payload ?? '{}');
-      expect(payload.id).toBe(VIAGEM_ID);
-      expect(payload.hodometro_inicial).toBe(10000);
-      expect(payload.status).toBe('EmAndamento');
-      expect(payload.km_rodado).toBeUndefined();
-      expect('km_rodado' in payload).toBe(false);
-    });
-
-    it('abrirViagem rejeita veículo em manutenção (VG002)', async () => {
-      const resultado = await abrirViagem({
-        veiculo_id: VEICULO_MANUTENCAO_ID,
-        rota_id: ROTA_ID,
-        motorista_id: MOTORISTA_ID,
-        hodometro_inicial: 10000,
-      });
-
-      expect(resultado).toEqual({
-        ok: false,
-        mensagem: MENSAGENS_ERRO_VIAGEM.VG002,
-        campo: 'veiculo_id',
-        codigo: 'VG002',
-      });
-
-      // Nada gravado em viagem nem em outbox
-      expect(banco.db.select().from(schema.viagem).all()).toHaveLength(0);
-      expect(banco.db.select().from(schema.outbox).all()).toHaveLength(0);
-    });
-
-    it('abrirViagem rejeita veículo inativo (VG003)', async () => {
-      const resultado = await abrirViagem({
-        veiculo_id: VEICULO_INATIVO_ID,
-        rota_id: ROTA_ID,
-        motorista_id: MOTORISTA_ID,
-        hodometro_inicial: 10000,
-      });
-
-      expect(resultado).toEqual({
-        ok: false,
-        mensagem: MENSAGENS_ERRO_VIAGEM.VG003,
-        campo: 'veiculo_id',
-        codigo: 'VG003',
-      });
+      expect(resultado).toEqual({ ok: true, data: viagemBase });
+      expect(mockFrom).toHaveBeenCalledWith('viagem');
+      expect(builder.insert).toHaveBeenCalledWith(
+        expect.objectContaining({
+          veiculo_id: 'veic-1',
+          rota_id: 'rota-1',
+          motorista_id: 'mot-1',
+          hodometro_inicial: 10000,
+          status: 'EmAndamento',
+        }),
+      );
+      // Garante que km_rodado NÃO é enviado (coluna gerada no Postgres, erro 428C9)
+      const payloadEnviado = builder.insert.mock.calls[0]?.[0] as Record<string, unknown>;
+      expect(payloadEnviado.km_rodado).toBeUndefined();
     });
 
     it('abrirViagem trata erro VG001 quando veículo já possui viagem em andamento', async () => {
-      // Primeira viagem aberta com sucesso
-      await abrirViagem({
-        id: VIAGEM_ID,
-        veiculo_id: VEICULO_ID,
-        rota_id: ROTA_ID,
-        motorista_id: MOTORISTA_ID,
-        hodometro_inicial: 10000,
-      });
+      responder(erro('VG001'));
 
-      // Segunda viagem para o mesmo veículo
       const resultado = await abrirViagem({
-        veiculo_id: VEICULO_ID,
-        rota_id: ROTA_ID,
-        motorista_id: MOTORISTA_ID,
-        hodometro_inicial: 10500,
+        veiculo_id: 'veic-1',
+        rota_id: 'rota-1',
+        motorista_id: 'mot-1',
+        hodometro_inicial: 10000,
       });
 
       expect(resultado).toEqual({
@@ -313,35 +398,16 @@ describe('viagensRepository', () => {
         campo: 'veiculo_id',
         codigo: 'VG001',
       });
-
-      // Apenas a primeira viagem foi salva
-      expect(banco.db.select().from(schema.viagem).all()).toHaveLength(1);
-      expect(banco.db.select().from(schema.outbox).all()).toHaveLength(1);
     });
 
-    it('abrirViagem trata erro VG004 quando hodômetro inicial regride em relação ao último hodômetro final', async () => {
-      // Viagem anterior finalizada com hodômetro 15000
-      banco.db
-        .insert(schema.viagem)
-        .values({
-          id: 'viagem-antiga',
-          veiculo_id: VEICULO_ID,
-          rota_id: ROTA_ID,
-          motorista_id: MOTORISTA_ID,
-          hodometro_inicial: 14000,
-          hodometro_final: 15000,
-          status: 'Finalizada',
-          km_rodado: 1000,
-          data_inclusao: '2026-10-17T10:00:00.000Z',
-          data_atualizacao: '2026-10-17T18:00:00.000Z',
-        })
-        .run();
+    it('abrirViagem trata erro VG004 quando hodômetro inicial regride', async () => {
+      responder(erro('VG004'));
 
       const resultado = await abrirViagem({
-        veiculo_id: VEICULO_ID,
-        rota_id: ROTA_ID,
-        motorista_id: MOTORISTA_ID,
-        hodometro_inicial: 14500, // Menor que 15000
+        veiculo_id: 'veic-1',
+        rota_id: 'rota-1',
+        motorista_id: 'mot-1',
+        hodometro_inicial: 5000,
       });
 
       expect(resultado).toEqual({
@@ -352,77 +418,57 @@ describe('viagensRepository', () => {
       });
     });
 
-    it('fecharViagem atualiza status para Finalizada e grava outbox sem km_rodado', async () => {
-      await abrirViagem({
-        id: VIAGEM_ID,
-        veiculo_id: VEICULO_ID,
-        rota_id: ROTA_ID,
-        motorista_id: MOTORISTA_ID,
-        hodometro_inicial: 10000,
-      });
+    it('fecharViagem atualiza status para Finalizada e hodometro_final', async () => {
+      const viagemFinalizada = {
+        ...viagemBase,
+        status: 'Finalizada' as const,
+        hodometro_final: 10400,
+        km_rodado: 400,
+        data_fim: '2026-10-18T18:00:00Z',
+      };
+      const [builder] = responder(ok(viagemFinalizada));
 
-      const resultado = await fecharViagem(VIAGEM_ID, { hodometro_final: 10400 });
+      const resultado = await fecharViagem('v1', { hodometro_final: 10400 });
 
-      expect(resultado.ok).toBe(true);
-      if (!resultado.ok) return;
+      expect(resultado).toEqual({ ok: true, data: viagemFinalizada });
+      expect(builder.update).toHaveBeenCalledWith(
+        expect.objectContaining({
+          status: 'Finalizada',
+          hodometro_final: 10400,
+        }),
+      );
+      expect(builder.eq).toHaveBeenCalledWith('id', 'v1');
+      expect(builder.eq).toHaveBeenCalledWith('status', 'EmAndamento');
+    });
 
-      expect(resultado.data.status).toBe('Finalizada');
-      expect(resultado.data.hodometro_final).toBe(10400);
-      expect(resultado.data.km_rodado).toBe(400);
+    it('fecharViagem não regrava viagem já encerrada por outra pessoa', async () => {
+      // Com o filtro de status, o update não acha linha e o PostgREST devolve null.
+      responder(ok(null));
 
-      // Verifica tabela local viagem
-      const viagemNoBanco = banco.db.select().from(schema.viagem).where(eq(schema.viagem.id, VIAGEM_ID)).get();
-      expect(viagemNoBanco?.status).toBe('Finalizada');
-      expect(viagemNoBanco?.km_rodado).toBe(400);
+      const resultado = await fecharViagem('v1', { hodometro_final: 15300 });
 
-      // Verifica outbox (deve ter 2 itens: insert da abertura + update do fechamento)
-      const outboxItems = banco.db.select().from(schema.outbox).all();
-      expect(outboxItems).toHaveLength(2);
-
-      const updateItem = outboxItems.find((item) => item.operacao === 'update');
-      expect(updateItem).toBeDefined();
-      const payload = JSON.parse(updateItem?.payload ?? '{}');
-      expect(payload.id).toBe(VIAGEM_ID);
-      expect(payload.status).toBe('Finalizada');
-      expect(payload.hodometro_final).toBe(10400);
-      // REGRA CRÍTICA: km_rodado NUNCA no payload da outbox
-      expect(payload.km_rodado).toBeUndefined();
-      expect('km_rodado' in payload).toBe(false);
+      expect(resultado).toEqual({ ok: false, mensagem: MENSAGEM_VIAGEM_NAO_ABERTA, campo: 'status' });
     });
 
     it('fecharViagem trata erro 23514 quando hodômetro final é menor ou igual ao inicial', async () => {
-      await abrirViagem({
-        id: VIAGEM_ID,
-        veiculo_id: VEICULO_ID,
-        rota_id: ROTA_ID,
-        motorista_id: MOTORISTA_ID,
-        hodometro_inicial: 10000,
-      });
+      responder(erroDeConstraint('23514', 'viagem_hodometro_final_maior'));
 
-      const resultado = await fecharViagem(VIAGEM_ID, { hodometro_final: 9000 });
+      const resultado = await fecharViagem('v1', { hodometro_final: 9000 });
 
       expect(resultado).toEqual({
         ok: false,
-        mensagem: MENSAGENS_ERRO_VIAGEM['23514'],
+        mensagem: MENSAGENS_ERRO_CONSTRAINT_VIAGEM.viagem_hodometro_final_maior,
         campo: 'hodometro_final',
         codigo: '23514',
       });
     });
 
     it('fecharViagem trata erro VG005 quando a viagem já está encerrada', async () => {
-      await abrirViagem({
-        id: VIAGEM_ID,
-        veiculo_id: VEICULO_ID,
-        rota_id: ROTA_ID,
-        motorista_id: MOTORISTA_ID,
-        hodometro_inicial: 10000,
-      });
+      responder(erro('VG005'));
 
-      await fecharViagem(VIAGEM_ID, { hodometro_final: 10400 });
+      const resultado = await fecharViagem('v1', { hodometro_final: 12000 });
 
-      const segundoFechamento = await fecharViagem(VIAGEM_ID, { hodometro_final: 10500 });
-
-      expect(segundoFechamento).toEqual({
+      expect(resultado).toEqual({
         ok: false,
         mensagem: MENSAGENS_ERRO_VIAGEM.VG005,
         campo: 'status',
@@ -430,166 +476,72 @@ describe('viagensRepository', () => {
       });
     });
 
-    it('cancelarViagem atualiza status para Cancelada e grava na outbox sem km_rodado', async () => {
-      await abrirViagem({
-        id: VIAGEM_ID,
-        veiculo_id: VEICULO_ID,
-        rota_id: ROTA_ID,
-        motorista_id: MOTORISTA_ID,
-        hodometro_inicial: 10000,
-      });
-
-      const resultado = await cancelarViagem(VIAGEM_ID);
-
-      expect(resultado.ok).toBe(true);
-      if (!resultado.ok) return;
-
-      expect(resultado.data.status).toBe('Cancelada');
-
-      const outboxItems = banco.db.select().from(schema.outbox).all();
-      const cancelItem = outboxItems.find((item) => item.operacao === 'update');
-      expect(cancelItem).toBeDefined();
-      const payload = JSON.parse(cancelItem?.payload ?? '{}');
-      expect(payload.status).toBe('Cancelada');
-      expect(payload.km_rodado).toBeUndefined();
-    });
-
-    it('corrigirHodometroFinal atualiza hodometro_final e trata VG007', async () => {
-      await abrirViagem({
-        id: VIAGEM_ID,
-        veiculo_id: VEICULO_ID,
-        rota_id: ROTA_ID,
-        motorista_id: MOTORISTA_ID,
-        hodometro_inicial: 10000,
-      });
-      await fecharViagem(VIAGEM_ID, { hodometro_final: 10400 });
-
-      // Correção válida
-      const sucesso = await corrigirHodometroFinal(VIAGEM_ID, { hodometro_final: 10450 });
-      expect(sucesso.ok).toBe(true);
-      if (sucesso.ok) {
-        expect(sucesso.data.hodometro_final).toBe(10450);
-        expect(sucesso.data.km_rodado).toBe(450);
-      }
-
-      // Adiciona uma viagem posterior começando em 10500
-      banco.db
-        .insert(schema.viagem)
-        .values({
-          id: 'viagem-posterior',
-          veiculo_id: VEICULO_ID,
-          rota_id: ROTA_ID,
-          motorista_id: MOTORISTA_ID,
-          hodometro_inicial: 10500,
-          status: 'EmAndamento',
-          data_inclusao: '2026-10-18T19:00:00.000Z',
-          data_atualizacao: '2026-10-18T19:00:00.000Z',
-        })
-        .run();
-
-      // Tentativa de corrigir viagem anterior para 10600 (maior que 10500 da posterior)
-      const falha = await corrigirHodometroFinal(VIAGEM_ID, { hodometro_final: 10600 });
-      expect(falha).toEqual({
-        ok: false,
-        mensagem: MENSAGENS_ERRO_VIAGEM.VG007,
-        campo: 'hodometro_final',
-        codigo: 'VG007',
-      });
-    });
-
     it('buscarViagemPorId retorna os dados detalhados ou erro não encontrada', async () => {
-      await abrirViagem({
-        id: VIAGEM_ID,
-        veiculo_id: VEICULO_ID,
-        rota_id: ROTA_ID,
-        motorista_id: MOTORISTA_ID,
-        hodometro_inicial: 10000,
-      });
+      responder(ok(viagemDetalhada));
+      const encontrada = await buscarViagemPorId('v1');
+      expect(encontrada).toEqual({ ok: true, data: viagemDetalhada });
 
-      const encontrada = await buscarViagemPorId(VIAGEM_ID);
-      expect(encontrada.ok).toBe(true);
-      if (encontrada.ok) {
-        expect(encontrada.data.id).toBe(VIAGEM_ID);
-        expect(encontrada.data.veiculo?.placa).toBe('ABC1D23');
-        expect(encontrada.data.rota?.cidade_origem).toBe('Recife');
-      }
-
+      responder(ok(null));
       const naoEncontrada = await buscarViagemPorId('inexistente');
       expect(naoEncontrada).toEqual({ ok: false, mensagem: 'Viagem não encontrada.' });
     });
 
     it('buscarUltimoHodometro retorna o maior hodômetro final do veículo', async () => {
-      banco.db
-        .insert(schema.viagem)
-        .values({
-          id: 'v-encerrada',
-          veiculo_id: VEICULO_ID,
-          rota_id: ROTA_ID,
-          motorista_id: MOTORISTA_ID,
-          hodometro_inicial: 10000,
-          hodometro_final: 15430,
-          status: 'Finalizada',
-          data_inclusao: AGORA,
-          data_atualizacao: AGORA,
-        })
-        .run();
+      const [builder] = responder(ok([{ hodometro_final: 15430 }]));
 
-      const resultado = await buscarUltimoHodometro(VEICULO_ID);
+      const resultado = await buscarUltimoHodometro('veic-1');
+
       expect(resultado).toEqual({ ok: true, data: 15430 });
+      expect(builder.eq).toHaveBeenCalledWith('veiculo_id', 'veic-1');
+      expect(builder.order).toHaveBeenCalledWith('hodometro_final', { ascending: false });
     });
 
     it('buscarUltimoHodometro retorna null quando veículo nunca teve viagem encerrada', async () => {
-      const resultado = await buscarUltimoHodometro(VEICULO_ID);
+      responder(ok([]));
+
+      const resultado = await buscarUltimoHodometro('veic-novo');
+
       expect(resultado).toEqual({ ok: true, data: null });
     });
 
-    it('buscarViagemEmAndamento retorna a viagem aberta ou null se disponível', async () => {
-      await abrirViagem({
-        id: VIAGEM_ID,
-        veiculo_id: VEICULO_ID,
-        rota_id: ROTA_ID,
-        motorista_id: MOTORISTA_ID,
-        hodometro_inicial: 10000,
+    it('listarRotasAtivas filtra as rotas ativas no banco', async () => {
+      const [builder] = responder(ok([viagemDetalhada.rota]));
+
+      const resultado = await listarRotasAtivas();
+
+      expect(resultado).toEqual({ ok: true, data: [viagemDetalhada.rota] });
+      expect(mockFrom).toHaveBeenCalledWith('rota');
+      expect(builder.eq).toHaveBeenCalledWith('ativa', true);
+    });
+
+    it('listarMotoristasAtivos filtra perfil Motorista e status Ativo no banco', async () => {
+      const [builder] = responder(
+        ok([{ id: 'mot-2', nome: 'João Motorista', email: 'joao@x.com', perfil: { nome: 'Motorista' } }]),
+      );
+
+      const resultado = await listarMotoristasAtivos();
+
+      expect(resultado).toEqual({
+        ok: true,
+        data: [{ id: 'mot-2', nome: 'João Motorista', email: 'joao@x.com' }],
       });
-
-      const emAndamento = await buscarViagemEmAndamento(VEICULO_ID);
-      expect(emAndamento.ok).toBe(true);
-      if (emAndamento.ok) {
-        expect(emAndamento.data?.id).toBe(VIAGEM_ID);
-      }
-
-      const livre = await buscarViagemEmAndamento(VEICULO_MANUTENCAO_ID);
-      expect(livre).toEqual({ ok: true, data: null });
+      expect(mockFrom).toHaveBeenCalledWith('usuario');
+      expect(builder.select).toHaveBeenCalledWith(expect.stringContaining('perfil_id!inner'));
+      expect(builder.eq).toHaveBeenCalledWith('status', 'Ativo');
+      expect(builder.eq).toHaveBeenCalledWith('perfil.nome', 'Motorista');
     });
 
     it('listarViagens aplica filtros de status e veículo e formata lista', async () => {
-      await abrirViagem({
-        id: VIAGEM_ID,
-        veiculo_id: VEICULO_ID,
-        rota_id: ROTA_ID,
-        motorista_id: MOTORISTA_ID,
-        hodometro_inicial: 10000,
-      });
+      const [builder] = responder(ok([viagemDetalhada]));
 
       const resultado = await listarViagens({
         status: 'EmAndamento',
-        veiculo_id: VEICULO_ID,
+        veiculo_id: 'veic-1',
       });
 
-      expect(resultado.ok).toBe(true);
-      if (resultado.ok) {
-        expect(resultado.data).toHaveLength(1);
-        expect(resultado.data[0]?.id).toBe(VIAGEM_ID);
-        expect(resultado.data[0]?.veiculo?.placa).toBe('ABC1D23');
-      }
-
-      const vazio = await listarViagens({
-        status: 'Finalizada',
-      });
-      expect(vazio.ok).toBe(true);
-      if (vazio.ok) {
-        expect(vazio.data).toHaveLength(0);
-      }
+      expect(resultado).toEqual({ ok: true, data: [viagemDetalhada] });
+      expect(builder.eq).toHaveBeenCalledWith('status', 'EmAndamento');
+      expect(builder.eq).toHaveBeenCalledWith('veiculo_id', 'veic-1');
     });
 
     it('viagensRepository implementa o contrato ViagensRepository', () => {
@@ -597,11 +549,10 @@ describe('viagensRepository', () => {
       expect(repo.listarViagens).toBe(listarViagens);
       expect(repo.buscarViagemPorId).toBe(buscarViagemPorId);
       expect(repo.buscarUltimoHodometro).toBe(buscarUltimoHodometro);
-      expect(repo.buscarViagemEmAndamento).toBe(buscarViagemEmAndamento);
+      expect(repo.listarRotasAtivas).toBe(listarRotasAtivas);
+      expect(repo.listarMotoristasAtivos).toBe(listarMotoristasAtivos);
       expect(repo.abrirViagem).toBe(abrirViagem);
       expect(repo.fecharViagem).toBe(fecharViagem);
-      expect(repo.cancelarViagem).toBe(cancelarViagem);
-      expect(repo.corrigirHodometroFinal).toBe(corrigirHodometroFinal);
     });
   });
 });

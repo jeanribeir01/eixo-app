@@ -43,8 +43,6 @@ describe('EIX-32: RLS por perfil', () => {
   let db: Banco;
   let categoriaId: string;
   let formaPagamentoId: string;
-  // Sem uma forma inativa, "o Gestor lê só as ativas" (RLS-17) passaria com `using (true)`.
-  let formaInativaId: string;
   let veiculoId: string;
   let veiculoOutroMotoristaId: string;
   // Sem viagem aberta: o teste de RLS-04 precisa que só o RLS barre o insert. Num veículo
@@ -76,11 +74,6 @@ describe('EIX-32: RLS por perfil', () => {
     await comoSuperuser(db, async (tx) => {
       categoriaId = (await tx.query<{ id: string }>(`select id from categoria limit 1`)).rows[0]!.id;
       formaPagamentoId = (await tx.query<{ id: string }>(`select id from forma_pagamento limit 1`)).rows[0]!.id;
-      formaInativaId = (
-        await tx.query<{ id: string }>(
-          `insert into forma_pagamento (nome, ativa) values ('Cheque EIX-32', false) returning id`,
-        )
-      ).rows[0]!.id;
 
       veiculoId = (
         await tx.query<{ id: string }>(
@@ -175,9 +168,9 @@ describe('EIX-32: RLS por perfil', () => {
       });
     });
 
-    // forma_pagamento fica de fora: o Gestor lê as ativas para o seletor da manutenção
-    // (RLS-17, AD-011).
-    it.each(['movimentacao', 'divida', 'categoria'] as const)('vê zero linhas de %s (RLS-06)', async (tabela) => {
+    // forma_pagamento entra: o seletor da manutenção usa a RPC listar_formas_pagamento_ativas,
+    // não a tabela (AD-013).
+    it.each(TABELAS_FINANCEIRAS)('vê zero linhas de %s (RLS-06)', async (tabela) => {
       await comoUsuario(db, { id: GESTOR, perfil: 'Gestor de Frota' }, async (tx) => {
         const linhas = await tx.query(`select id from ${tabela}`);
 
@@ -185,19 +178,8 @@ describe('EIX-32: RLS por perfil', () => {
       });
     });
 
-    it('lê só as formas de pagamento ativas (RLS-17)', async () => {
-      const ativas = await db.query<{ id: string }>(`select id from forma_pagamento where ativa order by id`);
-
-      await comoUsuario(db, { id: GESTOR, perfil: 'Gestor de Frota' }, async (tx) => {
-        const linhas = await tx.query<{ id: string }>(`select id from forma_pagamento order by id`);
-
-        expect(ativas.rows.length).toBeGreaterThan(0);
-        expect(linhas.rows).toEqual(ativas.rows);
-        expect(linhas.rows.map((linha) => linha.id)).not.toContain(formaInativaId);
-      });
-    });
-
-    it('é rejeitado com 42501 ao criar forma de pagamento (RLS-17)', async () => {
+    // A escrita já era barrada antes da EIX-39; estes dois testes continuam provando isso.
+    it('é rejeitado com 42501 ao criar forma de pagamento (RLS-06)', async () => {
       const codigo = await codigoDoErro(
         comoUsuario(db, { id: GESTOR, perfil: 'Gestor de Frota' }, (tx) =>
           tx.query(`insert into forma_pagamento (nome) values ('Criada pelo Gestor')`),
@@ -207,7 +189,7 @@ describe('EIX-32: RLS por perfil', () => {
       expect(codigo).toBe('42501');
     });
 
-    it('altera zero linhas ao editar forma de pagamento (RLS-17)', async () => {
+    it('altera zero linhas ao editar forma de pagamento (RLS-06)', async () => {
       await comoUsuario(db, { id: GESTOR, perfil: 'Gestor de Frota' }, async (tx) => {
         const alteradas = await tx.query(
           `update forma_pagamento set nome = 'Renomeada pelo Gestor' where id = $1 returning id`,

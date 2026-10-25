@@ -1,18 +1,23 @@
-import { fireEvent, render, screen } from '@testing-library/react-native';
+import { act, fireEvent, render, screen, waitFor } from '@testing-library/react-native';
+import { FlatList, RefreshControl, StyleSheet } from 'react-native';
 
-import * as syncModule from '../sync';
-import { useSyncStore } from '../syncStore';
+import { FAB_ALTURA_RESERVADA, colors } from '@/ui';
+
 import { ViagensListView } from '../ViagensListView';
 import * as repo from '../viagensRepository';
 
 const mockPush = jest.fn();
+let mockAoFocar: (() => void) | null = null;
 
 jest.mock('expo-router', () => {
   // eslint-disable-next-line @typescript-eslint/no-require-imports
   const react = require('react');
   return {
     useRouter: () => ({ push: mockPush }),
-    useFocusEffect: (callback: () => void) => react.useEffect(callback, [callback]),
+    useFocusEffect: (callback: () => void) => {
+      mockAoFocar = callback;
+      react.useEffect(callback, [callback]);
+    },
   };
 });
 
@@ -90,6 +95,11 @@ const mockViagens = [
 describe('ViagensListView', () => {
   beforeEach(() => {
     jest.clearAllMocks();
+    mockAoFocar = null;
+  });
+
+  afterEach(() => {
+    jest.restoreAllMocks();
   });
 
   it('renderiza viagens, calcula quilometragem offline e exibe aviso de discrepância', async () => {
@@ -116,6 +126,16 @@ describe('ViagensListView', () => {
     expect(mockPush).toHaveBeenCalledWith('/viagens/viagem-1/fechar');
   });
 
+  it('exibe "Concluída" na viagem e no filtro, como na tela de fechamento', async () => {
+    jest.spyOn(repo, 'listarViagens').mockResolvedValue({ ok: true, data: mockViagens });
+
+    render(<ViagensListView />);
+
+    expect(await screen.findByText('Concluída')).toBeOnTheScreen();
+    expect(screen.getByText('Concluídas')).toBeOnTheScreen();
+    expect(screen.queryByText(/Finalizada/)).not.toBeOnTheScreen();
+  });
+
   it('navega para nova viagem ao tocar no FAB', async () => {
     jest.spyOn(repo, 'listarViagens').mockResolvedValue({
       ok: true,
@@ -132,59 +152,142 @@ describe('ViagensListView', () => {
     expect(mockPush).toHaveBeenCalledWith('/viagens/nova');
   });
 
-  it('exibe indicador visual de offline e registros pendentes de sincronização', async () => {
-    jest.spyOn(syncModule, 'obterStatusOutboxViagens').mockReturnValue({
-      pendentes: 2,
-      comErro: 0,
-      conflitos: 0,
-    });
-
-    useSyncStore.setState({
-      isOnline: false,
-      pendentes: 2,
-      comErro: 0,
-      conflitos: 0,
-      sincronizando: false,
-    });
-
-    jest.spyOn(repo, 'listarViagens').mockResolvedValue({
+  it('filtro de status consulta o banco com o status escolhido', async () => {
+    const mockListar = jest.spyOn(repo, 'listarViagens').mockResolvedValue({
       ok: true,
       data: mockViagens,
     });
 
     render(<ViagensListView />);
-
     await screen.findByText('BRA2E19 • Actros');
 
-    expect(screen.getByTestId('indicador-sincronizacao')).toBeTruthy();
-    expect(screen.getByText('offline')).toBeTruthy();
-    expect(screen.getByText('2 registos a aguardar sincronização')).toBeTruthy();
+    mockListar.mockResolvedValueOnce({ ok: true, data: [mockViagens[0]] });
+
+    fireEvent.press(screen.getByRole('tab', { name: 'Em andamento' }));
+
+    await waitFor(() => expect(mockListar).toHaveBeenLastCalledWith({ status: 'EmAndamento' }));
+
+    expect(await screen.findByText('BRA2E19 • Actros')).toBeOnTheScreen();
+    expect(screen.queryByText('XYZ9K88 • FH')).not.toBeOnTheScreen();
   });
 
-  it('não exibe indicador de sincronização se estiver online e sem pendências', async () => {
-    jest.spyOn(syncModule, 'obterStatusOutboxViagens').mockReturnValue({
-      pendentes: 0,
-      comErro: 0,
-      conflitos: 0,
-    });
-
-    useSyncStore.setState({
-      isOnline: true,
-      pendentes: 0,
-      comErro: 0,
-      conflitos: 0,
-      sincronizando: false,
-    });
-
-    jest.spyOn(repo, 'listarViagens').mockResolvedValue({
+  it('erro numa recarga mantém a lista e mostra o Snackbar', async () => {
+    const mockListar = jest.spyOn(repo, 'listarViagens').mockResolvedValue({
       ok: true,
       data: mockViagens,
     });
 
     render(<ViagensListView />);
-
     await screen.findByText('BRA2E19 • Actros');
 
-    expect(screen.queryByTestId('indicador-sincronizacao')).toBeNull();
+    mockListar.mockResolvedValueOnce({ ok: false, mensagem: 'Sem conexão com o servidor.' });
+
+    await act(async () => {
+      mockAoFocar?.();
+    });
+
+    expect(screen.getByRole('alert')).toHaveTextContent('Sem conexão com o servidor.');
+    expect(screen.getByText('BRA2E19 • Actros')).toBeOnTheScreen();
+  });
+
+  it('erro na primeira carga mostra o estado de erro e "Tentar novamente" recarrega', async () => {
+    const mockListar = jest
+      .spyOn(repo, 'listarViagens')
+      .mockResolvedValueOnce({ ok: false, mensagem: 'Não foi possível carregar as viagens.' })
+      .mockResolvedValueOnce({ ok: true, data: mockViagens });
+
+    render(<ViagensListView />);
+
+    expect(await screen.findByText('Não foi possível carregar as viagens')).toBeOnTheScreen();
+    expect(screen.getByText('Não foi possível carregar as viagens.')).toBeOnTheScreen();
+
+    fireEvent.press(screen.getByRole('button', { name: 'Tentar novamente' }));
+
+    expect(await screen.findByText('BRA2E19 • Actros')).toBeOnTheScreen();
+    expect(mockListar).toHaveBeenCalledTimes(2);
+  });
+
+  it('mostra o estado vazio quando não há viagens', async () => {
+    jest.spyOn(repo, 'listarViagens').mockResolvedValue({ ok: true, data: [] });
+
+    render(<ViagensListView />);
+
+    expect(await screen.findByText('Nenhuma viagem encontrada')).toBeOnTheScreen();
+    expect(
+      screen.getByText('Nenhuma viagem registrada ainda. Abra a primeira viagem.'),
+    ).toBeOnTheScreen();
+    // O vazio fica dentro da FlatList para o pull-to-refresh continuar disponível.
+    expect(screen.UNSAFE_getByType(RefreshControl)).toBeTruthy();
+  });
+
+  it('estado vazio de um filtro oferece "Ver todas" e volta para Todos', async () => {
+    const mockListar = jest.spyOn(repo, 'listarViagens').mockImplementation(async (filtro = {}) => {
+      if (filtro.status === 'EmAndamento') {
+        return { ok: true, data: [] };
+      }
+      return { ok: true, data: mockViagens };
+    });
+
+    render(<ViagensListView />);
+    await screen.findByText('BRA2E19 • Actros');
+
+    fireEvent.press(screen.getByRole('tab', { name: 'Em andamento' }));
+
+    expect(await screen.findByText('Nenhuma viagem com esse status no momento.')).toBeOnTheScreen();
+
+    fireEvent.press(screen.getByRole('button', { name: 'Ver todas' }));
+
+    await waitFor(() => expect(mockListar).toHaveBeenLastCalledWith({ status: 'Todos' }));
+    expect(await screen.findByText('BRA2E19 • Actros')).toBeOnTheScreen();
+  });
+
+  it('limpa o Snackbar de erro ao trocar de filtro', async () => {
+    const mockListar = jest
+      .spyOn(repo, 'listarViagens')
+      .mockResolvedValueOnce({ ok: true, data: mockViagens })
+      .mockResolvedValueOnce({ ok: false, mensagem: 'Sem conexão com o servidor.' })
+      .mockResolvedValueOnce({ ok: true, data: mockViagens });
+
+    render(<ViagensListView />);
+    await screen.findByText('BRA2E19 • Actros');
+
+    const refresh = screen.UNSAFE_getByType(RefreshControl);
+    await act(async () => {
+      await refresh.props.onRefresh();
+    });
+
+    expect(screen.getByRole('alert')).toHaveTextContent('Sem conexão com o servidor.');
+
+    fireEvent.press(screen.getByRole('tab', { name: 'Em andamento' }));
+
+    await waitFor(() => expect(mockListar).toHaveBeenLastCalledWith({ status: 'EmAndamento' }));
+    await waitFor(() => expect(screen.queryByRole('alert')).not.toBeOnTheScreen());
+  });
+
+  it('usa FlatList com pull-to-refresh, atualiza os dados e reserva espaço para o FAB', async () => {
+    const mockListar = jest
+      .spyOn(repo, 'listarViagens')
+      .mockResolvedValueOnce({ ok: true, data: mockViagens })
+      .mockResolvedValueOnce({ ok: true, data: [mockViagens[0]] });
+
+    render(<ViagensListView />);
+    await screen.findByText('BRA2E19 • Actros');
+
+    const refresh = screen.UNSAFE_getByType(RefreshControl);
+    expect(refresh.props.colors).toEqual([colors.accent]);
+    expect(
+      StyleSheet.flatten(screen.UNSAFE_getByType(FlatList).props.contentContainerStyle),
+    ).toMatchObject({
+      paddingBottom: FAB_ALTURA_RESERVADA,
+    });
+
+    // Executa o onRefresh de verdade: a integração com `puxarParaAtualizar` refaz a consulta.
+    await act(async () => {
+      await refresh.props.onRefresh();
+    });
+
+    expect(mockListar).toHaveBeenCalledTimes(2);
+    expect(await screen.findByText('BRA2E19 • Actros')).toBeOnTheScreen();
+    expect(screen.queryByText('XYZ9K88 • FH')).not.toBeOnTheScreen();
   });
 });
