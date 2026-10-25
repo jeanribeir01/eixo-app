@@ -103,11 +103,11 @@
 ### EIX-68 — Motion contido
 
 - **Feature**: `.specs/features/eix58-design-app`, fase 12, T41–T42 / ANI-01
-- **Phase / Task**: implementação concluída; revisão independente PASS; validação humana posterior pelo usuário
+- **Phase / Task**: implementação concluída; revisão independente PASS; quatro cenários visuais do motion aprovados pelo usuário em 25/10/2026
 - **Completed**: Skeleton com pulso 1 → 0,5 → 1 em 1000 ms (`2c8d4d8`); transições de célula/linha em 200 ms, sem entering/exiting (`d4a2a7b`); correção do snapshot de movimento do Reanimated ao alterar a preferência com o app aberto, testes e evidências na entrega atual
 - **Validation**: typecheck e lint exit 0; 1069 testes app + 311 Supabase verdes; sensor independente 4/4 mutações detectadas; release dos componentes conferido em emulador Android API 36 de dois núcleos; build release do app completo passou. Evidências e APK locais em `C:/eix68-build/evidence/`; relatório em `validation.md`
 - **In-progress**: nenhum código pendente
-- **Next step**: Gabriel validar os fluxos reais e o aspecto visual; abrir PR para revisão de Jean e usar Squash and merge após aprovação
-- **Blockers**: nenhum bloqueio técnico; aceite humano continua pendente por decisão do usuário
+- **Next step**: abrir PR para revisão de Jean e usar Squash and merge após aprovação; os fluxos autenticados não fizeram parte do aceite visual do motion
+- **Blockers**: nenhum bloqueio técnico; aceite visual dos quatro cenários de motion registrado em validation.md
 - **Uncommitted files**: nenhum após o commit da entrega; artefatos de build/probe ficam fora do repositório
 - **Branch**: `feat/eix-68-design-motion`; Linear não encerrado; sem push, merge ou alterações de dados de produção

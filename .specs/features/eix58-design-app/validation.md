@@ -246,3 +246,16 @@ Os tempos observados vêm da gravação reamostrada a 60 Hz e indicam a janela v
 ### Smoke de inicialização do app completo (implementador)
 
 O APK completo abriu a tela de login, registrada em `C:/eix68-build/evidence/app-startup.png`, sem crash nativo. O build usa o `.env.local` existente, com backend local: a restauração da sessão anterior do emulador registrou `AuthRetryableFetchError`, pois HTTP para `10.0.2.2` é bloqueado pela política de rede do release, e depois exibiu o login. Não foi feito login nem alterada a política de rede; este APK de ensaio não comprova fluxos autenticados nem é artefato de deploy. Os testes de motion em release usaram o probe isolado, sem backend, conforme descrito acima.
+
+### Validação visual com o usuário — 25/10/2026
+
+O usuário conferiu o ensaio release no emulador e respondeu "sim" a cada resultado esperado:
+
+| Cenário observado | Resultado |
+| --- | --- |
+| Skeleton pulsa discretamente em ciclo de 1 segundo | Aprovado pelo usuário |
+| Inclusão/remoção de X reposiciona A, B e C suavemente, sem piscar nem desaparecer | Aprovado pelo usuário |
+| Remover animações ativo: Skeleton parado e troca de posição instantânea | Aprovado pelo usuário |
+| Reativar animações com o processo aberto: pulso e transições voltam sem linhas fora de posição | Aprovado pelo usuário |
+
+**Aceite visual do motion: aprovado nos quatro cenários.** O emulador ficou com animações habilitadas. Esta conferência não incluiu os fluxos autenticados do app completo nem uma avaliação visual separada da primeira montagem/reabertura, cuja cobertura automatizada está descrita acima. A issue não foi encerrada; revisão de Jean no PR permanece necessária.
