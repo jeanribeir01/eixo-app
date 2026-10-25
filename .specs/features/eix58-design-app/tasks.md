@@ -1308,8 +1308,8 @@ T49
 
 **Done when**:
 
-- [ ] Teste com largura 800: `maxWidth` 720; com 412: sem limite
-- [ ] Gate check passes: `npx jest --selectProjects app src/ui/__tests__/Screen.test.tsx`
+- [x] Teste com largura 800: `maxWidth` 720; com 412: sem limite
+- [x] Gate check passes: `npx jest --selectProjects app src/ui/__tests__/Screen.test.tsx`
 
 **Tests**: unit
 **Gate**: quick
