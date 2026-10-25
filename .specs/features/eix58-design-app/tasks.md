@@ -1256,8 +1256,8 @@ T49
 
 **Done when**:
 
-- [ ] Teste: com reduced motion não anima
-- [ ] Gate check passes: `npx jest --selectProjects app src/ui/__tests__/Skeleton.test.tsx`
+- [x] Teste: com reduced motion não anima
+- [x] Gate check passes: `npx jest --selectProjects app src/ui/__tests__/Skeleton.test.tsx`
 
 **Tests**: unit
 **Gate**: quick
