@@ -1,8 +1,8 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useFocusEffect, useRouter } from 'expo-router';
-import { ActivityIndicator, Alert, FlatList, ScrollView } from 'react-native';
+import { ActivityIndicator, Alert, ScrollView } from 'react-native';
 
-import { Badge, Button, Column, EmptyState, Input, ListItem, Screen, Snackbar, Tabs, Text, colors, type BadgeTone } from '@/ui';
+import { List, Badge, Button, Column, EmptyState, Input, ListItem, Screen, Snackbar, Tabs, Text, colors, type BadgeTone } from '@/ui';
 
 import { formatarPlaca } from './placa';
 import { inativarVeiculo, listarVeiculos } from './repository';
@@ -153,7 +153,7 @@ export function VeiculosListView() {
       )}
 
       {status === 'pronto' && veiculos.length > 0 && (
-        <FlatList
+        <List
           data={veiculos}
           keyExtractor={(item) => item.id}
           style={{ flex: 1 }}

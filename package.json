@@ -36,9 +36,11 @@
     "react": "19.2.3",
     "react-dom": "19.2.3",
     "react-native": "0.86.3",
+    "react-native-reanimated": "4.5.1",
     "react-native-safe-area-context": "~5.7.0",
     "react-native-screens": "~4.26.0",
     "react-native-svg": "15.15.4",
+    "react-native-worklets": "0.10.1",
     "zod": "^4.6.5",
     "zustand": "^5.0.15"
   },
@@ -64,6 +66,7 @@
     "projects": [
       {
         "displayName": "app",
+        "resolver": "react-native-worklets/jest/resolver",
         "preset": "jest-expo",
         "setupFiles": [
           "<rootDir>/jest.setup.ts",
@@ -72,7 +75,9 @@
         "moduleNameMapper": {
           "^@/(.*)$": "<rootDir>/src/$1"
         },
-        "testPathIgnorePatterns": ["<rootDir>/supabase/"],
+        "testPathIgnorePatterns": [
+          "<rootDir>/supabase/"
+        ],
         "transformIgnorePatterns": [
           "node_modules/(?!((jest-)?react-native|@react-native(-community)?)|expo(nent)?|@expo(nent)?/.*|@expo-google-fonts/.*|react-navigation|@react-navigation/.*|@supabase/.*|standard-navigation)"
         ]
@@ -80,9 +85,18 @@
       {
         "displayName": "supabase",
         "preset": "jest-expo/node",
-        "testMatch": ["<rootDir>/supabase/tests/**/*.test.ts"],
+        "testMatch": [
+          "<rootDir>/supabase/tests/**/*.test.ts"
+        ],
         "transform": {
-          "\\.[jt]sx?$": ["babel-jest", { "presets": ["babel-preset-expo"] }]
+          "\\.[jt]sx?$": [
+            "babel-jest",
+            {
+              "presets": [
+                "babel-preset-expo"
+              ]
+            }
+          ]
         }
       }
     ]

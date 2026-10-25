@@ -1,9 +1,9 @@
 import { useRouter } from 'expo-router';
-import { FlatList, RefreshControl, StyleSheet } from 'react-native';
+import { RefreshControl, StyleSheet } from 'react-native';
 
 import { rotuloPerfil, rotuloStatus } from '@/features/auth/permissions';
 import { useDadosDaTela } from '@/lib/useDadosDaTela';
-import { Badge, Column, EmptyState, ListItem, Screen, Skeleton, Snackbar, Text, colors } from '@/ui';
+import { List, Badge, Column, EmptyState, ListItem, Screen, Skeleton, Snackbar, Text, colors } from '@/ui';
 
 import type { Usuario } from './types';
 import { listarUsuarios } from './usuariosRepository';
@@ -51,7 +51,7 @@ export function UsuariosListView() {
       )}
 
       {tela.status === 'pronto' && (
-        <FlatList
+        <List
           data={tela.dados ?? []}
           keyExtractor={(item) => item.id}
           style={styles.lista}

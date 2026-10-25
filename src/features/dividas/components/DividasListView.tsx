@@ -1,9 +1,9 @@
 import { useCallback, useRef, useState } from 'react';
 import { useFocusEffect, useRouter } from 'expo-router';
-import { ActivityIndicator, FlatList, StyleSheet } from 'react-native';
+import { ActivityIndicator, StyleSheet } from 'react-native';
 
 import { formatarMoeda } from '@/lib/money';
-import { Column, EmptyState, FAB, FAB_ALTURA_RESERVADA, ListItem, Screen, Text, colors } from '@/ui';
+import { List, Column, EmptyState, FAB, FAB_ALTURA_RESERVADA, ListItem, Screen, Text, colors } from '@/ui';
 
 import { listarDividas } from '../dividasRepository';
 import type { Divida } from '../types';
@@ -72,7 +72,7 @@ export function DividasListView() {
       )}
 
       {status === 'pronto' && dividas.length > 0 && (
-        <FlatList
+        <List
           data={dividas}
           keyExtractor={(divida) => divida.id}
           contentContainerStyle={styles.espacoDoFab}
