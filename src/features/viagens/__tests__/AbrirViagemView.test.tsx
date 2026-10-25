@@ -4,13 +4,16 @@ import { Animated } from 'react-native';
 
 import * as authStore from '@/features/auth/profileStore';
 import type { UsuarioLogado } from '@/features/auth/profileStore';
-import * as veiculosRepo from '@/features/veiculos/repository';
 import { AbrirViagemView } from '../AbrirViagemView';
+import { pedirSincronizacao } from '../syncStore';
 import * as repo from '../viagensRepository';
 
 jest.mock('expo-router', () => ({
   useRouter: jest.fn(),
 }));
+
+// O envio ao servidor é do sync (coberto em sync.test.ts); aqui só importa que a tela peça.
+jest.mock('../syncStore', () => ({ pedirSincronizacao: jest.fn() }));
 
 const mockVeiculo = {
   id: 'veic-1',
@@ -93,7 +96,7 @@ async function preencherFormulario(
   opcoes?: { ultimoHodometroPreenchido?: number; motorista?: string },
 ) {
   await selecionarVeiculo('BRA2E19 • R450');
-  await waitFor(() => expect(veiculosRepo.buscarVeiculoPorId).toHaveBeenCalledWith('veic-1'));
+  await waitFor(() => expect(repo.buscarVeiculo).toHaveBeenCalledWith('veic-1'));
 
   if (opcoes?.ultimoHodometroPreenchido !== undefined) {
     await waitFor(() =>
@@ -137,11 +140,11 @@ describe('AbrirViagemView', () => {
       back: mockBack,
     });
     jest.spyOn(authStore, 'useProfile').mockReturnValue(perfilDoUsuario(usuarioMotorista));
-    jest.spyOn(veiculosRepo, 'listarVeiculosSelecionaveis').mockResolvedValue({
+    jest.spyOn(repo, 'listarVeiculosDisponiveis').mockResolvedValue({
       ok: true,
       data: [mockVeiculo, mockVeiculo2],
     });
-    jest.spyOn(veiculosRepo, 'buscarVeiculoPorId').mockResolvedValue({
+    jest.spyOn(repo, 'buscarVeiculo').mockResolvedValue({
       ok: true,
       data: mockVeiculo,
     });
@@ -161,7 +164,7 @@ describe('AbrirViagemView', () => {
   it('renderiza os campos solicitados: Veículo, Rota, Motorista e Hodômetro Inicial', async () => {
     render(<AbrirViagemView />);
 
-    await waitFor(() => expect(veiculosRepo.listarVeiculosSelecionaveis).toHaveBeenCalled());
+    await waitFor(() => expect(repo.listarVeiculosDisponiveis).toHaveBeenCalled());
     expect(screen.getByText('Informações da nova viagem')).toBeTruthy();
     expect(screen.getByRole('button', { name: 'Veículo' })).toBeTruthy();
     expect(screen.getByRole('button', { name: 'Rota' })).toBeTruthy();
@@ -169,21 +172,21 @@ describe('AbrirViagemView', () => {
     expect(screen.getByLabelText('Hodômetro Inicial (km)')).toBeTruthy();
   });
 
-  it('busca só os veículos selecionáveis para viagem', async () => {
+  it('busca os veículos disponíveis no cache do aparelho', async () => {
     render(<AbrirViagemView />);
 
     await screen.findByText('Informações da nova viagem');
 
-    // A exclusão de veículos em manutenção/inativos é feita pelo repositório e está coberta
-    // em src/features/veiculos/__tests__/repository.test.ts; aqui garantimos a fonte correta.
-    expect(veiculosRepo.listarVeiculosSelecionaveis).toHaveBeenCalledWith('viagem');
+    // A exclusão de veículos em manutenção/inativos/em viagem é feita pelo repositório e está
+    // coberta em viagensRepository.test.ts; aqui garantimos a fonte correta.
+    expect(repo.listarVeiculosDisponiveis).toHaveBeenCalled();
   });
 
   it.each([
     ['EmManutencao', 'Veículo em manutenção não pode sair em viagem.'],
     ['Inativo', 'Veículo inativo não pode sair em viagem.'],
   ] as const)('bloqueia veículo %s usando o status atual', async (status, mensagem) => {
-    jest.spyOn(veiculosRepo, 'buscarVeiculoPorId').mockResolvedValue({
+    jest.spyOn(repo, 'buscarVeiculo').mockResolvedValue({
       ok: true,
       data: { ...mockVeiculo, status },
     });
@@ -205,14 +208,14 @@ describe('AbrirViagemView', () => {
     await screen.findByText('Informações da nova viagem');
     await selecionarVeiculo('BRA2E19 • R450');
 
-    await waitFor(() => expect(veiculosRepo.buscarVeiculoPorId).toHaveBeenCalledWith('veic-1'));
+    await waitFor(() => expect(repo.buscarVeiculo).toHaveBeenCalledWith('veic-1'));
     expect(spyHodometro).not.toHaveBeenCalled();
     expect(screen.getByLabelText('Hodômetro Inicial (km)')).toHaveDisplayValue('');
     expect(screen.queryByText(/Último hodômetro final registrado/)).not.toBeOnTheScreen();
   });
 
   it('bloqueia veículo que outro motorista deixou em viagem', async () => {
-    jest.spyOn(veiculosRepo, 'buscarVeiculoPorId').mockResolvedValue({
+    jest.spyOn(repo, 'buscarVeiculo').mockResolvedValue({
       ok: true,
       data: { ...mockVeiculo, status: 'EmViagem' },
     });
@@ -324,6 +327,26 @@ describe('AbrirViagemView', () => {
 
     const payloadChamado = spyAbrir.mock.calls[0]?.[0] as Record<string, unknown>;
     expect(payloadChamado.km_rodado).toBeUndefined();
+    // Salvou no aparelho: com internet, a viagem sobe na hora (EIX-41).
+    expect(pedirSincronizacao).toHaveBeenCalledTimes(1);
+  });
+
+  it('não pede sincronização quando a abertura é recusada no aparelho', async () => {
+    jest.spyOn(repo, 'abrirViagem').mockResolvedValue({
+      ok: false,
+      mensagem: 'Este veículo já está em uma viagem em andamento.',
+      campo: 'veiculo_id',
+      codigo: 'VG001',
+    });
+
+    render(<AbrirViagemView />);
+    await screen.findByText('Informações da nova viagem');
+    await preencherFormulario('15000');
+    fireEvent.press(screen.getByRole('button', { name: 'Abrir viagem' }));
+
+    // A mensagem aparece no campo e no Snackbar.
+    expect(await screen.findAllByText('Este veículo já está em uma viagem em andamento.')).toHaveLength(2);
+    expect(pedirSincronizacao).not.toHaveBeenCalled();
   });
 
   it('limpa o hodômetro ao trocar de veículo e ignora a resposta atrasada do anterior', async () => {
@@ -425,7 +448,7 @@ describe('AbrirViagemView', () => {
 
   it('"Tentar novamente" recarrega as listas sem navegar', async () => {
     jest
-      .spyOn(veiculosRepo, 'listarVeiculosSelecionaveis')
+      .spyOn(repo, 'listarVeiculosDisponiveis')
       .mockResolvedValueOnce({ ok: false, mensagem: 'Falha ao carregar os veículos.' });
 
     render(<AbrirViagemView />);
@@ -434,13 +457,13 @@ describe('AbrirViagemView', () => {
     fireEvent.press(screen.getByRole('button', { name: 'Tentar novamente' }));
 
     expect(await screen.findByText('Informações da nova viagem')).toBeOnTheScreen();
-    expect(veiculosRepo.listarVeiculosSelecionaveis).toHaveBeenCalledTimes(2);
+    expect(repo.listarVeiculosDisponiveis).toHaveBeenCalledTimes(2);
   });
 
   it.each([
     [
       'veículo',
-      () => jest.spyOn(veiculosRepo, 'listarVeiculosSelecionaveis').mockResolvedValue({ ok: true, data: [] }),
+      () => jest.spyOn(repo, 'listarVeiculosDisponiveis').mockResolvedValue({ ok: true, data: [] }),
       'Nenhum veículo disponível',
     ],
     ['rota', () => jest.spyOn(repo, 'listarRotasAtivas').mockResolvedValue({ ok: true, data: [] }), 'Nenhuma rota ativa'],

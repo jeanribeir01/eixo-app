@@ -59,9 +59,35 @@ tasks compartilham.
 | `@types/better-sqlite3` (devDependency) | Tipos do `better-sqlite3`, por causa do `strict` |
 | `babel-plugin-inline-import` (devDependency) | Permite o Metro importar os `.sql` gerados pelo drizzle-kit. Configurado em `babel.config.js` (plugin) e `metro.config.js` (`sql` em `sourceExts`) |
 | `babel-preset-expo` (devDependency) | Preset oficial do Babel para Expo, referenciado em `babel.config.js` e no transform do projeto `supabase` do Jest. Só é usado em build e teste |
+| `expo-crypto` (dependency, EIX-41) | Bytes aleatórios seguros para o UUID v7 do cliente (`src/lib/uuid.ts`). O Hermes não garante `crypto.getRandomValues`, e `Math.random` é previsível |
 
-`expo-sqlite` e `expo-network` são módulos nativos. **O development build precisa ser gerado de
+`expo-sqlite`, `expo-network` e `expo-crypto` são módulos nativos. **O development build precisa ser gerado de
 novo** (`eas build --profile development`), como já avisado no ADR 0003.
+
+## Como a EIX-41 aplicou a decisão
+
+- **Ids:** UUID v7 gerado no aparelho (`src/lib/uuid.ts`). A abertura sobe como upsert que ignora
+  id repetido (`on conflict (id) do nothing`): reenviar não duplica nem altera a viagem.
+- **Ordem:** a outbox sai pela ordem de criação, e o fechamento de uma viagem só sobe depois da
+  abertura dela. Se a abertura não passou, o fechamento espera.
+- **Situação do item** (coluna `situacao` da outbox): `pendente` ainda vai subir; `falha` e
+  `conflito` foram recusados e ficam na fila, visíveis no indicador, porque reenviar daria o
+  mesmo erro. Os dois não ocupam o lote de envio.
+- **Conflito (revisão do gestor):** disputa de hodômetro, ou seja, `VG004`, `VG005`, `VG007` e o
+  fechamento de uma viagem que o servidor já encerrou com outro hodômetro. O servidor vence; a
+  versão dele desce para o aparelho na sincronização seguinte.
+- **Falha:** as demais regras (`VG001`–`VG003`, `VG006`, constraints, `42501`) e erro temporário
+  que passou de 5 tentativas. Abertura recusada (falha ou conflito) vira `Cancelada` no aparelho,
+  para liberar o veículo.
+- **Sem rede não é erro:** não gasta tentativa. Erro temporário do servidor espera 30 s, 1 min,
+  2 min, 4 min (backoff exponencial, coluna `proxima_tentativa_em`).
+- **Quando sincroniza:** na abertura do app, quando a conexão volta, logo depois de abrir ou
+  fechar viagem, ao abrir a lista de viagens e, com pendência, a cada 30 s. Sem sessão não
+  sincroniza, para o RLS não recusar tudo como `42501`.
+- **Descida:** depois de enviar, o app copia do servidor veículos, rotas e as viagens que o RLS
+  deixa a pessoa ver, com o nome do motorista (tabela local `motorista`, só id e nome). Viagem com
+  item pendente não é sobrescrita; viagem que o servidor não devolve mais e não tem item na fila
+  sai do aparelho.
 
 ## Alternativas consideradas
 

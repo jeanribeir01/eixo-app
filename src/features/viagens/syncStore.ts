@@ -1,90 +1,108 @@
 import * as Network from 'expo-network';
 import { create } from 'zustand';
 
-import { drenarOutboxViagens, obterStatusOutboxViagens } from './sync';
+import { obterStatusOutbox, sincronizarViagens } from './sync';
+
+// De quanto em quanto tempo, com internet, o app tenta de novo o que ficou pendente (item que
+// esperava o backoff, ou que falhou por instabilidade). Só roda se houver pendência.
+export const INTERVALO_RETENTATIVA_MS = 30_000;
 
 export type SyncState = {
   isOnline: boolean;
   pendentes: number;
-  comErro: number;
+  falhas: number;
   conflitos: number;
   sincronizando: boolean;
   setOnline: (isOnline: boolean) => void;
-  setSincronizando: (sincronizando: boolean) => void;
   atualizarStatus: () => void;
-  sincronizar: () => Promise<void>;
+  sincronizar: (opcoes?: { baixar?: boolean }) => Promise<void>;
 };
+
+// A sincronização em andamento. Quem pede de novo no meio dela espera a mesma, em vez de voltar
+// na hora: a lista que pede "sincronize e depois leia" não pode ler o banco antes de terminar.
+let emAndamento: Promise<void> | null = null;
+
+function estaOnline(estado: Network.NetworkState): boolean {
+  return Boolean(estado.isConnected && estado.isInternetReachable !== false);
+}
 
 export const useSyncStore = create<SyncState>((set, get) => ({
   isOnline: true,
   pendentes: 0,
-  comErro: 0,
+  falhas: 0,
   conflitos: 0,
   sincronizando: false,
 
-  setOnline: (isOnline: boolean) => set({ isOnline }),
-
-  setSincronizando: (sincronizando: boolean) => set({ sincronizando }),
+  setOnline: (isOnline) => set({ isOnline }),
 
   atualizarStatus: () => {
     try {
-      const status = obterStatusOutboxViagens();
-      set({
-        pendentes: status.pendentes,
-        comErro: status.comErro,
-        conflitos: status.conflitos,
-      });
+      set(obterStatusOutbox());
     } catch {
-      // Ignora erro se o banco ainda não estiver pronto (ex.: migrations em execução)
+      // Banco ainda não aberto (migrations rodando na abertura do app): mantém os números atuais.
     }
   },
 
-  sincronizar: async () => {
-    if (get().sincronizando || !get().isOnline) return;
+  sincronizar: (opcoes) => {
+    if (emAndamento) return emAndamento;
+    if (!get().isOnline) return Promise.resolve();
 
     set({ sincronizando: true });
-    try {
-      await drenarOutboxViagens();
-    } catch {
-      // Ignora erro inesperado durante drenagem automática
-    } finally {
-      set({ sincronizando: false });
-      get().atualizarStatus();
-    }
+    emAndamento = sincronizarViagens(opcoes)
+      .then(() => undefined)
+      .catch(() => {
+        // O que não subiu continua na outbox com o motivo; a tela mostra pelos contadores.
+      })
+      .finally(() => {
+        emAndamento = null;
+        set({ sincronizando: false });
+        get().atualizarStatus();
+      });
+    return emAndamento;
   },
 }));
 
+// Para a tela chamar depois de abrir ou fechar uma viagem: com internet, sobe na hora, sem
+// esperar a conexão cair e voltar. Sem internet, só atualiza o contador de pendências.
+export function pedirSincronizacao(): void {
+  useSyncStore.getState().atualizarStatus();
+  void useSyncStore.getState().sincronizar();
+}
+
 export function startNetworkSyncListener(): () => void {
-  // Estado inicial de conectividade na abertura da aplicação
+  // Estado inicial na abertura do app.
   Network.getNetworkStateAsync()
     .then((estado) => {
-      const isOnline = Boolean(estado.isConnected && estado.isInternetReachable !== false);
-      useSyncStore.getState().setOnline(isOnline);
-      useSyncStore.getState().atualizarStatus();
-
-      if (isOnline) {
-        useSyncStore.getState().sincronizar();
-      }
+      useSyncStore.getState().setOnline(estaOnline(estado));
+      pedirSincronizacao();
     })
     .catch(() => {
       useSyncStore.getState().atualizarStatus();
     });
 
-  // Listener para transições de conectividade
-  const subscription = Network.addNetworkStateListener(async (estado) => {
-    const isOnline = Boolean(estado.isConnected && estado.isInternetReachable !== false);
+  // A internet voltou: sobe o que ficou guardado.
+  const subscription = Network.addNetworkStateListener((estado) => {
+    const isOnline = estaOnline(estado);
     const estavaOffline = !useSyncStore.getState().isOnline;
 
     useSyncStore.getState().setOnline(isOnline);
     useSyncStore.getState().atualizarStatus();
 
-    // Dispara a sincronização automática quando a internet volta
     if (isOnline && estavaOffline) {
-      await useSyncStore.getState().sincronizar();
+      void useSyncStore.getState().sincronizar();
     }
   });
 
+  // Retentativa: só envia (não baixa tudo de novo) e só quando há o que enviar.
+  const timer = setInterval(() => {
+    const { isOnline, pendentes, sincronizar } = useSyncStore.getState();
+    if (isOnline && pendentes > 0) {
+      void sincronizar({ baixar: false });
+    }
+  }, INTERVALO_RETENTATIVA_MS);
+
   return () => {
-    subscription?.remove?.();
+    subscription.remove();
+    clearInterval(timer);
   };
 }

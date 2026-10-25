@@ -92,6 +92,23 @@ export const outbox = sqliteTable('outbox', {
   tentativas: integer('tentativas').notNull().default(0),
   criado_em: text('criado_em').notNull(),
   ultimo_erro: text('ultimo_erro'),
+  // 'pendente' ainda vai ser enviado. 'falha' e 'conflito' foram recusados pelo servidor e
+  // ficam na fila para alguém ver: reenviar o mesmo dado daria o mesmo erro (EIX-41).
+  // 'conflito' é a disputa de hodômetro, que vai para revisão do gestor (ADR 0004, decisão 4).
+  situacao: text('situacao', { enum: ['pendente', 'falha', 'conflito'] })
+    .notNull()
+    .default('pendente'),
+  // Backoff exponencial depois de um erro temporário do servidor: o item só volta a ser
+  // enviado a partir deste horário (ISO 8601 UTC). Nulo = pode ir já.
+  proxima_tentativa_em: text('proxima_tentativa_em'),
+});
+
+// motorista: cache só do nome, para a lista e o fechamento mostrarem quem dirige sem internet.
+// Não é espelho de `usuario` (ADR 0004, decisão 5): vem embutido nas viagens que o RLS já deixa
+// a pessoa ver, então o aparelho nunca guarda e-mail nem perfil de ninguém.
+export const motorista = sqliteTable('motorista', {
+  id: text('id').primaryKey(),
+  nome: text('nome').notNull(),
 });
 
 export type Veiculo = typeof veiculo.$inferSelect;
@@ -102,3 +119,4 @@ export type Viagem = typeof viagem.$inferSelect;
 export type NovaViagem = typeof viagem.$inferInsert;
 export type OutboxItem = typeof outbox.$inferSelect;
 export type NovoOutboxItem = typeof outbox.$inferInsert;
+export type Motorista = typeof motorista.$inferSelect;

@@ -25,6 +25,7 @@ import {
   parseHodometro,
 } from './calculo';
 import { fecharViagemFormSchema } from './schema';
+import { pedirSincronizacao } from './syncStore';
 import { rotuloStatusViagem, type ViagemDetalhada } from './types';
 import { buscarViagemPorId, fecharViagem } from './viagensRepository';
 
@@ -146,6 +147,9 @@ export function FecharViagemView({ viagemId }: FecharViagemViewProps) {
         setFeedback({ mensagem: resultado.mensagem, tone: 'error' });
         return;
       }
+
+      // O fechamento já está salvo no aparelho. Com internet, sobe agora; sem, fica na fila.
+      pedirSincronizacao();
 
       // O botão segue em loading até a tela fechar: sem setTimeout, o toque repetido durante a
       // mensagem de sucesso não fecha a viagem duas vezes.

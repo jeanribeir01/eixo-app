@@ -1,16 +1,21 @@
+import { and, asc, desc, eq, isNotNull, type SQL } from 'drizzle-orm';
+import type { BaseSQLiteDatabase } from 'drizzle-orm/sqlite-core';
 import { z } from 'zod';
 
+import { db } from '@/db/client';
+import * as local from '@/db/schema';
+import type { Veiculo as VeiculoSelecionavel } from '@/features/veiculos/types';
 import { ehAcessoNegado, MENSAGEM_ACESSO_NEGADO } from '@/lib/errors';
+import { gerarUuidV7 } from '@/lib/uuid';
 import { supabase } from '@/supabase/client';
-import type { Database } from '@/types/database';
 
 import {
   abrirViagemSchema,
   fecharViagemSchema,
   motoristaResumoSchema,
-  rotaResumoSchema,
   viagemDetalhadaSchema,
-  viagemSchema,
+  type PayloadAberturaViagem,
+  type PayloadFechamentoViagem,
 } from './schema';
 import type {
   CampoErroViagem,
@@ -26,17 +31,29 @@ import type {
 } from './types';
 
 // Camada de acesso a dados isolada da tela (AGENTS.md §2.3, skill supabase-query).
-// As telas usam esta interface mantendo paridade exata com as colunas do banco,
-// preparando a futura migração offline-first (EIX-41).
+//
+// Offline-first (EIX-41, ADR 0004): a tela lê e escreve no SQLite do aparelho, nunca direto no
+// Supabase. Abrir e fechar viagem gravam a linha local e o item da outbox na mesma transação; o
+// envio ao servidor e a cópia do que está lá ficam em `sync.ts`. Só a lista de motoristas
+// (Admin/Gestor) continua online: `usuario` não é espelhado no aparelho.
+
+// Tipo comum ao banco do app (expo-sqlite) e ao do Jest (better-sqlite3): os dois são SQLite
+// síncrono, só o tipo do resultado de `run()` muda, e o repositório não o usa.
+export type ViagensDb = BaseSQLiteDatabase<'sync', unknown, typeof local>;
+
+let dbAtual: ViagensDb = db as unknown as ViagensDb;
+
+// Os testes trocam o banco pelo SQLite em memória de `src/db/testing.ts`.
+export function setDb(instancia: ViagensDb): void {
+  dbAtual = instancia;
+}
+
+export function getDb(): ViagensDb {
+  return dbAtual;
+}
 
 export const COLUNAS_VIAGEM =
   'id, veiculo_id, rota_id, motorista_id, hodometro_inicial, hodometro_final, data_inicio, data_fim, status, km_rodado, data_inclusao, data_atualizacao';
-
-export const COLUNAS_DETALHADAS =
-  `${COLUNAS_VIAGEM}, ` +
-  'veiculo:veiculo_id (id, placa, marca, modelo, status), ' +
-  'rota:rota_id (id, cidade_origem, uf_origem, cidade_destino, uf_destino, distancia_estimada_km), ' +
-  'motorista:usuario!viagem_motorista_id_fkey (id, nome, email)';
 
 // Seletores do formulário de abertura: cadastro pequeno por natureza; o limite só impede uma
 // resposta sem teto (skill supabase-query). Os filtros vão para o banco para o limite valer
@@ -45,7 +62,7 @@ const LIMITE_SELETOR = 500;
 
 // Mensagens amigáveis para cada erro do banco (EIX-76 / migrations 20260924000300_frota.sql e
 // 20261015000100_viagem_regras.sql). O texto técnico do banco ou SQLSTATE nunca é exposto
-// diretamente ao usuário.
+// diretamente ao usuário. As mesmas mensagens servem para a regra checada no aparelho.
 export const MENSAGENS_ERRO_VIAGEM = {
   VG001: 'Este veículo já está em uma viagem em andamento.',
   VG002: 'Veículo em manutenção não pode sair em viagem.',
@@ -120,6 +137,12 @@ export const CAMPOS_ERRO_VIAGEM: Record<string, CampoErroViagem> = {
 
 export const MENSAGEM_VIAGEM_NAO_ABERTA = 'Esta viagem já foi encerrada ou não foi encontrada.';
 
+// O cache local de veículos e rotas só existe depois da primeira sincronização com internet.
+export const MENSAGEM_VEICULO_FORA_DO_APARELHO =
+  'Veículo não encontrado neste aparelho. Conecte-se à internet para atualizar a lista.';
+export const MENSAGEM_ROTA_FORA_DO_APARELHO =
+  'Rota não encontrada neste aparelho. Conecte-se à internet para atualizar a lista.';
+
 type ErroSupabase = { code: string; message?: string; details?: string };
 type Falha = Extract<Resultado<never>, { ok: false }>;
 
@@ -145,6 +168,8 @@ function falhaDaConstraint(nome: NomeConstraintViagem, codigo: string): Falha {
   };
 }
 
+// Traduz o erro do Supabase. Desde a EIX-41 quem chama é o sync (`sync.ts`) e a lista de
+// motoristas: a mensagem traduzida é o que fica gravado no item da outbox que o servidor recusou.
 export function traduzirErroBanco(error: ErroSupabase, mensagemPadrao: string): Falha {
   if (ehAcessoNegado(error)) {
     return { ok: false, mensagem: MENSAGEM_ACESSO_NEGADO, codigo: '42501' };
@@ -183,121 +208,203 @@ export function traduzirErroBanco(error: ErroSupabase, mensagemPadrao: string): 
   return { ok: false, mensagem: mensagemPadrao, codigo: error.code };
 }
 
-function validarViagem(data: unknown): Resultado<Viagem> {
-  const parsed = viagemSchema.safeParse(data);
-  if (!parsed.success) {
-    return { ok: false, mensagem: 'Os dados da viagem recebidos são inválidos.' };
+// Erro do SQLite local. As regras de negócio já foram checadas antes de gravar, com a mensagem
+// certa; o que chega aqui é a última barreira (índice único ou FK) ou um erro inesperado.
+function traduzirErroLocal(error: unknown, mensagemPadrao: string): Falha {
+  const texto = error instanceof Error ? error.message : String(error);
+
+  if (texto.includes('UNIQUE constraint failed: viagem.veiculo_id')) {
+    return { ok: false, mensagem: MENSAGENS_ERRO_VIAGEM.VG001, campo: 'veiculo_id', codigo: 'VG001' };
   }
-  return { ok: true, data: parsed.data };
+
+  return { ok: false, mensagem: mensagemPadrao };
 }
 
-function validarViagemDetalhada(data: unknown): Resultado<ViagemDetalhada> {
-  const parsed = viagemDetalhadaSchema.safeParse(data);
+// Viagem com veículo, rota e nome do motorista, montada pelos joins locais. O `motorista` vem do
+// cache de nomes que o sync preenche (`local.motorista`); sem ele, a tela só omite o nome.
+function selecionarViagensDetalhadas(onde?: SQL) {
+  const consulta = getDb()
+    .select({
+      viagem: local.viagem,
+      veiculo: {
+        id: local.veiculo.id,
+        placa: local.veiculo.placa,
+        marca: local.veiculo.marca,
+        modelo: local.veiculo.modelo,
+        status: local.veiculo.status,
+      },
+      rota: {
+        id: local.rota.id,
+        cidade_origem: local.rota.cidade_origem,
+        uf_origem: local.rota.uf_origem,
+        cidade_destino: local.rota.cidade_destino,
+        uf_destino: local.rota.uf_destino,
+        distancia_estimada_km: local.rota.distancia_estimada_km,
+      },
+      motorista: local.motorista,
+    })
+    .from(local.viagem)
+    .leftJoin(local.veiculo, eq(local.viagem.veiculo_id, local.veiculo.id))
+    .leftJoin(local.rota, eq(local.viagem.rota_id, local.rota.id))
+    .leftJoin(local.motorista, eq(local.viagem.motorista_id, local.motorista.id));
+
+  return onde ? consulta.where(onde) : consulta;
+}
+
+type LinhaDetalhada = ReturnType<ReturnType<typeof selecionarViagensDetalhadas>['all']>[number];
+
+function validarViagemDetalhada({ viagem, veiculo, rota, motorista }: LinhaDetalhada): Resultado<ViagemDetalhada> {
+  const parsed = viagemDetalhadaSchema.safeParse({ ...viagem, veiculo, rota, motorista });
   if (!parsed.success) {
-    return { ok: false, mensagem: 'Os dados detalhados da viagem recebidos são inválidos.' };
+    return { ok: false, mensagem: 'Os dados detalhados da viagem são inválidos.' };
   }
   return { ok: true, data: parsed.data };
 }
 
 export async function listarViagens(filtro: FiltroViagens = {}): Promise<Resultado<ViagemDetalhada[]>> {
-  let query = supabase
-    .from('viagem')
-    .select(COLUNAS_DETALHADAS)
-    .order('data_inclusao', { ascending: false })
-    .limit(filtro.limite ?? 100);
+  try {
+    const condicoes: SQL[] = [];
 
-  if (filtro.status && filtro.status !== 'Todos') {
-    query = query.eq('status', filtro.status);
-  }
-
-  if (filtro.veiculo_id) {
-    query = query.eq('veiculo_id', filtro.veiculo_id);
-  }
-
-  if (filtro.motorista_id) {
-    query = query.eq('motorista_id', filtro.motorista_id);
-  }
-
-  const { data, error } = await query;
-
-  if (error) {
-    return traduzirErroBanco(error, 'Não foi possível carregar as viagens. Tente novamente.');
-  }
-
-  const viagens: ViagemDetalhada[] = [];
-  for (const item of data ?? []) {
-    const validado = validarViagemDetalhada(item);
-    if (!validado.ok) {
-      return validado;
+    if (filtro.status && filtro.status !== 'Todos') {
+      condicoes.push(eq(local.viagem.status, filtro.status));
     }
-    viagens.push(validado.data);
-  }
+    if (filtro.veiculo_id) {
+      condicoes.push(eq(local.viagem.veiculo_id, filtro.veiculo_id));
+    }
+    if (filtro.motorista_id) {
+      condicoes.push(eq(local.viagem.motorista_id, filtro.motorista_id));
+    }
 
-  return { ok: true, data: viagens };
+    const linhas = selecionarViagensDetalhadas(and(...condicoes))
+      .orderBy(desc(local.viagem.data_inclusao))
+      .limit(filtro.limite ?? 100)
+      .all();
+
+    const viagens: ViagemDetalhada[] = [];
+    for (const linha of linhas) {
+      const validado = validarViagemDetalhada(linha);
+      if (!validado.ok) {
+        return validado;
+      }
+      viagens.push(validado.data);
+    }
+
+    return { ok: true, data: viagens };
+  } catch (error) {
+    return traduzirErroLocal(error, 'Não foi possível carregar as viagens. Tente novamente.');
+  }
 }
 
 export async function buscarViagemPorId(id: string): Promise<Resultado<ViagemDetalhada>> {
-  const { data, error } = await supabase.from('viagem').select(COLUNAS_DETALHADAS).eq('id', id).maybeSingle();
+  try {
+    const linha = selecionarViagensDetalhadas(eq(local.viagem.id, id)).get();
 
-  if (error) {
-    return traduzirErroBanco(error, 'Não foi possível carregar a viagem. Tente novamente.');
+    if (!linha) {
+      return { ok: false, mensagem: 'Viagem não encontrada.' };
+    }
+
+    return validarViagemDetalhada(linha);
+  } catch (error) {
+    return traduzirErroLocal(error, 'Não foi possível carregar a viagem. Tente novamente.');
   }
-
-  if (!data) {
-    return { ok: false, mensagem: 'Viagem não encontrada.' };
-  }
-
-  return validarViagemDetalhada(data);
 }
 
-// Consulta sujeita ao RLS: para o Motorista, o máximo considera só as viagens dele. A tela
-// só usa esse valor para Admin/Gestor; para o Motorista, o banco devolve VG004 sem expor o
-// hodômetro de uma viagem que ele não enxerga.
+// O aparelho só tem as viagens que o RLS deixou o sync baixar: para o Motorista, o máximo
+// considera só as viagens dele. A tela só usa esse valor para Admin/Gestor; para o Motorista, o
+// servidor devolve VG004 na sincronização sem expor o hodômetro de uma viagem que ele não enxerga.
 export async function buscarUltimoHodometro(veiculo_id: string): Promise<Resultado<number | null>> {
-  const { data, error } = await supabase
-    .from('viagem')
-    .select('hodometro_final')
-    .eq('veiculo_id', veiculo_id)
-    .not('hodometro_final', 'is', null)
-    .order('hodometro_final', { ascending: false })
-    .limit(1);
+  try {
+    const linha = getDb()
+      .select({ hodometro_final: local.viagem.hodometro_final })
+      .from(local.viagem)
+      .where(and(eq(local.viagem.veiculo_id, veiculo_id), isNotNull(local.viagem.hodometro_final)))
+      .orderBy(desc(local.viagem.hodometro_final))
+      .limit(1)
+      .get();
 
-  if (error) {
-    return traduzirErroBanco(error, 'Não foi possível consultar o último hodômetro do veículo.');
+    return { ok: true, data: linha?.hodometro_final ?? null };
+  } catch (error) {
+    return traduzirErroLocal(error, 'Não foi possível consultar o último hodômetro do veículo.');
   }
+}
 
-  if (!data || data.length === 0 || data[0]?.hodometro_final === null) {
-    return { ok: true, data: null };
+const COLUNAS_VEICULO_SELECIONAVEL = {
+  id: local.veiculo.id,
+  placa: local.veiculo.placa,
+  marca: local.veiculo.marca,
+  modelo: local.veiculo.modelo,
+  ano_fabricacao: local.veiculo.ano_fabricacao,
+  capacidade_carga: local.veiculo.capacidade_carga,
+  status: local.veiculo.status,
+};
+
+// Só Disponível, como `listarVeiculosSelecionaveis('viagem')`: inativo, em manutenção e em
+// viagem nem aparecem. Lê do cache local para o motorista abrir viagem sem internet.
+export async function listarVeiculosDisponiveis(): Promise<Resultado<VeiculoSelecionavel[]>> {
+  try {
+    const veiculos = getDb()
+      .select(COLUNAS_VEICULO_SELECIONAVEL)
+      .from(local.veiculo)
+      .where(eq(local.veiculo.status, 'Disponivel'))
+      .orderBy(asc(local.veiculo.placa))
+      .limit(LIMITE_SELETOR)
+      .all();
+
+    return { ok: true, data: veiculos };
+  } catch (error) {
+    return traduzirErroLocal(error, 'Não foi possível carregar os veículos. Tente novamente.');
   }
+}
 
-  return { ok: true, data: Number(data[0].hodometro_final) };
+// O status vem do cache de `veiculo`, que o sync copia do servidor (lá o trigger
+// `sincroniza_status_veiculo` o mantém) e que abrir/fechar viagem atualiza no próprio aparelho.
+export async function buscarVeiculo(id: string): Promise<Resultado<VeiculoSelecionavel>> {
+  try {
+    const veiculo = getDb()
+      .select(COLUNAS_VEICULO_SELECIONAVEL)
+      .from(local.veiculo)
+      .where(eq(local.veiculo.id, id))
+      .get();
+
+    if (!veiculo) {
+      return { ok: false, mensagem: MENSAGEM_VEICULO_FORA_DO_APARELHO, campo: 'veiculo_id' };
+    }
+
+    return { ok: true, data: veiculo };
+  } catch (error) {
+    return traduzirErroLocal(error, 'Não foi possível carregar o veículo. Tente novamente.');
+  }
 }
 
 // Só rotas ativas: uma rota desativada some do seletor, mas continua nas viagens antigas.
 export async function listarRotasAtivas(): Promise<Resultado<RotaResumo[]>> {
-  const { data, error } = await supabase
-    .from('rota')
-    .select('id, cidade_origem, uf_origem, cidade_destino, uf_destino, distancia_estimada_km')
-    .eq('ativa', true)
-    .order('cidade_origem')
-    .order('cidade_destino')
-    .limit(LIMITE_SELETOR);
+  try {
+    const rotas = getDb()
+      .select({
+        id: local.rota.id,
+        cidade_origem: local.rota.cidade_origem,
+        uf_origem: local.rota.uf_origem,
+        cidade_destino: local.rota.cidade_destino,
+        uf_destino: local.rota.uf_destino,
+        distancia_estimada_km: local.rota.distancia_estimada_km,
+      })
+      .from(local.rota)
+      .where(eq(local.rota.ativa, true))
+      .orderBy(asc(local.rota.cidade_origem), asc(local.rota.cidade_destino))
+      .limit(LIMITE_SELETOR)
+      .all();
 
-  if (error) {
-    return traduzirErroBanco(error, 'Não foi possível carregar as rotas. Tente novamente.');
+    return { ok: true, data: rotas };
+  } catch (error) {
+    return traduzirErroLocal(error, 'Não foi possível carregar as rotas. Tente novamente.');
   }
-
-  const parsed = z.array(rotaResumoSchema).safeParse(data);
-  if (!parsed.success) {
-    return { ok: false, mensagem: 'Os dados das rotas recebidos são inválidos.' };
-  }
-
-  return { ok: true, data: parsed.data };
 }
 
-// Motoristas ativos para o Admin/Gestor escolher o responsável. O `!inner` faz o filtro de
-// perfil valer sobre a linha de `usuario` (sem ele, o PostgREST só esvaziaria a relação).
-// O RLS de `usuario` deixa Admin e Gestor de Frota lerem todos (20260924000500_rls.sql).
+// Motoristas ativos para o Admin/Gestor escolher o responsável. Continua online: `usuario` não é
+// espelhado no aparelho (ADR 0004, decisão 5) e quem escolhe motorista trabalha no escritório.
+// O `!inner` faz o filtro de perfil valer sobre a linha de `usuario` (sem ele, o PostgREST só
+// esvaziaria a relação). O RLS de `usuario` deixa Admin e Gestor de Frota lerem todos
+// (20260924000500_rls.sql).
 export async function listarMotoristasAtivos(): Promise<Resultado<MotoristaResumo[]>> {
   const { data, error } = await supabase
     .from('usuario')
@@ -319,87 +426,183 @@ export async function listarMotoristasAtivos(): Promise<Resultado<MotoristaResum
   return { ok: true, data: parsed.data };
 }
 
+function primeiraFalhaDoSchema(error: z.ZodError, mensagemPadrao: string): Falha {
+  const issue = error.issues[0];
+  return {
+    ok: false,
+    mensagem: issue?.message ?? mensagemPadrao,
+    campo: issue?.path[0] as CampoErroViagem,
+  };
+}
+
+function falhaDeRegra(codigo: 'VG001' | 'VG002' | 'VG003' | 'VG004'): Falha {
+  return { ok: false, mensagem: MENSAGENS_ERRO_VIAGEM[codigo], campo: CAMPOS_ERRO_VIAGEM[codigo], codigo };
+}
+
+// Grava a viagem no aparelho e enfileira o envio. As regras VG001–VG004 são checadas aqui com o
+// que o aparelho sabe, para o motorista ter resposta na hora mesmo sem sinal. O servidor checa de
+// novo quando a viagem sobe, e o que ele recusar aparece como falha ou conflito na sincronização.
 export async function abrirViagem(input: NovaViagemInput): Promise<Resultado<Viagem>> {
   const parsed = abrirViagemSchema.safeParse(input);
   if (!parsed.success) {
-    const issue = parsed.error.issues[0];
-    return {
-      ok: false,
-      mensagem: issue?.message ?? 'Dados inválidos para abertura de viagem.',
-      campo: issue?.path[0] as CampoErroViagem,
-    };
+    return primeiraFalhaDoSchema(parsed.error, 'Dados inválidos para abertura de viagem.');
   }
+  const dados = parsed.data;
 
-  const payload: Database['public']['Tables']['viagem']['Insert'] = {
-    veiculo_id: parsed.data.veiculo_id,
-    rota_id: parsed.data.rota_id,
-    motorista_id: parsed.data.motorista_id,
-    hodometro_inicial: parsed.data.hodometro_inicial,
-    data_inicio: parsed.data.data_inicio ?? new Date().toISOString(),
-    status: 'EmAndamento',
-  };
+  try {
+    return getDb().transaction((tx): Resultado<Viagem> => {
+      const veiculo = tx
+        .select({ status: local.veiculo.status })
+        .from(local.veiculo)
+        .where(eq(local.veiculo.id, dados.veiculo_id))
+        .get();
 
-  if (parsed.data.id) {
-    payload.id = parsed.data.id;
+      if (!veiculo) {
+        return { ok: false, mensagem: MENSAGEM_VEICULO_FORA_DO_APARELHO, campo: 'veiculo_id' };
+      }
+      if (veiculo.status === 'EmViagem') return falhaDeRegra('VG001');
+      if (veiculo.status === 'EmManutencao') return falhaDeRegra('VG002');
+      if (veiculo.status === 'Inativo') return falhaDeRegra('VG003');
+
+      const rota = tx.select({ id: local.rota.id }).from(local.rota).where(eq(local.rota.id, dados.rota_id)).get();
+      if (!rota) {
+        return { ok: false, mensagem: MENSAGEM_ROTA_FORA_DO_APARELHO, campo: 'rota_id' };
+      }
+
+      // O status do veículo pode estar velho no cache; a viagem aberta neste aparelho, não.
+      const emAndamento = tx
+        .select({ id: local.viagem.id })
+        .from(local.viagem)
+        .where(and(eq(local.viagem.veiculo_id, dados.veiculo_id), eq(local.viagem.status, 'EmAndamento')))
+        .get();
+      if (emAndamento) return falhaDeRegra('VG001');
+
+      const ultimo = tx
+        .select({ hodometro_final: local.viagem.hodometro_final })
+        .from(local.viagem)
+        .where(and(eq(local.viagem.veiculo_id, dados.veiculo_id), isNotNull(local.viagem.hodometro_final)))
+        .orderBy(desc(local.viagem.hodometro_final))
+        .limit(1)
+        .get();
+      if (ultimo && ultimo.hodometro_final !== null && dados.hodometro_inicial < ultimo.hodometro_final) {
+        return falhaDeRegra('VG004');
+      }
+
+      const agora = new Date().toISOString();
+      const viagem: Viagem = {
+        id: dados.id ?? gerarUuidV7(),
+        veiculo_id: dados.veiculo_id,
+        rota_id: dados.rota_id,
+        motorista_id: dados.motorista_id,
+        hodometro_inicial: dados.hodometro_inicial,
+        hodometro_final: null,
+        data_inicio: dados.data_inicio ?? agora,
+        data_fim: null,
+        status: 'EmAndamento',
+        km_rodado: null,
+        data_inclusao: agora,
+        data_atualizacao: agora,
+      };
+
+      tx.insert(local.viagem).values(viagem).run();
+      // Espelha o trigger `sincroniza_status_veiculo`: o veículo sai do seletor na hora.
+      tx.update(local.veiculo).set({ status: 'EmViagem' }).where(eq(local.veiculo.id, dados.veiculo_id)).run();
+
+      // Mesmas colunas do insert online da EIX-40. Datas de inclusão e atualização ficam com o
+      // servidor, e km_rodado NUNCA vai: é coluna gerada no Postgres (428C9).
+      const payload: PayloadAberturaViagem = {
+        id: viagem.id,
+        veiculo_id: viagem.veiculo_id,
+        rota_id: viagem.rota_id,
+        motorista_id: viagem.motorista_id,
+        hodometro_inicial: viagem.hodometro_inicial,
+        data_inicio: viagem.data_inicio,
+        status: 'EmAndamento',
+      };
+      tx.insert(local.outbox)
+        .values({ id: gerarUuidV7(), entidade: 'viagem', operacao: 'insert', payload: JSON.stringify(payload), criado_em: agora })
+        .run();
+
+      return { ok: true, data: viagem };
+    });
+  } catch (error) {
+    return traduzirErroLocal(error, 'Não foi possível abrir a viagem. Tente novamente.');
   }
-
-  const { data, error } = await supabase
-    .from('viagem')
-    .insert(payload)
-    .select(COLUNAS_VIAGEM)
-    .single();
-
-  if (error) {
-    return traduzirErroBanco(error, 'Não foi possível abrir a viagem. Tente novamente.');
-  }
-
-  return validarViagem(data);
 }
 
 export async function fecharViagem(id: string, input: FecharViagemInput): Promise<Resultado<Viagem>> {
   const parsed = fecharViagemSchema.safeParse(input);
   if (!parsed.success) {
-    const issue = parsed.error.issues[0];
-    return {
-      ok: false,
-      mensagem: issue?.message ?? 'Dados inválidos para fechamento de viagem.',
-      campo: issue?.path[0] as CampoErroViagem,
-    };
+    return primeiraFalhaDoSchema(parsed.error, 'Dados inválidos para fechamento de viagem.');
   }
+  const dados = parsed.data;
 
-  const payload = {
-    status: 'Finalizada' as const,
-    hodometro_final: parsed.data.hodometro_final,
-    data_fim: parsed.data.data_fim ?? new Date().toISOString(),
-  };
+  try {
+    return getDb().transaction((tx): Resultado<Viagem> => {
+      const atual = tx.select().from(local.viagem).where(eq(local.viagem.id, id)).get();
 
-  // Só fecha o que ainda está em andamento. Sem esse filtro, o Admin/Gestor com a tela aberta
-  // "fecharia" de novo uma viagem que o motorista já fechou: o trigger aceita isso como correção
-  // do hodômetro final e a leitura do motorista e a data_fim seriam trocadas sem aviso.
-  const { data, error } = await supabase
-    .from('viagem')
-    .update(payload)
-    .eq('id', id)
-    .eq('status', 'EmAndamento')
-    .select(COLUNAS_VIAGEM)
-    .maybeSingle();
+      // Só fecha o que ainda está em andamento: a tela aberta há tempo não "fecha de novo" uma
+      // viagem já encerrada (aqui ou por outro aparelho, depois de sincronizar).
+      if (!atual || atual.status !== 'EmAndamento') {
+        return { ok: false, mensagem: MENSAGEM_VIAGEM_NAO_ABERTA, campo: 'status' };
+      }
 
-  if (error) {
-    return traduzirErroBanco(error, 'Não foi possível fechar a viagem. Tente novamente.');
+      if (dados.hodometro_final <= atual.hodometro_inicial) {
+        return falhaDaConstraint('viagem_hodometro_final_maior', '23514');
+      }
+
+      const agora = new Date().toISOString();
+      const data_fim = dados.data_fim ?? agora;
+      const viagem: Viagem = {
+        ...atual,
+        status: 'Finalizada',
+        hodometro_final: dados.hodometro_final,
+        data_fim,
+        // No servidor é coluna gerada; aqui é calculada só para a tela mostrar até sincronizar.
+        km_rodado: dados.hodometro_final - atual.hodometro_inicial,
+        data_atualizacao: agora,
+      };
+
+      tx.update(local.viagem)
+        .set({
+          status: viagem.status,
+          hodometro_final: viagem.hodometro_final,
+          data_fim,
+          km_rodado: viagem.km_rodado,
+          data_atualizacao: agora,
+        })
+        .where(eq(local.viagem.id, id))
+        .run();
+      // Como o trigger do servidor: só devolve o veículo que ainda está EmViagem (um veículo
+      // inativado durante a viagem continua Inativo).
+      tx.update(local.veiculo)
+        .set({ status: 'Disponivel' })
+        .where(and(eq(local.veiculo.id, atual.veiculo_id), eq(local.veiculo.status, 'EmViagem')))
+        .run();
+
+      const payload: PayloadFechamentoViagem = {
+        id,
+        status: 'Finalizada',
+        hodometro_final: dados.hodometro_final,
+        data_fim,
+      };
+      tx.insert(local.outbox)
+        .values({ id: gerarUuidV7(), entidade: 'viagem', operacao: 'update', payload: JSON.stringify(payload), criado_em: agora })
+        .run();
+
+      return { ok: true, data: viagem };
+    });
+  } catch (error) {
+    return traduzirErroLocal(error, 'Não foi possível fechar a viagem. Tente novamente.');
   }
-
-  // Nenhuma linha: a viagem não existe, o RLS a esconde ou ela já foi encerrada.
-  if (!data) {
-    return { ok: false, mensagem: MENSAGEM_VIAGEM_NAO_ABERTA, campo: 'status' };
-  }
-
-  return validarViagem(data);
 }
 
 export const viagensRepository: ViagensRepository = {
   listarViagens,
   buscarViagemPorId,
   buscarUltimoHodometro,
+  listarVeiculosDisponiveis,
+  buscarVeiculo,
   listarRotasAtivas,
   listarMotoristasAtivos,
   abrirViagem,

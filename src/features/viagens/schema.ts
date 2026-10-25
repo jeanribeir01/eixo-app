@@ -124,3 +124,53 @@ export const viagemDetalhadaSchema = viagemSchema.extend({
   rota: z.preprocess(normalizarRelacao, rotaResumoSchema.optional().nullable()),
   motorista: z.preprocess(normalizarRelacao, motoristaResumoSchema.optional().nullable()),
 });
+
+// --- Sincronização offline (EIX-41) ---
+
+// O que vai na outbox. O payload é JSON em texto no SQLite, então o sync valida de novo antes
+// de enviar: um item corrompido vira falha visível em vez de subir lixo para o servidor.
+// km_rodado nunca entra: é coluna gerada no Postgres e o servidor recusa valor escrito (428C9).
+export const payloadAberturaViagemSchema = z.object({
+  id: z.string().min(1),
+  veiculo_id: z.string().min(1),
+  rota_id: z.string().min(1),
+  motorista_id: z.string().min(1),
+  hodometro_inicial: z.number().nonnegative(),
+  data_inicio: z.string().nullable(),
+  status: z.literal('EmAndamento'),
+});
+
+export const payloadFechamentoViagemSchema = z.object({
+  id: z.string().min(1),
+  status: z.literal('Finalizada'),
+  hodometro_final: z.number().positive(),
+  data_fim: z.string().min(1),
+});
+
+export type PayloadAberturaViagem = z.infer<typeof payloadAberturaViagemSchema>;
+export type PayloadFechamentoViagem = z.infer<typeof payloadFechamentoViagemSchema>;
+
+// O que o sync baixa para o cache local: as mesmas colunas do espelho Drizzle (src/db/schema.ts).
+export const veiculoCacheSchema = z.object({
+  id: z.string(),
+  placa: z.string(),
+  marca: z.string(),
+  modelo: z.string(),
+  capacidade_carga: z.number(),
+  status: z.enum(Constants.public.Enums.status_veiculo),
+  ano_fabricacao: z.number().nullable(),
+  data_inclusao: z.string(),
+  data_atualizacao: z.string(),
+});
+
+export const rotaCacheSchema = z.object({
+  id: z.string(),
+  cidade_origem: z.string(),
+  cidade_destino: z.string(),
+  uf_origem: z.enum(Constants.public.Enums.uf),
+  uf_destino: z.enum(Constants.public.Enums.uf),
+  distancia_estimada_km: z.number(),
+  ativa: z.boolean(),
+  data_inclusao: z.string(),
+  data_atualizacao: z.string(),
+});

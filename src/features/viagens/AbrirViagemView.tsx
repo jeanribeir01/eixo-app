@@ -4,7 +4,6 @@ import { ActivityIndicator, StyleSheet, View } from 'react-native';
 import { z } from 'zod';
 
 import { useProfile } from '@/features/auth/profileStore';
-import { buscarVeiculoPorId, listarVeiculosSelecionaveis } from '@/features/veiculos/repository';
 import { rotuloStatusVeiculo, type Veiculo } from '@/features/veiculos/types';
 import {
   Button,
@@ -23,13 +22,16 @@ import {
 
 import { formatarHodometro, parseHodometro } from './calculo';
 import { abrirViagemComUltimoHodometroSchema } from './schema';
+import { pedirSincronizacao } from './syncStore';
 import type { MotoristaResumo, RotaResumo } from './types';
 import {
   MENSAGENS_ERRO_VIAGEM,
   abrirViagem,
   buscarUltimoHodometro,
+  buscarVeiculo,
   listarMotoristasAtivos,
   listarRotasAtivas,
+  listarVeiculosDisponiveis,
 } from './viagensRepository';
 
 type ErrosFormulario = {
@@ -87,11 +89,12 @@ export function AbrirViagemView() {
     let cancelado = false;
 
     async function carregarAuxiliares() {
-      // "viagem" só devolve veículo Disponível: inativo e em manutenção nem aparecem, e o
-      // trigger do banco continua sendo a barreira para a corrida com outra abertura.
+      // Veículos e rotas vêm do cache do aparelho, para abrir viagem sem internet (EIX-41). Só
+      // veículo Disponível aparece; o trigger do banco continua sendo a barreira para a corrida
+      // com outra abertura, e o que ele recusar aparece na sincronização.
       // O Motorista não consulta `usuario`: ele é sempre o próprio responsável (RLS de viagem).
       const [resVeiculos, resRotas, resMotoristas] = await Promise.all([
-        listarVeiculosSelecionaveis('viagem'),
+        listarVeiculosDisponiveis(),
         listarRotasAtivas(),
         ehAdminOuGestor ? listarMotoristasAtivos() : Promise.resolve(null),
       ]);
@@ -150,8 +153,9 @@ export function AbrirViagemView() {
 
     // A disponibilidade vem de `veiculo.status`, não de `viagem`: o RLS de `viagem` esconde
     // a viagem aberta por outro motorista, mas o status do veículo é visível a todos e o
-    // trigger `sincroniza_status_veiculo` o mantém atualizado.
-    const resVeiculo = await buscarVeiculoPorId(id);
+    // trigger `sincroniza_status_veiculo` o mantém atualizado. O sync copia esse status para o
+    // aparelho, e abrir/fechar viagem aqui o atualiza na hora.
+    const resVeiculo = await buscarVeiculo(id);
     if (requisicao !== requisicaoVeiculoRef.current) return;
 
     if (!resVeiculo.ok) {
@@ -235,6 +239,9 @@ export function AbrirViagemView() {
       setFeedback({ mensagem: resultado.mensagem, tone: 'error' });
       return;
     }
+
+    // A viagem já está salva no aparelho. Com internet, sobe agora; sem, fica na fila.
+    pedirSincronizacao();
 
     // O botão segue em loading até a tela fechar: sem setTimeout, o toque repetido durante a
     // mensagem de sucesso não abre uma segunda viagem.

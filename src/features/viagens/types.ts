@@ -1,3 +1,4 @@
+import type { Veiculo as VeiculoSelecionavel } from '@/features/veiculos/types';
 import type { Enums, Tables } from '@/types/database';
 
 export type StatusViagem = Enums<'status_viagem'>;
@@ -86,11 +87,14 @@ export type Resultado<T> =
   | { ok: false; mensagem: string; campo?: CampoErroViagem; codigo?: string };
 
 // Interface que define o contrato do repositório de viagens.
-// Mantém paridade com as colunas do banco e prepara a migração offline (EIX-41).
+// Mantém paridade com as colunas do banco. Desde a EIX-41 a implementação lê e grava no SQLite
+// do aparelho; a tela não muda, só a fonte.
 export interface ViagensRepository {
   listarViagens(filtro?: FiltroViagens): Promise<Resultado<ViagemDetalhada[]>>;
   buscarViagemPorId(id: string): Promise<Resultado<ViagemDetalhada>>;
   buscarUltimoHodometro(veiculo_id: string): Promise<Resultado<number | null>>;
+  listarVeiculosDisponiveis(): Promise<Resultado<VeiculoSelecionavel[]>>;
+  buscarVeiculo(id: string): Promise<Resultado<VeiculoSelecionavel>>;
   listarRotasAtivas(): Promise<Resultado<RotaResumo[]>>;
   listarMotoristasAtivos(): Promise<Resultado<MotoristaResumo[]>>;
   abrirViagem(dados: NovaViagemInput): Promise<Resultado<Viagem>>;

@@ -21,6 +21,8 @@ import {
 } from '@/ui';
 
 import { calcularKmRodado, distanciaUltrapassaEstimativa, formatarHodometro, formatarKm } from './calculo';
+import { IndicadorSincronizacao } from './IndicadorSincronizacao';
+import { useSyncStore } from './syncStore';
 import { rotuloStatusViagem, type StatusViagem } from './types';
 import { listarViagens } from './viagensRepository';
 
@@ -39,7 +41,13 @@ export function ViagensListView() {
 
   // O status vai para o banco. Filtrar no cliente reduziria o filtro às 100 viagens mais recentes
   // de qualquer status, e uma viagem antiga ainda em andamento poderia sumir da lista.
-  const buscar = useCallback(() => listarViagens({ status: filtroStatus }), [filtroStatus]);
+  // A lista lê do aparelho (EIX-41). Antes, com internet, sincroniza: sobe o que está pendente e
+  // traz o que mudou no servidor (as viagens dos outros motoristas, para o gestor). Sem internet a
+  // sincronização volta na hora e a lista mostra o que o aparelho tem.
+  const buscar = useCallback(async () => {
+    await useSyncStore.getState().sincronizar();
+    return listarViagens({ status: filtroStatus });
+  }, [filtroStatus]);
   const tela = useDadosDaTela(buscar);
 
   return (
@@ -59,6 +67,8 @@ export function ViagensListView() {
     >
       {/* Aba não tem header nativo; o título fica no conteúdo (DESIGN_CYAN §7) */}
       <Text variant="heading">Viagens</Text>
+
+      <IndicadorSincronizacao />
 
       {/* Filtro de status em pílulas */}
       <Tabs

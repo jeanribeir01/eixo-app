@@ -3,6 +3,7 @@ import { FlatList, RefreshControl, StyleSheet } from 'react-native';
 
 import { FAB_ALTURA_RESERVADA, colors } from '@/ui';
 
+import { useSyncStore } from '../syncStore';
 import { ViagensListView } from '../ViagensListView';
 import * as repo from '../viagensRepository';
 
@@ -93,9 +94,14 @@ const mockViagens = [
 ];
 
 describe('ViagensListView', () => {
+  let mockSincronizar: jest.SpyInstance;
+
   beforeEach(() => {
     jest.clearAllMocks();
     mockAoFocar = null;
+    useSyncStore.setState({ isOnline: true, pendentes: 0, falhas: 0, conflitos: 0, sincronizando: false });
+    // A sincronização em si é coberta em sync.test.ts e syncStore.test.ts.
+    mockSincronizar = jest.spyOn(useSyncStore.getState(), 'sincronizar').mockResolvedValue();
   });
 
   afterEach(() => {
@@ -289,5 +295,42 @@ describe('ViagensListView', () => {
     expect(mockListar).toHaveBeenCalledTimes(2);
     expect(await screen.findByText('BRA2E19 • Actros')).toBeOnTheScreen();
     expect(screen.queryByText('XYZ9K88 • FH')).not.toBeOnTheScreen();
+  });
+
+  it('sincroniza antes de ler o aparelho, para trazer o que mudou no servidor', async () => {
+    const ordem: string[] = [];
+    mockSincronizar.mockImplementation(async () => {
+      ordem.push('sincronizar');
+    });
+    jest.spyOn(repo, 'listarViagens').mockImplementation(async () => {
+      ordem.push('listar');
+      return { ok: true, data: mockViagens };
+    });
+
+    render(<ViagensListView />);
+    await screen.findByText('BRA2E19 • Actros');
+
+    expect(ordem).toEqual(['sincronizar', 'listar']);
+  });
+
+  it('mostra o indicador de offline e de registros pendentes', async () => {
+    useSyncStore.setState({ isOnline: false, pendentes: 2 });
+    jest.spyOn(repo, 'listarViagens').mockResolvedValue({ ok: true, data: mockViagens });
+
+    render(<ViagensListView />);
+    await screen.findByText('BRA2E19 • Actros');
+
+    expect(screen.getByTestId('indicador-sincronizacao')).toBeOnTheScreen();
+    expect(screen.getByText('Offline')).toBeOnTheScreen();
+    expect(screen.getByText('2 registros aguardando sincronização.')).toBeOnTheScreen();
+  });
+
+  it('não mostra o indicador quando está online e tudo já subiu', async () => {
+    jest.spyOn(repo, 'listarViagens').mockResolvedValue({ ok: true, data: mockViagens });
+
+    render(<ViagensListView />);
+    await screen.findByText('BRA2E19 • Actros');
+
+    expect(screen.queryByTestId('indicador-sincronizacao')).not.toBeOnTheScreen();
   });
 });

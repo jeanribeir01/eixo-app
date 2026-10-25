@@ -3,11 +3,15 @@ import { useRouter } from 'expo-router';
 import { Alert, Animated } from 'react-native';
 
 import { FecharViagemView } from '../FecharViagemView';
+import { pedirSincronizacao } from '../syncStore';
 import * as repo from '../viagensRepository';
 
 jest.mock('expo-router', () => ({
   useRouter: jest.fn(),
 }));
+
+// O envio ao servidor é do sync (coberto em sync.test.ts); aqui só importa que a tela peça.
+jest.mock('../syncStore', () => ({ pedirSincronizacao: jest.fn() }));
 
 const mockViagemAberta = {
   id: 'viagem-1',
@@ -135,6 +139,8 @@ describe('FecharViagemView', () => {
     expect(spyFechar).toHaveBeenCalledWith('viagem-1', {
       hodometro_final: 10095,
     });
+    // Salvou no aparelho: com internet, o fechamento sobe na hora (EIX-41).
+    expect(pedirSincronizacao).toHaveBeenCalledTimes(1);
   });
 
   it('usa formatarKm no texto de confirmação, sem números quebrados', async () => {
@@ -239,6 +245,7 @@ describe('FecharViagemView', () => {
     await waitFor(() => expect(repo.fecharViagem).toHaveBeenCalledTimes(1));
     expect(screen.getByRole('alert')).toHaveTextContent('Não foi possível fechar a viagem.');
     expect(screen.getByRole('button', { name: 'Fechar viagem' })).not.toBeDisabled();
+    expect(pedirSincronizacao).not.toHaveBeenCalled();
 
     await waitFor(() => expect(Animated.timing).toHaveBeenCalled());
     act(() => {

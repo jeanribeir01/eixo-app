@@ -1,83 +1,63 @@
-import { render, screen } from '@testing-library/react-native';
+import { act, render, screen } from '@testing-library/react-native';
 
 import { IndicadorSincronizacao } from '../IndicadorSincronizacao';
-import { useSyncStore } from '../syncStore';
+import { useSyncStore, type SyncState } from '../syncStore';
+
+type Estado = Pick<SyncState, 'isOnline' | 'pendentes' | 'falhas' | 'conflitos' | 'sincronizando'>;
+
+function renderizar(estado: Partial<Estado>) {
+  useSyncStore.setState({ isOnline: true, pendentes: 0, falhas: 0, conflitos: 0, sincronizando: false, ...estado });
+  return render(<IndicadorSincronizacao />);
+}
 
 describe('IndicadorSincronizacao', () => {
-  beforeEach(() => {
-    jest.clearAllMocks();
-    useSyncStore.setState({
-      isOnline: true,
-      pendentes: 0,
-      comErro: 0,
-      conflitos: 0,
-      sincronizando: false,
-    });
+  it('não ocupa espaço quando está online e tudo já subiu', () => {
+    renderizar({});
+
+    expect(screen.queryByTestId('indicador-sincronizacao')).not.toBeOnTheScreen();
   });
 
-  it('não renderiza nada se estiver online, sem pendências e sem sincronizar', () => {
-    render(<IndicadorSincronizacao isOnline pendentes={0} conflitos={0} sincronizando={false} />);
+  it('offline e sem pendência, avisa que o registro fica salvo no aparelho', () => {
+    renderizar({ isOnline: false });
 
-    expect(screen.queryByTestId('indicador-sincronizacao')).toBeNull();
-  });
-
-  it('renderiza badge "offline" e mensagem explicativa quando desconectado e sem pendências', () => {
-    render(<IndicadorSincronizacao isOnline={false} pendentes={0} />);
-
-    expect(screen.getByTestId('indicador-sincronizacao')).toBeTruthy();
-    expect(screen.getByText('offline')).toBeTruthy();
+    expect(screen.getByText('Offline')).toBeOnTheScreen();
     expect(
-      screen.getByText('As operações serão guardadas no dispositivo e enviadas quando a internet voltar.'),
-    ).toBeTruthy();
+      screen.getByText('O que você registrar fica salvo no aparelho e é enviado quando a internet voltar.'),
+    ).toBeOnTheScreen();
   });
 
-  it('exibe "1 registo a aguardar sincronização" no singular quando houver 1 pendência', () => {
-    render(<IndicadorSincronizacao isOnline={false} pendentes={1} />);
+  it.each([
+    [1, '1 registro aguardando sincronização.'],
+    [3, '3 registros aguardando sincronização.'],
+  ])('mostra %i pendência(s) no singular ou plural', (pendentes, texto) => {
+    renderizar({ isOnline: false, pendentes });
 
-    expect(screen.getByText('offline')).toBeTruthy();
-    expect(screen.getByText('1 registo a aguardar sincronização')).toBeTruthy();
+    expect(screen.getByText(texto)).toBeOnTheScreen();
+    expect(screen.queryByText(/fica salvo no aparelho/)).not.toBeOnTheScreen();
   });
 
-  it('exibe "3 registos a aguardar sincronização" no plural quando houver múltiplas pendências', () => {
-    render(<IndicadorSincronizacao isOnline={false} pendentes={3} />);
+  it('mostra o envio em andamento', () => {
+    renderizar({ sincronizando: true, pendentes: 2 });
 
-    expect(screen.getByText('offline')).toBeTruthy();
-    expect(screen.getByText('3 registos a aguardar sincronização')).toBeTruthy();
+    expect(screen.getByText('Sincronizando…')).toBeOnTheScreen();
+    expect(screen.queryByText('Offline')).not.toBeOnTheScreen();
   });
 
-  it('exibe pendências mesmo se estiver online (aguardando disparo de sincronização)', () => {
-    render(<IndicadorSincronizacao isOnline pendentes={2} />);
+  it('mostra falha e conflito separados, mesmo sem nada pendente', () => {
+    renderizar({ falhas: 1, conflitos: 2 });
 
-    expect(screen.queryByText('offline')).toBeNull();
-    expect(screen.getByText('2 registos a aguardar sincronização')).toBeTruthy();
+    expect(screen.getByText('1 registro recusado pelo servidor.')).toBeOnTheScreen();
+    expect(screen.getByText('2 conflitos de hodômetro aguardando revisão do gestor.')).toBeOnTheScreen();
   });
 
-  it('exibe estado de sincronização em andamento com indicador de atividade', () => {
-    render(<IndicadorSincronizacao isOnline pendentes={2} sincronizando />);
+  it('acompanha a store quando o status muda', () => {
+    renderizar({});
+    expect(screen.queryByTestId('indicador-sincronizacao')).not.toBeOnTheScreen();
 
-    expect(screen.getByText('A sincronizar...')).toBeTruthy();
-  });
+    act(() => {
+      useSyncStore.setState({ pendentes: 1 });
+    });
 
-  it('exibe aviso de conflito quando houver registros marcados para revisão do gestor', () => {
-    render(<IndicadorSincronizacao isOnline pendentes={1} conflitos={1} />);
-
-    expect(screen.getByText('1 conflito detectado (aguardando revisão do gestor).')).toBeTruthy();
-  });
-
-  it('lê valores padrão da store Zustand quando nenhuma prop é fornecida', () => {
-    useSyncStore.setState({ isOnline: false, pendentes: 4 });
-
-    render(<IndicadorSincronizacao atualizarAoMontar={false} />);
-
-    expect(screen.getByText('offline')).toBeTruthy();
-    expect(screen.getByText('4 registos a aguardar sincronização')).toBeTruthy();
-  });
-
-  it('chama atualizarStatus ao montar quando atualizarAoMontar for true', () => {
-    const spyAtualizar = jest.spyOn(useSyncStore.getState(), 'atualizarStatus');
-
-    render(<IndicadorSincronizacao />);
-
-    expect(spyAtualizar).toHaveBeenCalled();
+    expect(screen.getByText('1 registro aguardando sincronização.')).toBeOnTheScreen();
   });
 });
