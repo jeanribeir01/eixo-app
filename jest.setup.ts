@@ -27,8 +27,14 @@ jest.mock('@/db/client', () => ({ db: {} }));
 jest.mock('drizzle-orm/expo-sqlite/migrator', () => ({
   useMigrations: jest.fn(() => ({ success: true, error: undefined })),
 }));
+
+// expo-network e expo-crypto são módulos nativos. A rede começa "conectada" e cada teste de sync
+// troca o retorno quando precisa; os bytes aleatórios vêm do `crypto` do Node, que também é seguro.
 jest.mock('expo-network', () => ({
   getNetworkStateAsync: jest.fn().mockResolvedValue({ isConnected: true, isInternetReachable: true }),
   addNetworkStateListener: jest.fn().mockReturnValue({ remove: jest.fn() }),
 }));
-
+jest.mock('expo-crypto', () => ({
+  getRandomBytes: (quantidade: number) =>
+    new Uint8Array(jest.requireActual<typeof import('node:crypto')>('node:crypto').randomBytes(quantidade)),
+}));
