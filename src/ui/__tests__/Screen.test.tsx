@@ -1,11 +1,16 @@
 import { render, screen } from '@testing-library/react-native';
 import { HeaderHeightContext } from 'expo-router/react-navigation';
-import { KeyboardAvoidingView, ScrollView, StyleSheet, Text } from 'react-native';
+import { KeyboardAvoidingView, ScrollView, StyleSheet, Text, useWindowDimensions } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { FAB_ALTURA_RESERVADA } from '../FAB';
 import { Screen } from '../Screen';
 import { colors, spacing } from '../tokens';
+
+jest.mock('react-native/Libraries/Utilities/useWindowDimensions', () => ({
+  __esModule: true,
+  default: jest.fn(() => ({ width: 412, height: 900, scale: 1, fontScale: 1 })),
+}));
 
 // Lado da tela que o SafeAreaView protege (o header nativo já protege o topo das telas internas).
 function bordasProtegidas() {
@@ -131,5 +136,33 @@ describe('Screen (NAV-04)', () => {
     expect(StyleSheet.flatten(screen.UNSAFE_getByType(ScrollView).props.contentContainerStyle)).toMatchObject({
       paddingBottom: FAB_ALTURA_RESERVADA,
     });
+  });
+});
+
+describe('Screen responsivo (TAB-01)', () => {
+  afterEach(() => jest.mocked(useWindowDimensions).mockReturnValue({ width: 412, height: 900, scale: 1, fontScale: 1 }));
+
+  it.each([360, 412, 767, 768, 800])('largura %i: limita e centraliza somente a partir de 768', (width) => {
+    jest.mocked(useWindowDimensions).mockReturnValue({ width, height: 900, scale: 1, fontScale: 1 });
+    const { rerender } = render(<Screen><Text>Conteúdo</Text></Screen>);
+    const contentStyle = () => StyleSheet.flatten(screen.getByText('Conteúdo').parent?.parent?.props.style);
+    if (width >= 768) {
+      expect(contentStyle()).toMatchObject({ width: '100%', maxWidth: 720, alignSelf: 'center' });
+    } else {
+      expect(contentStyle().maxWidth).toBeUndefined();
+    }
+
+    rerender(<Screen scroll overlay={<Text>Mensagem</Text>}><Text>Conteúdo</Text></Screen>);
+    const scrollStyle = StyleSheet.flatten(screen.UNSAFE_getByType(ScrollView).props.contentContainerStyle);
+    const overlayStyle = StyleSheet.flatten(screen.getByText('Mensagem').parent?.parent?.props.style);
+    if (width >= 768) {
+      expect(scrollStyle).toMatchObject({ width: '100%', maxWidth: 720, alignSelf: 'center' });
+      expect(overlayStyle).toMatchObject({ width: '100%', maxWidth: 720, alignSelf: 'center' });
+      expect(overlayStyle.left).toBeUndefined();
+      expect(overlayStyle.right).toBeUndefined();
+    } else {
+      expect(scrollStyle.maxWidth).toBeUndefined();
+      expect(overlayStyle.maxWidth).toBeUndefined();
+    }
   });
 });

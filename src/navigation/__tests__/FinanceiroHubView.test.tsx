@@ -1,4 +1,5 @@
 import { act, fireEvent, render, screen } from '@testing-library/react-native';
+import { StyleSheet, useWindowDimensions } from 'react-native';
 
 import { resumoCaixaComDados } from '@/features/caixa/__mocks__/resumoCaixaMock';
 import { buscarResumoCaixa } from '@/features/caixa/fonteResumoCaixa';
@@ -9,6 +10,11 @@ import { FinanceiroHubView } from '../FinanceiroHubView';
 jest.setTimeout(15000);
 
 const mockPush = jest.fn();
+
+jest.mock('react-native/Libraries/Utilities/useWindowDimensions', () => ({
+  __esModule: true,
+  default: jest.fn(() => ({ width: 412, height: 900, scale: 1, fontScale: 1 })),
+}));
 
 jest.mock('expo-router', () => {
   // eslint-disable-next-line @typescript-eslint/no-require-imports
@@ -25,6 +31,7 @@ const mockBuscar = buscarResumoCaixa as jest.MockedFunction<typeof buscarResumoC
 const NOME_DO_CARTAO = 'Saldo atual + R$ 12.500,00. Ver saldo e projeção';
 
 beforeEach(() => {
+  jest.mocked(useWindowDimensions).mockReturnValue({ width: 412, height: 900, scale: 1, fontScale: 1 });
   mockPush.mockReset();
   mockBuscar.mockReset();
 });
@@ -88,6 +95,21 @@ describe('FinanceiroHubView — saldo (FIN-02)', () => {
 });
 
 describe('FinanceiroHubView — menu do módulo (FIN-03)', () => {
+  it.each([360, 412, 767, 768, 800])('largura %i: grupos em duas colunas somente no tablet (TAB-01)', async (width) => {
+    jest.mocked(useWindowDimensions).mockReturnValue({ width, height: 900, scale: 1, fontScale: 1 });
+    await renderComSaldo();
+    const atalhos = screen.getByTestId('atalhos-financeiro');
+    if (width >= 768) {
+      expect(atalhos).toHaveStyle({ flexDirection: 'row', alignItems: 'flex-start' });
+      for (const coluna of atalhos.children) {
+        if (typeof coluna !== 'string') expect(StyleSheet.flatten(coluna.props.style)).toMatchObject({ flex: 1, minWidth: 0 });
+      }
+    } else {
+      expect(atalhos).not.toHaveStyle({ flexDirection: 'row' });
+    }
+    fireEvent.press(screen.getByRole('button', { name: 'Formas de pagamento' }));
+    expect(mockPush).toHaveBeenCalledWith('/formas-pagamento');
+  });
   it.each([
     ['Movimentações', 'Entradas e saídas do mês', '/movimentacoes'],
     ['Saldo e projeção', 'Saldo atual e previsão dos próximos meses', '/caixa'],

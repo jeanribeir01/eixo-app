@@ -1,10 +1,10 @@
 import { useContext, type ReactNode } from 'react';
 import { HeaderHeightContext } from 'expo-router/react-navigation';
-import { KeyboardAvoidingView, ScrollView, StyleSheet, View } from 'react-native';
+import { KeyboardAvoidingView, ScrollView, StyleSheet, useWindowDimensions, View } from 'react-native';
 import { SafeAreaView, type Edge } from 'react-native-safe-area-context';
 
 import { FAB_ALTURA_RESERVADA } from './FAB';
-import { colors, spacing } from './tokens';
+import { colors, layout, spacing } from './tokens';
 
 type ScreenProps = {
   children: ReactNode;
@@ -23,12 +23,13 @@ type ScreenProps = {
 const TODAS_AS_BORDAS: Edge[] = ['top', 'right', 'bottom', 'left'];
 const SEM_O_TOPO: Edge[] = ['right', 'bottom', 'left'];
 
-// Fundo canvas + padding lateral de 16: sem largura fixa, o conteúdo flui em celular e tablet (RNF02).
+// Fundo ocupa a janela; o conteúdo mantém uma largura legível no tablet (RNF02).
 export function Screen({ children, align = 'top', underHeader = false, scroll = false, overlay, fab }: ScreenProps) {
   // O KeyboardAvoidingView calcula a sobreposição do teclado a partir da posição dele dentro da tela.
   // Sob um header nativo essa posição começa abaixo do header, então a altura dele entra como desconto;
   // sem isso o campo focado fica escondido atrás do teclado. Fora de um navegador o contexto vem vazio.
   const alturaDoHeader = useContext(HeaderHeightContext) ?? 0;
+  const tablet = useWindowDimensions().width >= layout.tablet;
 
   return (
     <SafeAreaView edges={underHeader ? SEM_O_TOPO : TODAS_AS_BORDAS} style={styles.screen}>
@@ -40,18 +41,18 @@ export function Screen({ children, align = 'top', underHeader = false, scroll = 
         >
           <ScrollView
             style={styles.flex}
-            contentContainerStyle={[styles.content, align === 'center' && styles.centerScroll, !!fab && styles.espacoDoFab]}
+            contentContainerStyle={[styles.content, tablet && styles.tablet, align === 'center' && styles.centerScroll, !!fab && styles.espacoDoFab]}
             keyboardShouldPersistTaps="handled"
           >
             {children}
           </ScrollView>
         </KeyboardAvoidingView>
       ) : (
-        <View style={[styles.flex, styles.content, align === 'center' && styles.center]}>{children}</View>
+        <View style={[styles.flex, styles.content, tablet && styles.tablet, align === 'center' && styles.center]}>{children}</View>
       )}
       {(overlay || fab) && (
         // Snackbar antes do FAB: empilhados no rodapé, a mensagem aparece sempre acima do botão.
-        <View style={[StyleSheet.absoluteFill, styles.overlay]} pointerEvents="box-none">
+        <View style={[StyleSheet.absoluteFill, styles.overlay, tablet && styles.tabletOverlay]} pointerEvents="box-none">
           {overlay}
           {fab}
         </View>
@@ -72,6 +73,18 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.base,
     paddingVertical: spacing.lg,
     gap: spacing.lg,
+  },
+  tablet: {
+    width: '100%',
+    maxWidth: layout.contentMaxWidth,
+    alignSelf: 'center',
+  },
+  tabletOverlay: {
+    width: '100%',
+    maxWidth: layout.contentMaxWidth,
+    alignSelf: 'center',
+    left: undefined,
+    right: undefined,
   },
   center: {
     justifyContent: 'center',
