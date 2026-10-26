@@ -72,6 +72,12 @@ export const fecharViagemFormSchema = fecharViagemSchema
     }
   });
 
+export const corrigirHodometroFinalSchema = z.object({
+  hodometro_final: z
+    .number('Informe um número para o hodômetro final.')
+    .positive('O hodômetro final deve ser maior que zero.'),
+});
+
 // Schemas de leitura: validam o que volta do PostgREST, inclusive as relações que podem vir
 // como objeto ou array (dependendo da cardinalidade que o PostgREST infere).
 export const veiculoResumoSchema = z.object({
@@ -108,6 +114,8 @@ export const viagemSchema = z.object({
   data_fim: z.string().nullable(),
   status: z.enum(Constants.public.Enums.status_viagem),
   km_rodado: z.number().nullable(),
+  // Só existe no SQLite; o PostgREST não devolve esta coluna. O default cobre as duas origens.
+  em_revisao: z.boolean().optional().default(false),
   data_inclusao: z.string(),
   data_atualizacao: z.string(),
 });
@@ -123,4 +131,35 @@ export const viagemDetalhadaSchema = viagemSchema.extend({
   veiculo: z.preprocess(normalizarRelacao, veiculoResumoSchema.optional().nullable()),
   rota: z.preprocess(normalizarRelacao, rotaResumoSchema.optional().nullable()),
   motorista: z.preprocess(normalizarRelacao, motoristaResumoSchema.optional().nullable()),
+});
+
+export const revisaoViagemSchema = z.object({
+  id: z.string(),
+  viagem_id: z.string(),
+  solicitante_id: z.string(),
+  motorista_id: z.string().nullable(),
+  motorista_nome: z.string().nullable(),
+  veiculo_id: z.string().nullable(),
+  veiculo_placa: z.string().nullable(),
+  rota_id: z.string().nullable(),
+  rota_trecho: z.string().nullable(),
+  codigo: z.string(),
+  mensagem: z.string(),
+  payload: z.record(z.string(), z.unknown()),
+  status: z.enum(Constants.public.Enums.status_revisao),
+  observacao: z.string().nullable(),
+  resolvido_por: z.string().nullable(),
+  resolvido_em: z.string().nullable(),
+  data_inclusao: z.string(),
+  data_atualizacao: z.string(),
+});
+
+export const resolverRevisaoSchema = z.object({
+  status: z.enum(['Resolvida', 'Descartada'], 'Selecione uma decisão para a revisão.'),
+  observacao: z
+    .string()
+    .trim()
+    .max(1000, 'A observação deve ter no máximo 1000 caracteres.')
+    .optional()
+    .or(z.literal('')),
 });

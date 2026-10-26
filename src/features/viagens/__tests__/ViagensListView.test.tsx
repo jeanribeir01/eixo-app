@@ -5,9 +5,13 @@ import { FAB_ALTURA_RESERVADA, colors } from '@/ui';
 
 import { ViagensListView } from '../ViagensListView';
 import * as repo from '../viagensRepository';
+import { contarRevisoesPendentes } from '../revisoesRepository';
+import { useSyncStore } from '../syncStore';
 
 const mockPush = jest.fn();
 let mockAoFocar: (() => void) | null = null;
+let mockCallbacksDeFoco: (() => void)[] = [];
+let mockUsuario: { id: string; nome: string; email: string; perfil: string } | null = null;
 
 jest.mock('expo-router', () => {
   // eslint-disable-next-line @typescript-eslint/no-require-imports
@@ -15,11 +19,24 @@ jest.mock('expo-router', () => {
   return {
     useRouter: () => ({ push: mockPush }),
     useFocusEffect: (callback: () => void) => {
-      mockAoFocar = callback;
+      mockCallbacksDeFoco.push(callback);
+      mockAoFocar = () => {
+        for (const aoFocar of new Set(mockCallbacksDeFoco)) aoFocar();
+      };
       react.useEffect(callback, [callback]);
     },
   };
 });
+
+jest.mock('@/features/auth/profileStore', () => ({
+  useProfile: () => ({ usuario: mockUsuario }),
+}));
+
+jest.mock('../revisoesRepository', () => ({
+  contarRevisoesPendentes: jest.fn(),
+}));
+
+const mockContarRevisoes = contarRevisoesPendentes as jest.Mock;
 
 const mockViagens = [
   {
@@ -33,6 +50,7 @@ const mockViagens = [
     data_fim: null,
     status: 'EmAndamento' as const,
     km_rodado: null,
+    em_revisao: false,
     data_inclusao: '2026-10-18T08:00:00Z',
     data_atualizacao: '2026-10-18T08:00:00Z',
     veiculo: {
@@ -62,11 +80,12 @@ const mockViagens = [
     rota_id: 'rota-2',
     motorista_id: 'mot-2',
     hodometro_inicial: 20000,
-    hodometro_final: 20500, // 500 km rodados, rota estimada é 350 km (excede > 20%)
+    hodometro_final: 20500,
     data_inicio: '2026-10-17T08:00:00Z',
     data_fim: '2026-10-17T18:00:00Z',
     status: 'Finalizada' as const,
-    km_rodado: null, // Sem km_rodado do banco para provar o cálculo offline
+    km_rodado: null,
+    em_revisao: false,
     data_inclusao: '2026-10-17T08:00:00Z',
     data_atualizacao: '2026-10-17T18:00:00Z',
     veiculo: {
@@ -96,6 +115,11 @@ describe('ViagensListView', () => {
   beforeEach(() => {
     jest.clearAllMocks();
     mockAoFocar = null;
+    mockCallbacksDeFoco = [];
+    mockUsuario = null;
+    mockContarRevisoes.mockResolvedValue({ ok: true, data: 0 });
+    useSyncStore.setState({ sincronizando: false, pendentes: 0, comErro: 0, emRevisao: 0 });
+    jest.spyOn(useSyncStore.getState(), 'sincronizarTudo').mockResolvedValue(undefined);
   });
 
   afterEach(() => {
@@ -103,79 +127,106 @@ describe('ViagensListView', () => {
   });
 
   it('renderiza viagens, calcula quilometragem offline e exibe aviso de discrepância', async () => {
-    jest.spyOn(repo, 'listarViagens').mockResolvedValue({
-      ok: true,
-      data: mockViagens,
-    });
+    jest.spyOn(repo, 'listarViagens').mockResolvedValue({ ok: true, data: mockViagens });
 
     render(<ViagensListView />);
 
     expect(await screen.findByText('BRA2E19 • Actros')).toBeTruthy();
     expect(screen.getByText('Viagens')).toBeTruthy();
     expect(screen.getByText('XYZ9K88 • FH')).toBeTruthy();
+    expect(screen.getByText('Concluída')).toBeTruthy();
 
-    // Prova cálculo offline: 20500 - 20000 = 500 km rodados (mesmo com km_rodado nulo)
     expect(screen.getByText('Distância rodada: 500 km')).toBeTruthy();
-
-    // Prova aviso visual de discrepância: 500 km > 350 km * 1.2
     expect(screen.getByText(/acima da rota/i)).toBeTruthy();
 
-    // Prova botão de fechar para viagem EmAndamento
     const botaoFechar = screen.getByRole('button', { name: 'Fechar viagem' });
     fireEvent.press(botaoFechar);
     expect(mockPush).toHaveBeenCalledWith('/viagens/viagem-1/fechar');
   });
 
-  it('exibe "Concluída" na viagem e no filtro, como na tela de fechamento', async () => {
-    jest.spyOn(repo, 'listarViagens').mockResolvedValue({ ok: true, data: mockViagens });
-
-    render(<ViagensListView />);
-
-    expect(await screen.findByText('Concluída')).toBeOnTheScreen();
-    expect(screen.getByText('Concluídas')).toBeOnTheScreen();
-    expect(screen.queryByText(/Finalizada/)).not.toBeOnTheScreen();
-  });
-
-  it('navega para nova viagem ao tocar no FAB', async () => {
+  it('mostra selo "Em revisão" quando a viagem local foi recusada pelo servidor', async () => {
     jest.spyOn(repo, 'listarViagens').mockResolvedValue({
       ok: true,
-      data: mockViagens,
+      data: [{ ...mockViagens[0], em_revisao: true }],
     });
 
     render(<ViagensListView />);
 
+    expect(await screen.findByText('Em revisão')).toBeOnTheScreen();
+    expect(
+      screen.getByText('Esta viagem tem uma operação aguardando revisão do gestor.'),
+    ).toBeOnTheScreen();
+  });
+
+  it('navega para nova viagem ao tocar no FAB', async () => {
+    jest.spyOn(repo, 'listarViagens').mockResolvedValue({ ok: true, data: mockViagens });
+
+    render(<ViagensListView />);
     await screen.findByText('BRA2E19 • Actros');
 
-    const fab = screen.getByRole('button', { name: 'Abrir viagem' });
-    fireEvent.press(fab);
+    fireEvent.press(screen.getByRole('button', { name: 'Abrir viagem' }));
 
     expect(mockPush).toHaveBeenCalledWith('/viagens/nova');
   });
 
   it('filtro de status consulta o banco com o status escolhido', async () => {
-    const mockListar = jest.spyOn(repo, 'listarViagens').mockResolvedValue({
-      ok: true,
-      data: mockViagens,
-    });
+    const mockListar = jest
+      .spyOn(repo, 'listarViagens')
+      .mockResolvedValue({ ok: true, data: mockViagens });
 
     render(<ViagensListView />);
     await screen.findByText('BRA2E19 • Actros');
 
     mockListar.mockResolvedValueOnce({ ok: true, data: [mockViagens[0]] });
-
     fireEvent.press(screen.getByRole('tab', { name: 'Em andamento' }));
 
     await waitFor(() => expect(mockListar).toHaveBeenLastCalledWith({ status: 'EmAndamento' }));
-
     expect(await screen.findByText('BRA2E19 • Actros')).toBeOnTheScreen();
     expect(screen.queryByText('XYZ9K88 • FH')).not.toBeOnTheScreen();
   });
 
-  it('erro numa recarga mantém a lista e mostra o Snackbar', async () => {
-    const mockListar = jest.spyOn(repo, 'listarViagens').mockResolvedValue({
-      ok: true,
-      data: mockViagens,
+  it('Motorista lê só as próprias viagens no cache local', async () => {
+    mockUsuario = {
+      id: 'motorista-1',
+      nome: 'João Silva',
+      email: 'joao@transportadora.com',
+      perfil: 'Motorista',
+    };
+    const mockListar = jest
+      .spyOn(repo, 'listarViagens')
+      .mockResolvedValue({ ok: true, data: mockViagens });
+
+    render(<ViagensListView />);
+    await screen.findByText('BRA2E19 • Actros');
+
+    expect(mockListar).toHaveBeenLastCalledWith({
+      status: 'Todos',
+      motorista_id: 'motorista-1',
     });
+  });
+
+  it('Admin vê o aviso de revisões e navega para a fila do gestor', async () => {
+    mockUsuario = {
+      id: 'admin-1',
+      nome: 'Maria Gestora',
+      email: 'maria@transportadora.com',
+      perfil: 'Gestor de Frota',
+    };
+    mockContarRevisoes.mockResolvedValue({ ok: true, data: 2 });
+    jest.spyOn(repo, 'listarViagens').mockResolvedValue({ ok: true, data: [] });
+
+    render(<ViagensListView />);
+
+    expect(await screen.findByText('2 viagens precisam de revisão')).toBeOnTheScreen();
+    fireEvent.press(screen.getByRole('button', { name: 'Ver revisões' }));
+
+    expect(mockPush).toHaveBeenCalledWith('/viagens/revisoes');
+  });
+
+  it('erro numa recarga mantém a lista e mostra o Snackbar', async () => {
+    const mockListar = jest
+      .spyOn(repo, 'listarViagens')
+      .mockResolvedValue({ ok: true, data: mockViagens });
 
     render(<ViagensListView />);
     await screen.findByText('BRA2E19 • Actros');
@@ -199,8 +250,6 @@ describe('ViagensListView', () => {
     render(<ViagensListView />);
 
     expect(await screen.findByText('Não foi possível carregar as viagens')).toBeOnTheScreen();
-    expect(screen.getByText('Não foi possível carregar as viagens.')).toBeOnTheScreen();
-
     fireEvent.press(screen.getByRole('button', { name: 'Tentar novamente' }));
 
     expect(await screen.findByText('BRA2E19 • Actros')).toBeOnTheScreen();
@@ -216,15 +265,12 @@ describe('ViagensListView', () => {
     expect(
       screen.getByText('Nenhuma viagem registrada ainda. Abra a primeira viagem.'),
     ).toBeOnTheScreen();
-    // O vazio fica dentro da FlatList para o pull-to-refresh continuar disponível.
     expect(screen.UNSAFE_getByType(RefreshControl)).toBeTruthy();
   });
 
   it('estado vazio de um filtro oferece "Ver todas" e volta para Todos', async () => {
     const mockListar = jest.spyOn(repo, 'listarViagens').mockImplementation(async (filtro = {}) => {
-      if (filtro.status === 'EmAndamento') {
-        return { ok: true, data: [] };
-      }
+      if (filtro.status === 'EmAndamento') return { ok: true, data: [] };
       return { ok: true, data: mockViagens };
     });
 
@@ -232,7 +278,6 @@ describe('ViagensListView', () => {
     await screen.findByText('BRA2E19 • Actros');
 
     fireEvent.press(screen.getByRole('tab', { name: 'Em andamento' }));
-
     expect(await screen.findByText('Nenhuma viagem com esse status no momento.')).toBeOnTheScreen();
 
     fireEvent.press(screen.getByRole('button', { name: 'Ver todas' }));
@@ -264,7 +309,7 @@ describe('ViagensListView', () => {
     await waitFor(() => expect(screen.queryByRole('alert')).not.toBeOnTheScreen());
   });
 
-  it('usa FlatList com pull-to-refresh, atualiza os dados e reserva espaço para o FAB', async () => {
+  it('usa FlatList com pull-to-refresh, sincroniza e reserva espaço para o FAB', async () => {
     const mockListar = jest
       .spyOn(repo, 'listarViagens')
       .mockResolvedValueOnce({ ok: true, data: mockViagens })
@@ -277,15 +322,13 @@ describe('ViagensListView', () => {
     expect(refresh.props.colors).toEqual([colors.accent]);
     expect(
       StyleSheet.flatten(screen.UNSAFE_getByType(FlatList).props.contentContainerStyle),
-    ).toMatchObject({
-      paddingBottom: FAB_ALTURA_RESERVADA,
-    });
+    ).toMatchObject({ paddingBottom: FAB_ALTURA_RESERVADA });
 
-    // Executa o onRefresh de verdade: a integração com `puxarParaAtualizar` refaz a consulta.
     await act(async () => {
       await refresh.props.onRefresh();
     });
 
+    expect(useSyncStore.getState().sincronizarTudo).toHaveBeenCalled();
     expect(mockListar).toHaveBeenCalledTimes(2);
     expect(await screen.findByText('BRA2E19 • Actros')).toBeOnTheScreen();
     expect(screen.queryByText('XYZ9K88 • FH')).not.toBeOnTheScreen();

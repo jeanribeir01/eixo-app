@@ -25,7 +25,7 @@ import {
   parseHodometro,
 } from './calculo';
 import { fecharViagemFormSchema } from './schema';
-import { rotuloStatusViagem, type ViagemDetalhada } from './types';
+import type { StatusViagem, ViagemDetalhada } from './types';
 import { buscarViagemPorId, fecharViagem } from './viagensRepository';
 
 export type FecharViagemViewProps = {
@@ -35,6 +35,14 @@ export type FecharViagemViewProps = {
 type Feedback = {
   mensagem: string;
   tone: 'success' | 'error';
+};
+
+// O banco guarda "Finalizada", mas o critério de aceite da US08 exibe "Concluída"
+// (mesmo padrão de EmManutencao → "Em Manutenção").
+const ROTULO_STATUS_VIAGEM: Record<StatusViagem, string> = {
+  EmAndamento: 'Em andamento',
+  Finalizada: 'Concluída',
+  Cancelada: 'Cancelada',
 };
 
 export function FecharViagemView({ viagemId }: FecharViagemViewProps) {
@@ -197,7 +205,7 @@ export function FecharViagemView({ viagemId }: FecharViagemViewProps) {
         <EmptyState
           icon="viagens"
           title="Viagem já encerrada"
-          description={`Esta viagem está com o status "${rotuloStatusViagem[viagem.status]}" e não pode ser fechada novamente.`}
+          description={`Esta viagem está com o status "${ROTULO_STATUS_VIAGEM[viagem.status]}" e não pode ser fechada novamente.`}
           actionLabel="Voltar"
           onAction={() => router.back()}
         />
@@ -208,7 +216,7 @@ export function FecharViagemView({ viagemId }: FecharViagemViewProps) {
             <Column gap="sm">
               <View style={styles.linhaTopo}>
                 <Text variant="subheading">Viagem em andamento</Text>
-                <Badge label={rotuloStatusViagem.EmAndamento} tone="neutral" />
+                <Badge label="Em andamento" tone="neutral" />
               </View>
 
               {viagem.veiculo && (

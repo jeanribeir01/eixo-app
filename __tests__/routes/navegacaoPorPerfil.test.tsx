@@ -26,6 +26,34 @@ jest.mock('@/supabase/client', () => ({
 }));
 jest.mock('@/features/auth/googleAuth', () => ({ configureGoogleSignIn: jest.fn() }));
 jest.mock('expo-font', () => ({ useFonts: () => [true, null] }));
+// O layout raiz só monta as telas depois de preparar o cache local. Aqui o foco é a navegação,
+// então o preparo e a sincronização são resolvidos sem tocar no SQLite nativo.
+jest.mock('@/features/viagens/viagensRepository', () => ({
+  prepararSessaoLocal: jest.fn().mockResolvedValue({ ok: true, data: true }),
+  limparCacheLocalNoLogout: jest.fn().mockResolvedValue(undefined),
+}));
+jest.mock('@/features/viagens/sync', () => ({
+  sincronizarViagens: jest.fn().mockResolvedValue({
+    ok: true,
+    semConexao: false,
+    viagensBaixadas: 0,
+    drenagem: { total: 0, sincronizados: 0, falhas: 0, conflitos: 0, semConexao: false, itens: [] },
+  }),
+  drenarOutboxViagens: jest.fn().mockResolvedValue({
+    total: 0,
+    sincronizados: 0,
+    falhas: 0,
+    conflitos: 0,
+    semConexao: false,
+    itens: [],
+  }),
+  obterStatusOutboxViagens: jest.fn().mockReturnValue({
+    pendentes: 0,
+    comErro: 0,
+    conflitos: 0,
+    emRevisao: 0,
+  }),
+}));
 
 const routes = {
   _layout: RootLayout,
