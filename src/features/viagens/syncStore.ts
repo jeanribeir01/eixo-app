@@ -34,7 +34,13 @@ export type SyncState = {
 
 let timerNovaTentativa: ReturnType<typeof setTimeout> | null = null;
 let tentativasConsecutivas = 0;
+// Qual sincronização o timer deve repetir. Uma falha do pull exige sincronização completa; uma
+// falha da outbox pode ser repetida apenas com a drenagem.
+let modoNovaTentativa: 'tudo' | 'outbox' = 'tudo';
 let sincronizacaoExtraPendente = false;
+// Uma sincronização completa pedida enquanto outra está em andamento não pode ser rebaixada para
+// uma drenagem da outbox: o pull também precisa rodar.
+let sincronizacaoExtraTudo = false;
 
 function limparTimerNovaTentativa(): void {
   if (timerNovaTentativa) {
@@ -43,31 +49,84 @@ function limparTimerNovaTentativa(): void {
   }
 }
 
-function agendarNovaTentativa(): void {
-  limparTimerNovaTentativa();
-  const atraso = Math.min(5_000 * 2 ** Math.min(tentativasConsecutivas, 6), 5 * 60_000);
-  timerNovaTentativa = setTimeout(() => {
-    timerNovaTentativa = null;
-    if (useSyncStore.getState().isOnline) {
-      void useSyncStore.getState().sincronizarTudo();
+function atrasoDaProximaTentativa(proximaTentativaEm: string | null): number {
+  if (proximaTentativaEm) {
+    const restante = new Date(proximaTentativaEm).getTime() - Date.now();
+    if (Number.isFinite(restante)) {
+      return Math.min(Math.max(restante, 1_000), 5 * 60_000);
     }
-  }, atraso);
+  }
+  return Math.min(5_000 * 2 ** Math.min(tentativasConsecutivas, 6), 5 * 60_000);
 }
 
-function finalizarComFalha(mensagem: string | undefined, semConexao: boolean): void {
+function agendarNovaTentativa(
+  proximaTentativaEm: string | null = null,
+  modo: 'tudo' | 'outbox' = 'tudo',
+): void {
+  limparTimerNovaTentativa();
+  modoNovaTentativa = modo;
+  timerNovaTentativa = setTimeout(() => {
+    timerNovaTentativa = null;
+    if (!useSyncStore.getState().isOnline) return;
+    if (modo === 'outbox') {
+      void useSyncStore.getState().sincronizarOutbox();
+    } else {
+      void useSyncStore.getState().sincronizarTudo();
+    }
+  }, atrasoDaProximaTentativa(proximaTentativaEm));
+}
+
+function finalizarComFalha(mensagem: string | undefined, modo: 'tudo' | 'outbox'): void {
   tentativasConsecutivas += 1;
   useSyncStore.setState({
     ultimoErro: mensagem ?? MENSAGEM_SEM_CONEXAO,
   });
-  if (!semConexao) {
-    agendarNovaTentativa();
+  // Uma falha na drenagem não pode rebaixar o retry de uma sincronização completa já agendada.
+  const modoFinal =
+    modo === 'outbox' && timerNovaTentativa !== null && modoNovaTentativa === 'tudo'
+      ? 'tudo'
+      : modo;
+  // Mesmo sem conexão o timer é agendado: a rede pode estar "online" para o sistema e ainda assim
+  // o servidor estar inalcançável. O listener de rede cobre a volta da conexão quando offline.
+  agendarNovaTentativa(null, modoFinal);
+}
+
+function finalizarComSucesso(
+  modo: 'tudo' | 'outbox',
+  pendencia?: { restantes: number; proximaTentativaEm: string | null },
+): void {
+  // Uma drenagem isolada bem-sucedida não prova que a sincronização completa que falhou antes
+  // (pull de catálogos/viagens) foi resolvida. Nesse caso o timer completo continua valendo.
+  const retryCompletoPendente =
+    modo === 'outbox' && timerNovaTentativa !== null && modoNovaTentativa === 'tudo';
+
+  if (!retryCompletoPendente) {
+    tentativasConsecutivas = 0;
+    useSyncStore.setState({ ultimoErro: null, ultimaSincronizacaoEm: Date.now() });
+  }
+
+  // Itens em backoff (ou além do limite da passada) continuam na fila: o ciclo não pode terminar
+  // sem um próximo agendamento. Se o retry completo já está pendente, ele também drena a fila.
+  if (pendencia && pendencia.restantes > 0) {
+    agendarNovaTentativa(
+      pendencia.proximaTentativaEm,
+      retryCompletoPendente ? 'tudo' : modo,
+    );
+  } else if (!retryCompletoPendente) {
+    limparTimerNovaTentativa();
   }
 }
 
-function finalizarComSucesso(): void {
-  tentativasConsecutivas = 0;
-  limparTimerNovaTentativa();
-  useSyncStore.setState({ ultimoErro: null, ultimaSincronizacaoEm: Date.now() });
+function executarSincronizacaoExtra(): void {
+  if (!sincronizacaoExtraPendente) return;
+  const tudo = sincronizacaoExtraTudo;
+  sincronizacaoExtraPendente = false;
+  sincronizacaoExtraTudo = false;
+  if (tudo) {
+    void useSyncStore.getState().sincronizarTudo();
+  } else {
+    void useSyncStore.getState().sincronizarOutbox();
+  }
 }
 
 export const useSyncStore = create<SyncState>((set, get) => ({
@@ -107,6 +166,7 @@ export const useSyncStore = create<SyncState>((set, get) => ({
   sincronizarTudo: async () => {
     if (get().sincronizando) {
       sincronizacaoExtraPendente = true;
+      sincronizacaoExtraTudo = true;
       return;
     }
     const usuarioId = obterUsuarioLocal();
@@ -119,21 +179,18 @@ export const useSyncStore = create<SyncState>((set, get) => ({
       if (obterGeracaoLocal() !== geracaoLocal) return;
       if (!resultado.ok) {
         if (resultado.sessaoAlterada) return;
-        finalizarComFalha(resultado.mensagem, resultado.semConexao);
+        finalizarComFalha(resultado.mensagem, 'tudo');
       } else {
-        finalizarComSucesso();
+        finalizarComSucesso('tudo', resultado.drenagem);
       }
     } catch {
       if (obterGeracaoLocal() !== geracaoLocal) return;
-      finalizarComFalha('Não foi possível sincronizar. Tente novamente.', false);
+      finalizarComFalha('Não foi possível sincronizar. Tente novamente.', 'tudo');
     } finally {
       if (obterGeracaoLocal() !== geracaoLocal) return;
       set({ sincronizando: false });
       get().atualizarStatus();
-      if (sincronizacaoExtraPendente) {
-        sincronizacaoExtraPendente = false;
-        void get().sincronizarOutbox();
-      }
+      executarSincronizacaoExtra();
     }
   },
 
@@ -153,23 +210,23 @@ export const useSyncStore = create<SyncState>((set, get) => ({
       get().atualizarStatus();
       if (resultado.sessaoAlterada) return;
       if (resultado.semConexao) {
-        finalizarComFalha(MENSAGEM_SEM_CONEXAO, true);
+        finalizarComFalha(MENSAGEM_SEM_CONEXAO, 'outbox');
       } else if (resultado.falhas > 0) {
-        finalizarComFalha('Alguns registros não foram enviados. Nova tentativa em instantes.', false);
+        finalizarComFalha(
+          'Alguns registros não foram enviados. Nova tentativa em instantes.',
+          'outbox',
+        );
       } else {
-        finalizarComSucesso();
+        finalizarComSucesso('outbox', resultado);
       }
     } catch {
       if (obterGeracaoLocal() !== geracaoLocal) return;
-      finalizarComFalha('Não foi possível sincronizar. Tente novamente.', false);
+      finalizarComFalha('Não foi possível sincronizar. Tente novamente.', 'outbox');
     } finally {
       if (obterGeracaoLocal() !== geracaoLocal) return;
       set({ sincronizando: false });
       get().atualizarStatus();
-      if (sincronizacaoExtraPendente) {
-        sincronizacaoExtraPendente = false;
-        void get().sincronizarOutbox();
-      }
+      executarSincronizacaoExtra();
     }
   },
 }));
@@ -179,6 +236,8 @@ export function startNetworkSyncListener(usuarioId: string): () => void {
   const geracaoLocal = obterGeracaoLocal();
   tentativasConsecutivas = 0;
   limparTimerNovaTentativa();
+  sincronizacaoExtraPendente = false;
+  sincronizacaoExtraTudo = false;
   useSyncStore.setState({ sessaoLocalUsuario: null, sessaoLocalErro: null });
 
   let encerrado = false;
@@ -273,6 +332,7 @@ export function startNetworkSyncListener(usuarioId: string): () => void {
     cancelarEscutaEscrita();
     definirUsuarioLocal(null);
     sincronizacaoExtraPendente = false;
+    sincronizacaoExtraTudo = false;
     useSyncStore.setState({
       sincronizando: false,
       ultimoErro: null,

@@ -10,6 +10,7 @@ import {
   ehErroConexao,
   obterStatusOutboxViagens,
   sincronizarSeConectado,
+  sincronizarViagens,
 } from '../sync';
 
 const AGORA = '2026-10-18T10:00:00.000Z';
@@ -196,6 +197,8 @@ describe('sync de viagens (drenarOutboxViagens)', () => {
       conflitos: 0,
       semConexao: false,
       itens: [],
+      restantes: 0,
+      proximaTentativaEm: null,
     });
     expect(client.from).not.toHaveBeenCalled();
   });
@@ -287,6 +290,77 @@ describe('sync de viagens (drenarOutboxViagens)', () => {
       .get();
     expect(viagemLocal?.km_rodado).toBe(400);
     expect(viagemLocal?.em_revisao).toBe(false);
+  });
+
+  it('preserva o estado local quando outra operação da mesma viagem ainda está pendente', async () => {
+    // Cenário offline: abrir (insert) e fechar (update) a mesma viagem. O insert sincroniza
+    // primeiro, mas a resposta do servidor ainda diz "EmAndamento"; ela não pode sobrescrever o
+    // fechamento que continua na outbox.
+    inserirViagemLocal({
+      status: 'Finalizada',
+      hodometro_final: 10400,
+      km_rodado: 400,
+      data_fim: '2026-10-18T18:00:00.000Z',
+    });
+    inserirOutbox(
+      {
+        payload: JSON.stringify({
+          id: VIAGEM_ID,
+          status: 'EmAndamento',
+          hodometro_inicial: 10000,
+          data_atualizacao: AGORA,
+        }),
+        criado_em: '2026-10-18T09:00:00.000Z',
+      },
+      OUTBOX_ID,
+    );
+    inserirOutbox(
+      {
+        operacao: 'update',
+        payload: JSON.stringify({
+          id: VIAGEM_ID,
+          status: 'Finalizada',
+          hodometro_final: 10400,
+          data_fim: '2026-10-18T18:00:00.000Z',
+        }),
+        criado_em: '2026-10-18T11:00:00.000Z',
+      },
+      OUTBOX_ID_2,
+    );
+
+    const { client } = criarMockSupabase({
+      upsertResultado: {
+        data: viagemServidor({ status: 'EmAndamento', hodometro_final: null }),
+        error: null,
+      },
+      updateResultado: {
+        data: null,
+        error: { code: 'ECONNREFUSED', message: 'Failed to fetch network request' },
+      },
+    });
+
+    const resultado = await drenarOutboxViagens(
+      { usuarioId: USUARIO_ID, agora: new Date(AGORA) },
+      { db: banco.db as unknown as ViagensDb, supabase: client as never },
+    );
+
+    expect(resultado.sincronizados).toBe(1);
+    expect(resultado.semConexao).toBe(true);
+    expect(resultado.restantes).toBe(1);
+    expect(resultado.proximaTentativaEm).not.toBeNull();
+
+    const outbox = banco.db.select().from(schema.outbox).all();
+    expect(outbox).toHaveLength(1);
+    expect(outbox[0]?.id).toBe(OUTBOX_ID_2);
+
+    const viagemLocal = banco.db
+      .select()
+      .from(schema.viagem)
+      .where(eq(schema.viagem.id, VIAGEM_ID))
+      .get();
+    expect(viagemLocal?.status).toBe('Finalizada');
+    expect(viagemLocal?.hodometro_final).toBe(10400);
+    expect(viagemLocal?.km_rodado).toBe(400);
   });
 
   it('em erro de conexão, usa backoff sem gastar tentativa e interrompe a fila', async () => {
@@ -498,6 +572,8 @@ describe('sync de viagens (drenarOutboxViagens)', () => {
     );
 
     expect(resultado.total).toBe(0);
+    expect(resultado.restantes).toBe(1);
+    expect(resultado.proximaTentativaEm).toBe('2026-10-18T10:05:00.000Z');
     expect(client.from).not.toHaveBeenCalled();
   });
 
@@ -636,6 +712,40 @@ describe('sync de viagens (drenarOutboxViagens)', () => {
       conflitos: 1,
       emRevisao: 1,
     });
+  });
+
+  it('marca a sincronização completa como falha quando a drenagem tem erro parcial', async () => {
+    definirUsuarioLocal(USUARIO_ID);
+    inserirOutbox();
+
+    const maybeSingle = jest
+      .fn()
+      .mockResolvedValue({ data: null, error: { code: 'XX000', message: 'Falha interna.' } });
+    const consulta = {
+      select: jest.fn(),
+      order: jest.fn(),
+      range: jest.fn().mockResolvedValue({ data: [], error: null }),
+      upsert: jest.fn(() => ({
+        select: jest.fn(() => ({ maybeSingle })),
+      })),
+    };
+    consulta.select.mockReturnValue(consulta);
+    consulta.order.mockReturnValue(consulta);
+    const client = { from: jest.fn(() => consulta) };
+
+    const resultado = await sincronizarViagens(USUARIO_ID, {
+      db: banco.db as unknown as ViagensDb,
+      supabase: client as never,
+      geracaoLocal: obterGeracaoLocal(),
+    });
+
+    expect(resultado.ok).toBe(false);
+    expect(resultado.semConexao).toBe(false);
+    expect(resultado.mensagem).toBe(
+      'Alguns registros não foram enviados. Nova tentativa em instantes.',
+    );
+    expect(resultado.drenagem.falhas).toBe(1);
+    expect(resultado.drenagem.restantes).toBe(1);
   });
 
   describe('sincronizarSeConectado', () => {

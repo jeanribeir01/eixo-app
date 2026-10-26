@@ -12,6 +12,7 @@ describe('IndicadorSincronizacao', () => {
       comErro: 0,
       emRevisao: 0,
       sincronizando: false,
+      ultimoErro: null,
     });
   });
 
@@ -66,6 +67,29 @@ describe('IndicadorSincronizacao', () => {
     render(<IndicadorSincronizacao isOnline pendentes={2} sincronizando />);
 
     expect(screen.getByText('Sincronizando...')).toBeTruthy();
+  });
+
+  it('exibe o último erro de sincronização mesmo sem pendências', () => {
+    useSyncStore.setState({
+      ultimoErro: 'Sem conexão com a internet. Os dados serão enviados quando a conexão voltar.',
+    });
+
+    render(
+      <IndicadorSincronizacao
+        isOnline
+        pendentes={0}
+        comErro={0}
+        emRevisao={0}
+        sincronizando={false}
+      />,
+    );
+
+    expect(screen.getByTestId('indicador-sincronizacao')).toBeTruthy();
+    expect(
+      screen.getByText(
+        'Sem conexão com a internet. Os dados serão enviados quando a conexão voltar.',
+      ),
+    ).toBeTruthy();
   });
 
   it('exibe tentativa automática quando algum item falhou', () => {

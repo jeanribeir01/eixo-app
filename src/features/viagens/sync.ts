@@ -46,6 +46,12 @@ export type ResultadoDrenagem = {
   semConexao: boolean;
   sessaoAlterada?: boolean;
   itens: ResultadoItemSync[];
+  // Itens que continuam na outbox depois desta passada. Inclui os que estão em backoff e os que
+  // ficaram fora do limite. O store usa isso para não encerrar o ciclo de retry sem agendamento.
+  restantes: number;
+  // Menor `proxima_tentativa_em` entre os itens restantes; null quando não há restante ou quando
+  // algum item já pode ser tentado agora.
+  proximaTentativaEm: string | null;
 };
 
 export type OpcoesDrenagem = {
@@ -104,6 +110,8 @@ function drenagemVazia(): ResultadoDrenagem {
     conflitos: 0,
     semConexao: false,
     itens: [],
+    restantes: 0,
+    proximaTentativaEm: null,
   };
 }
 
@@ -414,19 +422,68 @@ function aplicarSucessoLocal(
   item: schema.OutboxItem,
   data: ViagemApi,
 ): void {
-  // Outra operação da mesma viagem pode já estar na fila de revisão. Nesse caso o sucesso desta
-  // operação não pode apagar o selo "Em revisão" da viagem.
-  const emRevisao = database
-    .select({ id: schema.outbox.id, payload: schema.outbox.payload })
+  // Outra operação da mesma viagem pode já estar na fila (ex.: viagem aberta e fechada offline).
+  // Nesse caso a resposta do servidor é antiga em relação ao estado local: aplicar agora
+  // sobrescreveria um fechamento que ainda será enviado. A linha local só é reconciliada quando a
+  // última operação da viagem sair da outbox.
+  const outras = database
+    .select({
+      id: schema.outbox.id,
+      payload: schema.outbox.payload,
+      status: schema.outbox.status,
+    })
     .from(schema.outbox)
-    .where(eq(schema.outbox.status, 'revisao'))
+    .where(eq(schema.outbox.usuario_id, item.usuario_id))
     .all()
-    .some((linha) => linha.id !== item.id && viagemIdDoPayload(linha.payload) === data.id);
+    .filter((linha) => linha.id !== item.id && viagemIdDoPayload(linha.payload) === data.id);
+
+  const pendente = outras.some((linha) => linha.status === 'pendente');
+  // O selo "Em revisão" não pode ser apagado pelo sucesso de outra operação da mesma viagem.
+  const emRevisao = outras.some((linha) => linha.status === 'revisao');
 
   database.transaction((tx) => {
     tx.delete(schema.outbox).where(eq(schema.outbox.id, item.id)).run();
+    if (pendente) {
+      if (emRevisao) {
+        tx.update(schema.viagem)
+          .set({ em_revisao: true })
+          .where(eq(schema.viagem.id, data.id))
+          .run();
+      }
+      return;
+    }
     aplicarViagemServidor(tx as ViagensDb, data, { emRevisao });
   });
+}
+
+function resumirPendencias(
+  database: ViagensDb,
+  usuarioId: string,
+): { restantes: number; proximaTentativaEm: string | null } {
+  const linhas = database
+    .select({ proxima_tentativa_em: schema.outbox.proxima_tentativa_em })
+    .from(schema.outbox)
+    .where(
+      and(
+        eq(schema.outbox.entidade, 'viagem'),
+        eq(schema.outbox.usuario_id, usuarioId),
+        eq(schema.outbox.status, 'pendente'),
+      ),
+    )
+    .all();
+
+  let proximaTentativaEm: string | null = null;
+  for (const linha of linhas) {
+    // Um item sem backoff já pode ser tentado: o próximo ciclo não pode esperar por outro item.
+    if (linha.proxima_tentativa_em === null) {
+      return { restantes: linhas.length, proximaTentativaEm: null };
+    }
+    if (proximaTentativaEm === null || linha.proxima_tentativa_em < proximaTentativaEm) {
+      proximaTentativaEm = linha.proxima_tentativa_em;
+    }
+  }
+
+  return { restantes: linhas.length, proximaTentativaEm };
 }
 
 export async function drenarOutboxViagens(
@@ -470,6 +527,8 @@ export async function drenarOutboxViagens(
     conflitos: 0,
     semConexao: false,
     itens: [],
+    restantes: 0,
+    proximaTentativaEm: null,
   };
 
   for (const item of itens) {
@@ -910,6 +969,14 @@ export async function drenarOutboxViagens(
     }
   }
 
+  // A conta pode ter mudado durante a última operação. Nesse caso a outbox consultada pertence à
+  // sessão nova e não deve alimentar o retry da sessão antiga.
+  if (!resultado.sessaoAlterada && sessaoLocalAtual(geracaoLocal)) {
+    const pendencias = resumirPendencias(database, opcoes.usuarioId);
+    resultado.restantes = pendencias.restantes;
+    resultado.proximaTentativaEm = pendencias.proximaTentativaEm;
+  }
+
   return resultado;
 }
 
@@ -990,10 +1057,16 @@ export async function sincronizarViagens(
     };
   }
 
+  const semConexao = drenagem.semConexao;
+  const falhaParcial = drenagem.falhas > 0;
   return {
-    ok: !drenagem.semConexao,
-    semConexao: drenagem.semConexao,
-    mensagem: drenagem.semConexao ? MENSAGEM_SEM_CONEXAO : undefined,
+    ok: !semConexao && !falhaParcial,
+    semConexao,
+    mensagem: semConexao
+      ? MENSAGEM_SEM_CONEXAO
+      : falhaParcial
+        ? 'Alguns registros não foram enviados. Nova tentativa em instantes.'
+        : undefined,
     catalogos: catalogos.data,
     viagensBaixadas: primeiraCarga.data + segundaCarga.data,
     drenagem,

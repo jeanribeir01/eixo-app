@@ -30,6 +30,7 @@ export function IndicadorSincronizacao({
   const storeComErro = useSyncStore((state) => state.comErro);
   const storeEmRevisao = useSyncStore((state) => state.emRevisao);
   const storeSincronizando = useSyncStore((state) => state.sincronizando);
+  const ultimoErro = useSyncStore((state) => state.ultimoErro);
   const atualizarStatus = useSyncStore((state) => state.atualizarStatus);
 
   const isOnline = isOnlineProp ?? storeOnline;
@@ -45,7 +46,14 @@ export function IndicadorSincronizacao({
   }, [atualizarAoMontar, pendentesProp, isOnlineProp, atualizarStatus]);
 
   // Online, sem pendência, sem erro e sem revisão: não ocupa espaço visual.
-  if (isOnline && pendentes === 0 && emRevisao === 0 && comErro === 0 && !sincronizando) {
+  if (
+    isOnline &&
+    pendentes === 0 &&
+    emRevisao === 0 &&
+    comErro === 0 &&
+    !sincronizando &&
+    !ultimoErro
+  ) {
     return null;
   }
 
@@ -94,6 +102,12 @@ export function IndicadorSincronizacao({
               {comErro === 1
                 ? '1 registro não pôde ser enviado. Nova tentativa automática em instantes.'
                 : `${comErro} registros não puderam ser enviados. Nova tentativa automática em instantes.`}
+            </Text>
+          )}
+
+          {ultimoErro && !sincronizando && (
+            <Text variant="bodySm" tone="danger">
+              {ultimoErro}
             </Text>
           )}
 

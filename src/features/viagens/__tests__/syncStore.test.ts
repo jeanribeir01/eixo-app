@@ -61,6 +61,7 @@ describe('syncStore e startNetworkSyncListener', () => {
 
   afterEach(() => {
     definirUsuarioLocal(null);
+    jest.useRealTimers();
   });
 
   it('atualizarStatus lê contagens da outbox do usuário logado', () => {
@@ -98,6 +99,166 @@ describe('syncStore e startNetworkSyncListener', () => {
       usuarioId: 'usuario-1',
       geracaoLocal: expect.any(Number),
     });
+  });
+
+  it('agenda nova tentativa mesmo quando a falha é de conexão', async () => {
+    jest.useFakeTimers();
+    (syncModule.sincronizarViagens as jest.Mock).mockResolvedValueOnce({
+      ok: false,
+      semConexao: true,
+      mensagem: 'Sem conexão com a internet. Os dados serão enviados quando a conexão voltar.',
+      viagensBaixadas: 0,
+      drenagem: {
+        total: 1,
+        sincronizados: 0,
+        falhas: 1,
+        conflitos: 0,
+        semConexao: true,
+        itens: [],
+        restantes: 1,
+        proximaTentativaEm: null,
+      },
+    });
+
+    await useSyncStore.getState().sincronizarTudo();
+
+    expect(syncModule.sincronizarViagens).toHaveBeenCalledTimes(1);
+    expect(useSyncStore.getState().ultimoErro).toBe(
+      'Sem conexão com a internet. Os dados serão enviados quando a conexão voltar.',
+    );
+
+    // O backoff máximo cobre qualquer tentativa acumulada de outros testes.
+    jest.advanceTimersByTime(5 * 60_000);
+    for (let i = 0; i < 8; i += 1) await Promise.resolve();
+
+    expect(syncModule.sincronizarViagens).toHaveBeenCalledTimes(2);
+  });
+
+  it('agenda nova tentativa quando a outbox só tem itens em backoff', async () => {
+    jest.useFakeTimers();
+    const proximaTentativaEm = new Date(Date.now() + 3_000).toISOString();
+    (syncModule.drenarOutboxViagens as jest.Mock).mockResolvedValueOnce({
+      total: 0,
+      sincronizados: 0,
+      falhas: 0,
+      conflitos: 0,
+      semConexao: false,
+      itens: [],
+      restantes: 1,
+      proximaTentativaEm,
+    });
+
+    await useSyncStore.getState().sincronizarOutbox();
+
+    expect(syncModule.drenarOutboxViagens).toHaveBeenCalledTimes(1);
+    expect(syncModule.sincronizarViagens).not.toHaveBeenCalled();
+    expect(useSyncStore.getState().ultimoErro).toBeNull();
+
+    jest.advanceTimersByTime(3_000);
+    for (let i = 0; i < 8; i += 1) await Promise.resolve();
+
+    expect(syncModule.drenarOutboxViagens).toHaveBeenCalledTimes(2);
+    expect(syncModule.sincronizarViagens).not.toHaveBeenCalled();
+  });
+
+  it('não descarta o retry da sincronização completa quando uma drenagem isolada dá certo', async () => {
+    jest.useFakeTimers();
+    (syncModule.sincronizarViagens as jest.Mock).mockResolvedValueOnce({
+      ok: false,
+      semConexao: true,
+      mensagem: 'Sem conexão com a internet. Os dados serão enviados quando a conexão voltar.',
+      viagensBaixadas: 0,
+      drenagem: {
+        total: 0,
+        sincronizados: 0,
+        falhas: 1,
+        conflitos: 0,
+        semConexao: true,
+        itens: [],
+        restantes: 0,
+        proximaTentativaEm: null,
+      },
+    });
+
+    await useSyncStore.getState().sincronizarTudo();
+    expect(useSyncStore.getState().ultimoErro).toBe(
+      'Sem conexão com a internet. Os dados serão enviados quando a conexão voltar.',
+    );
+
+    (syncModule.drenarOutboxViagens as jest.Mock).mockResolvedValueOnce({
+      total: 0,
+      sincronizados: 0,
+      falhas: 0,
+      conflitos: 0,
+      semConexao: false,
+      itens: [],
+      restantes: 0,
+      proximaTentativaEm: null,
+    });
+    await useSyncStore.getState().sincronizarOutbox();
+
+    // O pull da sincronização completa ainda não rodou, então o erro continua visível.
+    expect(useSyncStore.getState().ultimoErro).toBe(
+      'Sem conexão com a internet. Os dados serão enviados quando a conexão voltar.',
+    );
+
+    jest.advanceTimersByTime(5 * 60_000);
+    for (let i = 0; i < 8; i += 1) await Promise.resolve();
+
+    expect(syncModule.sincronizarViagens).toHaveBeenCalledTimes(2);
+  });
+
+  it('não rebaixa para drenagem uma sincronização completa pedida durante outra', async () => {
+    let liberarPrimeira: ((resultado: unknown) => void) | undefined;
+    (syncModule.sincronizarViagens as jest.Mock)
+      .mockReturnValueOnce(
+        new Promise((resolve) => {
+          liberarPrimeira = resolve;
+        }),
+      )
+      .mockResolvedValueOnce({
+        ok: true,
+        semConexao: false,
+        viagensBaixadas: 0,
+        drenagem: {
+          total: 0,
+          sincronizados: 0,
+          falhas: 0,
+          conflitos: 0,
+          semConexao: false,
+          itens: [],
+          restantes: 0,
+          proximaTentativaEm: null,
+        },
+      });
+
+    const primeira = useSyncStore.getState().sincronizarTudo();
+    expect(useSyncStore.getState().sincronizando).toBe(true);
+
+    // Uma segunda sincronização completa chega enquanto a primeira ainda está em voo.
+    await useSyncStore.getState().sincronizarTudo();
+    expect(syncModule.sincronizarViagens).toHaveBeenCalledTimes(1);
+
+    liberarPrimeira?.({
+      ok: true,
+      semConexao: false,
+      viagensBaixadas: 0,
+      drenagem: {
+        total: 0,
+        sincronizados: 0,
+        falhas: 0,
+        conflitos: 0,
+        semConexao: false,
+        itens: [],
+        restantes: 0,
+        proximaTentativaEm: null,
+      },
+    });
+    await primeira;
+    for (let i = 0; i < 8; i += 1) await Promise.resolve();
+
+    expect(syncModule.sincronizarViagens).toHaveBeenCalledTimes(2);
+    expect(syncModule.drenarOutboxViagens).not.toHaveBeenCalled();
   });
 
   it('sincronizarTudo não executa se o aparelho estiver offline', async () => {
