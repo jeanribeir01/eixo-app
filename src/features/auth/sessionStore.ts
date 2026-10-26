@@ -2,6 +2,7 @@ import type { Session } from '@supabase/supabase-js';
 import { create } from 'zustand';
 
 import { supabase } from '@/supabase/client';
+import { limparCacheLocalNoLogout } from '@/features/viagens/viagensRepository';
 
 type SessionState = {
   session: Session | null;
@@ -19,7 +20,16 @@ export const useSessionStore = create<SessionState>(() => ({
 // SecureStore; os seguintes cobrem login (SIGNED_IN), refresh (TOKEN_REFRESHED) e saída (SIGNED_OUT).
 // Retorna a função que cancela a inscrição, para usar no cleanup do useEffect.
 export function startSessionSync(): () => void {
-  const { data } = supabase.auth.onAuthStateChange((_event, session) => {
+  const { data } = supabase.auth.onAuthStateChange((event, session) => {
+    // Limpa o cache local da conta que saiu, mas preserva a outbox (inclusive a de outras contas
+    // que já usaram o aparelho). A chamada é assíncrona de propósito: o callback do Supabase não
+    // pode ficar preso esperando SQLite.
+    if (event === 'SIGNED_OUT') {
+      const usuarioAnterior = useSessionStore.getState().session?.user.id;
+      if (usuarioAnterior) {
+        void limparCacheLocalNoLogout(usuarioAnterior);
+      }
+    }
     // Só atualiza estado aqui: chamar outras funções do supabase dentro deste callback pode travar o client.
     useSessionStore.setState({ session, isRestoring: false });
   });

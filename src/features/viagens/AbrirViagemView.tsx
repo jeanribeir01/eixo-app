@@ -1,13 +1,10 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useRouter } from 'expo-router';
 import { ActivityIndicator, StyleSheet, View } from 'react-native';
+import { z } from 'zod';
 
 import { useProfile } from '@/features/auth/profileStore';
-import { listarRotas } from '@/features/rotas/rotasRepository';
-import type { RotaComViagens } from '@/features/rotas/types';
-import { listarVeiculos } from '@/features/veiculos/repository';
-import type { Veiculo } from '@/features/veiculos/types';
-import { supabase } from '@/supabase/client';
+import { rotuloStatusVeiculo } from '@/features/veiculos/types';
 import {
   Button,
   Card,
@@ -23,8 +20,18 @@ import {
   type SelectOption,
 } from '@/ui';
 
-import { formatarHodometro } from './calculo';
-import { abrirViagem, buscarUltimoHodometro, buscarViagemEmAndamento } from './viagensRepository';
+import { formatarHodometro, parseHodometro } from './calculo';
+import { abrirViagemComUltimoHodometroSchema } from './schema';
+import type { MotoristaSelecionavel, RotaSelecionavel, VeiculoSelecionavel } from './types';
+import {
+  MENSAGENS_ERRO_VIAGEM,
+  abrirViagem,
+  buscarUltimoHodometro,
+  buscarVeiculoParaViagem,
+  listarMotoristasParaViagem,
+  listarRotasParaViagem,
+  listarVeiculosParaViagem,
+} from './viagensRepository';
 
 type ErrosFormulario = {
   veiculo_id?: string;
@@ -38,16 +45,26 @@ type Feedback = {
   tone: 'success' | 'error';
 };
 
+const MENSAGEM_VEICULO_INDISPONIVEL = {
+  EmViagem: MENSAGENS_ERRO_VIAGEM.VG001,
+  EmManutencao: MENSAGENS_ERRO_VIAGEM.VG002,
+  Inativo: MENSAGENS_ERRO_VIAGEM.VG003,
+} as const;
+
 export function AbrirViagemView() {
   const router = useRouter();
   const { usuario } = useProfile();
+  // Cada troca de veículo invalida as consultas da anterior: a resposta atrasada do veículo A
+  // não pode preencher o hodômetro já limpo para o veículo B.
+  const requisicaoVeiculoRef = useRef(0);
 
+  const [tentativa, setTentativa] = useState(0);
   const [carregandoDados, setCarregandoDados] = useState(true);
   const [erroCarregamento, setErroCarregamento] = useState<string | null>(null);
 
-  const [veiculos, setVeiculos] = useState<Veiculo[]>([]);
-  const [rotas, setRotas] = useState<RotaComViagens[]>([]);
-  const [motoristas, setMotoristas] = useState<SelectOption[]>([]);
+  const [veiculos, setVeiculos] = useState<VeiculoSelecionavel[]>([]);
+  const [rotas, setRotas] = useState<RotaSelecionavel[]>([]);
+  const [motoristas, setMotoristas] = useState<MotoristaSelecionavel[]>([]);
 
   const [veiculoId, setVeiculoId] = useState<string | null>(null);
   const [rotaId, setRotaId] = useState<string | null>(null);
@@ -60,8 +77,8 @@ export function AbrirViagemView() {
   const [feedback, setFeedback] = useState<Feedback | null>(null);
 
   const ehMotorista = usuario?.perfil === 'Motorista';
+  const ehAdminOuGestor = usuario?.perfil === 'Admin' || usuario?.perfil === 'Gestor de Frota';
 
-  // Carrega listas de veículos, rotas e motoristas
   useEffect(() => {
     let cancelado = false;
 
@@ -69,7 +86,19 @@ export function AbrirViagemView() {
       setCarregandoDados(true);
       setErroCarregamento(null);
 
-      const [resVeiculos, resRotas] = await Promise.all([listarVeiculos(), listarRotas()]);
+      if (!usuario) {
+        setErroCarregamento('Sessão não identificada. Entre novamente para abrir uma viagem.');
+        setCarregandoDados(false);
+        return;
+      }
+
+      // Todas as listas vêm do cache local. No primeiro login ainda online, o sync grava esse
+      // cache; depois disso a tela abre sem internet.
+      const [resVeiculos, resRotas, resMotoristas] = await Promise.all([
+        listarVeiculosParaViagem(),
+        listarRotasParaViagem(),
+        listarMotoristasParaViagem(usuario),
+      ]);
 
       if (cancelado) return;
 
@@ -78,40 +107,28 @@ export function AbrirViagemView() {
         setCarregandoDados(false);
         return;
       }
-
       if (!resRotas.ok) {
         setErroCarregamento(resRotas.mensagem);
         setCarregandoDados(false);
         return;
       }
+      if (!resMotoristas.ok) {
+        setErroCarregamento(resMotoristas.mensagem);
+        setCarregandoDados(false);
+        return;
+      }
 
       setVeiculos(resVeiculos.data);
-      // Apenas rotas ativas para seleção
-      setRotas(resRotas.data.filter((r) => r.ativa));
+      setRotas(resRotas.data);
 
-      // Se for Motorista, fixa nele mesmo (regra RLS-04 do banco)
-      if (ehMotorista && usuario) {
-        setMotoristas([{ value: usuario.id, label: usuario.nome, description: usuario.email }]);
+      if (ehMotorista) {
+        // RLS-04 do banco: o Motorista só abre para si mesmo.
+        setMotoristas([{ id: usuario.id, nome: usuario.nome, email: usuario.email }]);
         setMotoristaId(usuario.id);
       } else {
-        // Admin ou Gestor: busca lista de motoristas / usuários ativos
-        const { data: usuariosData } = await supabase
-          .from('usuario')
-          .select('id, nome, email')
-          .eq('status', 'Ativo')
-          .order('nome');
-
-        if (!cancelado && usuariosData) {
-          const opcoes = usuariosData.map((u) => ({
-            value: u.id,
-            label: u.nome,
-            description: u.email,
-          }));
-          setMotoristas(opcoes);
-          if (!motoristaId && usuario) {
-            setMotoristaId(usuario.id);
-          }
-        }
+        // Admin/Gestor abre para motoristas; o próprio usuário também aparece para ser o padrão.
+        setMotoristas(resMotoristas.data);
+        setMotoristaId((atual) => atual ?? usuario.id);
       }
 
       setCarregandoDados(false);
@@ -121,67 +138,86 @@ export function AbrirViagemView() {
 
     return () => {
       cancelado = true;
+      // Uma resposta de veículo ainda em voo não pode voltar depois de a tela sair.
+      requisicaoVeiculoRef.current += 1;
     };
-  }, [ehMotorista, usuario]);
+  }, [ehMotorista, tentativa, usuario]);
 
-  // Ao selecionar um veículo, consulta último hodômetro e se já há viagem em andamento
   async function aoSelecionarVeiculo(id: string) {
+    const requisicao = requisicaoVeiculoRef.current + 1;
+    requisicaoVeiculoRef.current = requisicao;
+
     setVeiculoId(id);
     setErros((prev) => ({ ...prev, veiculo_id: undefined }));
+    // O hodômetro pertence ao veículo selecionado: limpa antes de consultar o novo.
+    setHodometroInicial('');
+    setUltimoHodometroVeiculo(null);
 
-    // Consulta se o veículo já está em viagem
-    const resAndamento = await buscarViagemEmAndamento(id);
-    if (resAndamento.ok && resAndamento.data) {
+    const resVeiculo = await buscarVeiculoParaViagem(id);
+    if (requisicao !== requisicaoVeiculoRef.current) return;
+
+    if (!resVeiculo.ok) {
+      setErros((prev) => ({ ...prev, veiculo_id: resVeiculo.mensagem }));
+      return;
+    }
+
+    const statusVeiculo = resVeiculo.data.status;
+    if (statusVeiculo !== 'Disponivel') {
       setErros((prev) => ({
         ...prev,
-        veiculo_id: 'Este veículo já possui uma viagem em andamento.',
+        veiculo_id: MENSAGEM_VEICULO_INDISPONIVEL[statusVeiculo],
       }));
       return;
     }
 
-    // Consulta o último hodômetro final registrado para sugerir/preencher o inicial
+    // Para Motorista, o cache de viagens pode não conter o último hodômetro de viagens que o
+    // RLS esconde. O servidor valida o VG004 no sync; exibir um valor parcial seria pior.
+    if (!ehAdminOuGestor) return;
+
     const resHodometro = await buscarUltimoHodometro(id);
+    if (requisicao !== requisicaoVeiculoRef.current) return;
+
     if (resHodometro.ok && resHodometro.data !== null) {
       setUltimoHodometroVeiculo(resHodometro.data);
       setHodometroInicial(String(resHodometro.data));
-    } else {
-      setUltimoHodometroVeiculo(null);
     }
   }
 
   async function submeter() {
-    const novosErros: ErrosFormulario = {};
+    if (salvando) return;
 
-    if (!veiculoId) novosErros.veiculo_id = 'Selecione um veículo.';
-    if (!rotaId) novosErros.rota_id = 'Selecione uma rota.';
-    if (!motoristaId) novosErros.motorista_id = 'Selecione um motorista.';
+    const validacao = abrirViagemComUltimoHodometroSchema(ultimoHodometroVeiculo).safeParse({
+      veiculo_id: veiculoId ?? '',
+      rota_id: rotaId ?? '',
+      motorista_id: motoristaId ?? '',
+      hodometro_inicial: parseHodometro(hodometroInicial) ?? Number.NaN,
+    });
 
-    const valorHodometro = Number(hodometroInicial.replace(',', '.'));
-    if (!hodometroInicial.trim() || isNaN(valorHodometro) || valorHodometro < 0) {
-      novosErros.hodometro_inicial = 'Informe um hodômetro inicial válido (maior ou igual a zero).';
-    } else if (ultimoHodometroVeiculo !== null && valorHodometro < ultimoHodometroVeiculo) {
-      novosErros.hodometro_inicial = `O hodômetro inicial não pode ser menor que o último final (${formatarHodometro(ultimoHodometroVeiculo)} km).`;
-    }
-
-    if (Object.keys(novosErros).length > 0) {
-      setErros(novosErros);
+    if (!validacao.success) {
+      // As mensagens vêm do schema; a tela não repete texto de validação.
+      const fieldErrors = z.flattenError(validacao.error).fieldErrors;
+      setErros({
+        veiculo_id: fieldErrors.veiculo_id?.[0],
+        rota_id: fieldErrors.rota_id?.[0],
+        motorista_id: fieldErrors.motorista_id?.[0],
+        hodometro_inicial: fieldErrors.hodometro_inicial?.[0],
+      });
       return;
     }
 
     setSalvando(true);
     setErros({});
 
-    // REGRA CRÍTICA: km_rodado NUNCA é enviado no insert
+    // REGRA CRÍTICA: km_rodado NUNCA entra no insert (coluna gerada no Postgres).
     const resultado = await abrirViagem({
-      veiculo_id: veiculoId!,
-      rota_id: rotaId!,
-      motorista_id: motoristaId!,
-      hodometro_inicial: valorHodometro,
+      veiculo_id: validacao.data.veiculo_id,
+      rota_id: validacao.data.rota_id,
+      motorista_id: validacao.data.motorista_id,
+      hodometro_inicial: validacao.data.hodometro_inicial,
     });
 
-    setSalvando(false);
-
     if (!resultado.ok) {
+      setSalvando(false);
       if (resultado.campo) {
         setErros({ [resultado.campo]: resultado.mensagem });
       }
@@ -189,16 +225,24 @@ export function AbrirViagemView() {
       return;
     }
 
-    setFeedback({ mensagem: 'Viagem aberta com sucesso!', tone: 'success' });
-    setTimeout(() => {
-      router.back();
-    }, 600);
+    // O botão segue em loading até a tela fechar: sem setTimeout, o toque repetido durante a
+    // mensagem de sucesso não abre uma segunda viagem.
+    setFeedback({
+      mensagem: 'Viagem aberta com sucesso! Os dados serão enviados quando houver conexão.',
+      tone: 'success',
+    });
+  }
+
+  function dispensarFeedback() {
+    const eraSucesso = feedback?.tone === 'success';
+    setFeedback(null);
+    if (eraSucesso) router.back();
   }
 
   const opcoesVeiculos: SelectOption[] = veiculos.map((v) => ({
     value: v.id,
     label: `${v.placa} • ${v.modelo}`,
-    description: `Status: ${v.status} | Capacidade: ${v.capacidade_carga} t`,
+    description: `Status: ${rotuloStatusVeiculo[v.status]} | Capacidade: ${v.capacidade_carga} t`,
   }));
 
   const opcoesRotas: SelectOption[] = rotas.map((r) => ({
@@ -207,27 +251,53 @@ export function AbrirViagemView() {
     description: `Distância estimada: ${r.distancia_estimada_km} km`,
   }));
 
+  const opcoesMotoristas: SelectOption[] = motoristas.map((m) => ({
+    value: m.id,
+    label: m.nome,
+    description: m.email ?? undefined,
+  }));
+
+  const semVeiculos = !carregandoDados && !erroCarregamento && veiculos.length === 0;
+  const semRotas = !carregandoDados && !erroCarregamento && rotas.length === 0;
+  const semDados = semVeiculos || semRotas;
+
   return (
     <Screen
       scroll
       underHeader
       overlay={
         feedback ? (
-          <Snackbar message={feedback.mensagem} tone={feedback.tone} onDismiss={() => setFeedback(null)} />
+          <Snackbar message={feedback.mensagem} tone={feedback.tone} onDismiss={dispensarFeedback} />
         ) : undefined
       }
     >
       {carregandoDados ? (
         <View style={styles.centro}>
-          <ActivityIndicator size="large" color={colors.accent} />
+          <ActivityIndicator
+            size="large"
+            color={colors.accent}
+            accessibilityLabel="Carregando dados da viagem"
+          />
         </View>
       ) : erroCarregamento ? (
         <EmptyState
           icon="viagens"
-          title="Erro ao carregar dados"
+          title="Não foi possível carregar os dados"
           description={erroCarregamento}
           actionLabel="Tentar novamente"
-          onAction={() => router.replace('/viagens/nova')}
+          onAction={() => setTentativa((atual) => atual + 1)}
+        />
+      ) : semDados ? (
+        <EmptyState
+          icon="viagens"
+          title={semVeiculos ? 'Nenhum veículo disponível' : 'Nenhuma rota ativa'}
+          description={
+            semVeiculos
+              ? 'Todos os veículos estão em viagem ou em manutenção, ou o cache ainda não foi baixado. Conecte-se para atualizar.'
+              : 'Cadastre uma rota ativa ou conecte-se à internet para atualizar os dados.'
+          }
+          actionLabel="Tentar novamente"
+          onAction={() => setTentativa((atual) => atual + 1)}
         />
       ) : (
         <Column gap="lg">
@@ -235,7 +305,6 @@ export function AbrirViagemView() {
             <Column gap="md">
               <Text variant="subheading">Informações da nova viagem</Text>
 
-              {/* 1. Seleção de Veículo */}
               <Select
                 label="Veículo"
                 placeholder="Selecione o veículo"
@@ -245,7 +314,6 @@ export function AbrirViagemView() {
                 error={erros.veiculo_id}
               />
 
-              {/* 2. Seleção de Rota */}
               <Select
                 label="Rota"
                 placeholder="Selecione a rota"
@@ -258,11 +326,10 @@ export function AbrirViagemView() {
                 error={erros.rota_id}
               />
 
-              {/* 3. Seleção de Motorista */}
               <Select
                 label="Motorista"
                 placeholder="Selecione o motorista"
-                options={motoristas}
+                options={opcoesMotoristas}
                 value={motoristaId}
                 disabled={ehMotorista}
                 onChange={(valor) => {
@@ -272,9 +339,8 @@ export function AbrirViagemView() {
                 error={erros.motorista_id}
               />
 
-              {/* 4. Apontamento de Hodômetro Inicial */}
               <Input
-                label="Hodômetro Inicial (km)"
+                label="Hodômetro inicial (km)"
                 placeholder="Ex.: 15000"
                 keyboardType="numeric"
                 value={hodometroInicial}
@@ -285,7 +351,7 @@ export function AbrirViagemView() {
                 error={erros.hodometro_inicial}
               />
 
-              {ultimoHodometroVeiculo !== null && (
+              {ehAdminOuGestor && ultimoHodometroVeiculo !== null && (
                 <Text variant="caption" tone="muted">
                   {`Último hodômetro final registrado: ${formatarHodometro(ultimoHodometroVeiculo)} km`}
                 </Text>

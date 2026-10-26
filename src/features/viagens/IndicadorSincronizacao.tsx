@@ -2,12 +2,16 @@ import { useEffect } from 'react';
 import { ActivityIndicator, StyleSheet, View } from 'react-native';
 
 import { Badge, Card, Column, Text, colors, spacing } from '@/ui';
+
 import { useSyncStore } from './syncStore';
 
 export type IndicadorSincronizacaoProps = {
   isOnline?: boolean;
   pendentes?: number;
+  comErro?: number;
+  /** Nome antigo mantido para os testes/chamadas que ainda passam `conflitos`. */
   conflitos?: number;
+  emRevisao?: number;
   sincronizando?: boolean;
   atualizarAoMontar?: boolean;
 };
@@ -15,19 +19,23 @@ export type IndicadorSincronizacaoProps = {
 export function IndicadorSincronizacao({
   isOnline: isOnlineProp,
   pendentes: pendentesProp,
+  comErro: comErroProp,
   conflitos: conflitosProp,
+  emRevisao: emRevisaoProp,
   sincronizando: sincronizandoProp,
   atualizarAoMontar = true,
 }: IndicadorSincronizacaoProps = {}) {
   const storeOnline = useSyncStore((state) => state.isOnline);
   const storePendentes = useSyncStore((state) => state.pendentes);
-  const storeConflitos = useSyncStore((state) => state.conflitos);
+  const storeComErro = useSyncStore((state) => state.comErro);
+  const storeEmRevisao = useSyncStore((state) => state.emRevisao);
   const storeSincronizando = useSyncStore((state) => state.sincronizando);
   const atualizarStatus = useSyncStore((state) => state.atualizarStatus);
 
   const isOnline = isOnlineProp ?? storeOnline;
   const pendentes = pendentesProp ?? storePendentes;
-  const conflitos = conflitosProp ?? storeConflitos;
+  const comErro = comErroProp ?? storeComErro;
+  const emRevisao = emRevisaoProp ?? conflitosProp ?? storeEmRevisao;
   const sincronizando = sincronizandoProp ?? storeSincronizando;
 
   useEffect(() => {
@@ -36,14 +44,14 @@ export function IndicadorSincronizacao({
     }
   }, [atualizarAoMontar, pendentesProp, isOnlineProp, atualizarStatus]);
 
-  // Se estiver online, sem itens pendentes na outbox e sem conflitos, não ocupa espaço visual
-  if (isOnline && pendentes === 0 && conflitos === 0 && !sincronizando) {
+  // Online, sem pendência, sem erro e sem revisão: não ocupa espaço visual.
+  if (isOnline && pendentes === 0 && emRevisao === 0 && comErro === 0 && !sincronizando) {
     return null;
   }
 
   const textoPendencias =
     pendentes > 0
-      ? `${pendentes} ${pendentes === 1 ? 'registo a aguardar sincronização' : 'registos a aguardar sincronização'}`
+      ? `${pendentes} ${pendentes === 1 ? 'registro aguardando sincronização' : 'registros aguardando sincronização'}`
       : undefined;
 
   return (
@@ -56,12 +64,12 @@ export function IndicadorSincronizacao({
       <Card>
         <Column gap="xs">
           <View style={styles.linha}>
-            {!isOnline && <Badge label="offline" tone="neutral" />}
+            {!isOnline && <Badge label="Offline" tone="neutral" />}
             {sincronizando && (
               <View style={styles.carregando}>
                 <ActivityIndicator size="small" color={colors.accent} />
                 <Text variant="caption" tone="muted">
-                  A sincronizar...
+                  Sincronizando...
                 </Text>
               </View>
             )}
@@ -73,17 +81,27 @@ export function IndicadorSincronizacao({
             </Text>
           )}
 
-          {!isOnline && pendentes === 0 && (
+          {!isOnline && (
             <Text variant="bodySm" tone="muted">
-              As operações serão guardadas no dispositivo e enviadas quando a internet voltar.
+              {pendentes === 0
+                ? 'As operações serão guardadas no dispositivo e enviadas quando a internet voltar.'
+                : 'Os registros serão enviados quando a internet voltar.'}
             </Text>
           )}
 
-          {conflitos > 0 && (
+          {comErro > 0 && (
             <Text variant="bodySm" tone="muted">
-              {conflitos === 1
-                ? '1 conflito detectado (aguardando revisão do gestor).'
-                : `${conflitos} conflitos detectados (aguardando revisão do gestor).`}
+              {comErro === 1
+                ? '1 registro não pôde ser enviado. Nova tentativa automática em instantes.'
+                : `${comErro} registros não puderam ser enviados. Nova tentativa automática em instantes.`}
+            </Text>
+          )}
+
+          {emRevisao > 0 && (
+            <Text variant="bodySm" tone="muted">
+              {emRevisao === 1
+                ? '1 registro está em revisão com o gestor.'
+                : `${emRevisao} registros estão em revisão com o gestor.`}
             </Text>
           )}
         </Column>

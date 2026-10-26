@@ -32,3 +32,12 @@ jest.mock('expo-network', () => ({
   addNetworkStateListener: jest.fn().mockReturnValue({ remove: jest.fn() }),
 }));
 
+// O UUID v7 usa o CSPRNG nativo (`expo-crypto`), que não existe no Jest. O Node tem a mesma
+// garantia criptográfica, então o teste exercita o gerador real de UUID sem trocar por Math.random.
+jest.mock('expo-crypto', () => {
+  const { randomBytes } = jest.requireActual<typeof import('node:crypto')>('node:crypto');
+  return {
+    getRandomBytes: (tamanho: number) => new Uint8Array(randomBytes(tamanho)),
+  };
+});
+

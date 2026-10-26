@@ -50,7 +50,11 @@ const colunasViagem: Record<keyof Row<'viagem'>, true> = {
 };
 
 // `getTableColumns` devolve as colunas pela chave do objeto, que no schema é igual ao nome no banco.
-const nomes = (colunas: object) => Object.keys(colunas).sort();
+// `em_revisao` é local (o Postgres não tem essa coluna): fica fora da comparação de paridade.
+const nomes = (colunas: object) =>
+  Object.keys(colunas)
+    .filter((nome) => nome !== 'em_revisao')
+    .sort();
 
 describe('paridade Postgres x Drizzle', () => {
   it.each([

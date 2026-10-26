@@ -3,6 +3,7 @@ import {
   distanciaUltrapassaEstimativa,
   formatarHodometro,
   formatarKm,
+  parseHodometro,
 } from '../calculo';
 
 describe('calculo de viagem (US08)', () => {
@@ -64,6 +65,23 @@ describe('calculo de viagem (US08)', () => {
       expect(formatarKm(null)).toBe('—');
       expect(formatarHodometro(15230)).toBe('15.230');
       expect(formatarHodometro(null)).toBe('—');
+    });
+  });
+
+  describe('parseHodometro (entrada pt-BR)', () => {
+    it.each([
+      ['15000', 15000],
+      ['15.000', 15000],
+      ['15.000,5', 15000.5],
+      ['1.234.567', 1234567],
+      ['15000.5', 15000.5],
+      ['0', 0],
+    ])('lê "%s" como %s', (texto, esperado) => {
+      expect(parseHodometro(texto)).toBe(esperado);
+    });
+
+    it.each(['', '   ', 'abc', '15,', '15.00.0', '-1'])('recusa "%s"', (texto) => {
+      expect(parseHodometro(texto)).toBeNull();
     });
   });
 });

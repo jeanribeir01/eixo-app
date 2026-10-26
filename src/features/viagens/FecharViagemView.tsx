@@ -1,6 +1,7 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useRouter } from 'expo-router';
-import { ActivityIndicator, Modal, StyleSheet, View } from 'react-native';
+import { ActivityIndicator, Alert, StyleSheet, View } from 'react-native';
+import { z } from 'zod';
 
 import {
   Badge,
@@ -13,7 +14,6 @@ import {
   Snackbar,
   Text,
   colors,
-  radius,
   spacing,
 } from '@/ui';
 
@@ -22,8 +22,10 @@ import {
   distanciaUltrapassaEstimativa,
   formatarHodometro,
   formatarKm,
+  parseHodometro,
 } from './calculo';
-import type { ViagemDetalhada } from './types';
+import { fecharViagemFormSchema } from './schema';
+import type { StatusViagem, ViagemDetalhada } from './types';
 import { buscarViagemPorId, fecharViagem } from './viagensRepository';
 
 export type FecharViagemViewProps = {
@@ -35,6 +37,14 @@ type Feedback = {
   tone: 'success' | 'error';
 };
 
+// O banco guarda "Finalizada", mas o critério de aceite da US08 exibe "Concluída"
+// (mesmo padrão de EmManutencao → "Em Manutenção").
+const ROTULO_STATUS_VIAGEM: Record<StatusViagem, string> = {
+  EmAndamento: 'Em andamento',
+  Finalizada: 'Concluída',
+  Cancelada: 'Cancelada',
+};
+
 export function FecharViagemView({ viagemId }: FecharViagemViewProps) {
   const router = useRouter();
 
@@ -44,9 +54,11 @@ export function FecharViagemView({ viagemId }: FecharViagemViewProps) {
 
   const [hodometroFinal, setHodometroFinal] = useState('');
   const [erroHodometro, setErroHodometro] = useState<string | null>(null);
-  const [modalConfirmacaoAberto, setModalConfirmacaoAberto] = useState(false);
   const [fechando, setFechando] = useState(false);
   const [feedback, setFeedback] = useState<Feedback | null>(null);
+  // O Alert guarda a closure do primeiro render; o estado `fechando` sozinho não barra um
+  // segundo toque em "Confirmar" antes do próximo render. O ref é a guarda síncrona.
+  const fechandoRef = useRef(false);
 
   useEffect(() => {
     let cancelado = false;
@@ -76,13 +88,12 @@ export function FecharViagemView({ viagemId }: FecharViagemViewProps) {
     };
   }, [viagemId]);
 
-  const valorFinalNum = Number(hodometroFinal.replace(',', '.'));
-  const hodometroValido = !isNaN(valorFinalNum) && hodometroFinal.trim().length > 0;
+  const valorFinalNum = parseHodometro(hodometroFinal);
   const hodometroInicial = viagem?.hodometro_inicial ?? 0;
 
   // Passo 3.1: Cálculo Offline da quilometragem
   const kmCalculado =
-    hodometroValido && valorFinalNum > hodometroInicial
+    valorFinalNum !== null && valorFinalNum > hodometroInicial
       ? calcularKmRodado({
           hodometro_inicial: hodometroInicial,
           hodometro_final: valorFinalNum,
@@ -97,46 +108,75 @@ export function FecharViagemView({ viagemId }: FecharViagemViewProps) {
   );
 
   function solicitarConfirmacao() {
-    if (!hodometroValido || valorFinalNum <= 0) {
-      setErroHodometro('Informe um hodômetro final válido maior que zero.');
-      return;
-    }
+    const validacao = fecharViagemFormSchema.safeParse({
+      hodometro_inicial: hodometroInicial,
+      hodometro_final: valorFinalNum ?? Number.NaN,
+    });
 
-    if (valorFinalNum <= hodometroInicial) {
-      setErroHodometro(
-        `O hodômetro final deve ser maior que o inicial (${formatarHodometro(hodometroInicial)} km).`,
-      );
+    if (!validacao.success) {
+      // As mensagens vêm do schema; a tela não repete texto de validação.
+      const fieldErrors = z.flattenError(validacao.error).fieldErrors;
+      setErroHodometro(fieldErrors.hodometro_final?.[0] ?? 'Hodômetro final inválido.');
       return;
     }
 
     setErroHodometro(null);
-    // Passo 3.2: Abre modal de confirmação com o texto exigido
-    setModalConfirmacaoAberto(true);
+
+    // Passo 3.2: confirmação no Alert padrão do sistema, com a distância já formatada.
+    const mensagem = `${formatarKm(kmCalculado)} rodados, confirma?`;
+    const aviso = distanciaExcessiva
+      ? '\n\nAtenção: a distância percorrida é consideravelmente superior à distância estimada para esta rota.'
+      : '';
+
+    Alert.alert('Confirmar encerramento', `${mensagem}${aviso}`, [
+      { text: 'Cancelar', style: 'cancel' },
+      { text: 'Confirmar', onPress: () => executarFechamento(validacao.data.hodometro_final) },
+    ]);
   }
 
-  async function executarFechamento() {
-    setModalConfirmacaoAberto(false);
+  async function executarFechamento(hodometroFinalValidado: number) {
+    if (fechandoRef.current) return;
+
+    fechandoRef.current = true;
     setFechando(true);
+    let sucesso = false;
 
-    // REGRA CRÍTICA: km_rodado NUNCA é enviado no update
-    const resultado = await fecharViagem(viagemId, {
-      hodometro_final: valorFinalNum,
-    });
+    try {
+      // REGRA CRÍTICA: km_rodado NUNCA é enviado no update
+      const resultado = await fecharViagem(viagemId, {
+        hodometro_final: hodometroFinalValidado,
+      });
 
-    setFechando(false);
-
-    if (!resultado.ok) {
-      if (resultado.campo === 'hodometro_final') {
-        setErroHodometro(resultado.mensagem);
+      if (!resultado.ok) {
+        if (resultado.campo === 'hodometro_final') {
+          setErroHodometro(resultado.mensagem);
+        }
+        setFeedback({ mensagem: resultado.mensagem, tone: 'error' });
+        return;
       }
-      setFeedback({ mensagem: resultado.mensagem, tone: 'error' });
-      return;
-    }
 
-    setFeedback({ mensagem: 'Viagem finalizada com sucesso!', tone: 'success' });
-    setTimeout(() => {
-      router.back();
-    }, 600);
+      // O botão segue em loading até a tela fechar: sem setTimeout, o toque repetido durante a
+      // mensagem de sucesso não fecha a viagem duas vezes.
+      sucesso = true;
+      setFeedback({ mensagem: 'Viagem concluída com sucesso!', tone: 'success' });
+    } catch {
+      setFeedback({
+        mensagem: 'Não foi possível fechar a viagem. Tente novamente.',
+        tone: 'error',
+      });
+    } finally {
+      // Sucesso mantém o loading até o Snackbar navegar de volta; falha e exceção reabilitam.
+      if (!sucesso) {
+        fechandoRef.current = false;
+        setFechando(false);
+      }
+    }
+  }
+
+  function dispensarFeedback() {
+    const eraSucesso = feedback?.tone === 'success';
+    setFeedback(null);
+    if (eraSucesso) router.back();
   }
 
   return (
@@ -145,7 +185,7 @@ export function FecharViagemView({ viagemId }: FecharViagemViewProps) {
       underHeader
       overlay={
         feedback ? (
-          <Snackbar message={feedback.mensagem} tone={feedback.tone} onDismiss={() => setFeedback(null)} />
+          <Snackbar message={feedback.mensagem} tone={feedback.tone} onDismiss={dispensarFeedback} />
         ) : undefined
       }
     >
@@ -165,7 +205,7 @@ export function FecharViagemView({ viagemId }: FecharViagemViewProps) {
         <EmptyState
           icon="viagens"
           title="Viagem já encerrada"
-          description={`Esta viagem está com o status "${viagem.status}" e não pode ser fechada novamente.`}
+          description={`Esta viagem está com o status "${ROTULO_STATUS_VIAGEM[viagem.status]}" e não pode ser fechada novamente.`}
           actionLabel="Voltar"
           onAction={() => router.back()}
         />
@@ -233,8 +273,9 @@ export function FecharViagemView({ viagemId }: FecharViagemViewProps) {
               {/* Passo 3.3: Feedback visual na tela caso passe muito da estimativa */}
               {distanciaExcessiva && (
                 <View style={styles.blocoAviso}>
+                  {/* Verde/vermelho são exclusivos de valor financeiro; o texto já avisa do desvio. */}
                   <Badge
-                    tone="danger"
+                    tone="neutral"
                     label={`Atenção: ${formatarKm(kmCalculado)} rodados excede a estimativa da rota (${viagem.rota?.distancia_estimada_km} km).`}
                   />
                   <Text variant="caption" tone="body">
@@ -255,47 +296,6 @@ export function FecharViagemView({ viagemId }: FecharViagemViewProps) {
           />
         </Column>
       )}
-
-      {/* Passo 3.2: Modal de Confirmação com o texto exigido "X km rodados, confirma?" */}
-      <Modal
-        visible={modalConfirmacaoAberto}
-        transparent
-        animationType="fade"
-        onRequestClose={() => setModalConfirmacaoAberto(false)}
-      >
-        <View style={styles.fundoModal}>
-          <View style={styles.folhaModal}>
-            <Column gap="md">
-              <Text variant="subheading">Confirmar encerramento</Text>
-
-              {/* Texto exigido: "X km rodados, confirma?" */}
-              <Text variant="body" weight="medium">
-                {`${kmCalculado ?? 0} km rodados, confirma?`}
-              </Text>
-
-              {distanciaExcessiva && (
-                <Text variant="bodySm" tone="body">
-                  Atenção: A distância percorrida é consideravelmente superior à distância estimada para esta rota.
-                </Text>
-              )}
-
-              <View style={styles.botoesModal}>
-                <Button
-                  label="Cancelar"
-                  variant="ghost"
-                  onPress={() => setModalConfirmacaoAberto(false)}
-                />
-                <Button
-                  label="Confirmar"
-                  variant="primary"
-                  loading={fechando}
-                  onPress={executarFechamento}
-                />
-              </View>
-            </Column>
-          </View>
-        </View>
-      </Modal>
     </Screen>
   );
 }
@@ -317,27 +317,5 @@ const styles = StyleSheet.create({
   blocoAviso: {
     gap: spacing.xs,
     paddingTop: spacing.xs,
-  },
-  fundoModal: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    backgroundColor: `${colors.inverted}80`,
-    padding: spacing.base,
-  },
-  folhaModal: {
-    width: '100%',
-    maxWidth: 420,
-    backgroundColor: colors.surface,
-    borderRadius: radius.card,
-    borderWidth: 1,
-    borderColor: colors.border,
-    padding: spacing.lg,
-  },
-  botoesModal: {
-    flexDirection: 'row',
-    justifyContent: 'flex-end',
-    gap: spacing.sm,
-    marginTop: spacing.sm,
   },
 });

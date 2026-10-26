@@ -8,6 +8,13 @@
       "when": 1792153783729,
       "tag": "0000_daffy_ben_grimm",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "6",
+      "when": 1793018959834,
+      "tag": "0001_woozy_diamondback",
+      "breakpoints": true
     }
   ]
 }

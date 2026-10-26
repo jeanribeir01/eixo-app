@@ -4,6 +4,7 @@ export * from './calculo';
 export { ViagensListView } from './ViagensListView';
 export { AbrirViagemView } from './AbrirViagemView';
 export { FecharViagemView, type FecharViagemViewProps } from './FecharViagemView';
+export { RevisoesViagensView } from './RevisoesViagensView';
 export { IndicadorSincronizacao } from './IndicadorSincronizacao';
 export * from './sync';
 export * from './syncStore';
