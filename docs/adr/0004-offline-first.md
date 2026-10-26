@@ -86,7 +86,7 @@ tasks compartilham.
 | `babel-plugin-inline-import` (devDependency) | Permite o Metro importar os `.sql` gerados pelo drizzle-kit. Configurado em `babel.config.js` (plugin) e `metro.config.js` (`sql` em `sourceExts`) |
 | `babel-preset-expo` (devDependency) | Preset oficial do Babel para Expo, referenciado em `babel.config.js` e no transform do projeto `supabase` do Jest. Só é usado em build e teste |
 
-`expo-sqlite` e `expo-network` são módulos nativos. **O development build precisa ser gerado de
+`expo-sqlite`, `expo-network` e `expo-crypto` são módulos nativos. **O development build precisa ser gerado de
 novo** (`eas build --profile development`), como já avisado no ADR 0003.
 
 ## Alternativas consideradas
