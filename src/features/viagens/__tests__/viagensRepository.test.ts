@@ -17,6 +17,7 @@ import {
   fecharViagem,
   fecharViagemSchema,
   getDb,
+  lerPerfilDoCacheLocal,
   limparCacheLocalNoLogout,
   listarMotoristasParaViagem,
   listarRotasParaViagem,
@@ -707,27 +708,34 @@ describe('viagensRepository', () => {
       }
     });
 
-    it('listarMotoristasParaViagem coloca o usuário logado primeiro e só ativos', async () => {
+    it('listarMotoristasParaViagem traz só motoristas ativos, sem o gestor logado', async () => {
       banco.db
         .insert(schema.usuarioCache)
-        .values({
-          id: 'motorista-bloqueado',
-          nome: 'Motorista Bloqueado',
-          email: null,
-          status: 'Bloqueado',
-          perfil: 'Motorista',
-          data_atualizacao: AGORA,
-        })
+        .values([
+          {
+            id: 'motorista-bloqueado',
+            nome: 'Motorista Bloqueado',
+            email: null,
+            status: 'Bloqueado',
+            perfil: 'Motorista',
+            data_atualizacao: AGORA,
+          },
+          {
+            id: 'gestor-logado',
+            nome: 'Beatriz Gestora',
+            email: 'beatriz@transportadora.com',
+            status: 'Ativo',
+            perfil: 'Gestor de Frota',
+            data_atualizacao: AGORA,
+          },
+        ])
         .run();
 
-      const resultado = await listarMotoristasParaViagem({
-        id: OUTRO_MOTORISTA_ID,
-        nome: 'Ana Souza',
-        email: 'ana@transportadora.com',
-      });
+      const resultado = await listarMotoristasParaViagem();
 
       expect(resultado.ok).toBe(true);
       if (resultado.ok) {
+        // Ordem alfabética: Ana Souza, Carlos da Silva. Bloqueado e gestor ficam de fora.
         expect(resultado.data.map((item) => item.id)).toEqual([OUTRO_MOTORISTA_ID, MOTORISTA_ID]);
       }
     });
@@ -862,16 +870,25 @@ describe('viagensRepository', () => {
     });
 
     it('prepararSessaoLocal com outra conta não deixa vazar dados da conta anterior', async () => {
-      semearMinimo();
       definirUsuarioLocal(USUARIO_LOGADO);
-      await abrirViagem({
-        id: VIAGEM_ID,
-        veiculo_id: VEICULO_ID,
-        rota_id: ROTA_ID,
-        motorista_id: MOTORISTA_ID,
-        hodometro_inicial: 10000,
-      });
       await prepararSessaoLocal(USUARIO_LOGADO);
+      semearMinimo();
+
+      // Uma viagem já sincronizada da conta anterior: é só cache, sai na troca.
+      banco.db
+        .insert(schema.viagem)
+        .values({
+          id: 'viagem-sincronizada',
+          veiculo_id: VEICULO_ID,
+          rota_id: ROTA_ID,
+          motorista_id: MOTORISTA_ID,
+          hodometro_inicial: 1000,
+          hodometro_final: 1500,
+          status: 'Finalizada',
+          data_inclusao: AGORA,
+          data_atualizacao: AGORA,
+        })
+        .run();
 
       definirUsuarioLocal('outra-conta');
       const resultado = await prepararSessaoLocal('outra-conta');
@@ -881,11 +898,107 @@ describe('viagensRepository', () => {
       expect(banco.db.select().from(schema.veiculo).all()).toHaveLength(0);
       expect(banco.db.select().from(schema.rota).all()).toHaveLength(0);
       expect(banco.db.select().from(schema.usuarioCache).all()).toHaveLength(0);
+    });
 
-      // A operação ainda não sincronizada da conta anterior continua na outbox.
+    it('troca de conta preserva a viagem offline da conta anterior, escondida da conta nova', async () => {
+      definirUsuarioLocal(USUARIO_LOGADO);
+      await prepararSessaoLocal(USUARIO_LOGADO);
+      semearMinimo();
+      await abrirViagem({
+        id: VIAGEM_ID,
+        veiculo_id: VEICULO_ID,
+        rota_id: ROTA_ID,
+        motorista_id: MOTORISTA_ID,
+        hodometro_inicial: 10000,
+      });
+
+      // A sai sem sincronizar; B entra no mesmo aparelho.
+      await limparCacheLocalNoLogout(USUARIO_LOGADO);
+      definirUsuarioLocal('outra-conta');
+      await prepararSessaoLocal('outra-conta');
+
+      // A linha continua no SQLite (com o veículo e a rota que ela referencia)...
+      expect(banco.db.select().from(schema.viagem).all().map((item) => item.id)).toEqual([VIAGEM_ID]);
+      expect(banco.db.select().from(schema.veiculo).all()).toHaveLength(1);
+      // ...mas B não vê nem altera a viagem de A.
+      const listaB = await listarViagens();
+      expect(listaB.ok && listaB.data).toEqual([]);
+      expect((await buscarViagemPorId(VIAGEM_ID)).ok).toBe(false);
+      expect((await fecharViagem(VIAGEM_ID, { hodometro_final: 10500 })).ok).toBe(false);
+
+      // A volta, ainda sem internet, e ainda consegue fechar a própria viagem.
+      definirUsuarioLocal(USUARIO_LOGADO);
+      await prepararSessaoLocal(USUARIO_LOGADO);
+      const listaA = await listarViagens();
+      expect(listaA.ok && listaA.data.map((item) => item.id)).toEqual([VIAGEM_ID]);
+      const fechada = await fecharViagem(VIAGEM_ID, { hodometro_final: 10500 });
+      expect(fechada.ok).toBe(true);
+
       const outbox = banco.db.select().from(schema.outbox).all();
-      expect(outbox).toHaveLength(1);
-      expect(outbox[0]?.usuario_id).toBe(USUARIO_LOGADO);
+      expect(outbox).toHaveLength(2);
+      expect(outbox.every((item) => item.usuario_id === USUARIO_LOGADO)).toBe(true);
+    });
+
+    it('fechar a viagem libera o veículo localmente para a próxima abertura offline', async () => {
+      semearMinimo();
+      definirUsuarioLocal(USUARIO_LOGADO);
+      // A viagem foi aberta online: o pull gravou o veículo como EmViagem.
+      banco.db
+        .insert(schema.viagem)
+        .values({
+          id: VIAGEM_ID,
+          veiculo_id: VEICULO_ID,
+          rota_id: ROTA_ID,
+          motorista_id: MOTORISTA_ID,
+          hodometro_inicial: 10000,
+          status: 'EmAndamento',
+          data_inclusao: AGORA,
+          data_atualizacao: AGORA,
+        })
+        .run();
+      banco.db.update(schema.veiculo).set({ status: 'EmViagem' }).where(eq(schema.veiculo.id, VEICULO_ID)).run();
+
+      const fechada = await fecharViagem(VIAGEM_ID, { hodometro_final: 10500 });
+      expect(fechada.ok).toBe(true);
+
+      const veiculo = banco.db.select().from(schema.veiculo).where(eq(schema.veiculo.id, VEICULO_ID)).get();
+      expect(veiculo?.status).toBe('Disponivel');
+      const disponiveis = await listarVeiculosParaViagem();
+      expect(disponiveis.ok && disponiveis.data.map((item) => item.id)).toEqual([VEICULO_ID]);
+
+      const proxima = await abrirViagem({
+        veiculo_id: VEICULO_ID,
+        rota_id: ROTA_ID,
+        motorista_id: MOTORISTA_ID,
+        hodometro_inicial: 10500,
+      });
+      expect(proxima.ok).toBe(true);
+      const ocupado = banco.db.select().from(schema.veiculo).where(eq(schema.veiculo.id, VEICULO_ID)).get();
+      expect(ocupado?.status).toBe('EmViagem');
+    });
+
+    it('lerPerfilDoCacheLocal só devolve o perfil se o cache é da mesma conta', async () => {
+      semearMinimo();
+      definirUsuarioLocal(MOTORISTA_ID);
+      await prepararSessaoLocal(MOTORISTA_ID);
+      banco.db
+        .insert(schema.usuarioCache)
+        .values({
+          id: MOTORISTA_ID,
+          nome: 'Carlos da Silva',
+          email: 'carlos@transportadora.com',
+          status: 'Ativo',
+          perfil: 'Motorista',
+          data_atualizacao: AGORA,
+        })
+        .onConflictDoNothing()
+        .run();
+
+      expect(lerPerfilDoCacheLocal(MOTORISTA_ID)).toMatchObject({ id: MOTORISTA_ID, perfil: 'Motorista' });
+      expect(lerPerfilDoCacheLocal('outra-conta')).toBeNull();
+
+      await limparCacheLocalNoLogout(MOTORISTA_ID);
+      expect(lerPerfilDoCacheLocal(MOTORISTA_ID)).toBeNull();
     });
 
     it('setDb troca a instância usada pelo repositório', () => {

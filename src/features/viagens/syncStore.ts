@@ -314,6 +314,9 @@ export function startNetworkSyncListener(usuarioId: string): () => void {
   // para o caso de abertura/fechamento acontecerem em sequência.
   const cancelarEscutaEscrita = aoEscreverLocal(() => {
     if (!sessaoAtual() || !preparoConcluido) return;
+    // O contador muda na hora, com ou sem rede: offline o `sincronizarOutbox` sai antes de reler a
+    // fila, e o indicador ficaria mostrando "0 aguardando" com uma viagem recém-gravada.
+    useSyncStore.getState().atualizarStatus();
     if (timerEscrita) clearTimeout(timerEscrita);
     timerEscrita = setTimeout(() => {
       timerEscrita = null;

@@ -63,12 +63,6 @@ const motoristaJoao: MotoristaSelecionavel = {
   email: 'joao@transportadora.com',
 };
 
-const gestorSelecionavel: MotoristaSelecionavel = {
-  id: 'gest-1',
-  nome: 'Gestor de Frota',
-  email: 'gestor@transportadora.com',
-};
-
 const usuarioMotorista = {
   id: 'mot-1',
   nome: 'Carlos Motorista',
@@ -107,6 +101,11 @@ async function selecionarVeiculo(nome: string) {
     fireEvent.press(opcao);
     await Promise.resolve();
   });
+}
+
+async function escolherMotorista(nome: string) {
+  fireEvent.press(screen.getByRole('button', { name: 'Motorista' }));
+  fireEvent.press(await screen.findByRole('button', { name: nome }));
 }
 
 async function preencherFormulario(
@@ -163,7 +162,7 @@ describe('AbrirViagemView', () => {
     jest.spyOn(repo, 'listarRotasParaViagem').mockResolvedValue({ ok: true, data: [mockRota] });
     jest
       .spyOn(repo, 'listarMotoristasParaViagem')
-      .mockResolvedValue({ ok: true, data: [gestorSelecionavel, motoristaCarlos, motoristaJoao] });
+      .mockResolvedValue({ ok: true, data: [motoristaCarlos, motoristaJoao] });
     jest.spyOn(repo, 'buscarUltimoHodometro').mockResolvedValue({ ok: true, data: null });
   });
 
@@ -183,15 +182,23 @@ describe('AbrirViagemView', () => {
   });
 
   it('lê veículos, rotas e motoristas do cache local em vez do Supabase', async () => {
+    (authStore.useProfile as jest.Mock).mockReturnValue(perfilDoUsuario(usuarioGestor));
     render(<AbrirViagemView />);
 
     await screen.findByText('Informações da nova viagem');
 
     expect(repo.listarVeiculosParaViagem).toHaveBeenCalledTimes(1);
     expect(repo.listarRotasParaViagem).toHaveBeenCalledTimes(1);
-    expect(repo.listarMotoristasParaViagem).toHaveBeenCalledWith(
-      expect.objectContaining({ id: 'mot-1' }),
-    );
+    expect(repo.listarMotoristasParaViagem).toHaveBeenCalledTimes(1);
+  });
+
+  it('mostra estado vazio quando o cache não tem motorista ativo (Admin/Gestor)', async () => {
+    (authStore.useProfile as jest.Mock).mockReturnValue(perfilDoUsuario(usuarioGestor));
+    jest.spyOn(repo, 'listarMotoristasParaViagem').mockResolvedValue({ ok: true, data: [] });
+
+    render(<AbrirViagemView />);
+
+    expect(await screen.findByText('Nenhum motorista ativo')).toBeOnTheScreen();
   });
 
   it('mostra carregando enquanto lê o cache local', async () => {
@@ -347,12 +354,13 @@ describe('AbrirViagemView', () => {
     await screen.findByText('Informações da nova viagem');
     await preencherFormulario('15000', { ultimoHodometroPreenchido: 15000 });
     expect(screen.getByText('Último hodômetro final registrado: 15.000 km')).toBeOnTheScreen();
+    await escolherMotorista('João Motorista');
 
     fireEvent.press(screen.getByRole('button', { name: 'Abrir viagem' }));
 
     await waitFor(() => {
       expect(spyAbrir).toHaveBeenCalledWith(
-        expect.objectContaining({ hodometro_inicial: 15000 }),
+        expect.objectContaining({ hodometro_inicial: 15000, motorista_id: 'mot-2' }),
       );
     });
     expect(screen.queryByText(/menor que o último final/i)).not.toBeOnTheScreen();
@@ -419,26 +427,75 @@ describe('AbrirViagemView', () => {
     expect(screen.getByLabelText('Hodômetro inicial (km)')).toHaveDisplayValue('20000');
   });
 
-  it('Admin/Gestor escolhe motorista na lista local e usa a si mesmo como padrão', async () => {
+  it('Admin/Gestor escolhe entre os motoristas ativos, sem responsável pré-selecionado', async () => {
     (authStore.useProfile as jest.Mock).mockReturnValue(perfilDoUsuario(usuarioGestor));
+    const spyAbrir = jest.spyOn(repo, 'abrirViagem');
 
     render(<AbrirViagemView />);
     await screen.findByText('Informações da nova viagem');
 
-    expect(screen.getByText('Gestor de Frota')).toBeOnTheScreen();
+    // O gestor logado não vira o responsável por omissão.
+    expect(screen.queryByText(usuarioGestor.nome)).not.toBeOnTheScreen();
+
+    await preencherFormulario('15000');
+    fireEvent.press(screen.getByRole('button', { name: 'Abrir viagem' }));
+
+    expect(await screen.findByText('Motorista obrigatório.')).toBeOnTheScreen();
+    expect(spyAbrir).not.toHaveBeenCalled();
 
     fireEvent.press(screen.getByRole('button', { name: 'Motorista' }));
-
     expect(await screen.findByRole('button', { name: 'João Motorista' })).toBeOnTheScreen();
     expect(screen.getByRole('button', { name: 'Carlos Motorista' })).toBeOnTheScreen();
+    expect(screen.queryByRole('button', { name: usuarioGestor.nome })).not.toBeOnTheScreen();
   });
 
-  it('motorista tem o campo Motorista travado nele mesmo', async () => {
+  it('Motorista não consulta a lista de usuários e tem o campo travado nele mesmo', async () => {
     render(<AbrirViagemView />);
     await screen.findByText('Informações da nova viagem');
 
+    expect(repo.listarMotoristasParaViagem).not.toHaveBeenCalled();
     expect(screen.getByRole('button', { name: 'Motorista' })).toBeDisabled();
     expect(screen.getByText('Carlos Motorista')).toBeOnTheScreen();
+  });
+
+  it('não apaga o hodômetro que o usuário digitou antes da consulta do último final voltar', async () => {
+    (authStore.useProfile as jest.Mock).mockReturnValue(perfilDoUsuario(usuarioGestor));
+    let resolver: (valor: Resultado<number | null>) => void = () => {};
+    const resposta = new Promise<Resultado<number | null>>((resolve) => {
+      resolver = resolve;
+    });
+    jest.spyOn(repo, 'buscarUltimoHodometro').mockReturnValue(resposta);
+
+    render(<AbrirViagemView />);
+    await screen.findByText('Informações da nova viagem');
+    await selecionarVeiculo('BRA2E19 • R450');
+    await waitFor(() => expect(repo.buscarUltimoHodometro).toHaveBeenCalledWith('veic-1'));
+
+    fireEvent.changeText(screen.getByLabelText('Hodômetro inicial (km)'), '15100');
+
+    await act(async () => {
+      resolver({ ok: true, data: 15000 });
+      await resposta;
+    });
+
+    expect(screen.getByLabelText('Hodômetro inicial (km)')).toHaveDisplayValue('15100');
+    expect(screen.getByText('Último hodômetro final registrado: 15.000 km')).toBeOnTheScreen();
+  });
+
+  it('avisa quando a consulta do último hodômetro falha', async () => {
+    (authStore.useProfile as jest.Mock).mockReturnValue(perfilDoUsuario(usuarioGestor));
+    jest.spyOn(repo, 'buscarUltimoHodometro').mockResolvedValue({
+      ok: false,
+      mensagem: 'Não foi possível consultar o último hodômetro do veículo.',
+    });
+
+    render(<AbrirViagemView />);
+    await screen.findByText('Informações da nova viagem');
+    await selecionarVeiculo('BRA2E19 • R450');
+
+    expect(await screen.findByRole('alert')).toHaveTextContent(
+      'Não foi possível consultar o último hodômetro do veículo.',
+    );
   });
 
   it('mantém o botão em loading e só volta quando o Snackbar de sucesso é dispensado', async () => {

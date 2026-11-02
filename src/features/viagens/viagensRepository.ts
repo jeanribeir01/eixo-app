@@ -1,4 +1,4 @@
-import { and, desc, eq, gt, inArray, isNotNull, lt, notInArray } from 'drizzle-orm';
+import { and, desc, eq, gt, isNotNull, lt, notInArray } from 'drizzle-orm';
 import type { BaseSQLiteDatabase } from 'drizzle-orm/sqlite-core';
 
 import { db } from '@/db/client';
@@ -13,6 +13,7 @@ import {
   viagemDetalhadaSchema,
   viagemSchema,
 } from './schema';
+import { idsDeViagensDeOutrasContas, idsDeViagensNaOutbox } from './outboxLocal';
 import { obterUsuarioLocal } from './sessaoLocal';
 import { notificarEscritaLocal } from './syncBus';
 import type {
@@ -284,6 +285,12 @@ export async function listarViagens(filtro: FiltroViagens = {}): Promise<Resulta
     if (filtro.motorista_id) {
       condicoes.push(eq(schema.viagem.motorista_id, filtro.motorista_id));
     }
+    // Viagem ainda na fila de outra conta do aparelho fica guardada até o dono voltar, mas não
+    // aparece para quem está logado agora.
+    const deOutrasContas = idsDeViagensDeOutrasContas(database, obterUsuarioLocal());
+    if (deOutrasContas.size > 0) {
+      condicoes.push(notInArray(schema.viagem.id, [...deOutrasContas]));
+    }
 
     const query = database
       .select({
@@ -333,7 +340,7 @@ export async function buscarViagemPorId(id: string): Promise<Resultado<ViagemDet
       .where(eq(schema.viagem.id, id))
       .get();
 
-    if (!row) {
+    if (!row || idsDeViagensDeOutrasContas(database, obterUsuarioLocal()).has(id)) {
       return { ok: false, mensagem: 'Viagem não encontrada.' };
     }
 
@@ -445,11 +452,10 @@ export async function listarRotasParaViagem(): Promise<Resultado<RotaSelecionave
   }
 }
 
-export async function listarMotoristasParaViagem(usuario: {
-  id: string;
-  nome: string;
-  email: string;
-}): Promise<Resultado<MotoristaSelecionavel[]>> {
+// Usado só por Admin/Gestor: o Motorista é sempre o próprio responsável. A lista traz apenas
+// usuários ativos com perfil Motorista — o gestor logado não entra, senão a viagem poderia ficar
+// no nome dele sem ninguém perceber.
+export async function listarMotoristasParaViagem(): Promise<Resultado<MotoristaSelecionavel[]>> {
   try {
     const database = getDb();
     const rows = database
@@ -459,23 +465,31 @@ export async function listarMotoristasParaViagem(usuario: {
       .orderBy(schema.usuarioCache.nome)
       .all();
 
-    const opcoes = rows.map((row) => ({ id: row.id, nome: row.nome, email: row.email }));
-    // O próprio usuário logado pode abrir para si mesmo (Admin/Gestor) ou é o único motorista
-    // disponível no cache (Motorista). Se o cache ainda não tem a linha, ela entra da sessão.
-    if (!opcoes.some((opcao) => opcao.id === usuario.id)) {
-      opcoes.unshift({ id: usuario.id, nome: usuario.nome, email: usuario.email });
-    } else {
-      const propria = opcoes.findIndex((opcao) => opcao.id === usuario.id);
-      if (propria > 0) {
-        const [item] = opcoes.splice(propria, 1);
-        opcoes.unshift(item);
-      }
-    }
-
-    return { ok: true, data: opcoes };
+    return { ok: true, data: rows.map((row) => ({ id: row.id, nome: row.nome, email: row.email })) };
   } catch (error) {
     return traduzirErroSqlite(error, 'Não foi possível carregar os motoristas. Tente novamente.');
   }
+}
+
+// Espelho local do trigger `sincroniza_status_veiculo` (20261015000100_viagem_regras.sql). Sem
+// ele, um veículo que veio do servidor como EmViagem continuaria assim depois de um fechamento
+// offline, e a próxima viagem não poderia ser aberta até a internet voltar. O próximo pull de
+// veículos traz o valor do servidor por cima.
+function ocuparVeiculoLocal(database: ViagensDb, veiculoId: string): void {
+  database
+    .update(schema.veiculo)
+    .set({ status: 'EmViagem' })
+    .where(eq(schema.veiculo.id, veiculoId))
+    .run();
+}
+
+function liberarVeiculoLocal(database: ViagensDb, veiculoId: string): void {
+  // Só devolve se ainda está EmViagem: veículo inativado durante a viagem continua Inativo.
+  database
+    .update(schema.veiculo)
+    .set({ status: 'Disponivel' })
+    .where(and(eq(schema.veiculo.id, veiculoId), eq(schema.veiculo.status, 'EmViagem')))
+    .run();
 }
 
 function usuarioDaOutbox(): string | Falha {
@@ -670,6 +684,7 @@ export async function abrirViagem(input: NovaViagemInput): Promise<Resultado<Via
       };
 
       tx.insert(schema.viagem).values(novaViagemLocal).run();
+      ocuparVeiculoLocal(tx as ViagensDb, parsed.data.veiculo_id);
       tx.insert(schema.outbox)
         .values(criarItemOutbox('insert', outboxPayload, usuarioId, agora))
         .run();
@@ -713,7 +728,7 @@ export async function fecharViagem(id: string, input: FecharViagemInput): Promis
         .where(eq(schema.viagem.id, id))
         .get();
 
-      if (!viagemAtual) {
+      if (!viagemAtual || idsDeViagensDeOutrasContas(tx as ViagensDb, usuarioId).has(id)) {
         return { ok: false as const, mensagem: 'Viagem não encontrada.' };
       }
 
@@ -749,6 +764,8 @@ export async function fecharViagem(id: string, input: FecharViagemInput): Promis
         })
         .where(eq(schema.viagem.id, id))
         .run();
+
+      liberarVeiculoLocal(tx as ViagensDb, viagemAtual.veiculo_id);
 
       const outboxPayload = {
         id,
@@ -837,6 +854,8 @@ export async function cancelarViagem(
         })
         .where(eq(schema.viagem.id, id))
         .run();
+
+      liberarVeiculoLocal(tx as ViagensDb, viagemAtual.veiculo_id);
 
       const outboxPayload: Record<string, unknown> = {
         id,
@@ -987,32 +1006,56 @@ export async function corrigirHodometroFinal(
 // Ciclo de vida do cache local
 // ---------------------------------------------------------------------------
 
-function idsDeViagensNaOutbox(database: ViagensDb, usuarioId: string): string[] {
-  const itens = database
-    .select({ payload: schema.outbox.payload })
-    .from(schema.outbox)
-    .where(eq(schema.outbox.usuario_id, usuarioId))
-    .all();
+/**
+ * Remove o cache de leitura (viagens, veículos, rotas e usuários) e mantém só o que ainda tem
+ * operação na outbox de QUALQUER conta do aparelho, com o veículo e a rota que essas viagens
+ * referenciam (FK local). Assim nem logout nem troca de conta apagam uma viagem offline ainda
+ * não sincronizada: ela fica guardada até o dono voltar. As consultas da tela escondem as viagens
+ * que pertencem à fila de outra conta (`idsDeViagensDeOutrasContas`).
+ */
+function limparCachePreservandoPendencias(tx: ViagensDb): void {
+  const pendentes = [...idsDeViagensNaOutbox(tx)];
 
-  const ids = new Set<string>();
-  for (const item of itens) {
-    try {
-      const payload = JSON.parse(item.payload) as { id?: unknown };
-      if (typeof payload.id === 'string' && payload.id.length > 0) {
-        ids.add(payload.id);
-      }
-    } catch {
-      // Payload inválido já será tratado pelo dreno; não impede a limpeza do cache.
-    }
+  if (pendentes.length === 0) {
+    tx.delete(schema.viagem).run();
+    tx.delete(schema.veiculo).run();
+    tx.delete(schema.rota).run();
+    tx.delete(schema.usuarioCache).run();
+    return;
   }
-  return [...ids];
+
+  tx.delete(schema.viagem).where(notInArray(schema.viagem.id, pendentes)).run();
+  const mantidas = tx
+    .select({ veiculo_id: schema.viagem.veiculo_id, rota_id: schema.viagem.rota_id })
+    .from(schema.viagem)
+    .all();
+  const veiculosMantidos = [...new Set(mantidas.map((item) => item.veiculo_id))];
+  const rotasMantidas = [...new Set(mantidas.map((item) => item.rota_id))];
+
+  if (veiculosMantidos.length > 0) {
+    tx.delete(schema.veiculo).where(notInArray(schema.veiculo.id, veiculosMantidos)).run();
+  } else {
+    tx.delete(schema.veiculo).run();
+  }
+  if (rotasMantidas.length > 0) {
+    tx.delete(schema.rota).where(notInArray(schema.rota.id, rotasMantidas)).run();
+  } else {
+    tx.delete(schema.rota).run();
+  }
+  tx.delete(schema.usuarioCache).run();
+}
+
+function definirDonoDoCache(tx: ViagensDb, usuarioId: string): void {
+  tx.insert(schema.syncMeta)
+    .values({ chave: 'cache_owner', valor: usuarioId })
+    .onConflictDoUpdate({ target: schema.syncMeta.chave, set: { valor: usuarioId } })
+    .run();
 }
 
 /**
- * Prepara o banco local para a conta que acabou de entrar. Uma troca de conta limpa o cache da
- * conta anterior, mas preserva as outboxes de todas as contas: elas só serão drenadas quando o
- * respectivo dono entrar novamente. Assim um logout (ou uma falha dele) nunca apaga operação
- * ainda não sincronizada.
+ * Prepara o banco local para a conta que acabou de entrar. Se o cache é de outra conta (ou ficou
+ * sem dono depois de um logout), ele é limpo antes de qualquer tela ler, preservando as pendências
+ * de todas as contas. As outboxes só são drenadas quando o respectivo dono entrar de novo.
  */
 export async function prepararSessaoLocal(usuarioId: string): Promise<Resultado<true>> {
   if (!usuarioId) {
@@ -1037,57 +1080,8 @@ export async function prepararSessaoLocal(usuarioId: string): Promise<Resultado<
 
       if (dono === usuarioId) return;
 
-      // Sem dono (primeiro login desta versão) ou depois de um logout limpo, preserva apenas as
-      // viagens que ainda têm operação na outbox. A outbox sem dono já foi adotada acima.
-      if (!dono || dono === '') {
-        // Logout limpo: as viagens pendentes do usuário foram preservadas junto da outbox.
-        // Mantém somente elas (e os veículos/rotas que elas referenciam) ao entrar de novo.
-        const pendentes = idsDeViagensNaOutbox(database, usuarioId);
-        if (pendentes.length > 0) {
-          tx.delete(schema.viagem).where(notInArray(schema.viagem.id, pendentes)).run();
-          const veiculosMantidos = tx
-            .selectDistinct({ id: schema.viagem.veiculo_id })
-            .from(schema.viagem)
-            .where(inArray(schema.viagem.id, pendentes))
-            .all()
-            .map((item) => item.id);
-          const rotasMantidas = tx
-            .selectDistinct({ id: schema.viagem.rota_id })
-            .from(schema.viagem)
-            .where(inArray(schema.viagem.id, pendentes))
-            .all()
-            .map((item) => item.id);
-
-          if (veiculosMantidos.length > 0) {
-            tx.delete(schema.veiculo).where(notInArray(schema.veiculo.id, veiculosMantidos)).run();
-          } else {
-            tx.delete(schema.veiculo).run();
-          }
-          if (rotasMantidas.length > 0) {
-            tx.delete(schema.rota).where(notInArray(schema.rota.id, rotasMantidas)).run();
-          } else {
-            tx.delete(schema.rota).run();
-          }
-          tx.delete(schema.usuarioCache).run();
-        } else {
-          tx.delete(schema.viagem).run();
-          tx.delete(schema.veiculo).run();
-          tx.delete(schema.rota).run();
-          tx.delete(schema.usuarioCache).run();
-        }
-      } else {
-        // Troca direta de conta (o logout anterior falhou ou outra conta entrou sem sair):
-        // nada do cache da conta anterior pode aparecer. A outbox de cada dono permanece.
-        tx.delete(schema.viagem).run();
-        tx.delete(schema.veiculo).run();
-        tx.delete(schema.rota).run();
-        tx.delete(schema.usuarioCache).run();
-      }
-
-      tx.insert(schema.syncMeta)
-        .values({ chave: 'cache_owner', valor: usuarioId })
-        .onConflictDoUpdate({ target: schema.syncMeta.chave, set: { valor: usuarioId } })
-        .run();
+      limparCachePreservandoPendencias(tx as ViagensDb);
+      definirDonoDoCache(tx as ViagensDb, usuarioId);
     });
 
     return { ok: true, data: true };
@@ -1097,56 +1091,45 @@ export async function prepararSessaoLocal(usuarioId: string): Promise<Resultado<
 }
 
 /**
- * Logout: remove o cache da conta, mas mantém a outbox e as viagens pendentes dela. As demais
- * contas que usaram o aparelho continuam com suas outboxes intactas. Se a limpeza falhar, o
- * próximo login detecta o dono antigo e limpa antes de mostrar qualquer tela.
+ * Logout: remove o cache da conta, mas mantém a outbox e as viagens pendentes de todas as contas.
+ * Se a limpeza falhar, o próximo login detecta o dono antigo e limpa antes de mostrar qualquer tela.
  */
-export async function limparCacheLocalNoLogout(usuarioId: string): Promise<Resultado<true>> {
+export async function limparCacheLocalNoLogout(_usuarioId: string): Promise<Resultado<true>> {
   try {
     const database = getDb();
     database.transaction((tx) => {
-      const pendentes = idsDeViagensNaOutbox(database, usuarioId);
-      if (pendentes.length > 0) {
-        tx.delete(schema.viagem).where(notInArray(schema.viagem.id, pendentes)).run();
-        const veiculosMantidos = tx
-          .selectDistinct({ id: schema.viagem.veiculo_id })
-          .from(schema.viagem)
-          .where(inArray(schema.viagem.id, pendentes))
-          .all()
-          .map((item) => item.id);
-        const rotasMantidas = tx
-          .selectDistinct({ id: schema.viagem.rota_id })
-          .from(schema.viagem)
-          .where(inArray(schema.viagem.id, pendentes))
-          .all()
-          .map((item) => item.id);
-
-        if (veiculosMantidos.length > 0) {
-          tx.delete(schema.veiculo).where(notInArray(schema.veiculo.id, veiculosMantidos)).run();
-        } else {
-          tx.delete(schema.veiculo).run();
-        }
-        if (rotasMantidas.length > 0) {
-          tx.delete(schema.rota).where(notInArray(schema.rota.id, rotasMantidas)).run();
-        } else {
-          tx.delete(schema.rota).run();
-        }
-      } else {
-        tx.delete(schema.viagem).run();
-        tx.delete(schema.veiculo).run();
-        tx.delete(schema.rota).run();
-      }
-
-      tx.delete(schema.usuarioCache).run();
-      tx.insert(schema.syncMeta)
-        .values({ chave: 'cache_owner', valor: '' })
-        .onConflictDoUpdate({ target: schema.syncMeta.chave, set: { valor: '' } })
-        .run();
+      limparCachePreservandoPendencias(tx as ViagensDb);
+      definirDonoDoCache(tx as ViagensDb, '');
     });
 
     return { ok: true, data: true };
   } catch (error) {
     return traduzirErroSqlite(error, 'Não foi possível limpar os dados locais da conta.');
+  }
+}
+
+/**
+ * Perfil da conta salvo no último sync, para o app abrir sem internet (RNF01). Só vale se o cache
+ * ainda é desta conta: depois de um logout ou de uma troca de conta ele não é usado. É uma decisão
+ * de navegação, não de segurança — o RLS continua decidindo o que o servidor aceita.
+ */
+export function lerPerfilDoCacheLocal(usuarioId: string): schema.UsuarioCache | null {
+  try {
+    const database = getDb();
+    const dono = database
+      .select()
+      .from(schema.syncMeta)
+      .where(eq(schema.syncMeta.chave, 'cache_owner'))
+      .get()?.valor;
+    if (dono !== usuarioId) return null;
+
+    return (
+      database.select().from(schema.usuarioCache).where(eq(schema.usuarioCache.id, usuarioId)).get() ??
+      null
+    );
+  } catch {
+    // Banco ainda migrando ou indisponível: sem cache, o app segue o caminho online.
+    return null;
   }
 }
 

@@ -714,6 +714,247 @@ describe('sync de viagens (drenarOutboxViagens)', () => {
     });
   });
 
+  describe('ordem das operações de uma mesma viagem', () => {
+    function inserirAberturaEFechamento(aberturaOverrides: Partial<typeof schema.outbox.$inferInsert> = {}) {
+      inserirViagemLocal({ status: 'Finalizada', hodometro_final: 10400, km_rodado: 400 });
+      inserirOutbox(
+        {
+          payload: JSON.stringify({ id: VIAGEM_ID, status: 'EmAndamento', hodometro_inicial: 10000 }),
+          criado_em: '2026-10-18T09:00:00.000Z',
+          ...aberturaOverrides,
+        },
+        OUTBOX_ID,
+      );
+      inserirOutbox(
+        {
+          operacao: 'update',
+          payload: JSON.stringify({ id: VIAGEM_ID, status: 'Finalizada', hodometro_final: 10400 }),
+          criado_em: '2026-10-18T09:30:00.000Z',
+        },
+        OUTBOX_ID_2,
+      );
+    }
+
+    it('não envia o fechamento enquanto a abertura da mesma viagem está em backoff', async () => {
+      const futuro = '2026-10-18T10:05:00.000Z';
+      inserirAberturaEFechamento({ tentativas: 1, proxima_tentativa_em: futuro });
+      const { client, mockUpsert, mockUpdate } = criarMockSupabase({});
+
+      const resultado = await drenarOutboxViagens(
+        { usuarioId: USUARIO_ID, agora: new Date(AGORA) },
+        { db: banco.db as unknown as ViagensDb, supabase: client as never },
+      );
+
+      expect(mockUpsert).not.toHaveBeenCalled();
+      expect(mockUpdate).not.toHaveBeenCalled();
+      expect(resultado.total).toBe(0);
+      // Só a abertura pede agendamento; o fechamento sobe logo depois dela.
+      expect(resultado.restantes).toBe(1);
+      expect(resultado.proximaTentativaEm).toBe(futuro);
+      const outbox = banco.db.select().from(schema.outbox).all();
+      expect(outbox.map((item) => item.status)).toEqual(['pendente', 'pendente']);
+    });
+
+    it('não envia o fechamento quando a abertura falha na mesma passada', async () => {
+      inserirAberturaEFechamento();
+      const { client, mockUpdate } = criarMockSupabase({
+        upsertResultado: { data: null, error: { code: '40001', message: 'serialization failure' } },
+      });
+
+      const resultado = await drenarOutboxViagens(
+        { usuarioId: USUARIO_ID, agora: new Date(AGORA) },
+        { db: banco.db as unknown as ViagensDb, supabase: client as never },
+      );
+
+      expect(resultado.falhas).toBe(1);
+      expect(resultado.conflitos).toBe(0);
+      expect(mockUpdate).not.toHaveBeenCalled();
+      const fechamento = banco.db.select().from(schema.outbox).where(eq(schema.outbox.id, OUTBOX_ID_2)).get();
+      expect(fechamento?.status).toBe('pendente');
+      expect(fechamento?.tentativas).toBe(0);
+    });
+
+    it('abertura em revisão segura o fechamento sem pedir retry', async () => {
+      inserirAberturaEFechamento({ status: 'revisao', codigo_erro: 'VG001' });
+      const { client, mockUpdate } = criarMockSupabase({});
+
+      const resultado = await drenarOutboxViagens(
+        { usuarioId: USUARIO_ID, agora: new Date(AGORA) },
+        { db: banco.db as unknown as ViagensDb, supabase: client as never },
+      );
+
+      expect(mockUpdate).not.toHaveBeenCalled();
+      expect(resultado.restantes).toBe(0);
+      const fechamento = banco.db.select().from(schema.outbox).where(eq(schema.outbox.id, OUTBOX_ID_2)).get();
+      expect(fechamento?.status).toBe('pendente');
+    });
+
+    it('envia abertura e fechamento em sequência quando os dois sobem', async () => {
+      inserirAberturaEFechamento();
+      const { client, mockUpsert, mockUpdate } = criarMockSupabase({
+        upsertResultado: { data: viagemServidor(), error: null },
+        updateResultado: {
+          data: viagemServidor({ status: 'Finalizada', hodometro_final: 10400, km_rodado: 400 }),
+          error: null,
+        },
+      });
+
+      const resultado = await drenarOutboxViagens(
+        { usuarioId: USUARIO_ID, agora: new Date(AGORA) },
+        { db: banco.db as unknown as ViagensDb, supabase: client as never },
+      );
+
+      expect(resultado.sincronizados).toBe(2);
+      expect(mockUpsert.mock.invocationCallOrder[0]).toBeLessThan(mockUpdate.mock.invocationCallOrder[0] ?? 0);
+      expect(banco.db.select().from(schema.outbox).all()).toHaveLength(0);
+    });
+  });
+
+  describe('sincronização completa', () => {
+    // Cliente que atende o dreno (upsert de viagem) e o download paginado (select/order/range).
+    function criarClienteCompleto(opcoes: {
+      paginas?: Record<string, unknown[]>;
+      upsertResultado?: RespostaSupabase;
+      revisoesDecididas?: unknown[];
+    }) {
+      const maybeSingle = jest.fn().mockResolvedValue(opcoes.upsertResultado ?? { data: null, error: null });
+      const mockUpsert = jest.fn(() => ({ select: jest.fn(() => ({ maybeSingle })) }));
+      const neq = jest.fn().mockResolvedValue({ data: opcoes.revisoesDecididas ?? [], error: null });
+      const client = {
+        from: jest.fn((tabela: string) => {
+          if (tabela === 'viagem_revisao') {
+            return { select: jest.fn(() => ({ in: jest.fn(() => ({ neq })) })), upsert: jest.fn() };
+          }
+          const consulta = {
+            select: jest.fn(),
+            order: jest.fn(),
+            range: jest.fn().mockResolvedValue({ data: opcoes.paginas?.[tabela] ?? [], error: null }),
+            upsert: mockUpsert,
+          };
+          consulta.select.mockReturnValue(consulta);
+          consulta.order.mockReturnValue(consulta);
+          return consulta;
+        }),
+      };
+      return { client, mockUpsert, neq };
+    }
+
+    it('envia a outbox mesmo quando o download dos catálogos falha', async () => {
+      definirUsuarioLocal(USUARIO_ID);
+      inserirViagemLocal();
+      inserirOutbox();
+      const { client, mockUpsert } = criarClienteCompleto({
+        upsertResultado: { data: viagemServidor(), error: null },
+        // Linha que não passa no Zod: antes ela impedia o envio das viagens offline.
+        paginas: { usuario: [{ id: 'quebrado' }] },
+      });
+
+      const resultado = await sincronizarViagens(USUARIO_ID, {
+        db: banco.db as unknown as ViagensDb,
+        supabase: client as never,
+        geracaoLocal: obterGeracaoLocal(),
+      });
+
+      expect(mockUpsert).toHaveBeenCalledTimes(1);
+      expect(banco.db.select().from(schema.outbox).all()).toHaveLength(0);
+      expect(resultado.ok).toBe(false);
+      expect(resultado.mensagem).toBe('Os dados recebidos do servidor são inválidos. Tente novamente.');
+      expect(resultado.drenagem.sincronizados).toBe(1);
+    });
+
+    it('baixa as viagens uma vez só, depois do dreno', async () => {
+      definirUsuarioLocal(USUARIO_ID);
+      const { client } = criarClienteCompleto({});
+
+      await sincronizarViagens(USUARIO_ID, {
+        db: banco.db as unknown as ViagensDb,
+        supabase: client as never,
+        geracaoLocal: obterGeracaoLocal(),
+      });
+
+      const tabelas = client.from.mock.calls.map(([tabela]) => tabela);
+      expect(tabelas.filter((tabela) => tabela === 'viagem')).toHaveLength(1);
+      expect(tabelas.filter((tabela) => tabela === 'veiculo')).toHaveLength(1);
+    });
+
+    it('revisão decidida pelo gestor sai da fila e a abertura descartada some do aparelho', async () => {
+      definirUsuarioLocal(USUARIO_ID);
+      inserirViagemLocal({ em_revisao: true });
+      inserirOutbox({ status: 'revisao', codigo_erro: 'VG001' });
+      const { client, neq } = criarClienteCompleto({
+        revisoesDecididas: [{ id: OUTBOX_ID, status: 'Descartada' }],
+        // O servidor nunca aceitou a viagem: o download não a traz.
+        paginas: { viagem: [] },
+      });
+
+      const resultado = await sincronizarViagens(USUARIO_ID, {
+        db: banco.db as unknown as ViagensDb,
+        supabase: client as never,
+        geracaoLocal: obterGeracaoLocal(),
+      });
+
+      expect(resultado.ok).toBe(true);
+      expect(neq).toHaveBeenCalledWith('status', 'Pendente');
+      expect(banco.db.select().from(schema.outbox).all()).toHaveLength(0);
+      expect(banco.db.select().from(schema.viagem).all()).toHaveLength(0);
+      expect(obterStatusOutboxViagens(banco.db as unknown as ViagensDb, USUARIO_ID).emRevisao).toBe(0);
+    });
+
+    it('revisão resolvida libera o selo e a viagem volta a seguir o servidor', async () => {
+      definirUsuarioLocal(USUARIO_ID);
+      inserirViagemLocal({ em_revisao: true });
+      inserirOutbox({ status: 'revisao', codigo_erro: 'VG005' });
+      const { client } = criarClienteCompleto({
+        revisoesDecididas: [{ id: OUTBOX_ID, status: 'Resolvida' }],
+        paginas: { viagem: [viagemServidor({ status: 'Finalizada', hodometro_final: 10300, km_rodado: 300 })] },
+      });
+
+      await sincronizarViagens(USUARIO_ID, {
+        db: banco.db as unknown as ViagensDb,
+        supabase: client as never,
+        geracaoLocal: obterGeracaoLocal(),
+      });
+
+      const local = banco.db.select().from(schema.viagem).where(eq(schema.viagem.id, VIAGEM_ID)).get();
+      expect(local?.em_revisao).toBe(false);
+      expect(local?.status).toBe('Finalizada');
+      expect(local?.hodometro_final).toBe(10300);
+    });
+
+    it('revisão ainda pendente no servidor continua na fila local', async () => {
+      definirUsuarioLocal(USUARIO_ID);
+      inserirViagemLocal({ em_revisao: true });
+      inserirOutbox({ status: 'revisao', codigo_erro: 'VG001' });
+      const { client } = criarClienteCompleto({ revisoesDecididas: [] });
+
+      await sincronizarViagens(USUARIO_ID, {
+        db: banco.db as unknown as ViagensDb,
+        supabase: client as never,
+        geracaoLocal: obterGeracaoLocal(),
+      });
+
+      expect(banco.db.select().from(schema.outbox).all()).toHaveLength(1);
+      const local = banco.db.select().from(schema.viagem).where(eq(schema.viagem.id, VIAGEM_ID)).get();
+      expect(local?.em_revisao).toBe(true);
+    });
+
+    it('o download não apaga a viagem pendente de outra conta do aparelho', async () => {
+      definirUsuarioLocal(USUARIO_ID);
+      inserirViagemLocal();
+      inserirOutbox({ usuario_id: OUTRO_USUARIO_ID });
+      const { client } = criarClienteCompleto({ paginas: { viagem: [] } });
+
+      await sincronizarViagens(USUARIO_ID, {
+        db: banco.db as unknown as ViagensDb,
+        supabase: client as never,
+        geracaoLocal: obterGeracaoLocal(),
+      });
+
+      expect(banco.db.select().from(schema.viagem).all()).toHaveLength(1);
+      expect(banco.db.select().from(schema.outbox).all()).toHaveLength(1);
+    });
+  });
+
   it('marca a sincronização completa como falha quando a drenagem tem erro parcial', async () => {
     definirUsuarioLocal(USUARIO_ID);
     inserirOutbox();

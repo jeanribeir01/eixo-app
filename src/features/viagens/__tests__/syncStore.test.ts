@@ -403,4 +403,31 @@ describe('syncStore e startNetworkSyncListener', () => {
     unsubscribe();
     jest.useRealTimers();
   });
+
+  it('escrita local offline atualiza o contador de pendências na hora', async () => {
+    (Network.getNetworkStateAsync as jest.Mock).mockResolvedValue({
+      isConnected: false,
+      isInternetReachable: false,
+    });
+
+    const unsubscribe = startNetworkSyncListener('usuario-1');
+    for (let i = 0; i < 8; i += 1) await Promise.resolve();
+    useSyncStore.setState({ pendentes: 0 });
+    (syncModule.obterStatusOutboxViagens as jest.Mock).mockReturnValueOnce({
+      pendentes: 1,
+      comErro: 0,
+      conflitos: 0,
+      emRevisao: 0,
+    });
+
+    const { notificarEscritaLocal } = jest.requireActual<typeof import('../syncBus')>('../syncBus');
+    notificarEscritaLocal();
+
+    // Sem esperar o debounce nem a rede: o indicador já mostra o que está aguardando envio.
+    expect(useSyncStore.getState().isOnline).toBe(false);
+    expect(useSyncStore.getState().pendentes).toBe(1);
+    expect(syncModule.drenarOutboxViagens).not.toHaveBeenCalled();
+
+    unsubscribe();
+  });
 });

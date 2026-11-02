@@ -1,6 +1,9 @@
+import * as Network from 'expo-network';
 import { z } from 'zod';
 import { create } from 'zustand';
 
+import { ehErroConexao } from '@/features/viagens/syncErros';
+import { lerPerfilDoCacheLocal } from '@/features/viagens/viagensRepository';
 import { supabase } from '@/supabase/client';
 import { Constants } from '@/types/database';
 
@@ -38,21 +41,82 @@ const usuarioSchema = z.object({
   perfil: z.object({ nome: z.enum(Constants.public.Enums.perfil_nome) }),
 });
 
-export async function carregarPerfil(usuarioId: string): Promise<void> {
-  useProfileStore.setState({ usuarioId, estado: 'carregando' });
+// Perfil carregado do cache local (sem internet) é revalidado assim que a rede volta: um bloqueio
+// feito pelo Admin enquanto o aparelho estava offline passa a valer na reconexão.
+let cancelarRevalidacao: (() => void) | null = null;
+
+function pararRevalidacao(): void {
+  cancelarRevalidacao?.();
+  cancelarRevalidacao = null;
+}
+
+function revalidarQuandoOnline(usuarioId: string): void {
+  pararRevalidacao();
+  const inscricao = Network.addNetworkStateListener((estado) => {
+    if (!estado.isConnected || estado.isInternetReachable === false) return;
+    pararRevalidacao();
+    void carregarPerfil(usuarioId, { silencioso: true });
+  });
+  cancelarRevalidacao = () => inscricao?.remove?.();
+}
+
+function usarPerfilDoCache(usuarioId: string): boolean {
+  const cache = lerPerfilDoCacheLocal(usuarioId);
+  if (!cache) return false;
+
+  const parsed = usuarioSchema.safeParse({ ...cache, perfil: { nome: cache.perfil } });
+  if (!parsed.success) return false;
+
+  const { perfil, ...resto } = parsed.data;
+  useProfileStore.setState({ usuario: { ...resto, perfil: perfil.nome }, estado: 'pronto' });
+  revalidarQuandoOnline(usuarioId);
+  return true;
+}
+
+/**
+ * Carrega o perfil da conta. Sem internet, usa o perfil salvo no último sync (RNF01): o motorista
+ * que abre o app na cabine, sem sinal, continua entrando na rotina de viagem. A decisão de acesso
+ * no cliente é só navegação; o RLS segue decidindo no servidor.
+ *
+ * `silencioso` revalida sem voltar a tela para "carregando" (a área do app não desmonta) e, se a
+ * rede cair de novo, mantém o perfil que já estava em uso.
+ */
+export async function carregarPerfil(
+  usuarioId: string,
+  opcoes: { silencioso?: boolean } = {},
+): Promise<void> {
+  if (!opcoes.silencioso) {
+    pararRevalidacao();
+    useProfileStore.setState({ usuarioId, estado: 'carregando' });
+  }
 
   // A policy usuario_select deixa cada conta ler a própria linha mesmo sem aprovação — é
   // assim que a tela de "aguardando liberação" sabe se está pendente ou bloqueada.
-  const { data, error } = await supabase
-    .from('usuario')
-    .select('id, nome, email, status, perfil:perfil_id(nome)')
-    .eq('id', usuarioId)
-    .maybeSingle();
+  let data: unknown = null;
+  let error: { code?: string; message?: string } | null = null;
+  try {
+    const resposta = await supabase
+      .from('usuario')
+      .select('id, nome, email, status, perfil:perfil_id(nome)')
+      .eq('id', usuarioId)
+      .maybeSingle();
+    data = resposta.data;
+    error = resposta.error;
+  } catch (erro) {
+    error = { message: erro instanceof Error ? erro.message : String(erro) };
+  }
 
   // Logout (ou troca de conta) durante a requisição: a resposta não é mais desta sessão.
   if (useProfileStore.getState().usuarioId !== usuarioId) return;
 
   if (error) {
+    const semConexao = ehErroConexao(error);
+    if (opcoes.silencioso) {
+      // Revalidação: a rede caiu de novo. Mantém o perfil em uso e espera a próxima reconexão.
+      if (semConexao) revalidarQuandoOnline(usuarioId);
+      return;
+    }
+    if (semConexao && usarPerfilDoCache(usuarioId)) return;
     useProfileStore.setState({ usuario: null, estado: 'erro' });
     return;
   }
@@ -75,6 +139,7 @@ export async function carregarPerfil(usuarioId: string): Promise<void> {
 
 // Chamado no logout: a próxima conta não pode herdar o perfil da anterior.
 export function limparPerfil(): void {
+  pararRevalidacao();
   useProfileStore.setState(estadoInicial);
 }
 

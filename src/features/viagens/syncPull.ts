@@ -1,4 +1,4 @@
-import { eq, inArray } from 'drizzle-orm';
+import { and, eq, inArray } from 'drizzle-orm';
 import { z } from 'zod';
 
 import * as schema from '@/db/schema';
@@ -6,7 +6,8 @@ import { supabase } from '@/supabase/client';
 import { Constants } from '@/types/database';
 
 import { getDb, type ViagensDb } from './viagensRepository';
-import { obterGeracaoLocal } from './sessaoLocal';
+import { idsDeViagensNaOutbox, viagemIdDoPayload } from './outboxLocal';
+import { sessaoLocalAtual } from './sessaoLocal';
 import { ehErroConexao, MENSAGEM_SEM_CONEXAO, MENSAGEM_SESSAO_ALTERADA } from './syncErros';
 import type { Resultado } from './types';
 
@@ -85,11 +86,15 @@ const TAMANHO_PAGINA = 500;
 const MENSAGEM_DADOS_INVALIDOS = 'Os dados recebidos do servidor são inválidos. Tente novamente.';
 const MENSAGEM_FALHA_PULL = 'Não foi possível atualizar os dados. Tente novamente.';
 
-// A sessão pode mudar enquanto uma página está em voo. A geração é lida de novo imediatamente
-// antes de cada transação de escrita; o resultado atrasado é descartado em vez de contaminar o
-// cache da conta que acabou de entrar.
-function sessaoLocalAtual(geracaoLocal?: number): boolean {
-  return geracaoLocal === undefined || obterGeracaoLocal() === geracaoLocal;
+// Lotes do filtro `in` na consulta de revisões: mantém a URL do PostgREST curta.
+const TAMANHO_LOTE_IDS = 100;
+// Lotes de delete no SQLite: fica abaixo do limite de variáveis por comando.
+const TAMANHO_LOTE_DELETE = 500;
+
+function emLotes<T>(itens: T[], tamanho: number): T[][] {
+  const lotes: T[][] = [];
+  for (let i = 0; i < itens.length; i += tamanho) lotes.push(itens.slice(i, i + tamanho));
+  return lotes;
 }
 
 function sessaoAlterada<T>(): Resultado<T> {
@@ -223,27 +228,6 @@ export function aplicarViagemServidor(
   }
 }
 
-function idsDeViagensNaOutbox(database: ViagensDb, usuarioId?: string | null): Set<string> {
-  const consulta = database
-    .select({ payload: schema.outbox.payload })
-    .from(schema.outbox);
-  const itens =
-    usuarioId && usuarioId.length > 0
-      ? consulta.where(eq(schema.outbox.usuario_id, usuarioId)).all()
-      : consulta.all();
-
-  const ids = new Set<string>();
-  for (const item of itens) {
-    try {
-      const payload = JSON.parse(item.payload) as { id?: unknown };
-      if (typeof payload.id === 'string') ids.add(payload.id);
-    } catch {
-      // Payload quebrado já vira revisão no dreno; aqui só não protege a linha local.
-    }
-  }
-  return ids;
-}
-
 export async function baixarUsuarios(
   deps: DepsPull = {},
 ): Promise<Resultado<number>> {
@@ -334,7 +318,6 @@ export async function baixarViagens(
 ): Promise<Resultado<number>> {
   const cliente = deps.supabase ?? supabase;
   const database = deps.db ?? getDb();
-  const usuarioId = deps.usuarioId;
 
   const resultado = await buscarPaginado<ViagemApi>(
     (de, ate) =>
@@ -352,7 +335,10 @@ export async function baixarViagens(
   if (!resultado.ok) return resultado;
   if (!sessaoLocalAtual(deps.geracaoLocal)) return sessaoAlterada();
 
-  const pendentes = idsDeViagensNaOutbox(database, usuarioId);
+  // A outbox de TODAS as contas protege a linha local: a viagem offline de uma conta que saiu
+  // não pode ser sobrescrita (nem apagada) pelo download da conta que entrou.
+  const pendentes = idsDeViagensNaOutbox(database);
+  const idsServidor = new Set(resultado.data.map((viagem) => viagem.id));
   const veiculosComPendencia = new Set(
     pendentes.size === 0
       ? []
@@ -386,9 +372,118 @@ export async function baixarViagens(
       aplicarViagemServidor(tx as ViagensDb, viagem);
       aplicadas += 1;
     }
+
+    // O download traz tudo o que o RLS deixa a conta ver. Uma linha local que não veio e não tem
+    // operação na fila não existe mais para esta conta — por exemplo, a abertura offline que o
+    // gestor descartou na revisão. Mantê-la deixaria o veículo preso "em andamento" no aparelho.
+    const orfas = tx
+      .select({ id: schema.viagem.id })
+      .from(schema.viagem)
+      .all()
+      .map((linha) => linha.id)
+      .filter((id) => !idsServidor.has(id) && !pendentes.has(id));
+    for (const lote of emLotes(orfas, TAMANHO_LOTE_DELETE)) {
+      tx.delete(schema.viagem).where(inArray(schema.viagem.id, lote)).run();
+    }
   });
 
   return { ok: true, data: aplicadas };
+}
+
+const revisaoDecididaSchema = z.object({
+  id: z.string(),
+  status: z.enum(Constants.public.Enums.status_revisao),
+});
+
+/**
+ * Tira da fila local as operações cujas revisões o gestor já decidiu (Resolvida ou Descartada).
+ * Sem isso, a linha 'revisao' ficaria na outbox para sempre: a viagem nunca mais seria baixada,
+ * o selo "Em revisão" não sairia e o veículo continuaria bloqueado no aparelho. Depois daqui o
+ * download de viagens reconcilia a linha local com o que o servidor tem (ou a apaga).
+ */
+export async function baixarRevisoesResolvidas(
+  deps: DepsPull = {},
+): Promise<Resultado<number>> {
+  const cliente = deps.supabase ?? supabase;
+  const database = deps.db ?? getDb();
+  const usuarioId = deps.usuarioId;
+  if (!usuarioId) return { ok: true, data: 0 };
+
+  const locais = database
+    .select({ id: schema.outbox.id })
+    .from(schema.outbox)
+    .where(and(eq(schema.outbox.usuario_id, usuarioId), eq(schema.outbox.status, 'revisao')))
+    .all()
+    .map((linha) => linha.id);
+  if (locais.length === 0) return { ok: true, data: 0 };
+
+  const decididas: string[] = [];
+  for (const lote of emLotes(locais, TAMANHO_LOTE_IDS)) {
+    let resposta: PaginaSupabase;
+    try {
+      resposta = (await cliente
+        .from('viagem_revisao')
+        .select('id, status')
+        .in('id', lote)
+        .neq('status', 'Pendente')) as unknown as PaginaSupabase;
+    } catch (erro) {
+      return {
+        ok: false,
+        mensagem: ehErroConexao({ message: erro instanceof Error ? erro.message : String(erro) })
+          ? MENSAGEM_SEM_CONEXAO
+          : MENSAGEM_FALHA_PULL,
+      };
+    }
+
+    if (resposta.error) {
+      return {
+        ok: false,
+        mensagem: ehErroConexao(resposta.error) ? MENSAGEM_SEM_CONEXAO : MENSAGEM_FALHA_PULL,
+      };
+    }
+
+    for (const linha of resposta.data ?? []) {
+      const parsed = revisaoDecididaSchema.safeParse(linha);
+      if (!parsed.success) return { ok: false, mensagem: MENSAGEM_DADOS_INVALIDOS };
+      if (parsed.data.status !== 'Pendente') decididas.push(parsed.data.id);
+    }
+  }
+
+  if (decididas.length === 0) return { ok: true, data: 0 };
+  if (!sessaoLocalAtual(deps.geracaoLocal)) return sessaoAlterada();
+
+  database.transaction((tx) => {
+    const viagensAfetadas = new Set(
+      tx
+        .select({ payload: schema.outbox.payload })
+        .from(schema.outbox)
+        .where(inArray(schema.outbox.id, decididas))
+        .all()
+        .map((linha) => viagemIdDoPayload(linha.payload))
+        .filter((id): id is string => id !== null),
+    );
+
+    tx.delete(schema.outbox).where(inArray(schema.outbox.id, decididas)).run();
+
+    // O selo só sai quando a viagem não tem mais nenhuma operação em revisão.
+    const aindaEmRevisao = new Set(
+      tx
+        .select({ payload: schema.outbox.payload })
+        .from(schema.outbox)
+        .where(eq(schema.outbox.status, 'revisao'))
+        .all()
+        .map((linha) => viagemIdDoPayload(linha.payload)),
+    );
+    const liberadas = [...viagensAfetadas].filter((id) => !aindaEmRevisao.has(id));
+    if (liberadas.length > 0) {
+      tx.update(schema.viagem)
+        .set({ em_revisao: false })
+        .where(inArray(schema.viagem.id, liberadas))
+        .run();
+    }
+  });
+
+  return { ok: true, data: decididas.length };
 }
 
 export type ResultadoCatalogos = {

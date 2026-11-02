@@ -68,7 +68,9 @@ export function AbrirViagemView() {
 
   const [veiculoId, setVeiculoId] = useState<string | null>(null);
   const [rotaId, setRotaId] = useState<string | null>(null);
-  const [motoristaId, setMotoristaId] = useState<string | null>(usuario?.id ?? null);
+  // Sem padrão para Admin/Gestor: o responsável é escolhido de propósito, senão a validação
+  // "Motorista obrigatório" nunca dispararia e a viagem ficaria no nome do gestor.
+  const [motoristaId, setMotoristaId] = useState<string | null>(null);
   const [hodometroInicial, setHodometroInicial] = useState('');
   const [ultimoHodometroVeiculo, setUltimoHodometroVeiculo] = useState<number | null>(null);
 
@@ -93,42 +95,33 @@ export function AbrirViagemView() {
       }
 
       // Todas as listas vêm do cache local. No primeiro login ainda online, o sync grava esse
-      // cache; depois disso a tela abre sem internet.
+      // cache; depois disso a tela abre sem internet. O Motorista não lista motoristas: ele é
+      // sempre o próprio responsável (RLS-04 do banco).
       const [resVeiculos, resRotas, resMotoristas] = await Promise.all([
         listarVeiculosParaViagem(),
         listarRotasParaViagem(),
-        listarMotoristasParaViagem(usuario),
+        ehAdminOuGestor ? listarMotoristasParaViagem() : Promise.resolve(null),
       ]);
 
       if (cancelado) return;
 
-      if (!resVeiculos.ok) {
-        setErroCarregamento(resVeiculos.mensagem);
+      function falhar(mensagem: string) {
+        setErroCarregamento(mensagem);
         setCarregandoDados(false);
-        return;
       }
-      if (!resRotas.ok) {
-        setErroCarregamento(resRotas.mensagem);
-        setCarregandoDados(false);
-        return;
-      }
-      if (!resMotoristas.ok) {
-        setErroCarregamento(resMotoristas.mensagem);
-        setCarregandoDados(false);
-        return;
-      }
+
+      if (!resVeiculos.ok) return falhar(resVeiculos.mensagem);
+      if (!resRotas.ok) return falhar(resRotas.mensagem);
+      if (resMotoristas && !resMotoristas.ok) return falhar(resMotoristas.mensagem);
 
       setVeiculos(resVeiculos.data);
       setRotas(resRotas.data);
 
       if (ehMotorista) {
-        // RLS-04 do banco: o Motorista só abre para si mesmo.
         setMotoristas([{ id: usuario.id, nome: usuario.nome, email: usuario.email }]);
         setMotoristaId(usuario.id);
-      } else {
-        // Admin/Gestor abre para motoristas; o próprio usuário também aparece para ser o padrão.
+      } else if (resMotoristas) {
         setMotoristas(resMotoristas.data);
-        setMotoristaId((atual) => atual ?? usuario.id);
       }
 
       setCarregandoDados(false);
@@ -141,7 +134,7 @@ export function AbrirViagemView() {
       // Uma resposta de veículo ainda em voo não pode voltar depois de a tela sair.
       requisicaoVeiculoRef.current += 1;
     };
-  }, [ehMotorista, tentativa, usuario]);
+  }, [ehAdminOuGestor, ehMotorista, tentativa, usuario]);
 
   async function aoSelecionarVeiculo(id: string) {
     const requisicao = requisicaoVeiculoRef.current + 1;
@@ -177,9 +170,19 @@ export function AbrirViagemView() {
     const resHodometro = await buscarUltimoHodometro(id);
     if (requisicao !== requisicaoVeiculoRef.current) return;
 
-    if (resHodometro.ok && resHodometro.data !== null) {
-      setUltimoHodometroVeiculo(resHodometro.data);
-      setHodometroInicial(String(resHodometro.data));
+    if (!resHodometro.ok) {
+      // Sem o valor, a checagem do mínimo no app fica de fora: avisa, e o banco (VG004)
+      // continua barrando um hodômetro que regride.
+      setFeedback({ mensagem: resHodometro.mensagem, tone: 'error' });
+      return;
+    }
+
+    if (resHodometro.data !== null) {
+      const ultimo = resHodometro.data;
+      setUltimoHodometroVeiculo(ultimo);
+      // Só sugere se o campo ainda está vazio: o que o usuário digitou enquanto a consulta
+      // voltava não é apagado.
+      setHodometroInicial((atual) => (atual === '' ? String(ultimo) : atual));
     }
   }
 
@@ -257,9 +260,26 @@ export function AbrirViagemView() {
     description: m.email ?? undefined,
   }));
 
-  const semVeiculos = !carregandoDados && !erroCarregamento && veiculos.length === 0;
-  const semRotas = !carregandoDados && !erroCarregamento && rotas.length === 0;
-  const semDados = semVeiculos || semRotas;
+  // Estado vazio: sem veículo, rota ou motorista não há viagem para abrir, e um seletor vazio
+  // não explica o porquê (AGENTS.md §2.1).
+  const vazio =
+    veiculos.length === 0
+      ? {
+          titulo: 'Nenhum veículo disponível',
+          descricao:
+            'Todos os veículos estão em viagem ou em manutenção, ou o cache ainda não foi baixado. Conecte-se para atualizar.',
+        }
+      : rotas.length === 0
+        ? {
+            titulo: 'Nenhuma rota ativa',
+            descricao: 'Cadastre uma rota ativa ou conecte-se à internet para atualizar os dados.',
+          }
+        : opcoesMotoristas.length === 0
+          ? {
+              titulo: 'Nenhum motorista ativo',
+              descricao: 'Libere um usuário com o perfil Motorista para abrir a viagem.',
+            }
+          : null;
 
   return (
     <Screen
@@ -287,15 +307,11 @@ export function AbrirViagemView() {
           actionLabel="Tentar novamente"
           onAction={() => setTentativa((atual) => atual + 1)}
         />
-      ) : semDados ? (
+      ) : vazio ? (
         <EmptyState
           icon="viagens"
-          title={semVeiculos ? 'Nenhum veículo disponível' : 'Nenhuma rota ativa'}
-          description={
-            semVeiculos
-              ? 'Todos os veículos estão em viagem ou em manutenção, ou o cache ainda não foi baixado. Conecte-se para atualizar.'
-              : 'Cadastre uma rota ativa ou conecte-se à internet para atualizar os dados.'
-          }
+          title={vazio.titulo}
+          description={vazio.descricao}
           actionLabel="Tentar novamente"
           onAction={() => setTentativa((atual) => atual + 1)}
         />

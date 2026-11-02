@@ -1,10 +1,11 @@
-import { and, asc, eq, isNull, lte, or } from 'drizzle-orm';
+import { and, asc, eq } from 'drizzle-orm';
 import * as Network from 'expo-network';
 
 import * as schema from '@/db/schema';
 import { supabase } from '@/supabase/client';
 
-import { obterGeracaoLocal } from './sessaoLocal';
+import { viagemIdDoPayload } from './outboxLocal';
+import { obterGeracaoLocal, sessaoLocalAtual } from './sessaoLocal';
 import {
   MENSAGEM_SEM_CONEXAO,
   MENSAGEM_SESSAO_ALTERADA,
@@ -12,7 +13,7 @@ import {
 } from './syncErros';
 import {
   aplicarViagemServidor,
-  baixarVeiculos,
+  baixarRevisoesResolvidas,
   baixarViagens,
   sincronizarCatalogos,
   type ResultadoCatalogos,
@@ -113,10 +114,6 @@ function drenagemVazia(): ResultadoDrenagem {
     restantes: 0,
     proximaTentativaEm: null,
   };
-}
-
-function sessaoLocalAtual(geracaoLocal?: number): boolean {
-  return geracaoLocal === undefined || obterGeracaoLocal() === geracaoLocal;
 }
 
 function resultadoSessaoAlterada(
@@ -408,15 +405,6 @@ async function tratarErroDoServidor(
   return { tipo: 'falha', mensagem };
 }
 
-function viagemIdDoPayload(payload: string): string | null {
-  try {
-    const dado = JSON.parse(payload) as { id?: unknown };
-    return typeof dado.id === 'string' && dado.id.length > 0 ? dado.id : null;
-  } catch {
-    return null;
-  }
-}
-
 function aplicarSucessoLocal(
   database: ViagensDb,
   item: schema.OutboxItem,
@@ -456,34 +444,218 @@ function aplicarSucessoLocal(
   });
 }
 
+// Fila da conta na ordem em que as operações foram gravadas. Inclui as linhas em revisão porque
+// elas também seguram as operações seguintes da mesma viagem.
+function lerFila(database: ViagensDb, usuarioId: string): schema.OutboxItem[] {
+  return database
+    .select()
+    .from(schema.outbox)
+    .where(and(eq(schema.outbox.entidade, 'viagem'), eq(schema.outbox.usuario_id, usuarioId)))
+    .orderBy(asc(schema.outbox.criado_em), asc(schema.outbox.id))
+    .all();
+}
+
 function resumirPendencias(
   database: ViagensDb,
   usuarioId: string,
 ): { restantes: number; proximaTentativaEm: string | null } {
-  const linhas = database
-    .select({ proxima_tentativa_em: schema.outbox.proxima_tentativa_em })
-    .from(schema.outbox)
-    .where(
-      and(
-        eq(schema.outbox.entidade, 'viagem'),
-        eq(schema.outbox.usuario_id, usuarioId),
-        eq(schema.outbox.status, 'pendente'),
-      ),
-    )
-    .all();
-
+  // Só a operação mais antiga de cada viagem conta para o agendamento: as seguintes sobem logo
+  // depois dela, na mesma passada. As que esperam uma revisão do gestor não pedem retry — elas
+  // saem da espera quando o pull baixa a decisão.
+  const vistas = new Set<string>();
+  let restantes = 0;
+  let algumaProntaAgora = false;
   let proximaTentativaEm: string | null = null;
-  for (const linha of linhas) {
-    // Um item sem backoff já pode ser tentado: o próximo ciclo não pode esperar por outro item.
+
+  for (const linha of lerFila(database, usuarioId)) {
+    const viagemId = viagemIdDoPayload(linha.payload);
+    const dependente = viagemId !== null && vistas.has(viagemId);
+    if (viagemId) vistas.add(viagemId);
+    if (linha.status !== 'pendente' || dependente) continue;
+
+    restantes += 1;
     if (linha.proxima_tentativa_em === null) {
-      return { restantes: linhas.length, proximaTentativaEm: null };
-    }
-    if (proximaTentativaEm === null || linha.proxima_tentativa_em < proximaTentativaEm) {
+      // Um item sem backoff já pode ser tentado: o próximo ciclo não pode esperar por outro item.
+      algumaProntaAgora = true;
+    } else if (proximaTentativaEm === null || linha.proxima_tentativa_em < proximaTentativaEm) {
       proximaTentativaEm = linha.proxima_tentativa_em;
     }
   }
 
-  return { restantes: linhas.length, proximaTentativaEm };
+  return { restantes, proximaTentativaEm: algumaProntaAgora ? null : proximaTentativaEm };
+}
+
+type Desfecho =
+  | { tipo: 'sucesso' }
+  | {
+      tipo: 'conflito' | 'falha' | 'conexao' | 'cancelada';
+      mensagem: string;
+      codigo?: string;
+      // Falha inesperada (exceção que não é de rede): encerra a passada em vez de insistir.
+      parar?: boolean;
+    };
+
+type ContextoDreno = {
+  cliente: typeof supabase;
+  database: ViagensDb;
+  usuarioId: string;
+  maxTentativas: number;
+  agora: Date;
+  geracaoLocal: number;
+};
+
+function desfechoDaRevisao(
+  revisao: { tipo: 'revisao' | 'falha' | 'conexao' | 'cancelada'; mensagem: string },
+  codigo: string | undefined,
+): Desfecho {
+  if (revisao.tipo === 'revisao') return { tipo: 'conflito', mensagem: revisao.mensagem, codigo };
+  if (revisao.tipo === 'falha') return { tipo: 'falha', mensagem: revisao.mensagem, codigo };
+  return { tipo: revisao.tipo, mensagem: revisao.mensagem };
+}
+
+async function revisar(
+  ctx: ContextoDreno,
+  item: schema.OutboxItem,
+  payload: Record<string, unknown>,
+  codigo: string,
+  mensagem: string,
+  buscarServidor = false,
+): Promise<Desfecho> {
+  const revisao = await enviarParaRevisao(
+    ctx.cliente,
+    ctx.database,
+    item,
+    ctx.usuarioId,
+    payload,
+    codigo,
+    mensagem,
+    { buscarServidor, agora: ctx.agora, geracaoLocal: ctx.geracaoLocal },
+  );
+  return desfechoDaRevisao(revisao, codigo);
+}
+
+// Envia UMA operação da outbox e diz o que aconteceu. Toda a escrita local do resultado (apagar da
+// fila, backoff, revisão) acontece aqui dentro; o laço do dreno só contabiliza.
+async function enviarItem(ctx: ContextoDreno, item: schema.OutboxItem): Promise<Desfecho> {
+  let payload: Record<string, unknown>;
+  try {
+    payload = JSON.parse(item.payload) as Record<string, unknown>;
+  } catch {
+    return revisar(ctx, item, {}, 'PAYLOAD_INVALIDO', 'A operação local está corrompida e precisa de revisão.');
+  }
+
+  // REGRA CRÍTICA: km_rodado NUNCA é enviado ao Supabase (coluna gerada, erro 428C9).
+  delete payload.km_rodado;
+
+  if (typeof payload.id !== 'string' || payload.id.length === 0) {
+    return revisar(
+      ctx,
+      item,
+      payload,
+      'PAYLOAD_SEM_ID',
+      'A operação local não tem identificador e precisa de revisão.',
+    );
+  }
+
+  if (item.tentativas >= ctx.maxTentativas) {
+    return revisar(
+      ctx,
+      item,
+      payload,
+      'MAX_TENTATIVAS',
+      `A operação não sincronizou após ${item.tentativas} tentativas e foi encaminhada para revisão.`,
+    );
+  }
+
+  try {
+    const idViagem = payload.id;
+    const { id: _ignorado, ...dadosParaAtualizar } = payload;
+    const { data, error } =
+      item.operacao === 'insert'
+        ? await ctx.cliente
+            .from('viagem')
+            .upsert(payload as never, { onConflict: 'id' })
+            .select(COLUNAS_VIAGEM)
+            .maybeSingle()
+        : await ctx.cliente
+            .from('viagem')
+            .update(dadosParaAtualizar as never)
+            .eq('id', idViagem)
+            .select(COLUNAS_VIAGEM)
+            .maybeSingle();
+
+    if (!sessaoLocalAtual(ctx.geracaoLocal)) {
+      return { tipo: 'cancelada', mensagem: MENSAGEM_SESSAO_ALTERADA };
+    }
+
+    if (error) {
+      const tratado = await tratarErroDoServidor(ctx.cliente, ctx.database, item, ctx.usuarioId, payload, error, {
+        maxTentativas: ctx.maxTentativas,
+        agora: ctx.agora,
+        geracaoLocal: ctx.geracaoLocal,
+      });
+      return desfechoDaRevisao(tratado, error.code);
+    }
+
+    if (!data) {
+      // Zero linhas sem erro. No insert, o servidor não confirmou a gravação; no update, a viagem
+      // não existe (ou o RLS a escondeu). Nunca apagar a outbox em silêncio: o dado local é
+      // preservado e o conflito vai para revisão.
+      return item.operacao === 'insert'
+        ? revisar(ctx, item, payload, 'SEM_RESPOSTA', 'O servidor não confirmou a gravação da viagem.', true)
+        : revisar(
+            ctx,
+            item,
+            payload,
+            'VIAGEM_AUSENTE',
+            'A viagem não foi encontrada no servidor. A alteração local foi mantida para revisão.',
+            true,
+          );
+    }
+
+    const parsed = viagemApiSchema.safeParse(data);
+    if (!parsed.success) {
+      return revisar(ctx, item, payload, 'RESPOSTA_INVALIDA', 'O servidor devolveu uma viagem inválida.', true);
+    }
+
+    aplicarSucessoLocal(ctx.database, item, parsed.data);
+    return { tipo: 'sucesso' };
+  } catch (erro) {
+    // A troca de conta durante a requisição não pode gravar erro nem aplicar nada na sessão nova.
+    if (!sessaoLocalAtual(ctx.geracaoLocal)) {
+      return { tipo: 'cancelada', mensagem: MENSAGEM_SESSAO_ALTERADA };
+    }
+
+    const mensagem = erro instanceof Error ? erro.message : 'Falha ao sincronizar com o servidor.';
+    const erroNormalizado = {
+      message: mensagem,
+      code: erro instanceof Error ? (erro as Error & { code?: string }).code : undefined,
+    };
+    // Uma exceção de rede (fetch abortado, DNS, timeout) não pode queimar tentativa: o item
+    // continua pendente e o backoff é aplicado quando a conexão voltar.
+    if (ehErroConexao(erroNormalizado)) {
+      atualizarErroTemporario(
+        ctx.database,
+        item,
+        MENSAGEM_SEM_CONEXAO,
+        'CONEXAO',
+        item.tentativas,
+        proximaTentativa(ctx.agora, item.tentativas),
+      );
+      return { tipo: 'conexao', mensagem: MENSAGEM_SEM_CONEXAO };
+    }
+
+    const tentativas = item.tentativas + 1;
+    atualizarErroTemporario(
+      ctx.database,
+      item,
+      mensagem,
+      'EXCECAO',
+      tentativas,
+      proximaTentativa(ctx.agora, tentativas),
+    );
+    return { tipo: 'falha', mensagem, codigo: 'EXCECAO', parar: true };
+  }
 }
 
 export async function drenarOutboxViagens(
@@ -502,471 +674,85 @@ export async function drenarOutboxViagens(
     return drenagemVazia();
   }
 
-  const itens = database
-    .select()
-    .from(schema.outbox)
-    .where(
-      and(
-        eq(schema.outbox.entidade, 'viagem'),
-        eq(schema.outbox.usuario_id, opcoes.usuarioId),
-        eq(schema.outbox.status, 'pendente'),
-        or(
-          isNull(schema.outbox.proxima_tentativa_em),
-          lte(schema.outbox.proxima_tentativa_em, agoraIso),
-        ),
-      ),
-    )
-    .orderBy(asc(schema.outbox.criado_em), asc(schema.outbox.id))
-    .limit(limite)
-    .all();
-
-  const resultado: ResultadoDrenagem = {
-    total: itens.length,
-    sincronizados: 0,
-    falhas: 0,
-    conflitos: 0,
-    semConexao: false,
-    itens: [],
-    restantes: 0,
-    proximaTentativaEm: null,
+  const ctx: ContextoDreno = {
+    cliente,
+    database,
+    usuarioId: opcoes.usuarioId,
+    maxTentativas,
+    agora,
+    geracaoLocal,
   };
+  const resultado = drenagemVazia();
 
-  for (const item of itens) {
-    // A conta pode ter mudado enquanto a página/requisição anterior estava em voo. A fila da
-    // conta anterior fica preservada; nenhuma escrita local pode acontecer depois dessa troca.
+  // Viagens cuja operação mais antiga ainda não subiu. As operações seguintes da mesma viagem
+  // esperam: o fechamento (update) enviado antes da abertura (insert) afetaria zero linhas no
+  // servidor e iria para revisão como VIAGEM_AUSENTE, mesmo com a abertura prestes a subir.
+  const bloqueadas = new Set<string>();
+
+  for (const item of lerFila(database, opcoes.usuarioId)) {
+    // A conta pode ter mudado enquanto a requisição anterior estava em voo. A fila da conta
+    // anterior fica preservada; nenhuma escrita local pode acontecer depois dessa troca.
     if (!sessaoLocalAtual(geracaoLocal)) {
       resultado.sessaoAlterada = true;
       break;
     }
 
-    let payload: Record<string, unknown>;
-    try {
-      payload = JSON.parse(item.payload) as Record<string, unknown>;
-    } catch {
-      const revisao = await enviarParaRevisao(
-        cliente,
-        database,
-        item,
-        opcoes.usuarioId,
-        {},
-        'PAYLOAD_INVALIDO',
-        'A operação local está corrompida e precisa de revisão.',
-        { agora, geracaoLocal },
-      );
-      if (revisao.tipo === 'cancelada') {
-        resultado.sessaoAlterada = true;
-        break;
-      }
-      if (revisao.tipo === 'conexao') {
-        resultado.semConexao = true;
-        resultado.falhas += 1;
-        resultado.itens.push({
-          id: item.id,
-          status: 'falha',
-          operacao: item.operacao,
-          erro: revisao.mensagem,
-          codigo: 'CONEXAO',
-        });
-        break;
-      }
-      resultado.conflitos += 1;
-      resultado.itens.push({
-        id: item.id,
-        status: 'conflito',
-        operacao: item.operacao,
-        erro: revisao.mensagem,
-        codigo: 'PAYLOAD_INVALIDO',
-      });
+    const viagemId = viagemIdDoPayload(item.payload);
+    if (viagemId && bloqueadas.has(viagemId)) continue;
+
+    // Em revisão ou em backoff: não sobe agora e segura o que vem depois da mesma viagem.
+    const aguardando =
+      item.status !== 'pendente' ||
+      (item.proxima_tentativa_em !== null && item.proxima_tentativa_em > agoraIso);
+    if (aguardando) {
+      if (viagemId) bloqueadas.add(viagemId);
       continue;
     }
 
-    // REGRA CRÍTICA: km_rodado NUNCA é enviado ao Supabase (coluna gerada, erro 428C9).
-    delete payload.km_rodado;
+    if (resultado.total >= limite) break;
+    resultado.total += 1;
 
-    if (typeof payload.id !== 'string' || payload.id.length === 0) {
-      const revisao = await enviarParaRevisao(
-        cliente,
-        database,
-        item,
-        opcoes.usuarioId,
-        payload,
-        'PAYLOAD_SEM_ID',
-        'A operação local não tem identificador e precisa de revisão.',
-        { agora, geracaoLocal },
-      );
-      if (revisao.tipo === 'cancelada') {
-        resultado.sessaoAlterada = true;
-        break;
-      }
-      if (revisao.tipo === 'conexao') {
-        resultado.semConexao = true;
-        resultado.falhas += 1;
-        resultado.itens.push({
-          id: item.id,
-          status: 'falha',
-          operacao: item.operacao,
-          erro: revisao.mensagem,
-          codigo: 'CONEXAO',
-        });
-        break;
-      }
-      resultado.conflitos += 1;
-      resultado.itens.push({
-        id: item.id,
-        status: 'conflito',
-        operacao: item.operacao,
-        erro: revisao.mensagem,
-        codigo: 'PAYLOAD_SEM_ID',
-      });
+    const desfecho = await enviarItem(ctx, item);
+
+    if (desfecho.tipo === 'sucesso') {
+      resultado.sincronizados += 1;
+      resultado.itens.push({ id: item.id, status: 'sucesso', operacao: item.operacao });
       continue;
     }
 
-    if (item.tentativas >= maxTentativas) {
-      const revisao = await enviarParaRevisao(
-        cliente,
-        database,
-        item,
-        opcoes.usuarioId,
-        payload,
-        'MAX_TENTATIVAS',
-        `A operação não sincronizou após ${item.tentativas} tentativas e foi encaminhada para revisão.`,
-        { agora, geracaoLocal },
-      );
-      if (revisao.tipo === 'cancelada') {
-        resultado.sessaoAlterada = true;
-        break;
-      }
-      if (revisao.tipo === 'conexao') {
-        resultado.semConexao = true;
-        resultado.falhas += 1;
-        resultado.itens.push({
-          id: item.id,
-          status: 'falha',
-          operacao: item.operacao,
-          erro: revisao.mensagem,
-          codigo: 'CONEXAO',
-        });
-        break;
-      }
-      resultado.conflitos += 1;
-      resultado.itens.push({
-        id: item.id,
-        status: 'conflito',
-        operacao: item.operacao,
-        erro: revisao.mensagem,
-        codigo: 'MAX_TENTATIVAS',
-      });
-      continue;
+    if (desfecho.tipo === 'cancelada') {
+      resultado.sessaoAlterada = true;
+      break;
     }
 
-    try {
-      if (item.operacao === 'insert') {
-        const { data, error } = await cliente
-          .from('viagem')
-          .upsert(payload as never, { onConflict: 'id' })
-          .select(COLUNAS_VIAGEM)
-          .maybeSingle();
-
-        if (!sessaoLocalAtual(geracaoLocal)) {
-          resultado.sessaoAlterada = true;
-          break;
-        }
-
-        if (error) {
-          const tratado = await tratarErroDoServidor(
-            cliente,
-            database,
-            item,
-            opcoes.usuarioId,
-            payload,
-            error,
-            { maxTentativas, agora, geracaoLocal },
-          );
-          if (tratado.tipo === 'cancelada') {
-            resultado.sessaoAlterada = true;
-            break;
-          }
-          if (tratado.tipo === 'conexao') {
-            resultado.semConexao = true;
-            resultado.falhas += 1;
-            resultado.itens.push({
-              id: item.id,
-              status: 'falha',
-              operacao: 'insert',
-              erro: tratado.mensagem,
-              codigo: 'CONEXAO',
-            });
-            break;
-          }
-          if (tratado.tipo === 'revisao') {
-            resultado.conflitos += 1;
-            resultado.itens.push({
-              id: item.id,
-              status: 'conflito',
-              operacao: 'insert',
-              erro: tratado.mensagem,
-              codigo: error.code,
-            });
-          } else {
-            resultado.falhas += 1;
-            resultado.itens.push({
-              id: item.id,
-              status: 'falha',
-              operacao: 'insert',
-              erro: tratado.mensagem,
-              codigo: error.code,
-            });
-          }
-          continue;
-        }
-
-        const parsed = data ? viagemApiSchema.safeParse(data) : null;
-        if (!parsed?.success) {
-          const motivo = data
-            ? 'O servidor devolveu uma viagem inválida.'
-            : 'O servidor não confirmou a gravação da viagem.';
-          const revisao = await enviarParaRevisao(
-            cliente,
-            database,
-            item,
-            opcoes.usuarioId,
-            payload,
-            data ? 'RESPOSTA_INVALIDA' : 'SEM_RESPOSTA',
-            motivo,
-            { buscarServidor: true, agora, geracaoLocal },
-          );
-          if (revisao.tipo === 'cancelada') {
-            resultado.sessaoAlterada = true;
-            break;
-          }
-          if (revisao.tipo === 'conexao') {
-            resultado.semConexao = true;
-            resultado.falhas += 1;
-            resultado.itens.push({
-              id: item.id,
-              status: 'falha',
-              operacao: 'insert',
-              erro: revisao.mensagem,
-              codigo: 'CONEXAO',
-            });
-            break;
-          }
-          resultado.conflitos += 1;
-          resultado.itens.push({
-            id: item.id,
-            status: 'conflito',
-            operacao: 'insert',
-            erro: revisao.mensagem,
-            codigo: data ? 'RESPOSTA_INVALIDA' : 'SEM_RESPOSTA',
-          });
-          continue;
-        }
-
-        aplicarSucessoLocal(database, item, parsed.data);
-        resultado.sincronizados += 1;
-        resultado.itens.push({ id: item.id, status: 'sucesso', operacao: 'insert' });
-      } else {
-        const idViagem = payload.id;
-        const { id: _ignorado, ...dadosParaAtualizar } = payload;
-
-        const { data, error } = await cliente
-          .from('viagem')
-          .update(dadosParaAtualizar as never)
-          .eq('id', idViagem)
-          .select(COLUNAS_VIAGEM)
-          .maybeSingle();
-
-        if (!sessaoLocalAtual(geracaoLocal)) {
-          resultado.sessaoAlterada = true;
-          break;
-        }
-
-        if (error) {
-          const tratado = await tratarErroDoServidor(
-            cliente,
-            database,
-            item,
-            opcoes.usuarioId,
-            payload,
-            error,
-            { maxTentativas, agora, geracaoLocal },
-          );
-          if (tratado.tipo === 'cancelada') {
-            resultado.sessaoAlterada = true;
-            break;
-          }
-          if (tratado.tipo === 'conexao') {
-            resultado.semConexao = true;
-            resultado.falhas += 1;
-            resultado.itens.push({
-              id: item.id,
-              status: 'falha',
-              operacao: 'update',
-              erro: tratado.mensagem,
-              codigo: 'CONEXAO',
-            });
-            break;
-          }
-          if (tratado.tipo === 'revisao') {
-            resultado.conflitos += 1;
-            resultado.itens.push({
-              id: item.id,
-              status: 'conflito',
-              operacao: 'update',
-              erro: tratado.mensagem,
-              codigo: error.code,
-            });
-          } else {
-            resultado.falhas += 1;
-            resultado.itens.push({
-              id: item.id,
-              status: 'falha',
-              operacao: 'update',
-              erro: tratado.mensagem,
-              codigo: error.code,
-            });
-          }
-          continue;
-        }
-
-        if (!data) {
-          // Zero linhas sem erro: a viagem não existe mais (ou o RLS escondeu). Nunca deletar
-          // a outbox silenciosamente — o dado local é preservado e o conflito vai para revisão.
-          const revisao = await enviarParaRevisao(
-            cliente,
-            database,
-            item,
-            opcoes.usuarioId,
-            payload,
-            'VIAGEM_AUSENTE',
-            'A viagem não foi encontrada no servidor. A alteração local foi mantida para revisão.',
-            { buscarServidor: true, agora, geracaoLocal },
-          );
-          if (revisao.tipo === 'cancelada') {
-            resultado.sessaoAlterada = true;
-            break;
-          }
-          if (revisao.tipo === 'conexao') {
-            resultado.semConexao = true;
-            resultado.falhas += 1;
-            resultado.itens.push({
-              id: item.id,
-              status: 'falha',
-              operacao: 'update',
-              erro: revisao.mensagem,
-              codigo: 'CONEXAO',
-            });
-            break;
-          }
-          resultado.conflitos += 1;
-          resultado.itens.push({
-            id: item.id,
-            status: 'conflito',
-            operacao: 'update',
-            erro: revisao.mensagem,
-            codigo: 'VIAGEM_AUSENTE',
-          });
-          continue;
-        }
-
-        const parsed = viagemApiSchema.safeParse(data);
-        if (!parsed.success) {
-          const revisao = await enviarParaRevisao(
-            cliente,
-            database,
-            item,
-            opcoes.usuarioId,
-            payload,
-            'RESPOSTA_INVALIDA',
-            'O servidor devolveu uma viagem inválida.',
-            { buscarServidor: true, agora, geracaoLocal },
-          );
-          if (revisao.tipo === 'cancelada') {
-            resultado.sessaoAlterada = true;
-            break;
-          }
-          if (revisao.tipo === 'conexao') {
-            resultado.semConexao = true;
-            resultado.falhas += 1;
-            resultado.itens.push({
-              id: item.id,
-              status: 'falha',
-              operacao: 'update',
-              erro: revisao.mensagem,
-              codigo: 'CONEXAO',
-            });
-            break;
-          }
-          resultado.conflitos += 1;
-          resultado.itens.push({
-            id: item.id,
-            status: 'conflito',
-            operacao: 'update',
-            erro: revisao.mensagem,
-            codigo: 'RESPOSTA_INVALIDA',
-          });
-          continue;
-        }
-
-        aplicarSucessoLocal(database, item, parsed.data);
-        resultado.sincronizados += 1;
-        resultado.itens.push({ id: item.id, status: 'sucesso', operacao: 'update' });
-      }
-    } catch (erro) {
-      // A troca de conta durante a requisição não pode gravar erro nem aplicar nada na sessão nova.
-      if (!sessaoLocalAtual(geracaoLocal)) {
-        resultado.sessaoAlterada = true;
-        break;
-      }
-
-      const mensagem = erro instanceof Error ? erro.message : 'Falha ao sincronizar com o servidor.';
-      const erroNormalizado = {
-        message: mensagem,
-        code: erro instanceof Error ? (erro as Error & { code?: string }).code : undefined,
-      };
-      // Uma exceção de rede (fetch abortado, DNS, timeout) não pode queimar tentativa: o item
-      // continua pendente e o backoff é aplicado quando a conexão voltar.
-      if (ehErroConexao(erroNormalizado)) {
-        const proxima = proximaTentativa(agora, item.tentativas);
-        atualizarErroTemporario(
-          database,
-          item,
-          MENSAGEM_SEM_CONEXAO,
-          'CONEXAO',
-          item.tentativas,
-          proxima,
-        );
-        resultado.semConexao = true;
-        resultado.falhas += 1;
-        resultado.itens.push({
-          id: item.id,
-          status: 'falha',
-          operacao: item.operacao,
-          erro: MENSAGEM_SEM_CONEXAO,
-          codigo: 'CONEXAO',
-        });
-        break;
-      }
-
-      const tentativas = item.tentativas + 1;
-      atualizarErroTemporario(
-        database,
-        item,
-        mensagem,
-        'EXCECAO',
-        tentativas,
-        proximaTentativa(agora, tentativas),
-      );
+    if (desfecho.tipo === 'conexao') {
+      // Sem conexão, o resto da fila também falharia: para a passada e espera a rede voltar.
+      resultado.semConexao = true;
       resultado.falhas += 1;
       resultado.itens.push({
         id: item.id,
         status: 'falha',
         operacao: item.operacao,
-        erro: mensagem,
-        codigo: 'EXCECAO',
+        erro: desfecho.mensagem,
+        codigo: 'CONEXAO',
       });
       break;
     }
+
+    if (viagemId) bloqueadas.add(viagemId);
+    if (desfecho.tipo === 'conflito') {
+      resultado.conflitos += 1;
+    } else {
+      resultado.falhas += 1;
+    }
+    resultado.itens.push({
+      id: item.id,
+      status: desfecho.tipo,
+      operacao: item.operacao,
+      erro: desfecho.mensagem,
+      codigo: desfecho.codigo,
+    });
+    if (desfecho.parar) break;
   }
 
   // A conta pode ter mudado durante a última operação. Nesse caso a outbox consultada pertence à
@@ -980,6 +766,16 @@ export async function drenarOutboxViagens(
   return resultado;
 }
 
+/**
+ * Ciclo completo de sincronização, nesta ordem:
+ *
+ * 1. Baixa as revisões que o gestor já decidiu, para liberar as viagens presas nelas.
+ * 2. Sobe a outbox. Vem antes do download de propósito: o que o motorista gravou offline
+ *    (RNF07) não pode esperar o download dar certo — uma linha inválida no catálogo não segura
+ *    os hodômetros no aparelho.
+ * 3. Baixa catálogos e viagens UMA vez, já depois do dreno, trazendo o status do veículo e o
+ *    km_rodado que o servidor calculou durante o envio.
+ */
 export async function sincronizarViagens(
   usuarioId: string,
   deps: DepsSync = {},
@@ -991,9 +787,32 @@ export async function sincronizarViagens(
     return resultadoSessaoAlterada(drenagemVazia());
   }
 
+  // Uma falha aqui não impede o dreno: no pior caso, a viagem continua presa na revisão até a
+  // próxima sincronização.
+  const revisoes = await baixarRevisoesResolvidas({ ...depsSessao, usuarioId });
+  if (!sessaoLocalAtual(geracaoLocal) || (!revisoes.ok && revisoes.sessaoAlterada)) {
+    return resultadoSessaoAlterada(drenagemVazia());
+  }
+
+  const drenagem = await drenarOutboxViagens({ usuarioId, geracaoLocal }, depsSessao);
+  if (!sessaoLocalAtual(geracaoLocal) || drenagem.sessaoAlterada) {
+    return resultadoSessaoAlterada(drenagem);
+  }
+
+  // Sem conexão no envio, o download também falharia: devolve já, com o retry agendado pelo store.
+  if (drenagem.semConexao) {
+    return {
+      ok: false,
+      semConexao: true,
+      mensagem: MENSAGEM_SEM_CONEXAO,
+      viagensBaixadas: 0,
+      drenagem,
+    };
+  }
+
   const catalogos = await sincronizarCatalogos({ ...depsSessao, usuarioId });
   if (!sessaoLocalAtual(geracaoLocal) || (!catalogos.ok && catalogos.sessaoAlterada)) {
-    return resultadoSessaoAlterada(drenagemVazia());
+    return resultadoSessaoAlterada(drenagem);
   }
   if (!catalogos.ok) {
     return {
@@ -1001,74 +820,43 @@ export async function sincronizarViagens(
       semConexao: catalogos.mensagem === MENSAGEM_SEM_CONEXAO,
       mensagem: catalogos.mensagem,
       viagensBaixadas: 0,
-      drenagem: drenagemVazia(),
+      drenagem,
     };
   }
 
-  const primeiraCarga = await baixarViagens({ ...depsSessao, usuarioId });
-  if (!sessaoLocalAtual(geracaoLocal) || (!primeiraCarga.ok && primeiraCarga.sessaoAlterada)) {
-    return resultadoSessaoAlterada(drenagemVazia(), catalogos.data);
+  const viagens = await baixarViagens({ ...depsSessao, usuarioId });
+  if (!sessaoLocalAtual(geracaoLocal) || (!viagens.ok && viagens.sessaoAlterada)) {
+    return resultadoSessaoAlterada(drenagem, catalogos.data);
   }
-  if (!primeiraCarga.ok) {
+  if (!viagens.ok) {
     return {
       ok: false,
-      semConexao: primeiraCarga.mensagem === MENSAGEM_SEM_CONEXAO,
-      mensagem: primeiraCarga.mensagem,
+      semConexao: viagens.mensagem === MENSAGEM_SEM_CONEXAO,
+      mensagem: viagens.mensagem,
       catalogos: catalogos.data,
       viagensBaixadas: 0,
-      drenagem: drenagemVazia(),
-    };
-  }
-
-  const drenagem = await drenarOutboxViagens({ usuarioId, geracaoLocal }, depsSessao);
-  if (!sessaoLocalAtual(geracaoLocal) || drenagem.sessaoAlterada) {
-    return resultadoSessaoAlterada(drenagem, catalogos.data, primeiraCarga.data);
-  }
-
-  // O status do veículo e o km_rodado gerado mudam no servidor durante o dreno. A segunda
-  // passada reconcilia o cache local, mas nunca sobrescreve outbox pendente.
-  const veiculos = await baixarVeiculos(depsSessao);
-  if (!sessaoLocalAtual(geracaoLocal) || (!veiculos.ok && veiculos.sessaoAlterada)) {
-    return resultadoSessaoAlterada(drenagem, catalogos.data, primeiraCarga.data);
-  }
-  if (!veiculos.ok) {
-    return {
-      ok: false,
-      semConexao: veiculos.mensagem === MENSAGEM_SEM_CONEXAO,
-      mensagem: veiculos.mensagem,
-      catalogos: catalogos.data,
-      viagensBaixadas: primeiraCarga.data,
       drenagem,
     };
   }
 
-  const segundaCarga = await baixarViagens({ ...depsSessao, usuarioId });
-  if (!sessaoLocalAtual(geracaoLocal) || (!segundaCarga.ok && segundaCarga.sessaoAlterada)) {
-    return resultadoSessaoAlterada(drenagem, catalogos.data, primeiraCarga.data);
-  }
-  if (!segundaCarga.ok) {
+  if (!revisoes.ok) {
     return {
       ok: false,
-      semConexao: segundaCarga.mensagem === MENSAGEM_SEM_CONEXAO,
-      mensagem: segundaCarga.mensagem,
+      semConexao: revisoes.mensagem === MENSAGEM_SEM_CONEXAO,
+      mensagem: revisoes.mensagem,
       catalogos: catalogos.data,
-      viagensBaixadas: primeiraCarga.data,
+      viagensBaixadas: viagens.data,
       drenagem,
     };
   }
 
-  const semConexao = drenagem.semConexao;
   const falhaParcial = drenagem.falhas > 0;
   return {
-    ok: !semConexao && !falhaParcial,
-    semConexao,
-    mensagem: semConexao
-      ? MENSAGEM_SEM_CONEXAO
-      : falhaParcial
-        ? 'Alguns registros não foram enviados. Nova tentativa em instantes.'
-        : undefined,
+    ok: !falhaParcial,
+    semConexao: false,
+    mensagem: falhaParcial ? 'Alguns registros não foram enviados. Nova tentativa em instantes.' : undefined,
     catalogos: catalogos.data,
-    viagensBaixadas: primeiraCarga.data + segundaCarga.data,
+    viagensBaixadas: viagens.data,
     drenagem,
   };
 }

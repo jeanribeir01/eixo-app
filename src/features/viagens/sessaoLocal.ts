@@ -18,3 +18,10 @@ export function obterUsuarioLocal(): string | null {
 export function obterGeracaoLocal(): number {
   return geracaoAtual;
 }
+
+// A sessão pode mudar enquanto uma requisição está em voo. Quem começou numa geração confere esta
+// função antes de cada escrita local: o resultado atrasado é descartado em vez de contaminar o
+// cache da conta que acabou de entrar. Sem geração informada, não há o que comparar.
+export function sessaoLocalAtual(geracaoLocal?: number): boolean {
+  return geracaoLocal === undefined || geracaoAtual === geracaoLocal;
+}
