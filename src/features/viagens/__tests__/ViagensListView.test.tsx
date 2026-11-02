@@ -144,6 +144,16 @@ describe('ViagensListView', () => {
     expect(mockPush).toHaveBeenCalledWith('/viagens/viagem-1/fechar');
   });
 
+  it('exibe "Concluída" na viagem e no filtro, como na tela de fechamento', async () => {
+    jest.spyOn(repo, 'listarViagens').mockResolvedValue({ ok: true, data: mockViagens });
+
+    render(<ViagensListView />);
+
+    expect(await screen.findByText('Concluída')).toBeOnTheScreen();
+    expect(screen.getByText('Concluídas')).toBeOnTheScreen();
+    expect(screen.queryByText(/Finalizada/)).not.toBeOnTheScreen();
+  });
+
   it('mostra selo "Em revisão" quando a viagem local foi recusada pelo servidor', async () => {
     jest.spyOn(repo, 'listarViagens').mockResolvedValue({
       ok: true,

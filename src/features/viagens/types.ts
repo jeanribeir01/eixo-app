@@ -8,6 +8,14 @@ export type Uf = Enums<'uf'>;
 // Linha exata da tabela `viagem` no banco (snake_case, paridade 1:1 com schema e tipos gerados).
 export type Viagem = Tables<'viagem'>;
 
+// O banco guarda "Finalizada", mas o critério de aceite da US08 exibe "Concluída"
+// (mesmo padrão de `rotuloStatusVeiculo`). Um mapa só, para lista e fechamento não divergirem.
+export const rotuloStatusViagem: Record<StatusViagem, string> = {
+  EmAndamento: 'Em andamento',
+  Finalizada: 'Concluída',
+  Cancelada: 'Cancelada',
+};
+
 // Linha local: além das colunas do Postgres, o SQLite guarda `em_revisao` (estado só do aparelho).
 export type ViagemLocal = Viagem & { em_revisao: boolean };
 

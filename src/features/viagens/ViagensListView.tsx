@@ -18,7 +18,6 @@ import {
   Text,
   colors,
   spacing,
-  type BadgeTone,
   type TabOption,
 } from '@/ui';
 
@@ -26,7 +25,7 @@ import { calcularKmRodado, distanciaUltrapassaEstimativa, formatarHodometro, for
 import { IndicadorSincronizacao } from './IndicadorSincronizacao';
 import { contarRevisoesPendentes } from './revisoesRepository';
 import { useSyncStore } from './syncStore';
-import type { StatusViagem, ViagemDetalhada } from './types';
+import { rotuloStatusViagem, type StatusViagem, type ViagemDetalhada } from './types';
 import { listarViagens } from './viagensRepository';
 
 type FiltroStatus = StatusViagem | 'Todos';
@@ -34,17 +33,9 @@ type FiltroStatus = StatusViagem | 'Todos';
 const opcoesFiltro: TabOption[] = [
   { label: 'Todas', value: 'Todos' },
   { label: 'Em andamento', value: 'EmAndamento' },
-  { label: 'Finalizadas', value: 'Finalizada' },
+  { label: 'Concluídas', value: 'Finalizada' },
   { label: 'Canceladas', value: 'Cancelada' },
 ];
-
-// O banco guarda "Finalizada", mas o critério de aceite da US08 exibe "Concluída"
-// (mesmo padrão de EmManutencao → "Em Manutenção").
-const badgePorStatus: Record<StatusViagem, { label: string; tone: BadgeTone }> = {
-  EmAndamento: { label: 'Em andamento', tone: 'neutral' },
-  Finalizada: { label: 'Concluída', tone: 'success' },
-  Cancelada: { label: 'Cancelada', tone: 'neutral' },
-};
 
 export function ViagensListView() {
   const router = useRouter();
@@ -198,7 +189,6 @@ function CartaoViagem({ viagem }: { viagem: ViagemDetalhada }) {
   const router = useRouter();
   // Passo 3.1: km_rodado ?? (hodometro_final - hodometro_inicial)
   const kmRodado = calcularKmRodado(viagem);
-  const statusConfig = badgePorStatus[viagem.status];
   // Passo 3.3: aviso visual se ultrapassar muito a estimativa da rota
   const distanciaExcessiva = distanciaUltrapassaEstimativa(
     kmRodado,
@@ -213,8 +203,10 @@ function CartaoViagem({ viagem }: { viagem: ViagemDetalhada }) {
             {viagem.veiculo ? `${viagem.veiculo.placa} • ${viagem.veiculo.modelo}` : 'Veículo'}
           </Text>
           <View style={styles.badges}>
-            {viagem.em_revisao && <Badge label="Em revisão" tone="danger" />}
-            <Badge label={statusConfig.label} tone={statusConfig.tone} />
+            {/* Verde/vermelho são só para entrada/saída financeira (CLAUDE.md §8): o status da
+                viagem é informado pelo rótulo, sempre no tom neutro. */}
+            {viagem.em_revisao && <Badge label="Em revisão" tone="neutral" />}
+            <Badge label={rotuloStatusViagem[viagem.status]} tone="neutral" />
           </View>
         </View>
 
