@@ -4,8 +4,7 @@ import { ActivityIndicator, StyleSheet, View } from 'react-native';
 import { z } from 'zod';
 
 import { useProfile } from '@/features/auth/profileStore';
-import { buscarVeiculoPorId, listarVeiculosSelecionaveis } from '@/features/veiculos/repository';
-import { rotuloStatusVeiculo, type Veiculo } from '@/features/veiculos/types';
+import { rotuloStatusVeiculo } from '@/features/veiculos/types';
 import {
   Button,
   Card,
@@ -23,13 +22,15 @@ import {
 
 import { formatarHodometro, parseHodometro } from './calculo';
 import { abrirViagemComUltimoHodometroSchema } from './schema';
-import type { MotoristaResumo, RotaResumo } from './types';
+import type { MotoristaSelecionavel, RotaSelecionavel, VeiculoSelecionavel } from './types';
 import {
   MENSAGENS_ERRO_VIAGEM,
   abrirViagem,
   buscarUltimoHodometro,
-  listarMotoristasAtivos,
-  listarRotasAtivas,
+  buscarVeiculoParaViagem,
+  listarMotoristasParaViagem,
+  listarRotasParaViagem,
+  listarVeiculosParaViagem,
 } from './viagensRepository';
 
 type ErrosFormulario = {
@@ -57,15 +58,13 @@ export function AbrirViagemView() {
   // não pode preencher o hodômetro já limpo para o veículo B.
   const requisicaoVeiculoRef = useRef(0);
 
+  const [tentativa, setTentativa] = useState(0);
   const [carregandoDados, setCarregandoDados] = useState(true);
   const [erroCarregamento, setErroCarregamento] = useState<string | null>(null);
-  // "Tentar novamente" só incrementa este número; o efeito de carga roda de novo por causa dele,
-  // sem depender de a rota remontar a tela.
-  const [tentativaCarga, setTentativaCarga] = useState(0);
 
-  const [veiculos, setVeiculos] = useState<Veiculo[]>([]);
-  const [rotas, setRotas] = useState<RotaResumo[]>([]);
-  const [motoristas, setMotoristas] = useState<MotoristaResumo[]>([]);
+  const [veiculos, setVeiculos] = useState<VeiculoSelecionavel[]>([]);
+  const [rotas, setRotas] = useState<RotaSelecionavel[]>([]);
+  const [motoristas, setMotoristas] = useState<MotoristaSelecionavel[]>([]);
 
   const [veiculoId, setVeiculoId] = useState<string | null>(null);
   const [rotaId, setRotaId] = useState<string | null>(null);
@@ -82,18 +81,26 @@ export function AbrirViagemView() {
   const ehMotorista = usuario?.perfil === 'Motorista';
   const ehAdminOuGestor = usuario?.perfil === 'Admin' || usuario?.perfil === 'Gestor de Frota';
 
-  // Carrega veículos, rotas e (Admin/Gestor) motoristas em paralelo.
   useEffect(() => {
     let cancelado = false;
 
     async function carregarAuxiliares() {
-      // "viagem" só devolve veículo Disponível: inativo e em manutenção nem aparecem, e o
-      // trigger do banco continua sendo a barreira para a corrida com outra abertura.
-      // O Motorista não consulta `usuario`: ele é sempre o próprio responsável (RLS de viagem).
+      setCarregandoDados(true);
+      setErroCarregamento(null);
+
+      if (!usuario) {
+        setErroCarregamento('Sessão não identificada. Entre novamente para abrir uma viagem.');
+        setCarregandoDados(false);
+        return;
+      }
+
+      // Todas as listas vêm do cache local. No primeiro login ainda online, o sync grava esse
+      // cache; depois disso a tela abre sem internet. O Motorista não lista motoristas: ele é
+      // sempre o próprio responsável (RLS-04 do banco).
       const [resVeiculos, resRotas, resMotoristas] = await Promise.all([
-        listarVeiculosSelecionaveis('viagem'),
-        listarRotasAtivas(),
-        ehAdminOuGestor ? listarMotoristasAtivos() : Promise.resolve(null),
+        listarVeiculosParaViagem(),
+        listarRotasParaViagem(),
+        ehAdminOuGestor ? listarMotoristasParaViagem() : Promise.resolve(null),
       ]);
 
       if (cancelado) return;
@@ -110,7 +117,7 @@ export function AbrirViagemView() {
       setVeiculos(resVeiculos.data);
       setRotas(resRotas.data);
 
-      if (ehMotorista && usuario) {
+      if (ehMotorista) {
         setMotoristas([{ id: usuario.id, nome: usuario.nome, email: usuario.email }]);
         setMotoristaId(usuario.id);
       } else if (resMotoristas) {
@@ -127,17 +134,8 @@ export function AbrirViagemView() {
       // Uma resposta de veículo ainda em voo não pode voltar depois de a tela sair.
       requisicaoVeiculoRef.current += 1;
     };
-  }, [ehAdminOuGestor, ehMotorista, usuario, tentativaCarga]);
+  }, [ehAdminOuGestor, ehMotorista, tentativa, usuario]);
 
-  // A primeira carga já começa em "carregando" (estado inicial); a nova tentativa volta a tela
-  // para o loading e dispara o efeito de novo.
-  function recarregarAuxiliares() {
-    setCarregandoDados(true);
-    setErroCarregamento(null);
-    setTentativaCarga((atual) => atual + 1);
-  }
-
-  // Ao selecionar um veículo, confere a disponibilidade e (Admin/Gestor) o último hodômetro.
   async function aoSelecionarVeiculo(id: string) {
     const requisicao = requisicaoVeiculoRef.current + 1;
     requisicaoVeiculoRef.current = requisicao;
@@ -148,10 +146,7 @@ export function AbrirViagemView() {
     setHodometroInicial('');
     setUltimoHodometroVeiculo(null);
 
-    // A disponibilidade vem de `veiculo.status`, não de `viagem`: o RLS de `viagem` esconde
-    // a viagem aberta por outro motorista, mas o status do veículo é visível a todos e o
-    // trigger `sincroniza_status_veiculo` o mantém atualizado.
-    const resVeiculo = await buscarVeiculoPorId(id);
+    const resVeiculo = await buscarVeiculoParaViagem(id);
     if (requisicao !== requisicaoVeiculoRef.current) return;
 
     if (!resVeiculo.ok) {
@@ -168,13 +163,10 @@ export function AbrirViagemView() {
       return;
     }
 
-    // Consultas diretas a `viagem` também respeitam o RLS: para o Motorista, o "último
-    // hodômetro" pode ser de uma viagem que ele não enxerga. Só Admin/Gestor, que veem todas
-    // as viagens, recebem o valor; para o Motorista, o banco valida no insert (VG004) sem
-    // expor o hodômetro de uma viagem alheia.
+    // Para Motorista, o cache de viagens pode não conter o último hodômetro de viagens que o
+    // RLS esconde. O servidor valida o VG004 no sync; exibir um valor parcial seria pior.
     if (!ehAdminOuGestor) return;
 
-    // Consulta o último hodômetro final registrado para sugerir/preencher o inicial
     const resHodometro = await buscarUltimoHodometro(id);
     if (requisicao !== requisicaoVeiculoRef.current) return;
 
@@ -219,7 +211,7 @@ export function AbrirViagemView() {
     setSalvando(true);
     setErros({});
 
-    // REGRA CRÍTICA: km_rodado NUNCA é enviado no insert
+    // REGRA CRÍTICA: km_rodado NUNCA entra no insert (coluna gerada no Postgres).
     const resultado = await abrirViagem({
       veiculo_id: validacao.data.veiculo_id,
       rota_id: validacao.data.rota_id,
@@ -238,7 +230,10 @@ export function AbrirViagemView() {
 
     // O botão segue em loading até a tela fechar: sem setTimeout, o toque repetido durante a
     // mensagem de sucesso não abre uma segunda viagem.
-    setFeedback({ mensagem: 'Viagem aberta com sucesso!', tone: 'success' });
+    setFeedback({
+      mensagem: 'Viagem aberta com sucesso! Os dados serão enviados quando houver conexão.',
+      tone: 'success',
+    });
   }
 
   function dispensarFeedback() {
@@ -271,10 +266,14 @@ export function AbrirViagemView() {
     veiculos.length === 0
       ? {
           titulo: 'Nenhum veículo disponível',
-          descricao: 'Todos os veículos estão em viagem, em manutenção ou inativos.',
+          descricao:
+            'Todos os veículos estão em viagem ou em manutenção, ou o cache ainda não foi baixado. Conecte-se para atualizar.',
         }
       : rotas.length === 0
-        ? { titulo: 'Nenhuma rota ativa', descricao: 'Cadastre ou reative uma rota para abrir a viagem.' }
+        ? {
+            titulo: 'Nenhuma rota ativa',
+            descricao: 'Cadastre uma rota ativa ou conecte-se à internet para atualizar os dados.',
+          }
         : opcoesMotoristas.length === 0
           ? {
               titulo: 'Nenhum motorista ativo',
@@ -294,23 +293,27 @@ export function AbrirViagemView() {
     >
       {carregandoDados ? (
         <View style={styles.centro}>
-          <ActivityIndicator size="large" color={colors.accent} />
+          <ActivityIndicator
+            size="large"
+            color={colors.accent}
+            accessibilityLabel="Carregando dados da viagem"
+          />
         </View>
       ) : erroCarregamento ? (
         <EmptyState
           icon="viagens"
-          title="Erro ao carregar dados"
+          title="Não foi possível carregar os dados"
           description={erroCarregamento}
           actionLabel="Tentar novamente"
-          onAction={recarregarAuxiliares}
+          onAction={() => setTentativa((atual) => atual + 1)}
         />
       ) : vazio ? (
         <EmptyState
           icon="viagens"
           title={vazio.titulo}
           description={vazio.descricao}
-          actionLabel="Atualizar"
-          onAction={recarregarAuxiliares}
+          actionLabel="Tentar novamente"
+          onAction={() => setTentativa((atual) => atual + 1)}
         />
       ) : (
         <Column gap="lg">
@@ -318,7 +321,6 @@ export function AbrirViagemView() {
             <Column gap="md">
               <Text variant="subheading">Informações da nova viagem</Text>
 
-              {/* 1. Seleção de Veículo */}
               <Select
                 label="Veículo"
                 placeholder="Selecione o veículo"
@@ -328,7 +330,6 @@ export function AbrirViagemView() {
                 error={erros.veiculo_id}
               />
 
-              {/* 2. Seleção de Rota */}
               <Select
                 label="Rota"
                 placeholder="Selecione a rota"
@@ -341,7 +342,6 @@ export function AbrirViagemView() {
                 error={erros.rota_id}
               />
 
-              {/* 3. Seleção de Motorista */}
               <Select
                 label="Motorista"
                 placeholder="Selecione o motorista"
@@ -355,9 +355,8 @@ export function AbrirViagemView() {
                 error={erros.motorista_id}
               />
 
-              {/* 4. Apontamento de Hodômetro Inicial */}
               <Input
-                label="Hodômetro Inicial (km)"
+                label="Hodômetro inicial (km)"
                 placeholder="Ex.: 15000"
                 keyboardType="numeric"
                 value={hodometroInicial}

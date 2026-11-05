@@ -47,6 +47,8 @@ export default function AppLayout() {
         <Stack.Screen name="rotas/[id]/editar" options={{ title: 'Editar rota' }} />
         <Stack.Screen name="manutencoes/index" options={{ title: 'Manutenções' }} />
         <Stack.Screen name="manutencoes/nova" options={{ title: 'Nova manutenção' }} />
+        {/* Revisões de viagens: só Admin/Gestor decidem; o Motorista nem vê a rota. */}
+        <Stack.Screen name="viagens/revisoes" options={{ title: 'Revisões de viagens' }} />
       </Stack.Protected>
       {/* Viagens (US08) seguem a aba: o Motorista também abre e fecha. A lista é a própria aba. */}
       <Stack.Protected guard={podeVerViagens}>

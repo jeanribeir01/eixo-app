@@ -20,6 +20,7 @@ const mockViagemAberta = {
   data_fim: null,
   status: 'EmAndamento' as const,
   km_rodado: null,
+  em_revisao: false,
   data_inclusao: '2026-10-18T08:00:00Z',
   data_atualizacao: '2026-10-18T08:00:00Z',
   veiculo: {
