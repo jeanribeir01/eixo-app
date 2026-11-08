@@ -102,7 +102,7 @@ describe('FinanceiroHubView — menu do módulo (FIN-03)', () => {
     if (width >= 768) {
       expect(atalhos).toHaveStyle({ flexDirection: 'row', alignItems: 'flex-start' });
       for (const coluna of atalhos.children) {
-        if (typeof coluna !== 'string') expect(StyleSheet.flatten(coluna.props.style)).toMatchObject({ flex: 1, minWidth: 0 });
+        if (typeof coluna !== 'string') expect(StyleSheet.flatten(coluna.props.style)).toMatchObject({ flex: 1 });
       }
     } else {
       expect(atalhos).not.toHaveStyle({ flexDirection: 'row' });

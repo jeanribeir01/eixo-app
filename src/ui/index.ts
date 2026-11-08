@@ -23,3 +23,4 @@ export { Switch, type SwitchProps } from './Switch';
 export { Tabs, type TabOption, type TabsProps } from './Tabs';
 export { Text, toneColors, type TextProps, type TextTone } from './Text';
 export { colors, fontFamily, iconSize, radius, shadow, spacing, touchTarget, typography } from './tokens';
+export { useTablet } from './useTablet';

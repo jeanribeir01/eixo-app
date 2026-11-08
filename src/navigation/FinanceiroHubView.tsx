@@ -1,11 +1,11 @@
 import { useCallback, useRef, useState } from 'react';
 import { useFocusEffect, useRouter, type Href } from 'expo-router';
-import { StyleSheet, useWindowDimensions, View } from 'react-native';
+import { StyleSheet, View } from 'react-native';
 
 import { SaldoAtualCard } from '@/features/caixa/components/SaldoAtualCard';
 import { buscarResumoCaixa } from '@/features/caixa/fonteResumoCaixa';
-import { Button, Card, FAB, ListItem, ListSection, Screen, Skeleton, Text, type IconName } from '@/ui';
-import { layout, spacing } from '@/ui/tokens';
+import { Button, Card, FAB, ListItem, ListSection, Screen, Skeleton, Text, useTablet, type IconName } from '@/ui';
+import { spacing } from '@/ui/tokens';
 
 type Saldo = { status: 'carregando' } | { status: 'pronto'; centavos: number } | { status: 'erro' };
 
@@ -27,7 +27,7 @@ const CADASTROS: Atalho[] = [
 // depende do saldo: se o saldo falhar, o erro fica dentro do cartão e as linhas continuam tocáveis.
 export function FinanceiroHubView() {
   const router = useRouter();
-  const tablet = useWindowDimensions().width >= layout.tablet;
+  const tablet = useTablet();
   const [saldo, setSaldo] = useState<Saldo>({ status: 'carregando' });
   // Só a resposta mais recente escreve na tela (mesmo padrão das listas).
   const ultimoPedido = useRef(0);
@@ -99,5 +99,5 @@ export function FinanceiroHubView() {
 const styles = StyleSheet.create({
   atalhos: { gap: spacing.lg },
   duasColunas: { flexDirection: 'row', alignItems: 'flex-start' },
-  coluna: { flex: 1, minWidth: 0 },
+  coluna: { flex: 1 },
 });

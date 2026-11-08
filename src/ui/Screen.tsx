@@ -1,10 +1,11 @@
 import { useContext, type ReactNode } from 'react';
 import { HeaderHeightContext } from 'expo-router/react-navigation';
-import { KeyboardAvoidingView, ScrollView, StyleSheet, useWindowDimensions, View } from 'react-native';
+import { KeyboardAvoidingView, ScrollView, StyleSheet, View } from 'react-native';
 import { SafeAreaView, type Edge } from 'react-native-safe-area-context';
 
 import { FAB_ALTURA_RESERVADA } from './FAB';
 import { colors, layout, spacing } from './tokens';
+import { useTablet } from './useTablet';
 
 type ScreenProps = {
   children: ReactNode;
@@ -29,7 +30,7 @@ export function Screen({ children, align = 'top', underHeader = false, scroll = 
   // Sob um header nativo essa posição começa abaixo do header, então a altura dele entra como desconto;
   // sem isso o campo focado fica escondido atrás do teclado. Fora de um navegador o contexto vem vazio.
   const alturaDoHeader = useContext(HeaderHeightContext) ?? 0;
-  const tablet = useWindowDimensions().width >= layout.tablet;
+  const tablet = useTablet();
 
   return (
     <SafeAreaView edges={underHeader ? SEM_O_TOPO : TODAS_AS_BORDAS} style={styles.screen}>
@@ -48,11 +49,21 @@ export function Screen({ children, align = 'top', underHeader = false, scroll = 
           </ScrollView>
         </KeyboardAvoidingView>
       ) : (
-        <View style={[styles.flex, styles.content, tablet && styles.tablet, align === 'center' && styles.center]}>{children}</View>
+        <View
+          testID="screen-conteudo"
+          style={[styles.flex, styles.content, tablet && styles.tablet, align === 'center' && styles.center]}
+        >
+          {children}
+        </View>
       )}
       {(overlay || fab) && (
         // Snackbar antes do FAB: empilhados no rodapé, a mensagem aparece sempre acima do botão.
-        <View style={[StyleSheet.absoluteFill, styles.overlay, tablet && styles.tabletOverlay]} pointerEvents="box-none">
+        // O posicionamento é um OU outro (nunca "absoluteFill + anular left/right"): ver tabletOverlay.
+        <View
+          testID="screen-camada-flutuante"
+          style={[tablet ? styles.tabletOverlay : StyleSheet.absoluteFill, styles.overlay]}
+          pointerEvents="box-none"
+        >
           {overlay}
           {fab}
         </View>
@@ -79,12 +90,17 @@ const styles = StyleSheet.create({
     maxWidth: layout.contentMaxWidth,
     alignSelf: 'center',
   },
+  // Camada flutuante no tablet: substitui o absoluteFill em vez de anular left/right com undefined.
+  // Com left/right definidos o Yoga ignora o alignSelf e a camada não centraliza; e o renderer nativo
+  // não aplica `undefined` quando a View já está montada (celular → tablet com a tela aberta, ao girar
+  // ou dividir a tela), então left: 0 ficaria valendo. Trocando o objeto inteiro, o diff remove as chaves.
   tabletOverlay: {
+    position: 'absolute',
+    top: 0,
+    bottom: 0,
     width: '100%',
     maxWidth: layout.contentMaxWidth,
     alignSelf: 'center',
-    left: undefined,
-    right: undefined,
   },
   center: {
     justifyContent: 'center',
