@@ -1,9 +1,10 @@
 import { useState } from 'react';
 import { useRouter } from 'expo-router';
-import { FlatList, RefreshControl, StyleSheet } from 'react-native';
+import { RefreshControl, StyleSheet } from 'react-native';
 
 import { useDadosDaTela } from '@/lib/useDadosDaTela';
 import {
+  List,
   Column,
   EmptyState,
   FAB,
@@ -100,7 +101,7 @@ export function CategoriasListView() {
       )}
 
       {tela.status === 'pronto' && (
-        <FlatList
+        <List
           data={categoriasFiltradas}
           keyExtractor={(item) => item.id}
           style={styles.lista}

@@ -347,7 +347,7 @@ O app funciona, mas parece um protótipo. As telas internas não têm header nem
 | DAT-01 | P1: Data com calendário nativo (AC 1–5) | Tasks | Pending |
 | REL-01 | P1: Build de release (AC 1–4) | Tasks | Pending |
 | HAP-01 | P2: Haptics (AC 1–4) | Tasks | Pending |
-| ANI-01 | P2: Motion contido (AC 1–4) | Tasks | Pending |
+| ANI-01 | P2: Motion contido (AC 1–4) | Execute | Verified (EIX-68; validation.md) |
 | TAB-01 | P2: Tablet (AC 1–3) | Tasks | Pending |
 | NTB-01 | P2: Spike de NativeTabs (AC 1) | Tasks | Pending |
 | PRF-01 | P2: Performance medida (AC 1–3) | Tasks | Pending |

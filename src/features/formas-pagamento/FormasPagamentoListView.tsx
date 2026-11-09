@@ -1,9 +1,10 @@
 import { useState } from 'react';
 import { useRouter } from 'expo-router';
-import { FlatList, RefreshControl, StyleSheet } from 'react-native';
+import { RefreshControl, StyleSheet } from 'react-native';
 
 import { useDadosDaTela } from '@/lib/useDadosDaTela';
 import {
+  List,
   Column,
   EmptyState,
   FAB,
@@ -101,7 +102,7 @@ export function FormasPagamentoListView() {
       )}
 
       {tela.status === 'pronto' && (
-        <FlatList
+        <List
           data={filtradas}
           keyExtractor={(item) => item.id}
           style={styles.lista}

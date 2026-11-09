@@ -24,6 +24,16 @@ export const colors = {
 
 export const spacing = { xs: 4, sm: 8, md: 12, base: 16, lg: 24, xl: 32, xxl: 48 } as const;
 
+// listEasing são os pontos de controle do cubic-bezier (Easing.bezier); skeletonEasing é a curva da
+// animação CSS do Reanimated, que aceita os nomes do CSS.
+export const motion = {
+  listDuration: 200,
+  listEasing: [0.77, 0, 0.175, 1],
+  skeletonCycle: 1000,
+  skeletonMinOpacity: 0.5,
+  skeletonEasing: 'ease-in-out',
+} as const;
+
 export const layout = { tablet: 768, contentMaxWidth: 720 } as const;
 
 export const radius = { icon: 4, input: 6, card: 10, feature: 16, pill: 9999 } as const;

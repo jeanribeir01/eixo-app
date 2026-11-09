@@ -162,6 +162,12 @@ Seen once or not yet corroborated. Tracked, not trusted.
 - evidence: M16 src/features/manutencao/ManutencaoFormView.tsx:48 (MAN-40) (forms, screens)
 - last seen: 2026-10-18T18:34:15Z
 
+### L-026 - Quando o hook acompanha reduceMotionChanged, controle a presença da animação pelo valor atual e evite somar ReduceMotion.System do Reanimated, que usa o snapshot inicial; confira ligar e desligar a preferência em release.
+- signal: `ac_gap` · recurrence: 1 feature(s) · scope: `src/ui motion acessibilidade` · harmful: 0
+- features: eix58-design-app
+- evidence: validation.md: EIX-68 iteração 2, preferência alterada em runtime (src/ui motion acessibilidade)
+- last seen: 2026-10-25T18:48:52Z
+
 ## Quarantined (failed when applied - ignore)
 
 A confirmed lesson that recurred alongside failure. Kept for the maintainer to review.

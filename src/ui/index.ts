@@ -13,6 +13,7 @@ export { Icon } from './Icon';
 export { icons, type IconName } from './icons';
 export { Input, type InputProps } from './Input';
 export { ListItem, type ListItemProps } from './ListItem';
+export { List } from './List';
 export { ListSection } from './ListSection';
 export { Logo, type LogoProps } from './Logo';
 export { Screen } from './Screen';

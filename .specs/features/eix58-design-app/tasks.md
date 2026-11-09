@@ -1256,8 +1256,8 @@ T49
 
 **Done when**:
 
-- [ ] Teste: com reduced motion não anima
-- [ ] Gate check passes: `npx jest --selectProjects app src/ui/__tests__/Skeleton.test.tsx`
+- [x] Teste: com reduced motion não anima
+- [x] Gate check passes: `npx jest --selectProjects app src/ui/__tests__/Skeleton.test.tsx`
 
 **Tests**: unit
 **Gate**: quick
@@ -1270,6 +1270,8 @@ T49
 
 **What**: Animar entrada e saída de linha em lista (≤ 250 ms, `LinearTransition`), sem animar a primeira montagem da tela.
 **Where**: `src/ui/ListItem.tsx`
+
+**Integração necessária (EIX-68)**: `src/ui/List.tsx`, `useListTransition.ts` e as oito listas de dados que usavam `FlatList`. O contêiner da célula controla a posição na lista virtualizada; somente animar o filho `ListItem` não anima a remoção/inclusão. A troca preserva os props, dados e ações das telas. A preferência de movimento é compartilhada com Skeleton por `useReducedMotion.ts`.
 **Depends on**: None
 **Reuses**: `ListItem`
 **Requirement**: ANI-01
@@ -1281,8 +1283,9 @@ T49
 
 **Done when**:
 
-- [ ] Teste: primeira montagem sem `entering`; reduced motion respeitado
-- [ ] Gate check passes: `npm run typecheck && npm run lint && npm run test`
+- [x] Teste: primeira montagem sem `entering`; reduced motion respeitado
+- [x] Release em emulador de dois núcleos: incluir/remover sem entrada e respeitar a preferência; iniciar com remover animações ligado e desligar com o app aberto preserva as posições (correção do snapshot de `ReduceMotion.System`, evidência em `validation.md`)
+- [x] Gate check passes: `npm run typecheck && npm run lint && npm run test`
 
 **Tests**: unit
 **Gate**: build
