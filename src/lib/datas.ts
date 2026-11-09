@@ -83,3 +83,27 @@ export function intervaloDoMes(ano: number, mes: number): IntervaloDoMes {
 export function nomeDoMes(ano: number, mes: number): string {
   return `${NOMES_DOS_MESES[mes - 1]} ${ano}`;
 }
+
+export type AnoMes = { ano: number; mes: number };
+
+// Mês de hoje no relógio do aparelho (fuso local).
+export function mesDeHoje(): AnoMes {
+  const hoje = new Date();
+  return { ano: hoje.getFullYear(), mes: hoje.getMonth() + 1 };
+}
+
+// Navegação mês a mês das listas e dos dashboards. O Date resolve a virada de ano: mês 13 de 2026 vira
+// janeiro de 2027, mês 0 vira dezembro do ano anterior.
+export function somarMeses({ ano, mes }: AnoMes, meses: number): AnoMes {
+  const destino = new Date(ano, mes - 1 + meses, 1);
+  return { ano: destino.getFullYear(), mes: destino.getMonth() + 1 };
+}
+
+// Dias corridos entre duas datas ISO (AAAA-MM-DD). Conta em UTC, que não tem horário de verão:
+// assim todo dia tem exatamente 24h e a divisão sempre dá um número inteiro.
+export function diasEntre(inicioISO: string, fimISO: string): number {
+  const [anoInicio, mesInicio, diaInicio] = inicioISO.split('-').map(Number);
+  const [anoFim, mesFim, diaFim] = fimISO.split('-').map(Number);
+  const milissegundos = Date.UTC(anoFim, mesFim - 1, diaFim) - Date.UTC(anoInicio, mesInicio - 1, diaInicio);
+  return milissegundos / 86_400_000;
+}

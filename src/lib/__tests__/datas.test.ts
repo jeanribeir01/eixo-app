@@ -1,4 +1,14 @@
-import { dataBRParaISO, hojeISO, intervaloDoMes, isoParaDataBR, mascararData, nomeDoMes } from '../datas';
+import {
+  dataBRParaISO,
+  diasEntre,
+  hojeISO,
+  intervaloDoMes,
+  isoParaDataBR,
+  mascararData,
+  mesDeHoje,
+  nomeDoMes,
+  somarMeses,
+} from '../datas';
 
 describe('mascararData (MOV-05)', () => {
   it.each([
@@ -79,5 +89,41 @@ describe('nomeDoMes (MOV-08)', () => {
     [2026, 3, 'Março 2026'],
   ])('%i/%i → %s', (ano, mes, esperado) => {
     expect(nomeDoMes(ano, mes)).toBe(esperado);
+  });
+});
+
+describe('mesDeHoje', () => {
+  afterEach(() => {
+    jest.useRealTimers();
+  });
+
+  it('usa o mês local, mesmo às 23h30 do último dia', () => {
+    jest.useFakeTimers().setSystemTime(new Date(2026, 9, 31, 23, 30));
+
+    expect(mesDeHoje()).toEqual({ ano: 2026, mes: 10 });
+  });
+});
+
+describe('somarMeses', () => {
+  it.each([
+    [{ ano: 2026, mes: 12 }, 1, { ano: 2027, mes: 1 }],
+    [{ ano: 2026, mes: 1 }, -1, { ano: 2025, mes: 12 }],
+    [{ ano: 2026, mes: 3 }, 0, { ano: 2026, mes: 3 }],
+    [{ ano: 2026, mes: 3 }, -15, { ano: 2024, mes: 12 }],
+  ])('%o + %i → %o', (inicio, meses, esperado) => {
+    expect(somarMeses(inicio, meses)).toEqual(esperado);
+  });
+});
+
+describe('diasEntre', () => {
+  it.each([
+    ['2026-10-05', '2026-10-05', 0],
+    ['2026-10-01', '2026-10-15', 14],
+    ['2028-01-01', '2028-12-31', 365],
+    ['2026-12-31', '2027-01-01', 1],
+    // Atravessa o início do horário de verão em fusos que ainda o adotam: continua inteiro.
+    ['2026-03-01', '2026-04-01', 31],
+  ])('%s a %s → %i', (inicio, fim, esperado) => {
+    expect(diasEntre(inicio, fim)).toBe(esperado);
   });
 });
