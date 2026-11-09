@@ -1,4 +1,4 @@
-import { hojeISO, intervaloDoMes, isoParaDataBR, nomeDoMes } from '@/lib/datas';
+import { intervaloDoMes, isoParaDataBR, mesDeHoje, nomeDoMes, somarMeses } from '@/lib/datas';
 
 // Período escolhido no filtro dos dashboards (US11, reutilizado pelas US12 e US13). As datas são ISO
 // (AAAA-MM-DD) e valem inclusive nas duas pontas: é o formato que uma RPC recebe em parâmetro `date`.
@@ -26,25 +26,37 @@ export function periodoDoAno(ano: number): Periodo {
 }
 
 export function mesAtual(): Periodo {
-  const [ano, mes] = anoEMes(hojeISO());
+  const { ano, mes } = mesDeHoje();
   return periodoDoMes(ano, mes);
 }
 
 export function anoAtual(): Periodo {
-  const [ano] = anoEMes(hojeISO());
-  return periodoDoAno(ano);
+  return periodoDoAno(mesDeHoje().ano);
 }
 
 export function deslocarMes(periodo: Periodo, meses: number): Periodo {
   const [ano, mes] = anoEMes(periodo.dataInicial);
-  // O Date resolve a virada de ano: mês 13 de 2026 vira janeiro de 2027.
-  const destino = new Date(ano, mes - 1 + meses, 1);
-  return periodoDoMes(destino.getFullYear(), destino.getMonth() + 1);
+  const destino = somarMeses({ ano, mes }, meses);
+  return periodoDoMes(destino.ano, destino.mes);
 }
 
 export function deslocarAno(periodo: Periodo, anos: number): Periodo {
   const [ano] = anoEMes(periodo.dataInicial);
   return periodoDoAno(ano + anos);
+}
+
+// Troca de aba entre Mês e Ano (ou saída do período customizado) parte do período em uso, não de hoje:
+// quem voltou a março de 2024 e toca em "Ano" quer ver 2024. De um ano para "Mês", o mês é o de hoje
+// dentro daquele ano; no ano atual, isso dá o mês atual.
+export function converterPeriodo(periodo: Periodo, modo: 'mes' | 'ano'): Periodo {
+  const [ano, mes] = anoEMes(periodo.dataInicial);
+  if (modo === 'ano') return periodoDoAno(ano);
+  if (periodo.modo === 'ano') return periodoDoMes(ano, mesDeHoje().mes);
+  return periodoDoMes(ano, mes);
+}
+
+export function mesmoPeriodo(a: Periodo, b: Periodo): boolean {
+  return a.modo === b.modo && a.dataInicial === b.dataInicial && a.dataFinal === b.dataFinal;
 }
 
 export function rotuloDoPeriodo(periodo: Periodo): string {

@@ -2,7 +2,7 @@ import { useCallback, useState } from 'react';
 import { useRouter } from 'expo-router';
 import { Alert, FlatList, RefreshControl, StyleSheet } from 'react-native';
 
-import { isoParaDataBR, nomeDoMes } from '@/lib/datas';
+import { isoParaDataBR, mesDeHoje, nomeDoMes, somarMeses } from '@/lib/datas';
 import { formatarMoeda } from '@/lib/money';
 import { useDadosDaTela } from '@/lib/useDadosDaTela';
 import {
@@ -39,11 +39,6 @@ const OPCOES_STATUS = [
   { value: 'Pago', label: 'Pagos' },
 ];
 
-function mesAtual() {
-  const hoje = new Date();
-  return { ano: hoje.getFullYear(), mes: hoje.getMonth() + 1 };
-}
-
 // Cor nunca sozinha: o sinal + / − acompanha sempre (DESIGN_CYAN, cores semânticas).
 function ValorComSinal({ movimentacao }: { movimentacao: Movimentacao }) {
   const entrada = movimentacao.categoria.tipo === 'Entrada';
@@ -66,7 +61,7 @@ function subtitulo(movimentacao: Movimentacao): string {
 
 export function MovimentacoesListView() {
   const router = useRouter();
-  const [periodo, setPeriodo] = useState(mesAtual);
+  const [periodo, setPeriodo] = useState(mesDeHoje);
   const [filtroTipo, setFiltroTipo] = useState<FiltroTipo>('todas');
   const [filtroStatus, setFiltroStatus] = useState<FiltroStatus>('todos');
   const [feedback, setFeedback] = useState<Feedback | null>(null);
@@ -76,10 +71,7 @@ export function MovimentacoesListView() {
   const tela = useDadosDaTela(buscar);
 
   function mudarMes(delta: number) {
-    setPeriodo(({ ano, mes }) => {
-      const data = new Date(ano, mes - 1 + delta, 1);
-      return { ano: data.getFullYear(), mes: data.getMonth() + 1 };
-    });
+    setPeriodo((atual) => somarMeses(atual, delta));
   }
 
   async function excluir(movimentacao: Movimentacao) {

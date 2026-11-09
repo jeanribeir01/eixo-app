@@ -1,8 +1,10 @@
 import {
   anoAtual,
+  converterPeriodo,
   deslocarAno,
   deslocarMes,
   mesAtual,
+  mesmoPeriodo,
   periodoDoAno,
   periodoDoMes,
   rotuloDoPeriodo,
@@ -46,5 +48,27 @@ describe('períodos do filtro', () => {
     expect(rotuloDoPeriodo({ modo: 'customizado', dataInicial: '2026-10-01', dataFinal: '2026-10-15' })).toBe(
       '01/10/2026 a 15/10/2026',
     );
+  });
+
+  it('trocar de Mês para Ano mantém o ano navegado', () => {
+    expect(converterPeriodo(periodoDoMes(2024, 3), 'ano')).toEqual(periodoDoAno(2024));
+  });
+
+  it('trocar de Ano para Mês usa o mês de hoje dentro do ano navegado', () => {
+    jest.useFakeTimers().setSystemTime(new Date(2026, 10, 8, 12));
+
+    expect(converterPeriodo(periodoDoAno(2024), 'mes')).toEqual(periodoDoMes(2024, 11));
+  });
+
+  it('sair do período customizado usa o mês e o ano da data inicial', () => {
+    const customizado = { modo: 'customizado' as const, dataInicial: '2025-07-10', dataFinal: '2025-08-20' };
+
+    expect(converterPeriodo(customizado, 'mes')).toEqual(periodoDoMes(2025, 7));
+    expect(converterPeriodo(customizado, 'ano')).toEqual(periodoDoAno(2025));
+  });
+
+  it('mesmoPeriodo compara pelo conteúdo, não pelo objeto', () => {
+    expect(mesmoPeriodo(periodoDoMes(2026, 11), periodoDoMes(2026, 11))).toBe(true);
+    expect(mesmoPeriodo(periodoDoMes(2026, 11), periodoDoMes(2026, 10))).toBe(false);
   });
 });

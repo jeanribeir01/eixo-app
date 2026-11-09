@@ -1,6 +1,6 @@
 import { z } from 'zod';
 
-import { periodoCustomizadoSchema } from '../schema';
+import { MAX_DIAS_PERIODO, periodoCustomizadoSchema } from '../schema';
 
 function errosDe(dataInicial: string, dataFinal: string) {
   const resultado = periodoCustomizadoSchema.safeParse({ dataInicial, dataFinal });
@@ -33,5 +33,18 @@ describe('periodoCustomizadoSchema', () => {
 
   it('recusa data final anterior à inicial, mesmo em anos diferentes', () => {
     expect(errosDe('01/01/2027', '31/12/2026').dataFinal).toEqual(['A data final não pode ser anterior à data inicial.']);
+  });
+
+  it('aceita um ano inteiro, inclusive bissexto (366 dias)', () => {
+    expect(MAX_DIAS_PERIODO).toBe(366);
+    expect(periodoCustomizadoSchema.safeParse({ dataInicial: '01/01/2028', dataFinal: '31/12/2028' }).success).toBe(true);
+  });
+
+  it('recusa período maior que 366 dias', () => {
+    expect(errosDe('01/01/2026', '02/01/2027').dataFinal).toEqual(['O período pode ter no máximo 366 dias.']);
+  });
+
+  it('recusa o histórico inteiro (1900 a 9999)', () => {
+    expect(errosDe('01/01/1900', '31/12/9999').dataFinal).toEqual(['O período pode ter no máximo 366 dias.']);
   });
 });
