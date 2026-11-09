@@ -444,6 +444,84 @@ export type Database = {
           },
         ]
       }
+      viagem_revisao: {
+        Row: {
+          codigo: string
+          data_atualizacao: string
+          data_inclusao: string
+          id: string
+          mensagem: string
+          motorista_id: string | null
+          motorista_nome: string | null
+          observacao: string | null
+          payload: Json
+          resolvido_em: string | null
+          resolvido_por: string | null
+          rota_id: string | null
+          rota_trecho: string | null
+          solicitante_id: string
+          status: Database["public"]["Enums"]["status_revisao"]
+          veiculo_id: string | null
+          veiculo_placa: string | null
+          viagem_id: string
+        }
+        Insert: {
+          codigo: string
+          data_atualizacao?: string
+          data_inclusao?: string
+          id: string
+          mensagem: string
+          motorista_id?: string | null
+          motorista_nome?: string | null
+          observacao?: string | null
+          payload?: Json
+          resolvido_em?: string | null
+          resolvido_por?: string | null
+          rota_id?: string | null
+          rota_trecho?: string | null
+          solicitante_id: string
+          status?: Database["public"]["Enums"]["status_revisao"]
+          veiculo_id?: string | null
+          veiculo_placa?: string | null
+          viagem_id: string
+        }
+        Update: {
+          codigo?: string
+          data_atualizacao?: string
+          data_inclusao?: string
+          id?: string
+          mensagem?: string
+          motorista_id?: string | null
+          motorista_nome?: string | null
+          observacao?: string | null
+          payload?: Json
+          resolvido_em?: string | null
+          resolvido_por?: string | null
+          rota_id?: string | null
+          rota_trecho?: string | null
+          solicitante_id?: string
+          status?: Database["public"]["Enums"]["status_revisao"]
+          veiculo_id?: string | null
+          veiculo_placa?: string | null
+          viagem_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "viagem_revisao_resolvido_por_fkey"
+            columns: ["resolvido_por"]
+            isOneToOne: false
+            referencedRelation: "usuario"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "viagem_revisao_solicitante_id_fkey"
+            columns: ["solicitante_id"]
+            isOneToOne: false
+            referencedRelation: "usuario"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Views: {
       [_ in never]: never
@@ -495,6 +573,7 @@ export type Database = {
     Enums: {
       perfil_nome: "Admin" | "Gestor de Frota" | "Financeiro" | "Motorista"
       status_pagamento: "Pendente" | "Pago"
+      status_revisao: "Pendente" | "Resolvida" | "Descartada"
       status_usuario: "AguardandoAprovacao" | "Ativo" | "Bloqueado"
       status_veiculo: "Disponivel" | "EmViagem" | "EmManutencao" | "Inativo"
       status_viagem: "EmAndamento" | "Finalizada" | "Cancelada"
@@ -656,6 +735,7 @@ export const Constants = {
     Enums: {
       perfil_nome: ["Admin", "Gestor de Frota", "Financeiro", "Motorista"],
       status_pagamento: ["Pendente", "Pago"],
+      status_revisao: ["Pendente", "Resolvida", "Descartada"],
       status_usuario: ["AguardandoAprovacao", "Ativo", "Bloqueado"],
       status_veiculo: ["Disponivel", "EmViagem", "EmManutencao", "Inativo"],
       status_viagem: ["EmAndamento", "Finalizada", "Cancelada"],

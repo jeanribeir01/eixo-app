@@ -34,6 +34,8 @@ export const motion = {
   skeletonEasing: 'ease-in-out',
 } as const;
 
+export const layout = { tablet: 768, contentMaxWidth: 720 } as const;
+
 export const radius = { icon: 4, input: 6, card: 10, feature: 16, pill: 9999 } as const;
 
 // Sombra "subtle" do DESIGN_CYAN (rgba(0,0,0,0.05) 0 1px 2px). Sombra é exceção, não regra:

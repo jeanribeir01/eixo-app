@@ -4,7 +4,8 @@ import { KeyboardAvoidingView, ScrollView, StyleSheet, View } from 'react-native
 import { SafeAreaView, type Edge } from 'react-native-safe-area-context';
 
 import { FAB_ALTURA_RESERVADA } from './FAB';
-import { colors, spacing } from './tokens';
+import { colors, layout, spacing } from './tokens';
+import { useTablet } from './useTablet';
 
 type ScreenProps = {
   children: ReactNode;
@@ -23,12 +24,13 @@ type ScreenProps = {
 const TODAS_AS_BORDAS: Edge[] = ['top', 'right', 'bottom', 'left'];
 const SEM_O_TOPO: Edge[] = ['right', 'bottom', 'left'];
 
-// Fundo canvas + padding lateral de 16: sem largura fixa, o conteúdo flui em celular e tablet (RNF02).
+// Fundo ocupa a janela; o conteúdo mantém uma largura legível no tablet (RNF02).
 export function Screen({ children, align = 'top', underHeader = false, scroll = false, overlay, fab }: ScreenProps) {
   // O KeyboardAvoidingView calcula a sobreposição do teclado a partir da posição dele dentro da tela.
   // Sob um header nativo essa posição começa abaixo do header, então a altura dele entra como desconto;
   // sem isso o campo focado fica escondido atrás do teclado. Fora de um navegador o contexto vem vazio.
   const alturaDoHeader = useContext(HeaderHeightContext) ?? 0;
+  const tablet = useTablet();
 
   return (
     <SafeAreaView edges={underHeader ? SEM_O_TOPO : TODAS_AS_BORDAS} style={styles.screen}>
@@ -40,18 +42,28 @@ export function Screen({ children, align = 'top', underHeader = false, scroll = 
         >
           <ScrollView
             style={styles.flex}
-            contentContainerStyle={[styles.content, align === 'center' && styles.centerScroll, !!fab && styles.espacoDoFab]}
+            contentContainerStyle={[styles.content, tablet && styles.tablet, align === 'center' && styles.centerScroll, !!fab && styles.espacoDoFab]}
             keyboardShouldPersistTaps="handled"
           >
             {children}
           </ScrollView>
         </KeyboardAvoidingView>
       ) : (
-        <View style={[styles.flex, styles.content, align === 'center' && styles.center]}>{children}</View>
+        <View
+          testID="screen-conteudo"
+          style={[styles.flex, styles.content, tablet && styles.tablet, align === 'center' && styles.center]}
+        >
+          {children}
+        </View>
       )}
       {(overlay || fab) && (
         // Snackbar antes do FAB: empilhados no rodapé, a mensagem aparece sempre acima do botão.
-        <View style={[StyleSheet.absoluteFill, styles.overlay]} pointerEvents="box-none">
+        // O posicionamento é um OU outro (nunca "absoluteFill + anular left/right"): ver tabletOverlay.
+        <View
+          testID="screen-camada-flutuante"
+          style={[tablet ? styles.tabletOverlay : StyleSheet.absoluteFill, styles.overlay]}
+          pointerEvents="box-none"
+        >
           {overlay}
           {fab}
         </View>
@@ -72,6 +84,23 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.base,
     paddingVertical: spacing.lg,
     gap: spacing.lg,
+  },
+  tablet: {
+    width: '100%',
+    maxWidth: layout.contentMaxWidth,
+    alignSelf: 'center',
+  },
+  // Camada flutuante no tablet: substitui o absoluteFill em vez de anular left/right com undefined.
+  // Com left/right definidos o Yoga ignora o alignSelf e a camada não centraliza; e o renderer nativo
+  // não aplica `undefined` quando a View já está montada (celular → tablet com a tela aberta, ao girar
+  // ou dividir a tela), então left: 0 ficaria valendo. Trocando o objeto inteiro, o diff remove as chaves.
+  tabletOverlay: {
+    position: 'absolute',
+    top: 0,
+    bottom: 0,
+    width: '100%',
+    maxWidth: layout.contentMaxWidth,
+    alignSelf: 'center',
   },
   center: {
     justifyContent: 'center',

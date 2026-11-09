@@ -23,14 +23,26 @@ type DadosViagem = {
   status?: StatusViagem;
 };
 
-// O erro do PGlite traz o SQLSTATE em `code`; é ele que o app traduz em mensagem.
-async function codigoDoErro(promessa: Promise<unknown>): Promise<string | undefined> {
+type ErroDoBanco = { code?: string; message?: string; detail?: string; details?: string };
+
+// O erro do PGlite traz o SQLSTATE em `code`; é ele que o app traduz em mensagem. O nome da
+// constraint chega no texto técnico (message/detail), usado pelo repositório para diferenciar
+// os 23505/23514 genéricos.
+async function erroDoBanco(promessa: Promise<unknown>): Promise<ErroDoBanco | null> {
   try {
     await promessa;
-    return undefined;
+    return null;
   } catch (erro) {
-    return (erro as { code?: string }).code;
+    return erro as ErroDoBanco;
   }
+}
+
+async function codigoDoErro(promessa: Promise<unknown>): Promise<string | undefined> {
+  return (await erroDoBanco(promessa))?.code;
+}
+
+function textoDoErro(erro: ErroDoBanco | null): string {
+  return `${erro?.message ?? ''} ${erro?.detail ?? ''} ${erro?.details ?? ''}`;
 }
 
 describe('migration viagem_regras', () => {
@@ -107,7 +119,7 @@ describe('migration viagem_regras', () => {
       await inserirViagem({ veiculoId });
 
       // `replica` desliga os triggers comuns: sobra só o índice para segurar a regra.
-      const codigo = await codigoDoErro(
+      const erro = await erroDoBanco(
         comoSuperuser(db, async (tx) => {
           await tx.query(`set local session_replication_role = replica`);
           await tx.query(
@@ -118,8 +130,33 @@ describe('migration viagem_regras', () => {
         }),
       );
 
-      expect(codigo).toBe('23505');
+      expect(erro?.code).toBe('23505');
+      // O repositório escolhe a mensagem pelo nome da constraint presente no erro.
+      expect(textoDoErro(erro)).toContain('viagem_um_andamento_por_veiculo');
       expect(await viagensDoVeiculo(veiculoId)).toBe(1);
+    });
+
+    it('expõe o nome viagem_pkey no 23505 de chave duplicada', async () => {
+      const veiculoId = await criarVeiculo();
+      const outroVeiculoId = await criarVeiculo();
+      const id = randomUUID();
+
+      await db.query(
+        `insert into viagem (id, veiculo_id, rota_id, motorista_id, hodometro_inicial, hodometro_final, status)
+         values ($1, $2, $3, $4, 1000, 1500, 'Finalizada')`,
+        [id, veiculoId, rotaId, MOTORISTA_A.id],
+      );
+
+      const erro = await erroDoBanco(
+        db.query(
+          `insert into viagem (id, veiculo_id, rota_id, motorista_id, hodometro_inicial)
+           values ($1, $2, $3, $4, 2000)`,
+          [id, outroVeiculoId, rotaId, MOTORISTA_B.id],
+        ),
+      );
+
+      expect(erro?.code).toBe('23505');
+      expect(textoDoErro(erro)).toContain('viagem_pkey');
     });
 
     it.each(['Finalizada', 'Cancelada'] as const)(
@@ -142,6 +179,26 @@ describe('migration viagem_regras', () => {
         expect(await viagensDoVeiculo(veiculoId)).toBe(2);
       },
     );
+  });
+
+  // A tela do Motorista não consegue ler a viagem de outro motorista (RLS), mas consegue ler
+  // `veiculo.status`, que o trigger mantém sincronizado. É esse sinal seguro que o cliente usa
+  // para bloquear a abertura antes de tentar o insert.
+  describe('disponibilidade visível sem expor a viagem alheia', () => {
+    it('Motorista B vê o veículo EmViagem, mas não a viagem aberta por A', async () => {
+      const veiculoId = await criarVeiculo();
+      await inserirViagem({ veiculoId, motoristaId: MOTORISTA_A.id });
+
+      const veiculo = await comoUsuario(db, MOTORISTA_B, (tx) =>
+        tx.query<{ status: string }>('select status from veiculo where id = $1', [veiculoId]),
+      );
+      expect(veiculo.rows).toEqual([{ status: 'EmViagem' }]);
+
+      const viagens = await comoUsuario(db, MOTORISTA_B, (tx) =>
+        tx.query('select id from viagem where veiculo_id = $1', [veiculoId]),
+      );
+      expect(viagens.rows).toEqual([]);
+    });
   });
 
   describe('veículo indisponível', () => {
@@ -314,14 +371,21 @@ describe('migration viagem_regras', () => {
       expect(mensagem).not.toMatch(/\d/);
     });
 
-    it('mantém as checks antigas: final igual ao inicial e Finalizada sem final dão 23514 (VIAG-11)', async () => {
+    it('mantém as checks antigas com o nome da constraint no 23514 (VIAG-11)', async () => {
       const veiculoId = await criarVeiculo();
 
-      const finalIgual = await codigoDoErro(inserirViagem({ veiculoId, hodometroInicial: 1000, hodometroFinal: 1000 }));
-      const finalizadaSemFinal = await codigoDoErro(inserirViagem({ veiculoId, status: 'Finalizada' }));
+      const inicialNegativo = await erroDoBanco(inserirViagem({ veiculoId, hodometroInicial: -1 }));
+      const finalIgual = await erroDoBanco(
+        inserirViagem({ veiculoId, hodometroInicial: 1000, hodometroFinal: 1000 }),
+      );
+      const finalizadaSemFinal = await erroDoBanco(inserirViagem({ veiculoId, status: 'Finalizada' }));
 
-      expect(finalIgual).toBe('23514');
-      expect(finalizadaSemFinal).toBe('23514');
+      expect(inicialNegativo?.code).toBe('23514');
+      expect(textoDoErro(inicialNegativo)).toContain('viagem_hodometro_inicial_nao_negativo');
+      expect(finalIgual?.code).toBe('23514');
+      expect(textoDoErro(finalIgual)).toContain('viagem_hodometro_final_maior');
+      expect(finalizadaSemFinal?.code).toBe('23514');
+      expect(textoDoErro(finalizadaSemFinal)).toContain('viagem_finalizada_tem_hodometro_final');
       expect(await viagensDoVeiculo(veiculoId)).toBe(0);
     });
   });
