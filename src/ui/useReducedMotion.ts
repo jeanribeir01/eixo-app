@@ -1,28 +1,59 @@
-import { useEffect, useState } from 'react';
+import { useSyncExternalStore } from 'react';
 import { AccessibilityInfo } from 'react-native';
-import { useReducedMotion as useInitialReducedMotion } from 'react-native-reanimated';
 
-// Preferência nativa inicial e alterações com o app aberto, inclusive ao voltar dos ajustes.
-export function useReducedMotion() {
-  const initialReduced = useInitialReducedMotion();
-  const [reduced, setReduced] = useState(initialReduced);
+// Uma única leitura da preferência "remover animações" para o app inteiro. Antes cada linha de lista
+// e cada Skeleton abria o próprio listener e fazia a própria chamada nativa; agora o primeiro
+// componente que monta abre a assinatura e os demais leem o mesmo valor.
+//
+// null = ainda não sabemos. Enquanto isso o hook responde "sem movimento": é mais seguro não animar
+// por um instante do que animar para quem pediu ao sistema que não anime. O snapshot de inicialização
+// do Reanimated não serve aqui porque fica velho se a pessoa muda a preferência com o app aberto.
+let atual: boolean | null = null;
+const ouvintes = new Set<() => void>();
+let assinatura: { remove: () => void } | null = null;
 
-  useEffect(() => {
-    let active = true;
-    let changed = false;
-    const subscription = AccessibilityInfo.addEventListener('reduceMotionChanged', (value) => {
-      changed = true;
-      if (active) setReduced(value);
+function definir(valor: boolean) {
+  if (atual === valor) return;
+  atual = valor;
+  ouvintes.forEach((avisar) => avisar());
+}
+
+function assinar(avisar: () => void) {
+  ouvintes.add(avisar);
+  if (!assinatura) {
+    let mudouAntes = false;
+    const esta = AccessibilityInfo.addEventListener('reduceMotionChanged', (valor) => {
+      mudouAntes = true;
+      definir(valor);
     });
+    assinatura = esta;
+    // A resposta só vale se esta assinatura ainda está aberta e nenhum evento (mais novo) chegou antes.
+    const aindaVale = () => assinatura === esta && !mudouAntes;
     AccessibilityInfo.isReduceMotionEnabled().then(
-      (value) => { if (active && !changed) setReduced(value); },
-      () => { /* Sem preferência disponível, preserva a versão estática. */ },
+      (valor) => {
+        if (aindaVale()) definir(valor);
+      },
+      () => {
+        // Sem preferência disponível no aparelho: segue o padrão do sistema, que é animar.
+        if (aindaVale()) definir(false);
+      },
     );
-    return () => {
-      active = false;
-      subscription.remove();
-    };
-  }, []);
+  }
+  return () => {
+    ouvintes.delete(avisar);
+    // Sem ninguém ouvindo, a assinatura fecha e o valor volta a "não sei": ele poderia ficar velho.
+    if (ouvintes.size === 0 && assinatura) {
+      assinatura.remove();
+      assinatura = null;
+      atual = null;
+    }
+  };
+}
 
-  return reduced;
+function lerValor() {
+  return atual ?? true;
+}
+
+export function useReducedMotion() {
+  return useSyncExternalStore(assinar, lerValor, lerValor);
 }

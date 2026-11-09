@@ -33,7 +33,7 @@ const pulse = {
   },
   animationDuration: motion.skeletonCycle,
   animationIterationCount: 'infinite',
-  animationTimingFunction: 'ease-in-out',
+  animationTimingFunction: motion.skeletonEasing,
 } as const;
 
 const styles = StyleSheet.create({
