@@ -5,7 +5,7 @@ import { ActivityIndicator, Alert, ScrollView } from 'react-native';
 import { List, Badge, Button, Column, EmptyState, Input, ListItem, Screen, Snackbar, Tabs, Text, colors, type BadgeTone } from '@/ui';
 
 import { formatarPlaca } from './placa';
-import { inativarVeiculo, listarVeiculos } from './repository';
+import { inativarVeiculo, listarVeiculos, reativarVeiculo } from './repository';
 import { STATUS_VEICULO, rotuloStatusVeiculo, type StatusVeiculo, type Veiculo } from './types';
 
 type Status = 'carregando' | 'pronto' | 'erro';
@@ -43,7 +43,7 @@ export function VeiculosListView() {
   const [busca, setBusca] = useState('');
   const [buscaAplicada, setBuscaAplicada] = useState('');
   const [filtroStatus, setFiltroStatus] = useState<string>(TODOS);
-  const [inativandoId, setInativandoId] = useState<string | null>(null);
+  const [alterandoId, setAlterandoId] = useState<string | null>(null);
   const [feedback, setFeedback] = useState<Feedback | null>(null);
   const operacaoPendente = useRef(false);
   // Descarta respostas fora de ordem: se o usuário troca o filtro rápido, só a última vale.
@@ -79,21 +79,23 @@ export function VeiculosListView() {
     carregarAtual.current = carregar;
   }, [carregar]);
 
-  async function inativar(veiculo: Veiculo) {
+  // Inativar e reativar compartilham a trava: um veículo só tem uma das duas ações na linha, e
+  // uma operação por vez evita duas escritas cruzadas na mesma lista.
+  async function alterarStatus(veiculo: Veiculo, acao: 'inativar' | 'reativar') {
     if (operacaoPendente.current) return;
     operacaoPendente.current = true;
-    setInativandoId(veiculo.id);
+    setAlterandoId(veiculo.id);
     try {
-      const resultado = await inativarVeiculo(veiculo.id);
+      const resultado = acao === 'inativar' ? await inativarVeiculo(veiculo.id) : await reativarVeiculo(veiculo.id);
       if (!resultado.ok) {
         setFeedback({ mensagem: resultado.mensagem, tone: 'error' });
         return;
       }
-      setFeedback({ mensagem: 'Veículo inativado.', tone: 'success' });
+      setFeedback({ mensagem: acao === 'inativar' ? 'Veículo inativado.' : 'Veículo reativado.', tone: 'success' });
       await carregarAtual.current();
     } finally {
       operacaoPendente.current = false;
-      setInativandoId(null);
+      setAlterandoId(null);
     }
   }
 
@@ -101,7 +103,16 @@ export function VeiculosListView() {
     if (operacaoPendente.current) return;
     Alert.alert('Inativar veículo?', `${formatarPlaca(veiculo.placa)} deixará de aparecer nas seleções de viagens e manutenções. O histórico será preservado.`, [
       { text: 'Cancelar', style: 'cancel' },
-      { text: 'Inativar', style: 'destructive', onPress: () => inativar(veiculo) },
+      { text: 'Inativar', style: 'destructive', onPress: () => alterarStatus(veiculo, 'inativar') },
+    ]);
+  }
+
+  // Reativar não é destrutivo (o veículo só volta às seleções), por isso o botão não usa o estilo vermelho.
+  function confirmarReativacao(veiculo: Veiculo) {
+    if (operacaoPendente.current) return;
+    Alert.alert('Reativar veículo?', `${formatarPlaca(veiculo.placa)} volta como Disponível e passa a aparecer nas seleções de viagens e manutenções.`, [
+      { text: 'Cancelar', style: 'cancel' },
+      { text: 'Reativar', onPress: () => alterarStatus(veiculo, 'reativar') },
     ]);
   }
 
@@ -175,7 +186,10 @@ export function VeiculosListView() {
                     onPress={() => router.push(`/frota/${item.id}/editar`)}
                   />
                   {item.status === 'Disponivel' && (
-                    <Button label="Inativar" variant="ghost" onPress={() => confirmarInativacao(item)} loading={inativandoId === item.id} disabled={inativandoId !== null} />
+                    <Button label="Inativar" variant="ghost" onPress={() => confirmarInativacao(item)} loading={alterandoId === item.id} disabled={alterandoId !== null} />
+                  )}
+                  {item.status === 'Inativo' && (
+                    <Button label="Reativar" variant="ghost" onPress={() => confirmarReativacao(item)} loading={alterandoId === item.id} disabled={alterandoId !== null} />
                   )}
                 </Column>
               </Column>
