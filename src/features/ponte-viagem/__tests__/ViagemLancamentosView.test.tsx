@@ -137,6 +137,21 @@ describe('ViagemLancamentosView', () => {
     expect(screen.getByText('Lançamento desvinculado.')).toBeOnTheScreen();
   });
 
+  // DETALHE-04: feedback de loading no botão enquanto o banco grava (AGENTS.md §2.1).
+  it('o botão Desvincular fica ocupado enquanto grava', async () => {
+    let concluir: (valor: { ok: true; data: string }) => void = () => undefined;
+    mockDesvincular.mockReturnValue(new Promise((resolver) => (concluir = resolver)));
+    await renderDetalhe();
+
+    // act síncrono: o toque dispara a gravação, que fica pendente até `concluir`.
+    act(() => {
+      fireEvent.press(screen.getAllByRole('button', { name: 'Desvincular' })[0]!);
+    });
+
+    expect(screen.getAllByRole('button', { name: 'Desvincular' })[0]).toBeBusy();
+    await act(async () => concluir({ ok: true, data: 'm-frete' }));
+  });
+
   // DETALHE-05
   it('falha no desvínculo mantém a linha e mostra a mensagem de erro', async () => {
     mockDesvincular.mockResolvedValue({ ok: false, mensagem: 'Não foi possível desvincular. Tente novamente.' });

@@ -79,6 +79,8 @@ const routes = {
   '(app)/manutencoes/nova': () => <Text>Tela Nova Manutencao</Text>,
   '(app)/viagens/nova': () => <Text>Tela Abrir Viagem</Text>,
   '(app)/viagens/[id]/fechar': () => <Text>Tela Fechar Viagem</Text>,
+  '(app)/viagens/[id]/index': () => <Text>Tela Viagem Lancamentos</Text>,
+  '(app)/viagens/lancamentos': () => <Text>Tela Lancamentos por Viagem</Text>,
   '(app)/caixa/index': () => <Text>Tela Caixa</Text>,
   '(app)/formas-pagamento/index': () => <Text>Tela Formas</Text>,
   '(app)/formas-pagamento/nova': () => <Text>Tela Nova Forma</Text>,
@@ -251,6 +253,41 @@ describe('telas internas seguem o módulo (EIX-31)', () => {
     act(() => navegador.push('/caixa'));
 
     expect(await screen.findByText('Tela Caixa')).toBeOnTheScreen();
+  });
+
+  // Ponte Caixa ↔ Viagens (EIX-42): as duas telas leem movimentação, então só Admin e Financeiro.
+  it.each(
+    (['Gestor de Frota', 'Motorista'] as const).flatMap((perfil) =>
+      [
+        ['/viagens/lancamentos', 'Tela Lancamentos por Viagem'],
+        ['/viagens/v-1', 'Tela Viagem Lancamentos'],
+      ].map(([rota, tela]) => ({ perfil, rota: rota!, tela: tela! })),
+    ),
+  )('$perfil digitando $rota volta para a home do perfil', async ({ perfil, rota, tela }) => {
+    const { telaInicial, rotaInicial } = cenarios.find((c) => c.perfil === perfil)!;
+    const router = await entrarComo(perfil);
+    await screen.findByText(telaInicial);
+
+    act(() => navegador.push(rota as Href));
+
+    expect(await screen.findByText(telaInicial)).toBeOnTheScreen();
+    expect(screen.queryByText(tela)).not.toBeOnTheScreen();
+    expect(router.getPathname()).toBe(rotaInicial);
+  });
+
+  it.each(
+    (['Admin', 'Financeiro'] as const).flatMap((perfil) =>
+      [
+        ['/viagens/lancamentos', 'Tela Lancamentos por Viagem'],
+        ['/viagens/v-1', 'Tela Viagem Lancamentos'],
+      ].map(([rota, tela]) => ({ perfil, rota: rota!, tela: tela! })),
+    ),
+  )('$perfil abre $rota', async ({ perfil, rota, tela }) => {
+    await entrarComo(perfil);
+
+    act(() => navegador.push(rota as Href));
+
+    expect(await screen.findByText(tela)).toBeOnTheScreen();
   });
 
   // Dívidas (EIX-50): só Financeiro e Admin. O RLS de `divida` é quem garante.

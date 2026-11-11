@@ -525,6 +525,27 @@ describe('MovimentacaoFormView — vincular à viagem (US09)', () => {
     expect(mockCriar).toHaveBeenCalledWith(expect.objectContaining({ categoriaId: 'cat-frete', viagemId: 'v-1' }));
   });
 
+  // Edge case: busca sem resultado.
+  it('busca sem viagem correspondente mostra "Nenhuma viagem encontrada."', async () => {
+    await renderNova();
+
+    fireEvent.press(screen.getByRole('button', { name: 'Vincular à viagem' }));
+    fireEvent.changeText(screen.getByLabelText('Buscar'), 'Manaus');
+
+    expect(screen.getByText('Nenhuma viagem encontrada.')).toBeOnTheScreen();
+  });
+
+  // Edge case: nenhuma viagem vinculável.
+  it('sem viagens vinculáveis o seletor mostra só "Sem viagem" e a mensagem da janela de 30 dias', async () => {
+    mockListarViagens.mockResolvedValue({ ok: true, data: [] });
+    await renderNova();
+
+    fireEvent.press(screen.getByRole('button', { name: 'Vincular à viagem' }));
+
+    expect(screen.getByLabelText('Sem viagem')).toBeOnTheScreen();
+    expect(screen.getByText('Nenhuma viagem em andamento ou concluída nos últimos 30 dias.')).toBeOnTheScreen();
+  });
+
   // PONTE-05
   it('"Sem viagem" num lançamento vinculado salva viagemId null', async () => {
     mockBuscar.mockResolvedValue({ ok: true, data: vinculado });

@@ -4,6 +4,7 @@
 // Financeiro as viagens que ele pode vincular, sem abrir a tabela `viagem`.
 
 import {
+  aplicarMigration,
   comoAnonimo,
   comoSuperuser,
   comoUsuario,
@@ -45,7 +46,7 @@ describe('migration ponte_viagem', () => {
   let rotaId: string;
   let formaId: string;
   let categoria: { combustivel: string; frete: string; pedagio: string };
-  const viagem = { andamento: '', recente: '', semFim: '', antiga: '', cancelada: '' };
+  const viagem = { andamento: '', recente: '', semFim: '', limite29: '', limite31: '', antiga: '', cancelada: '' };
   let placas = 0;
 
   async function criarVeiculo() {
@@ -91,7 +92,12 @@ describe('migration ponte_viagem', () => {
   }
 
   beforeAll(async () => {
-    db = await criarBanco();
+    // O Supabase concede `execute` em toda função nova a anon e authenticated (privilégio padrão do
+    // schema public); o stub do PGlite não. Sem imitar isso aqui, o teste de ACESSO-04 passaria mesmo
+    // sem o `revoke ... from anon` da migration.
+    db = await criarBanco({ antesDe: '20261111000100_ponte_viagem.sql' });
+    await db.exec('alter default privileges in schema public grant execute on functions to anon, authenticated');
+    await aplicarMigration(db, '20261111000100_ponte_viagem.sql');
     for (const usuario of [ADMIN, FINANCEIRO, GESTOR, MOTORISTA]) {
       await comoUsuario(db, usuario, async () => {});
     }
@@ -111,10 +117,15 @@ describe('migration ponte_viagem', () => {
     const porTitulo = Object.fromEntries(categorias.rows.map((linha) => [linha.titulo, linha.id]));
     categoria = { combustivel: porTitulo['Combustível']!, frete: porTitulo['Frete']!, pedagio: porTitulo['Pedágio']! };
 
-    viagem.andamento = await criarViagem({ status: 'EmAndamento', inicioHaDias: 2, fimHaDias: null });
+    // A em andamento começou antes das concluídas: só a regra "em andamento primeiro" a põe no
+    // topo; ordenar só pela data de início a deixaria no fim.
+    viagem.andamento = await criarViagem({ status: 'EmAndamento', inicioHaDias: 35, fimHaDias: null });
     viagem.recente = await criarViagem({ status: 'Finalizada', inicioHaDias: 6, fimHaDias: 5 });
     // Finalizada sem data_fim: vale a última atualização, que é agora.
     viagem.semFim = await criarViagem({ status: 'Finalizada', inicioHaDias: 4, fimHaDias: null });
+    // Limite da janela de 30 dias: 29 entra, 31 fica de fora.
+    viagem.limite29 = await criarViagem({ status: 'Finalizada', inicioHaDias: 30, fimHaDias: 29 });
+    viagem.limite31 = await criarViagem({ status: 'Finalizada', inicioHaDias: 32, fimHaDias: 31 });
     viagem.antiga = await criarViagem({ status: 'Finalizada', inicioHaDias: 41, fimHaDias: 40 });
     viagem.cancelada = await criarViagem({ status: 'Cancelada', inicioHaDias: 1, fimHaDias: null });
   });
@@ -212,11 +223,16 @@ describe('migration ponte_viagem', () => {
     }
 
     // ACESSO-01, PONTE-02: em andamento primeiro; concluídas dos últimos 30 dias pela data de
-    // início mais recente; fora a concluída de 40 dias atrás e a cancelada.
+    // início mais recente; fora as concluídas de 31 e 40 dias atrás e a cancelada.
     it.each([ADMIN, FINANCEIRO])('$perfil recebe as viagens vinculáveis na ordem da spec', async (usuario) => {
       const resultado = await listar(usuario);
 
-      expect(resultado.rows.map((linha) => linha.id)).toEqual([viagem.andamento, viagem.semFim, viagem.recente]);
+      expect(resultado.rows.map((linha) => linha.id)).toEqual([
+        viagem.andamento,
+        viagem.semFim,
+        viagem.recente,
+        viagem.limite29,
+      ]);
     });
 
     // ACESSO-01: só as colunas da spec (nada de hodômetro nem motorista).
