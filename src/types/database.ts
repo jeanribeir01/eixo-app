@@ -10,7 +10,7 @@ export type Database = {
   // Allows to automatically instantiate createClient with right options
   // instead of createClient<Database, { PostgrestVersion: 'XX' }>(URL, KEY)
   __InternalSupabase: {
-    PostgrestVersion: "14.17"
+    PostgrestVersion: "14.18"
   }
   public: {
     Tables: {
@@ -178,6 +178,7 @@ export type Database = {
           divida_id: string | null
           forma_pagamento_id: string
           id: string
+          litros: number | null
           status_pagamento: Database["public"]["Enums"]["status_pagamento"]
           valor: number
           viagem_id: string | null
@@ -193,6 +194,7 @@ export type Database = {
           divida_id?: string | null
           forma_pagamento_id: string
           id?: string
+          litros?: number | null
           status_pagamento?: Database["public"]["Enums"]["status_pagamento"]
           valor: number
           viagem_id?: string | null
@@ -208,6 +210,7 @@ export type Database = {
           divida_id?: string | null
           forma_pagamento_id?: string
           id?: string
+          litros?: number | null
           status_pagamento?: Database["public"]["Enums"]["status_pagamento"]
           valor?: number
           viagem_id?: string | null
@@ -532,6 +535,20 @@ export type Database = {
         Returns: Database["public"]["Enums"]["perfil_nome"]
       }
       auth_usuario_id: { Args: never; Returns: string }
+      buscar_viagem_vinculavel: {
+        Args: { p_viagem_id: string }
+        Returns: {
+          cidade_destino: string
+          cidade_origem: string
+          data_fim: string
+          data_inicio: string
+          id: string
+          placa: string
+          status: Database["public"]["Enums"]["status_viagem"]
+          uf_destino: Database["public"]["Enums"]["uf"]
+          uf_origem: Database["public"]["Enums"]["uf"]
+        }[]
+      }
       concluir_manutencao: {
         Args: { id: string }
         Returns: Database["public"]["Enums"]["status_veiculo"]
@@ -549,11 +566,33 @@ export type Database = {
         Returns: string
       }
       excluir_divida: { Args: { id: string }; Returns: Json }
+      kpis_financeiros: {
+        Args: { data_final: string; data_inicial: string }
+        Returns: Json
+      }
+      kpis_frota: {
+        Args: { data_final: string; data_inicial: string }
+        Returns: Json
+      }
       listar_formas_pagamento_ativas: {
         Args: never
         Returns: {
           id: string
           nome: string
+        }[]
+      }
+      listar_viagens_vinculaveis: {
+        Args: never
+        Returns: {
+          cidade_destino: string
+          cidade_origem: string
+          data_fim: string
+          data_inicio: string
+          id: string
+          placa: string
+          status: Database["public"]["Enums"]["status_viagem"]
+          uf_destino: Database["public"]["Enums"]["uf"]
+          uf_origem: Database["public"]["Enums"]["uf"]
         }[]
       }
       normaliza_cidade: { Args: { cidade: string }; Returns: string }

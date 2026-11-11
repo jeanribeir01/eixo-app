@@ -93,9 +93,9 @@ T5 → T6 → T7 → T8
 
 **Done when**:
 
-- [ ] Usuário aprovou o dry-run com `--remote`
-- [ ] `database.ts` tem `litros` em `movimentacao` e as duas funções, sem edição à mão
-- [ ] Build gate passa
+- [x] Usuário aprovou o dry-run com `--remote`
+- [x] `database.ts` tem `litros` em `movimentacao` e as duas funções, sem edição à mão
+- [x] Build gate passa
 
 **Tests**: none
 **Gate**: build
