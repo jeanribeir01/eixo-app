@@ -197,11 +197,11 @@ T5 → T6 → T7 → T8
 
 **Done when**:
 
-- [ ] Entradas e Saídas separadas, valor com `+`/`−`
-- [ ] Desvincular tira a linha e mostra "Lançamento desvinculado."; falha mantém a linha
-- [ ] Vazio, carregando e erro com "Tentar novamente"
-- [ ] Formulário de lançamento vinculado mostra "Ver viagem", que abre `/viagens/<id>`
-- [ ] Gate quick passa
+- [x] Entradas e Saídas separadas, valor com `+`/`−`
+- [x] Desvincular tira a linha e mostra "Lançamento desvinculado."; falha mantém a linha
+- [x] Vazio, carregando e erro com "Tentar novamente"
+- [x] Formulário de lançamento vinculado mostra "Ver viagem", que abre `/viagens/<id>`
+- [x] Gate quick passa
 
 **Tests**: unit
 **Gate**: quick

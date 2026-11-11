@@ -25,9 +25,10 @@ import type { Movimentacao } from '../types';
 jest.setTimeout(15000);
 
 const mockBack = jest.fn();
+const mockPush = jest.fn();
 
 jest.mock('expo-router', () => ({
-  useRouter: () => ({ back: mockBack }),
+  useRouter: () => ({ back: mockBack, push: mockPush }),
 }));
 
 jest.mock('../movimentacoesRepository', () => ({
@@ -155,6 +156,7 @@ async function renderNova() {
 
 beforeEach(() => {
   mockBack.mockReset();
+  mockPush.mockReset();
   mockCriar.mockReset();
   mockAtualizar.mockReset();
   mockBuscar.mockReset();
@@ -564,6 +566,24 @@ describe('MovimentacaoFormView — vincular à viagem (US09)', () => {
     await act(async () => salvar());
 
     expect(mockCriar).toHaveBeenCalledWith(expect.objectContaining({ viagemId: 'v-2' }));
+  });
+
+  // DETALHE-09
+  it('lançamento salvo com viagem mostra "Ver viagem", que abre o detalhe dela', async () => {
+    mockBuscar.mockResolvedValue({ ok: true, data: vinculado });
+    render(<MovimentacaoFormView movimentacaoId="mov-1" />);
+    await screen.findByLabelText('Descrição');
+
+    fireEvent.press(screen.getByRole('button', { name: 'Ver viagem' }));
+
+    expect(mockPush).toHaveBeenCalledWith('/viagens/v-1');
+  });
+
+  it('lançamento novo, mesmo com viagem escolhida, não mostra "Ver viagem"', async () => {
+    await renderNova();
+    escolher('Vincular à viagem', ROTULO_SP);
+
+    expect(screen.queryByRole('button', { name: 'Ver viagem' })).not.toBeOnTheScreen();
   });
 
   // PONTE-09

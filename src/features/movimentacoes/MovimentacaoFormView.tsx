@@ -272,27 +272,34 @@ export function MovimentacaoFormView({ movimentacaoId, viagemIdInicial }: Movime
             error={erro}
           />
         );
-      case 'viagem':
+      case 'viagem': {
+        // "Ver viagem" só para o vínculo já salvo: o detalhe lista o que está gravado no banco.
+        const viagemSalva = original?.viagem_id;
         return (
-          <Select
-            key={campo.nome}
-            label={campo.rotulo}
-            value={valores.viagemId}
-            options={viagens.map((viagem) => ({
-              value: viagem.id,
-              label: rotuloViagem(viagem),
-              description: descricaoViagem(viagem),
-            }))}
-            onChange={(id) => alterar('viagemId', id)}
-            searchable
-            clearLabel="Sem viagem"
-            onClear={() => alterar('viagemId', null)}
-            emptyMessage="Nenhuma viagem em andamento ou concluída nos últimos 30 dias."
-            noResultsMessage="Nenhuma viagem encontrada."
-            fallbackLabel={rotuloViagemFora}
-            error={erro}
-          />
+          <Column key={campo.nome} gap="sm">
+            <Select
+              label={campo.rotulo}
+              value={valores.viagemId}
+              options={viagens.map((viagem) => ({
+                value: viagem.id,
+                label: rotuloViagem(viagem),
+                description: descricaoViagem(viagem),
+              }))}
+              onChange={(id) => alterar('viagemId', id)}
+              searchable
+              clearLabel="Sem viagem"
+              onClear={() => alterar('viagemId', null)}
+              emptyMessage="Nenhuma viagem em andamento ou concluída nos últimos 30 dias."
+              noResultsMessage="Nenhuma viagem encontrada."
+              fallbackLabel={rotuloViagemFora}
+              error={erro}
+            />
+            {!!viagemSalva && (
+              <Button label="Ver viagem" variant="ghost" onPress={() => router.push(`/viagens/${viagemSalva}`)} />
+            )}
+          </Column>
         );
+      }
       case 'litros':
         return (
           <Input
