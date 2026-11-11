@@ -14,6 +14,9 @@ type ButtonBaseProps = {
   onPress: () => void;
   loading?: boolean;
   disabled?: boolean;
+  // Nome para o leitor de tela quando o rótulo visível se repete na tela (ex.: "Reativar" em cada
+  // linha da lista vira "Reativar GHI-1234"). Sem ele, o leitor anuncia o próprio `label`.
+  accessibilityLabel?: string;
 };
 
 export type ButtonProps =
@@ -24,7 +27,7 @@ export type ButtonProps =
   | (ButtonBaseProps & { variant: 'icon'; icon: IconName });
 
 export function Button(props: ButtonProps) {
-  const { label, onPress, variant = 'primary', loading = false, disabled = false } = props;
+  const { label, onPress, variant = 'primary', loading = false, disabled = false, accessibilityLabel } = props;
   // Carregando conta como desabilitado: impede o duplo toque que dispararia duas tentativas de login.
   const isDisabled = disabled || loading;
   const isPrimary = variant === 'primary';
@@ -33,7 +36,7 @@ export function Button(props: ButtonProps) {
   return (
     <Pressable
       accessibilityRole="button"
-      accessibilityLabel={label}
+      accessibilityLabel={accessibilityLabel ?? label}
       accessibilityState={{ disabled: isDisabled, busy: loading }}
       disabled={isDisabled}
       onPress={onPress}
