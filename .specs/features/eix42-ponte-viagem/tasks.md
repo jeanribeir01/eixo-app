@@ -134,10 +134,10 @@ T5 → T6 → T7 → T8
 
 **Done when**:
 
-- [ ] Chamadas `rpc` e `from('movimentacao')` com os filtros certos; resposta validada com Zod; valor em centavos
-- [ ] Rótulo "PLACA · Origem/UF → Destino/UF"
-- [ ] `42501` vira a mensagem de acesso negado; falha do desvínculo vira "Não foi possível desvincular. Tente novamente."
-- [ ] Gate quick passa
+- [x] Chamadas `rpc` e `from('movimentacao')` com os filtros certos; resposta validada com Zod; valor em centavos
+- [x] Rótulo "PLACA · Origem/UF → Destino/UF"
+- [x] `42501` vira a mensagem de acesso negado; falha do desvínculo vira "Não foi possível desvincular. Tente novamente."
+- [x] Gate quick passa
 
 **Tests**: unit
 **Gate**: quick
