@@ -168,18 +168,18 @@ T5 → T6 → T7 → T8
 
 ### T6: Formulário com "Vincular à viagem" e litros
 
-**What**: Campos `viagem` (Select pesquisável com "Sem viagem") e `litros` (só em Combustível) no formulário, parâmetro `viagemId` na rota de criação e botão "Ver viagem".
+**What**: Campos `viagem` (Select pesquisável com "Sem viagem") e `litros` (só em Combustível) no formulário e parâmetro `viagemId` na rota de criação. O botão "Ver viagem" (DETALHE-09) foi para a T7: o `href` tipado só aceita a rota depois que ela existe.
 **Where**: `src/features/movimentacoes/MovimentacaoFormView.tsx`
 **Depends on**: T5
 **Reuses**: `camposMovimentacao.ts`
-**Requirement**: PONTE-01, PONTE-02, PONTE-04, PONTE-05, PONTE-06, PONTE-07, PONTE-08, PONTE-09, LITROS-01, LITROS-02, LITROS-03, DETALHE-09
+**Requirement**: PONTE-01, PONTE-02, PONTE-04, PONTE-05, PONTE-06, PONTE-07, PONTE-08, PONTE-09, LITROS-01, LITROS-02, LITROS-03, LITROS-04
 
 **Done when**:
 
-- [ ] Vínculo, desvínculo e lançamento sem viagem gravam o `viagemId` certo
-- [ ] Litros aparece só em Combustível e bloqueia o salvar sem litros quando vinculado
-- [ ] Falha na lista de viagens mostra o erro de carga
-- [ ] Gate quick passa
+- [x] Vínculo, desvínculo e lançamento sem viagem gravam o `viagemId` certo
+- [x] Litros aparece só em Combustível e bloqueia o salvar sem litros quando vinculado
+- [x] Falha na lista de viagens mostra o erro de carga
+- [x] Gate quick passa
 
 **Tests**: unit
 **Gate**: quick
@@ -193,13 +193,14 @@ T5 → T6 → T7 → T8
 **Where**: `src/features/ponte-viagem/ViagemLancamentosView.tsx`
 **Depends on**: T6
 **Reuses**: `Screen`, `Card`, `ListSection`, `ListItem`, `EmptyState`, `Snackbar`
-**Requirement**: DETALHE-02, DETALHE-03, DETALHE-04, DETALHE-05, DETALHE-06, DETALHE-07, DETALHE-08
+**Requirement**: DETALHE-02, DETALHE-03, DETALHE-04, DETALHE-05, DETALHE-06, DETALHE-07, DETALHE-08, DETALHE-09
 
 **Done when**:
 
 - [ ] Entradas e Saídas separadas, valor com `+`/`−`
 - [ ] Desvincular tira a linha e mostra "Lançamento desvinculado."; falha mantém a linha
 - [ ] Vazio, carregando e erro com "Tentar novamente"
+- [ ] Formulário de lançamento vinculado mostra "Ver viagem", que abre `/viagens/<id>`
 - [ ] Gate quick passa
 
 **Tests**: unit

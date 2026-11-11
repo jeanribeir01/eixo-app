@@ -1,5 +1,9 @@
+import { useLocalSearchParams } from 'expo-router';
+
 import { MovimentacaoFormView } from '@/features/movimentacoes/MovimentacaoFormView';
 
 export default function NovaMovimentacaoRoute() {
-  return <MovimentacaoFormView />;
+  // `viagemId` chega quando o lançamento é criado a partir do detalhe da viagem (US09).
+  const { viagemId } = useLocalSearchParams<{ viagemId?: string }>();
+  return <MovimentacaoFormView viagemIdInicial={viagemId} />;
 }

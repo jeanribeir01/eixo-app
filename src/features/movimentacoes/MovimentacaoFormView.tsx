@@ -4,11 +4,18 @@ import { ActivityIndicator } from 'react-native';
 import { z } from 'zod';
 
 import { rotuloTipoCategoria, type TipoCategoria } from '@/features/categorias/types';
+import {
+  buscarViagemVinculavel,
+  descricaoViagem,
+  listarViagensVinculaveis,
+  rotuloViagem,
+  type ViagemVinculavel,
+} from '@/features/ponte-viagem/ponteRepository';
 import { isoParaDataBR } from '@/lib/datas';
 import { removerComprovante } from '@/lib/storage';
 import { Button, CampoData, CampoMoeda, Column, EmptyState, Input, Screen, Select, Snackbar, Tabs, Text, colors } from '@/ui';
 
-import { camposMovimentacao, type CampoMovimentacao } from './camposMovimentacao';
+import { camposMovimentacao, type CampoMovimentacao, type ContextoCampos } from './camposMovimentacao';
 import { AnexoComprovante } from './components/AnexoComprovante';
 import {
   atualizarMovimentacao,
@@ -53,11 +60,21 @@ function valoresDe(movimentacao: Movimentacao): MovimentacaoFormValues {
   };
 }
 
+// Combustível é achado pelo título, como no banco (trigger `valida_litros_movimentacao`).
+function ehCombustivel(categoria: { titulo: string; tipo: TipoCategoria } | undefined): boolean {
+  return categoria?.titulo === 'Combustível' && categoria.tipo === 'Saida';
+}
+
+// Usado quando a viagem do vínculo não carrega: o campo não fica parecendo vazio.
+const ROTULO_VIAGEM_DESCONHECIDA = 'Viagem vinculada';
+
 export type MovimentacaoFormViewProps = {
   movimentacaoId?: string;
+  // Lançamento novo já vinculado: vem do "Nova movimentação" do detalhe da viagem (PONTE-08).
+  viagemIdInicial?: string;
 };
 
-export function MovimentacaoFormView({ movimentacaoId }: MovimentacaoFormViewProps) {
+export function MovimentacaoFormView({ movimentacaoId, viagemIdInicial }: MovimentacaoFormViewProps) {
   const router = useRouter();
   const modoEdicao = !!movimentacaoId;
 
@@ -66,7 +83,13 @@ export function MovimentacaoFormView({ movimentacaoId }: MovimentacaoFormViewPro
   const [opcoes, setOpcoes] = useState<OpcoesMovimentacao>({ categorias: [], formasPagamento: [] });
   // Lançamento original na edição: guarda nomes de categoria/forma que podem estar inativas.
   const [original, setOriginal] = useState<Movimentacao | null>(null);
-  const [valores, setValores] = useState<MovimentacaoFormValues>(VALORES_INICIAIS);
+  // Viagens que o seletor lista (US09) e o rótulo de uma viagem vinculada que está fora da lista.
+  const [viagens, setViagens] = useState<ViagemVinculavel[]>([]);
+  const [rotuloViagemFora, setRotuloViagemFora] = useState<string | undefined>(undefined);
+  const [valores, setValores] = useState<MovimentacaoFormValues>(() => ({
+    ...VALORES_INICIAIS,
+    viagemId: viagemIdInicial ?? null,
+  }));
   const [erros, setErros] = useState<Erros>({});
   const [salvando, setSalvando] = useState(false);
   const [feedback, setFeedback] = useState<Feedback | null>(null);
@@ -75,13 +98,20 @@ export function MovimentacaoFormView({ movimentacaoId }: MovimentacaoFormViewPro
     let cancelado = false;
 
     async function carregar() {
-      const [resultadoOpcoes, resultadoMovimentacao] = await Promise.all([
+      const [resultadoOpcoes, resultadoMovimentacao, resultadoViagens] = await Promise.all([
         listarOpcoesMovimentacao(),
         movimentacaoId ? buscarMovimentacaoPorId(movimentacaoId) : Promise.resolve(null),
+        listarViagensVinculaveis(),
       ]);
       if (cancelado) return;
 
-      const falha = !resultadoOpcoes.ok ? resultadoOpcoes : resultadoMovimentacao && !resultadoMovimentacao.ok ? resultadoMovimentacao : null;
+      const falha = !resultadoOpcoes.ok
+        ? resultadoOpcoes
+        : resultadoMovimentacao && !resultadoMovimentacao.ok
+          ? resultadoMovimentacao
+          : !resultadoViagens.ok
+            ? resultadoViagens
+            : null;
       if (falha) {
         setErroCarga(falha.mensagem);
         setStatus('erro');
@@ -89,9 +119,22 @@ export function MovimentacaoFormView({ movimentacaoId }: MovimentacaoFormViewPro
       }
 
       if (resultadoOpcoes.ok) setOpcoes(resultadoOpcoes.data);
+      const listaViagens = resultadoViagens.ok ? resultadoViagens.data : [];
+      setViagens(listaViagens);
+
+      let viagemId = viagemIdInicial ?? null;
       if (resultadoMovimentacao?.ok) {
         setOriginal(resultadoMovimentacao.data);
         setValores(valoresDe(resultadoMovimentacao.data));
+        viagemId = resultadoMovimentacao.data.viagem_id;
+      }
+
+      // Vínculo com uma viagem antiga (concluída há mais de 30 dias, cancelada): ela não está na
+      // lista, mas o campo continua mostrando qual é (PONTE-07).
+      if (viagemId && !listaViagens.some((viagem) => viagem.id === viagemId)) {
+        const resultadoViagem = await buscarViagemVinculavel(viagemId);
+        if (cancelado) return;
+        setRotuloViagemFora(resultadoViagem.ok ? rotuloViagem(resultadoViagem.data) : ROTULO_VIAGEM_DESCONHECIDA);
       }
       setStatus('pronto');
     }
@@ -101,7 +144,7 @@ export function MovimentacaoFormView({ movimentacaoId }: MovimentacaoFormViewPro
     return () => {
       cancelado = true;
     };
-  }, [movimentacaoId]);
+  }, [movimentacaoId, viagemIdInicial]);
 
   function alterar<K extends keyof MovimentacaoFormValues>(nome: K, valor: MovimentacaoFormValues[K]) {
     setValores((atuais) => ({ ...atuais, [nome]: valor }));
@@ -121,10 +164,18 @@ export function MovimentacaoFormView({ movimentacaoId }: MovimentacaoFormViewPro
     opcoes.categorias.find((categoria) => categoria.id === valores.categoriaId)?.tipo ??
     (original && original.categoria_id === valores.categoriaId ? original.categoria.tipo : 'Saida');
 
+  // Combustível decide se o campo de litros aparece e se ele é validado (LITROS-01/02).
+  const contexto: ContextoCampos = {
+    combustivel: ehCombustivel(
+      opcoes.categorias.find((categoria) => categoria.id === valores.categoriaId) ??
+        (original && original.categoria_id === valores.categoriaId ? original.categoria : undefined),
+    ),
+  };
+
   async function handleSalvar() {
     if (salvando) return;
 
-    const resultado = movimentacaoSchema.safeParse(valores);
+    const resultado = movimentacaoSchema.safeParse({ ...valores, combustivel: contexto.combustivel });
     if (!resultado.success) {
       const fieldErrors = z.flattenError(resultado.error).fieldErrors;
       const novosErros: Erros = {};
@@ -221,6 +272,40 @@ export function MovimentacaoFormView({ movimentacaoId }: MovimentacaoFormViewPro
             error={erro}
           />
         );
+      case 'viagem':
+        return (
+          <Select
+            key={campo.nome}
+            label={campo.rotulo}
+            value={valores.viagemId}
+            options={viagens.map((viagem) => ({
+              value: viagem.id,
+              label: rotuloViagem(viagem),
+              description: descricaoViagem(viagem),
+            }))}
+            onChange={(id) => alterar('viagemId', id)}
+            searchable
+            clearLabel="Sem viagem"
+            onClear={() => alterar('viagemId', null)}
+            emptyMessage="Nenhuma viagem em andamento ou concluída nos últimos 30 dias."
+            noResultsMessage="Nenhuma viagem encontrada."
+            fallbackLabel={rotuloViagemFora}
+            error={erro}
+          />
+        );
+      case 'litros':
+        return (
+          <Input
+            key={campo.nome}
+            label={campo.rotulo}
+            placeholder={campo.placeholder}
+            value={valores.litros}
+            onChangeText={(texto) => alterar('litros', texto)}
+            keyboardType="decimal-pad"
+            maxLength={9}
+            error={erro}
+          />
+        );
       case 'data': {
         const nome = campo.nome === 'dataPagamento' ? 'dataPagamento' : 'dataVencimento';
         const rotulo = nome === 'dataPagamento' && tipoAtual === 'Entrada' ? 'Data de recebimento' : campo.rotulo;
@@ -294,7 +379,7 @@ export function MovimentacaoFormView({ movimentacaoId }: MovimentacaoFormViewPro
     >
       <Column gap="md">
         {camposMovimentacao
-          .filter((campo) => !campo.visivel || campo.visivel(valores))
+          .filter((campo) => !campo.visivel || campo.visivel(valores, contexto))
           .map(renderizarCampo)}
       </Column>
 
