@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { FlatList, Modal, Pressable, StyleSheet, View } from 'react-native';
 
 import { Button } from './Button';
+import { Input } from './Input';
 import { ListItem } from './ListItem';
 import { Text } from './Text';
 import { colors, radius, spacing, touchTarget } from './tokens';
@@ -21,7 +22,23 @@ export type SelectProps = {
   // antigo. Some do seletor (soft delete), mas o lançamento continua mostrando o nome.
   fallbackLabel?: string;
   disabled?: boolean;
+  // Campo "Buscar" no topo da lista, para listas longas (ex.: viagens, na US09). Filtra por parte
+  // do rótulo ou da descrição, sem diferenciar maiúsculas nem acentos.
+  searchable?: boolean;
+  noResultsMessage?: string;
+  // Opção de voltar a "nada escolhido" (ex.: "Sem viagem"). Vira a primeira linha da lista e o
+  // texto do campo vazio. Só aparece com as duas props, porque o `onChange` recebe só string.
+  clearLabel?: string;
+  onClear?: () => void;
 };
+
+// "São Paulo" e "sao paulo" viram o mesmo texto: NFD separa o acento da letra, e o regex o remove.
+function normalizar(texto: string): string {
+  return texto
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase();
+}
 
 // Campo de escolha com a aparência do Input. Abre a lista num Modal do próprio React Native,
 // sem biblioteca de picker: funciona igual em Android e iOS e usa só os primitivos da casa.
@@ -35,15 +52,38 @@ export function Select({
   emptyMessage = 'Nenhuma opção disponível.',
   fallbackLabel,
   disabled = false,
+  searchable = false,
+  noResultsMessage = 'Nenhuma opção encontrada.',
+  clearLabel,
+  onClear,
 }: SelectProps) {
   const [aberto, setAberto] = useState(false);
+  const [busca, setBusca] = useState('');
 
+  const podeLimpar = clearLabel !== undefined && onClear !== undefined;
   const escolhida = options.find((opcao) => opcao.value === value);
-  const textoAtual = escolhida?.label ?? (value ? fallbackLabel : undefined);
+  const textoAtual = escolhida?.label ?? (value ? fallbackLabel : podeLimpar ? clearLabel : undefined);
+
+  const termo = normalizar(busca.trim());
+  const visiveis =
+    termo === ''
+      ? options
+      : options.filter((opcao) => normalizar(`${opcao.label} ${opcao.description ?? ''}`).includes(termo));
+
+  // Fechar sempre limpa a busca: quem reabre vê a lista inteira de novo.
+  function fechar() {
+    setAberto(false);
+    setBusca('');
+  }
 
   function escolher(novoValor: string) {
-    setAberto(false);
+    fechar();
     onChange(novoValor);
+  }
+
+  function limpar() {
+    fechar();
+    onClear?.();
   }
 
   return (
@@ -67,15 +107,25 @@ export function Select({
         </Text>
       )}
 
-      <Modal visible={aberto} transparent animationType="fade" onRequestClose={() => setAberto(false)}>
+      <Modal visible={aberto} transparent animationType="fade" onRequestClose={fechar}>
         <View style={styles.fundo}>
           <View style={styles.folha}>
             <Text variant="subheading">{label}</Text>
+            {searchable && options.length > 0 && (
+              <Input label="Buscar" value={busca} onChangeText={setBusca} autoCorrect={false} autoCapitalize="none" />
+            )}
+            {podeLimpar && (
+              <ListItem accessibilityLabel={clearLabel} onPress={limpar}>
+                <Text weight={value === null ? 'medium' : 'regular'}>{clearLabel}</Text>
+              </ListItem>
+            )}
             {options.length === 0 ? (
               <Text tone="body">{emptyMessage}</Text>
+            ) : visiveis.length === 0 ? (
+              <Text tone="body">{noResultsMessage}</Text>
             ) : (
               <FlatList
-                data={options}
+                data={visiveis}
                 keyExtractor={(opcao) => opcao.value}
                 renderItem={({ item }) => (
                   <ListItem accessibilityLabel={item.label} onPress={() => escolher(item.value)}>
@@ -89,7 +139,7 @@ export function Select({
                 )}
               />
             )}
-            <Button label="Cancelar" variant="ghost" onPress={() => setAberto(false)} />
+            <Button label="Cancelar" variant="ghost" onPress={fechar} />
           </View>
         </View>
       </Modal>

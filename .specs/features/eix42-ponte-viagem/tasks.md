@@ -113,10 +113,10 @@ T5 → T6 → T7 → T8
 
 **Done when**:
 
-- [ ] Busca filtra por texto parcial, ignorando maiúsculas e acentos, e mostra a mensagem sem resultado
-- [ ] Linha "Sem viagem" chama `onClear` e fecha o modal
-- [ ] Testes antigos do `Select` continuam passando
-- [ ] Gate quick passa
+- [x] Busca filtra por texto parcial, ignorando maiúsculas e acentos, e mostra a mensagem sem resultado
+- [x] Linha "Sem viagem" chama `onClear` e fecha o modal
+- [x] Testes antigos do `Select` continuam passando
+- [x] Gate quick passa
 
 **Tests**: unit
 **Gate**: quick
