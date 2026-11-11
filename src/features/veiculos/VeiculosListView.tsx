@@ -5,7 +5,7 @@ import { ActivityIndicator, Alert, ScrollView } from 'react-native';
 import { List, Badge, Button, Column, EmptyState, Input, ListItem, Screen, Snackbar, Tabs, Text, colors, type BadgeTone } from '@/ui';
 
 import { formatarPlaca } from './placa';
-import { inativarVeiculo, listarVeiculos, reativarVeiculo } from './repository';
+import { inativarVeiculo, listarVeiculos, reativarVeiculo, type Resultado } from './repository';
 import { STATUS_VEICULO, rotuloStatusVeiculo, type StatusVeiculo, type Veiculo } from './types';
 
 type Status = 'carregando' | 'pronto' | 'erro';
@@ -80,19 +80,28 @@ export function VeiculosListView() {
   }, [carregar]);
 
   // Inativar e reativar compartilham a trava: um veículo só tem uma das duas ações na linha, e
-  // uma operação por vez evita duas escritas cruzadas na mesma lista.
-  async function alterarStatus(veiculo: Veiculo, acao: 'inativar' | 'reativar') {
+  // uma operação por vez evita duas escritas cruzadas na mesma lista. A operação e a mensagem
+  // chegam prontas, então uma ação nova de status não precisa mexer aqui.
+  async function alterarStatus(
+    veiculo: Veiculo,
+    operacao: (id: string) => Promise<Resultado<Veiculo>>,
+    mensagemSucesso: (atualizado: Veiculo) => string,
+  ) {
     if (operacaoPendente.current) return;
     operacaoPendente.current = true;
     setAlterandoId(veiculo.id);
     try {
-      const resultado = acao === 'inativar' ? await inativarVeiculo(veiculo.id) : await reativarVeiculo(veiculo.id);
+      const resultado = await operacao(veiculo.id);
       if (!resultado.ok) {
         setFeedback({ mensagem: resultado.mensagem, tone: 'error' });
         return;
       }
-      setFeedback({ mensagem: acao === 'inativar' ? 'Veículo inativado.' : 'Veículo reativado.', tone: 'success' });
+      setFeedback({ mensagem: mensagemSucesso(resultado.data), tone: 'success' });
       await carregarAtual.current();
+    } catch {
+      // O repositório devolve as falhas conhecidas como resultado; aqui só chega o imprevisto
+      // (ex.: fetch lançando). Sem este catch o erro sumiria no onPress do Alert, sem Snackbar.
+      setFeedback({ mensagem: 'Não foi possível concluir a operação. Atualize a lista e tente novamente.', tone: 'error' });
     } finally {
       operacaoPendente.current = false;
       setAlterandoId(null);
@@ -103,16 +112,24 @@ export function VeiculosListView() {
     if (operacaoPendente.current) return;
     Alert.alert('Inativar veículo?', `${formatarPlaca(veiculo.placa)} deixará de aparecer nas seleções de viagens e manutenções. O histórico será preservado.`, [
       { text: 'Cancelar', style: 'cancel' },
-      { text: 'Inativar', style: 'destructive', onPress: () => alterarStatus(veiculo, 'inativar') },
+      { text: 'Inativar', style: 'destructive', onPress: () => alterarStatus(veiculo, inativarVeiculo, () => 'Veículo inativado.') },
     ]);
   }
 
   // Reativar não é destrutivo (o veículo só volta às seleções), por isso o botão não usa o estilo vermelho.
+  // Com viagem ou manutenção aberta o banco devolve o veículo com esse status (trigger da EIX-81),
+  // e a mensagem diz isso para o gestor não esperar vê-lo como Disponível.
   function confirmarReativacao(veiculo: Veiculo) {
     if (operacaoPendente.current) return;
-    Alert.alert('Reativar veículo?', `${formatarPlaca(veiculo.placa)} volta como Disponível e passa a aparecer nas seleções de viagens e manutenções.`, [
+    Alert.alert('Reativar veículo?', `${formatarPlaca(veiculo.placa)} volta à frota. Se houver viagem ou manutenção em aberto, ele volta com esse status.`, [
       { text: 'Cancelar', style: 'cancel' },
-      { text: 'Reativar', onPress: () => alterarStatus(veiculo, 'reativar') },
+      {
+        text: 'Reativar',
+        onPress: () =>
+          alterarStatus(veiculo, reativarVeiculo, (atualizado) =>
+            atualizado.status === 'Disponivel' ? 'Veículo reativado.' : `Veículo reativado como ${rotuloStatusVeiculo[atualizado.status]}.`,
+          ),
+      },
     ]);
   }
 

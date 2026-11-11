@@ -210,6 +210,28 @@ describe('VeiculosListView', () => {
       expect(listarVeiculos).toHaveBeenLastCalledWith({ busca: undefined, status: 'Inativo' });
     });
 
+    it('avisa quando o banco devolve o veículo com viagem em aberto', async () => {
+      (listarVeiculos as jest.Mock).mockResolvedValue({ ok: true, data: [inativo] });
+      (reativarVeiculo as jest.Mock).mockResolvedValue({ ok: true, data: { ...inativo, status: 'EmViagem' } });
+      render(<VeiculosListView />);
+      await screen.findByText('GHI-1234');
+      fireEvent.press(screen.getByRole('button', { name: 'Reativar' }));
+      await confirmarReativacao();
+      expect(screen.getByText('Veículo reativado como Em Viagem.')).toBeOnTheScreen();
+    });
+
+    it('erro imprevisto (exceção) mostra Snackbar de erro e libera o botão', async () => {
+      (listarVeiculos as jest.Mock).mockResolvedValue({ ok: true, data: [inativo] });
+      (reativarVeiculo as jest.Mock).mockRejectedValue(new TypeError('Network request failed'));
+      render(<VeiculosListView />);
+      await screen.findByText('GHI-1234');
+      fireEvent.press(screen.getByRole('button', { name: 'Reativar' }));
+      await confirmarReativacao();
+      expect(screen.getByText('Não foi possível concluir a operação. Atualize a lista e tente novamente.')).toBeOnTheScreen();
+      expect(screen.getByRole('button', { name: 'Reativar' })).not.toBeDisabled();
+      expect(screen.getByText('GHI-1234')).toBeOnTheScreen();
+    });
+
     it('falha preserva o veículo e mostra erro (REA-08)', async () => {
       (listarVeiculos as jest.Mock).mockResolvedValue({ ok: true, data: [inativo] });
       (reativarVeiculo as jest.Mock).mockResolvedValue({ ok: false, mensagem: 'Não foi possível reativar o veículo. Tente novamente.' });

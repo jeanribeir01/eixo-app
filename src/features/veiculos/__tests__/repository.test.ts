@@ -107,6 +107,12 @@ describe('veiculos/repository', () => {
       expect(query.delete).not.toHaveBeenCalled();
     });
 
+    it('devolve o status que o banco gravou, não o pedido (trigger de reativação)', async () => {
+      // Com viagem aberta, o trigger troca Disponivel por EmViagem; a tela precisa receber isso.
+      responder(ok({ ...volvo, status: 'EmViagem' }));
+      expect(await reativarVeiculo('1')).toEqual({ ok: true, data: { ...volvo, status: 'EmViagem' } });
+    });
+
     it('zero linhas não anuncia sucesso (REA-02)', async () => {
       responder(ok(null));
       expect(await reativarVeiculo('1')).toEqual({
