@@ -100,6 +100,17 @@
 
 ## Handoff
 
+### EIX-81 — Reativar veículo inativo
+
+- **Feature**: `.specs/features/eix81-reativar-veiculo`, T1–T3 / REA-01..REA-10
+- **Phase / Task**: implementação concluída; verificação independente em `validation.md`
+- **Completed**: `reativarVeiculo` no repositório, com UPDATE para Disponivel condicionado a id e status Inativo, sem delete; botão Reativar na lista só para Inativo, com confirmação, loading, Snackbar e recarga com o filtro atual
+- **Decision**: ponto a decidir da task resolvido com a opção (a): basta o guard da tela, porque ela só inativa veículo Disponivel. Conferir viagem/manutenção aberta antes de reativar só seria garantido no banco (constraint/RPC, com o Jean); fica registrado no PR
+- **Validation**: typecheck e lint exit 0; 1332 testes app + 326 Supabase verdes
+- **Next step**: teste manual em dispositivo; push e PR para revisão do Jean, Squash and merge após aprovação
+- **Blockers**: nenhum
+- **Branch**: `feat/eix-81-us06-reativar-veiculo`; Linear não encerrado; sem migrations
+
 ### EIX-68 — Motion contido
 
 - **Feature**: `.specs/features/eix58-design-app`, fase 12, T41–T42 / ANI-01
