@@ -1,4 +1,4 @@
-import { atualizarVeiculo, buscarVeiculoPorId, criarVeiculo, inativarVeiculo, listarVeiculos, listarVeiculosSelecionaveis } from '../repository';
+import { atualizarVeiculo, buscarVeiculoPorId, criarVeiculo, inativarVeiculo, listarVeiculos, listarVeiculosSelecionaveis, reativarVeiculo } from '../repository';
 import type { VeiculoInput } from '../types';
 
 // Nenhum teste chama o banco real: o client é trocado por um query builder falso (mesmo molde de
@@ -92,6 +92,34 @@ describe('veiculos/repository', () => {
       responder(erro('PGRST301'), ok({ ...volvo, status: 'Vendido' }));
       expect(await inativarVeiculo('1')).toEqual({ ok: false, mensagem: 'Não foi possível inativar o veículo. Tente novamente.' });
       expect(await inativarVeiculo('1')).toEqual({ ok: false, mensagem: 'Os dados recebidos são inválidos. Tente novamente.' });
+    });
+  });
+
+  describe('reativarVeiculo', () => {
+    it('atualiza somente id inativo para Disponivel e nunca exclui (REA-01)', async () => {
+      const [query] = responder(ok(volvo));
+      expect(await reativarVeiculo('1')).toEqual({ ok: true, data: volvo });
+      expect(mockFrom).toHaveBeenCalledWith('veiculo');
+      expect(query.update).toHaveBeenCalledWith({ status: 'Disponivel' });
+      expect(query.eq).toHaveBeenCalledWith('id', '1');
+      expect(query.eq).toHaveBeenCalledWith('status', 'Inativo');
+      expect(query.select).toHaveBeenCalledWith(COLUNAS);
+      expect(query.delete).not.toHaveBeenCalled();
+    });
+
+    it('zero linhas não anuncia sucesso (REA-02)', async () => {
+      responder(ok(null));
+      expect(await reativarVeiculo('1')).toEqual({
+        ok: false,
+        mensagem: 'Não foi possível reativar. O veículo pode já ter sido reativado ou você não tem permissão. Atualize a lista e tente novamente.',
+      });
+    });
+
+    it('traduz permissão e falha e rejeita resposta inválida (REA-03)', async () => {
+      responder(erro('42501'), erro('PGRST301'), ok({ ...volvo, status: 'Vendido' }));
+      expect(await reativarVeiculo('1')).toEqual({ ok: false, mensagem: 'Você não tem permissão para alterar veículos.' });
+      expect(await reativarVeiculo('1')).toEqual({ ok: false, mensagem: 'Não foi possível reativar o veículo. Tente novamente.' });
+      expect(await reativarVeiculo('1')).toEqual({ ok: false, mensagem: 'Os dados recebidos são inválidos. Tente novamente.' });
     });
   });
 

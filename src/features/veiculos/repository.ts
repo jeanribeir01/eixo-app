@@ -200,6 +200,30 @@ export async function inativarVeiculo(id: string): Promise<Resultado<Veiculo>> {
   return validarVeiculo(data);
 }
 
+// Desfaz uma inativação feita por engano (EIX-81). Mesmo molde do inativarVeiculo: a guarda no
+// próprio UPDATE só deixa passar quem ainda está Inativo, então dois toques ou duas sessões não
+// "reativam" um veículo que já voltou a rodar. Volta como Disponivel porque a tela só inativa
+// veículo Disponivel; conferir viagem/manutenção aberta só seria garantido no banco (spec EIX-81).
+export async function reativarVeiculo(id: string): Promise<Resultado<Veiculo>> {
+  const { data, error } = await supabase
+    .from('veiculo')
+    .update({ status: 'Disponivel' })
+    .eq('id', id)
+    .eq('status', 'Inativo')
+    .select(COLUNAS)
+    .maybeSingle();
+
+  if (error) return traduzirErro(error, 'Não foi possível reativar o veículo. Tente novamente.');
+  // Sem linha: id inexistente, RLS recusou ou o veículo já foi reativado em outra sessão.
+  if (!data) {
+    return {
+      ok: false,
+      mensagem: 'Não foi possível reativar. O veículo pode já ter sido reativado ou você não tem permissão. Atualize a lista e tente novamente.',
+    };
+  }
+  return validarVeiculo(data);
+}
+
 // Contrato compartilhado com EIX-39/EIX-40. Uma lista permitida no banco exclui
 // inativos antes do limite de resultados, sem esconder veículos do histórico.
 export async function listarVeiculosSelecionaveis(finalidade: 'viagem' | 'manutencao'): Promise<Resultado<Veiculo[]>> {
