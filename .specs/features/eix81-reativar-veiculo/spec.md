@@ -20,7 +20,7 @@ A EIX-79 permite inativar um veículo, mas não permite desfazer. Uma inativaç�
 
 | Assumption / decision | Chosen default | Rationale | Confirmed? |
 | --- | --- | --- | --- |
-| Ponto a decidir da task: conferir viagem/manutenção aberta | Trigger `veiculo_corrige_status_reativacao` (migration 20261111000100) grava o status real ao sair de `Inativo` | A revisão da PR #47 mostrou que a edição e um PATCH direto inativam veículo com pendência aberta; a decisão (a) anterior (só o guard da tela) não protegia. Corrigir em vez de recusar: recusar deixaria o veículo preso em Inativo | Sim (usuário, 11/11/2026) |
+| Ponto a decidir da task: conferir viagem/manutenção aberta | Trigger `veiculo_corrige_status_reativacao` (migration 20261111000200) grava o status real ao sair de `Inativo` | A revisão da PR #47 mostrou que a edição e um PATCH direto inativam veículo com pendência aberta; a decisão (a) anterior (só o guard da tela) não protegia. Corrigir em vez de recusar: recusar deixaria o veículo preso em Inativo | Sim (usuário, 11/11/2026) |
 | Guarda de concorrência | `update` condicionado a `id` e `status = 'Inativo'` | Mesmo molde do `inativarVeiculo` | Sim (critério da task) |
 | Zero linhas | Erro em português, sem sucesso falso | Pode ser concorrência, id ausente ou RLS | Sim (critério da task) |
 | Trigger do ano | Não dispara | `update of ano_fabricacao`: mudar só o status não revalida o ano, então veículo legado sem ano reativa normalmente | Sim (migration 20261014000100) |

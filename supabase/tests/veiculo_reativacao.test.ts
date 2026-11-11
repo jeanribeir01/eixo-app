@@ -1,5 +1,5 @@
 /** @jest-environment node */
-// Testes da migration 20261111000100_veiculo_reativacao.sql — EIX-81.
+// Testes da migration 20261111000200_veiculo_reativacao.sql — EIX-81.
 // A reativação é o mesmo UPDATE que o `reativarVeiculo` do app manda pelo PostgREST; cada teste
 // confere o status gravado, porque o critério é sobre o que fica no banco, não sobre a tela.
 

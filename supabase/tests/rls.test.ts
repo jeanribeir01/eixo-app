@@ -256,7 +256,7 @@ describe('migration rls: policies por perfil', () => {
     const alvo = veiculo.rows[0]!.id;
     for (const status of ['Disponivel', 'EmViagem', 'EmManutencao', 'Inativo'] as const) {
       // Passa por Disponivel antes: saindo de Inativo, o trigger da EIX-81
-      // (20261111000100_veiculo_reativacao.sql) grava o status real, não o pedido.
+      // (20261111000200_veiculo_reativacao.sql) grava o status real, não o pedido.
       await comoSuperuser(db, (tx) => tx.query(`update veiculo set status = 'Disponivel' where id = $1`, [alvo]));
       await comoSuperuser(db, (tx) => tx.query('update veiculo set status = $1 where id = $2', [status, alvo]));
       const atualiza = permitido && status === 'Disponivel';

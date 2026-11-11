@@ -213,7 +213,7 @@ export function inativarVeiculo(id: string): Promise<Resultado<Veiculo>> {
 }
 
 // Desfaz uma inativação feita por engano (EIX-81). O pedido é Disponivel, mas quem decide o
-// status final é o trigger `veiculo_corrige_status_reativacao` (20261111000100_veiculo_reativacao.sql):
+// status final é o trigger `veiculo_corrige_status_reativacao` (20261111000200_veiculo_reativacao.sql):
 // com viagem ou manutenção aberta, o veículo volta como EmViagem ou EmManutencao. Por isso a tela
 // lê o status do veículo devolvido, e não supõe Disponivel.
 export function reativarVeiculo(id: string): Promise<Resultado<Veiculo>> {
