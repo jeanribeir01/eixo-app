@@ -145,37 +145,37 @@ O Financeiro registra fretes, combustível e pedágios, mas não consegue dizer 
 
 | Requirement ID | Story | Phase | Status |
 | --- | --- | --- | --- |
-| PONTE-01 | P1: Vincular | Tasks | Pending |
-| PONTE-02 | P1: Vincular | Tasks | Pending |
-| PONTE-03 | P1: Vincular | Tasks | Pending |
-| PONTE-04 | P1: Vincular | Tasks | Pending |
-| PONTE-05 | P1: Vincular | Tasks | Pending |
-| PONTE-06 | P1: Vincular | Tasks | Pending |
-| PONTE-07 | P1: Vincular | Tasks | Pending |
-| PONTE-08 | P1: Vincular | Tasks | Pending |
-| PONTE-09 | P1: Vincular | Tasks | Pending |
-| LITROS-01 | P1: Litros | Tasks | Pending |
-| LITROS-02 | P1: Litros | Tasks | Pending |
-| LITROS-03 | P1: Litros | Tasks | Pending |
-| LITROS-04 | P1: Litros | Tasks | Pending |
-| LITROS-05 | P1: Litros | T1 | Implementing |
-| LITROS-06 | P1: Litros | T1 | Implementing |
-| DETALHE-01 | P1: Detalhe | Tasks | Pending |
-| DETALHE-02 | P1: Detalhe | Tasks | Pending |
-| DETALHE-03 | P1: Detalhe | Tasks | Pending |
-| DETALHE-04 | P1: Detalhe | Tasks | Pending |
-| DETALHE-05 | P1: Detalhe | Tasks | Pending |
-| DETALHE-06 | P1: Detalhe | Tasks | Pending |
-| DETALHE-07 | P1: Detalhe | Tasks | Pending |
-| DETALHE-08 | P1: Detalhe | Tasks | Pending |
-| DETALHE-09 | P1: Detalhe | Tasks | Pending |
-| ACESSO-01 | P1: Acesso | T1 | Implementing |
-| ACESSO-02 | P1: Acesso | T1 | Implementing |
-| ACESSO-03 | P1: Acesso | T1 | Implementing |
-| ACESSO-04 | P1: Acesso | T1 | Implementing |
-| ACESSO-05 | P1: Acesso | T1 | Implementing |
+| PONTE-01 | P1: Vincular | Execute | Implementing |
+| PONTE-02 | P1: Vincular | Execute | Implementing |
+| PONTE-03 | P1: Vincular | Execute | Implementing |
+| PONTE-04 | P1: Vincular | Execute | Implementing |
+| PONTE-05 | P1: Vincular | Execute | Implementing |
+| PONTE-06 | P1: Vincular | Execute | Implementing |
+| PONTE-07 | P1: Vincular | Execute | Implementing |
+| PONTE-08 | P1: Vincular | Execute | Implementing |
+| PONTE-09 | P1: Vincular | Execute | Implementing |
+| LITROS-01 | P1: Litros | Execute | Implementing |
+| LITROS-02 | P1: Litros | Execute | Implementing |
+| LITROS-03 | P1: Litros | Execute | Implementing |
+| LITROS-04 | P1: Litros | Execute | Implementing |
+| LITROS-05 | P1: Litros | Execute | Implementing |
+| LITROS-06 | P1: Litros | Execute | Implementing |
+| DETALHE-01 | P1: Detalhe | Execute | Implementing |
+| DETALHE-02 | P1: Detalhe | Execute | Implementing |
+| DETALHE-03 | P1: Detalhe | Execute | Implementing |
+| DETALHE-04 | P1: Detalhe | Execute | Implementing |
+| DETALHE-05 | P1: Detalhe | Execute | Implementing |
+| DETALHE-06 | P1: Detalhe | Execute | Implementing |
+| DETALHE-07 | P1: Detalhe | Execute | Implementing |
+| DETALHE-08 | P1: Detalhe | Execute | Implementing |
+| DETALHE-09 | P1: Detalhe | Execute | Implementing |
+| ACESSO-01 | P1: Acesso | Execute | Implementing |
+| ACESSO-02 | P1: Acesso | Execute | Implementing |
+| ACESSO-03 | P1: Acesso | Execute | Implementing |
+| ACESSO-04 | P1: Acesso | Execute | Implementing |
+| ACESSO-05 | P1: Acesso | Execute | Implementing |
 
-**Coverage:** 29 total, 0 mapped to tasks, 29 unmapped ⚠️ (mapeados em `tasks.md`)
+**Coverage:** 29 total, 29 mapped to tasks (T1–T8), 0 unmapped
 
 ---
 

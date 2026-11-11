@@ -35,6 +35,7 @@ export default function AppLayout() {
         <Stack.Screen name="dividas/[id]" options={{ title: 'Dívida' }} />
         {/* Ponte Caixa ↔ Viagens (US09): detalhe da viagem com os lançamentos. O Financeiro não lê
             `viagem` direto; a tela usa as RPCs da ponte. Gestor e Motorista não leem movimentação. */}
+        <Stack.Screen name="viagens/lancamentos" options={{ title: 'Lançamentos por viagem' }} />
         <Stack.Screen name="viagens/[id]/index" options={{ title: 'Viagem' }} />
       </Stack.Protected>
       <Stack.Protected guard={podeVerFrota}>

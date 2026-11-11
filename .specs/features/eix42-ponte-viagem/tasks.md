@@ -219,10 +219,10 @@ T5 → T6 → T7 → T8
 
 **Done when**:
 
-- [ ] Lista as viagens vinculáveis e o toque abre `/viagens/<id>`
-- [ ] Hub Financeiro mostra "Lançamentos por viagem"
-- [ ] Vazio, carregando e erro tratados
-- [ ] Build gate passa
+- [x] Lista as viagens vinculáveis e o toque abre `/viagens/<id>`
+- [x] Hub Financeiro mostra "Lançamentos por viagem"
+- [x] Vazio, carregando e erro tratados
+- [x] Build gate passa
 
 **Tests**: unit
 **Gate**: build
