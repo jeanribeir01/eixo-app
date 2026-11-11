@@ -6,22 +6,21 @@ A EIX-79 permite inativar um veículo, mas não permite desfazer. Uma inativaç�
 
 ## Goals
 
-- Devolver à circulação, como `Disponivel`, um veículo `Inativo`, com confirmação e feedback.
+- Devolver à circulação um veículo `Inativo`, com confirmação e feedback. Sem pendência volta `Disponivel`; com viagem ou manutenção aberta volta `EmViagem`/`EmManutencao` (decisão revista na revisão da PR #47).
 - Manter a edição sem reativar (ANO-06 da EIX-79).
 
 ## Out of Scope
 
 | Feature | Reason |
 | --- | --- |
-| Conferir viagem ou manutenção aberta antes de reativar | Só seria garantido no banco (constraint/RPC), e banco é com o Jean. Decisão (a) abaixo |
-| Migrations, `src/types/database.ts`, `src/ui/` | Base existente suficiente: RLS `veiculo_update` já cobre Admin e Gestor de Frota |
+| `src/types/database.ts`, `src/ui/` | O trigger novo não muda tipos; RLS `veiculo_update` já cobre Admin e Gestor de Frota |
 | Mudança de status no Linear | Quem fecha a task é a pessoa |
 
 ## Assumptions & Open Questions
 
 | Assumption / decision | Chosen default | Rationale | Confirmed? |
 | --- | --- | --- | --- |
-| Ponto a decidir da task: conferir viagem/manutenção aberta | (a) Basta o guard da tela | A tela só inativa `Disponivel`; uma conferência só no cliente não protege contra chamada direta à API. Se o Jean quiser garantia, é constraint/RPC no banco | Sim (usuário, 10/11/2026) |
+| Ponto a decidir da task: conferir viagem/manutenção aberta | Trigger `veiculo_corrige_status_reativacao` (migration 20261111000100) grava o status real ao sair de `Inativo` | A revisão da PR #47 mostrou que a edição e um PATCH direto inativam veículo com pendência aberta; a decisão (a) anterior (só o guard da tela) não protegia. Corrigir em vez de recusar: recusar deixaria o veículo preso em Inativo | Sim (usuário, 11/11/2026) |
 | Guarda de concorrência | `update` condicionado a `id` e `status = 'Inativo'` | Mesmo molde do `inativarVeiculo` | Sim (critério da task) |
 | Zero linhas | Erro em português, sem sucesso falso | Pode ser concorrência, id ausente ou RLS | Sim (critério da task) |
 | Trigger do ano | Não dispara | `update of ano_fabricacao`: mudar só o status não revalida o ano, então veículo legado sem ano reativa normalmente | Sim (migration 20261014000100) |
