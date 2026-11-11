@@ -54,7 +54,7 @@ describe('VeiculosListView', () => {
     (listarVeiculos as jest.Mock).mockResolvedValue({ ok: true, data: veiculosMock });
     render(<VeiculosListView />);
     await screen.findByText('ABC-1234');
-    fireEvent.press(screen.getByRole('button', { name: 'Inativar' }));
+    fireEvent.press(screen.getByRole('button', { name: 'Inativar ABC-1234' }));
     expect(alerta).toHaveBeenCalledWith('Inativar veículo?', expect.stringContaining('ABC-1234'), [
       expect.objectContaining({ text: 'Cancelar', style: 'cancel' }),
       expect.objectContaining({ text: 'Inativar', style: 'destructive', onPress: expect.any(Function) }),
@@ -72,12 +72,12 @@ describe('VeiculosListView', () => {
     (inativarVeiculo as jest.Mock).mockResolvedValue({ ok: true, data: inativo });
     render(<VeiculosListView />);
     await screen.findByText('ABC-1234');
-    fireEvent.press(screen.getByRole('button', { name: 'Inativar' }));
+    fireEvent.press(screen.getByRole('button', { name: 'Inativar ABC-1234' }));
     await confirmar();
     expect(inativarVeiculo).toHaveBeenCalledWith('1');
     expect(screen.getByText('Veículo inativado.')).toBeOnTheScreen();
     expect(screen.getAllByText('Inativo')).toHaveLength(2);
-    expect(screen.queryByRole('button', { name: 'Inativar' })).toBeNull();
+    expect(screen.queryByRole('button', { name: 'Inativar ABC-1234' })).toBeNull();
   });
 
   it('respeita filtro Disponível ao atualizar após inativar (INA-06)', async () => {
@@ -87,9 +87,9 @@ describe('VeiculosListView', () => {
     await screen.findByText('ABC-1234');
     fireEvent.press(screen.getByRole('tab', { name: 'Disponível' }));
     await waitFor(() => expect(listarVeiculos).toHaveBeenLastCalledWith({ busca: undefined, status: 'Disponivel' }));
-    await screen.findByRole('button', { name: 'Inativar' });
+    await screen.findByRole('button', { name: 'Inativar ABC-1234' });
     (listarVeiculos as jest.Mock).mockResolvedValue({ ok: true, data: [] });
-    fireEvent.press(screen.getByRole('button', { name: 'Inativar' }));
+    fireEvent.press(screen.getByRole('button', { name: 'Inativar ABC-1234' }));
     await confirmar();
     expect(screen.queryByText('ABC-1234')).toBeNull();
     expect(screen.getByText('Nenhum veículo encontrado')).toBeOnTheScreen();
@@ -102,15 +102,15 @@ describe('VeiculosListView', () => {
     (inativarVeiculo as jest.Mock).mockReturnValue(new Promise((resolve) => { concluir = resolve; }));
     render(<VeiculosListView />);
     await screen.findByText('ABC-1234');
-    fireEvent.press(screen.getByRole('button', { name: 'Inativar' }));
+    fireEvent.press(screen.getByRole('button', { name: 'Inativar ABC-1234' }));
     await confirmar();
-    expect(screen.getByRole('button', { name: 'Inativar' })).toBeDisabled();
+    expect(screen.getByRole('button', { name: 'Inativar ABC-1234' })).toBeDisabled();
     expect(screen.getByTestId('button-loading')).toBeOnTheScreen();
     await confirmar();
     expect(inativarVeiculo).toHaveBeenCalledTimes(1);
     await act(async () => concluir({ ok: false, mensagem: 'Falha de rede.' }));
     expect(screen.getByText('Falha de rede.')).toBeOnTheScreen();
-    expect(screen.getByRole('button', { name: 'Inativar' })).not.toBeDisabled();
+    expect(screen.getByRole('button', { name: 'Inativar ABC-1234' })).not.toBeDisabled();
   });
 
   it('falha ou concorrência preserva veículo e mostra erro (INA-02/07)', async () => {
@@ -118,7 +118,7 @@ describe('VeiculosListView', () => {
     (inativarVeiculo as jest.Mock).mockResolvedValue({ ok: false, mensagem: 'Veículo não está mais disponível.' });
     render(<VeiculosListView />);
     await screen.findByText('ABC-1234');
-    fireEvent.press(screen.getByRole('button', { name: 'Inativar' }));
+    fireEvent.press(screen.getByRole('button', { name: 'Inativar ABC-1234' }));
     await confirmar();
     expect(screen.getByText('Veículo não está mais disponível.')).toBeOnTheScreen();
     expect(screen.getByText('ABC-1234')).toBeOnTheScreen();
@@ -132,7 +132,7 @@ describe('VeiculosListView', () => {
     ] });
     render(<VeiculosListView />);
     await screen.findByText('ABC-1234');
-    expect(screen.queryByRole('button', { name: 'Inativar' })).toBeNull();
+    expect(screen.queryByRole('button', { name: /^Inativar/ })).toBeNull();
   });
 
   it('filtra Inativo e mantém filtros roláveis em telas pequenas (SEL-01)', async () => {
@@ -161,14 +161,14 @@ describe('VeiculosListView', () => {
       ] });
       render(<VeiculosListView />);
       await screen.findByText('GHI-1234');
-      expect(screen.getAllByRole('button', { name: 'Reativar' })).toHaveLength(1);
+      expect(screen.getAllByRole('button', { name: /^Reativar/ })).toHaveLength(1);
     });
 
     it('confirma antes de reativar e cancelar não altera dados (REA-05)', async () => {
       (listarVeiculos as jest.Mock).mockResolvedValue({ ok: true, data: [inativo] });
       render(<VeiculosListView />);
       await screen.findByText('GHI-1234');
-      fireEvent.press(screen.getByRole('button', { name: 'Reativar' }));
+      fireEvent.press(screen.getByRole('button', { name: 'Reativar GHI-1234' }));
       expect(alerta).toHaveBeenCalledWith('Reativar veículo?', expect.stringContaining('GHI-1234'), [
         expect.objectContaining({ text: 'Cancelar', style: 'cancel' }),
         expect.objectContaining({ text: 'Reativar', onPress: expect.any(Function) }),
@@ -183,14 +183,14 @@ describe('VeiculosListView', () => {
       (reativarVeiculo as jest.Mock).mockReturnValue(new Promise((resolve) => { concluir = resolve; }));
       render(<VeiculosListView />);
       await screen.findByText('GHI-1234');
-      fireEvent.press(screen.getByRole('button', { name: 'Reativar' }));
+      fireEvent.press(screen.getByRole('button', { name: 'Reativar GHI-1234' }));
       await confirmarReativacao();
-      expect(screen.getByRole('button', { name: 'Reativar' })).toBeDisabled();
+      expect(screen.getByRole('button', { name: 'Reativar GHI-1234' })).toBeDisabled();
       expect(screen.getByTestId('button-loading')).toBeOnTheScreen();
       await confirmarReativacao();
       expect(reativarVeiculo).toHaveBeenCalledTimes(1);
       await act(async () => concluir({ ok: false, mensagem: 'Falha de rede.' }));
-      expect(screen.getByRole('button', { name: 'Reativar' })).not.toBeDisabled();
+      expect(screen.getByRole('button', { name: 'Reativar GHI-1234' })).not.toBeDisabled();
     });
 
     it('sucesso mostra Snackbar e recarrega respeitando o filtro Inativo (REA-07)', async () => {
@@ -200,9 +200,9 @@ describe('VeiculosListView', () => {
       await screen.findByText('GHI-1234');
       fireEvent.press(screen.getByRole('tab', { name: 'Inativo' }));
       await waitFor(() => expect(listarVeiculos).toHaveBeenLastCalledWith({ busca: undefined, status: 'Inativo' }));
-      await screen.findByRole('button', { name: 'Reativar' });
+      await screen.findByRole('button', { name: 'Reativar GHI-1234' });
       (listarVeiculos as jest.Mock).mockResolvedValue({ ok: true, data: [] });
-      fireEvent.press(screen.getByRole('button', { name: 'Reativar' }));
+      fireEvent.press(screen.getByRole('button', { name: 'Reativar GHI-1234' }));
       await confirmarReativacao();
       expect(reativarVeiculo).toHaveBeenCalledWith('3');
       expect(screen.getByText('Veículo reativado.')).toBeOnTheScreen();
@@ -215,7 +215,7 @@ describe('VeiculosListView', () => {
       (reativarVeiculo as jest.Mock).mockResolvedValue({ ok: true, data: { ...inativo, status: 'EmViagem' } });
       render(<VeiculosListView />);
       await screen.findByText('GHI-1234');
-      fireEvent.press(screen.getByRole('button', { name: 'Reativar' }));
+      fireEvent.press(screen.getByRole('button', { name: 'Reativar GHI-1234' }));
       await confirmarReativacao();
       expect(screen.getByText('Veículo reativado como Em Viagem.')).toBeOnTheScreen();
     });
@@ -225,10 +225,10 @@ describe('VeiculosListView', () => {
       (reativarVeiculo as jest.Mock).mockRejectedValue(new TypeError('Network request failed'));
       render(<VeiculosListView />);
       await screen.findByText('GHI-1234');
-      fireEvent.press(screen.getByRole('button', { name: 'Reativar' }));
+      fireEvent.press(screen.getByRole('button', { name: 'Reativar GHI-1234' }));
       await confirmarReativacao();
       expect(screen.getByText('Não foi possível concluir a operação. Atualize a lista e tente novamente.')).toBeOnTheScreen();
-      expect(screen.getByRole('button', { name: 'Reativar' })).not.toBeDisabled();
+      expect(screen.getByRole('button', { name: 'Reativar GHI-1234' })).not.toBeDisabled();
       expect(screen.getByText('GHI-1234')).toBeOnTheScreen();
     });
 
@@ -237,7 +237,7 @@ describe('VeiculosListView', () => {
       (reativarVeiculo as jest.Mock).mockResolvedValue({ ok: false, mensagem: 'Não foi possível reativar o veículo. Tente novamente.' });
       render(<VeiculosListView />);
       await screen.findByText('GHI-1234');
-      fireEvent.press(screen.getByRole('button', { name: 'Reativar' }));
+      fireEvent.press(screen.getByRole('button', { name: 'Reativar GHI-1234' }));
       await confirmarReativacao();
       expect(screen.getByText('Não foi possível reativar o veículo. Tente novamente.')).toBeOnTheScreen();
       expect(screen.getByText('GHI-1234')).toBeOnTheScreen();

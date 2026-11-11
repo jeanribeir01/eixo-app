@@ -15,6 +15,13 @@ describe('Button', () => {
     expect(screen.getByText('Continuar')).toHaveStyle({ color: '#ffffff' });
   });
 
+  it('accessibilityLabel substitui o nome lido pelo leitor de tela, mantendo o rótulo visível', () => {
+    render(<Button label="Reativar" variant="ghost" accessibilityLabel="Reativar GHI-1234" onPress={jest.fn()} />);
+
+    expect(screen.getByRole('button', { name: 'Reativar GHI-1234' })).toBeOnTheScreen();
+    expect(screen.getByText('Reativar')).toBeOnTheScreen();
+  });
+
   it('ghost: fundo transparente, borda hairline e texto primário', () => {
     render(<Button label="Sair" variant="ghost" onPress={jest.fn()} />);
 

@@ -203,10 +203,25 @@ export function VeiculosListView() {
                     onPress={() => router.push(`/frota/${item.id}/editar`)}
                   />
                   {item.status === 'Disponivel' && (
-                    <Button label="Inativar" variant="ghost" onPress={() => confirmarInativacao(item)} loading={alterandoId === item.id} disabled={alterandoId !== null} />
+                    <Button
+                      label="Inativar"
+                      accessibilityLabel={`Inativar ${formatarPlaca(item.placa)}`}
+                      variant="ghost"
+                      onPress={() => confirmarInativacao(item)}
+                      loading={alterandoId === item.id}
+                      disabled={alterandoId !== null}
+                    />
                   )}
+                  {/* A placa no nome acessível: com várias linhas, o leitor de tela diria só "Reativar". */}
                   {item.status === 'Inativo' && (
-                    <Button label="Reativar" variant="ghost" onPress={() => confirmarReativacao(item)} loading={alterandoId === item.id} disabled={alterandoId !== null} />
+                    <Button
+                      label="Reativar"
+                      accessibilityLabel={`Reativar ${formatarPlaca(item.placa)}`}
+                      variant="ghost"
+                      onPress={() => confirmarReativacao(item)}
+                      loading={alterandoId === item.id}
+                      disabled={alterandoId !== null}
+                    />
                   )}
                 </Column>
               </Column>
