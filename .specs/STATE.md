@@ -98,16 +98,22 @@
 - **Date**: 2026-10-18
 - **Status**: active
 
+### AD-014
+- **Decision**: O Financeiro enxerga viagens só pelas RPCs `listar_viagens_vinculaveis()` e `buscar_viagem_vinculavel(uuid)` (`security definer`, Admin e Financeiro, devolvem placa, rota, status e datas). A policy `viagem_select` não muda. Os litros do abastecimento ficam em `movimentacao.litros numeric(8,2)`, e um trigger exige litros em Combustível vinculado a viagem e recusa litros fora de Combustível (`23514`). O código da ponte mora em `src/features/ponte-viagem/`.
+- **Reason**: Decidido com o usuário em 11/11/2026, no molde da AD-013: a tela só precisa desses campos, sem hodômetro nem motorista. A US10 (EIX-43) soma os litros por `viagem_id` para o KM/L. Pela RNF08, a ponte é o único lugar que conhece Caixa e Frota.
+- **Trade-off**: Combustível é achado pelo título 'Combustível' (Saída), como a 'Manutenção' na `registrar_manutencao`, então renomear a categoria desliga a regra. A janela "concluídas recentes" de 30 dias é premissa, não confirmada pelo usuário.
+- **Scope**: `supabase/migrations/20261111000100_ponte_viagem.sql`, `src/features/ponte-viagem`, `src/features/movimentacoes`, EIX-42, EIX-43.
+- **Date**: 2026-11-11
+- **Status**: active
+
 ## Handoff
 
-### EIX-68 — Motion contido
+### EIX-42 — US09 ponte Caixa ↔ Viagens
 
-- **Feature**: `.specs/features/eix58-design-app`, fase 12, T41–T42 / ANI-01
-- **Phase / Task**: implementação concluída; revisão independente PASS; quatro cenários visuais do motion aprovados pelo usuário em 25/10/2026
-- **Completed**: Skeleton com pulso 1 → 0,5 → 1 em 1000 ms (`2c8d4d8`); transições de célula/linha em 200 ms, sem entering/exiting (`d4a2a7b`); correção do snapshot de movimento do Reanimated ao alterar a preferência com o app aberto, testes e evidências na entrega atual
-- **Validation**: typecheck e lint exit 0; 1069 testes app + 311 Supabase verdes; sensor independente 4/4 mutações detectadas; release dos componentes conferido em emulador Android API 36 de dois núcleos; build release do app completo passou. Evidências e APK locais em `C:/eix68-build/evidence/`; relatório em `validation.md`
+- **Feature**: `.specs/features/eix42-ponte-viagem`, T1–T8 concluídas; Verifier PASS na rodada 2 (`validation.md`)
+- **Completed**: migration `20261111000100_ponte_viagem.sql` aplicada na nuvem (db push --remote aprovado pelo usuário em 11/11/2026) e tipos regerados; `Select` com busca e "Sem viagem"; campos de viagem e litros no formulário; detalhe `/viagens/<id>` e lista `/viagens/lancamentos` para Admin e Financeiro
+- **Validation**: typecheck e lint exit 0; app 1408 testes, PGlite 359 testes; sensor 13/13 na rodada 2
 - **In-progress**: nenhum código pendente
-- **Next step**: abrir PR para revisão de Jean e usar Squash and merge após aprovação; os fluxos autenticados não fizeram parte do aceite visual do motion
-- **Blockers**: nenhum bloqueio técnico; aceite visual dos quatro cenários de motion registrado em validation.md
-- **Uncommitted files**: nenhum após o commit da entrega; artefatos de build/probe ficam fora do repositório
-- **Branch**: `feat/eix-68-design-motion`; Linear não encerrado; sem push, merge ou alterações de dados de produção
+- **Next step**: usuário confirma as duas premissas `n` da spec (janela de 30 dias e pasta `ponte-viagem`), testa no aparelho e abre o PR (revisor: Diogo). O `database.ts` traz `kpis_*` do PR #46, que já está na nuvem; quem fizer merge depois resolve o conflito com o arquivo gerado.
+- **Blockers**: nenhum
+- **Branch**: `feat/eix-42-us09-integracao-viagem-caixa`; sem push; Linear não alterado

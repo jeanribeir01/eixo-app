@@ -10,7 +10,7 @@ Implement these tasks with the `tlc-spec-driven` skill: **activate it by name an
 
 **Spec**: `.specs/features/eix42-ponte-viagem/spec.md`
 **Design**: inline (sem `design.md`): segue o molde da AD-013 (RPC `security definer`) e da EIX-33 (form montado por `camposMovimentacao`)
-**Status**: In Progress
+**Status**: Done
 
 ---
 
