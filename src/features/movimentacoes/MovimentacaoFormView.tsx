@@ -33,6 +33,8 @@ const VALORES_INICIAIS: MovimentacaoFormValues = {
   status: 'Pendente',
   caminhoComprovante: null,
   dataPagamento: '',
+  viagemId: null,
+  litros: '',
 };
 
 function valoresDe(movimentacao: Movimentacao): MovimentacaoFormValues {
@@ -45,6 +47,9 @@ function valoresDe(movimentacao: Movimentacao): MovimentacaoFormValues {
     status: movimentacao.status_pagamento,
     caminhoComprovante: movimentacao.caminho_comprovante,
     dataPagamento: movimentacao.data_pagamento ? isoParaDataBR(movimentacao.data_pagamento) : '',
+    viagemId: movimentacao.viagem_id,
+    // Vírgula decimal, como o usuário digita.
+    litros: movimentacao.litros === null ? '' : String(movimentacao.litros).replace('.', ','),
   };
 }
 

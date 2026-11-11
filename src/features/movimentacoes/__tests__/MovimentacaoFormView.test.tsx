@@ -79,6 +79,8 @@ const existente: Movimentacao = {
   categoria_id: 'cat-antiga',
   forma_pagamento_id: 'fp-pix',
   divida_id: null,
+  viagem_id: null,
+  litros: null,
   data_vencimento: '2026-10-10',
   data_pagamento: null,
   data_inclusao: '2026-10-01T12:00:00+00:00',
@@ -255,6 +257,9 @@ describe('MovimentacaoFormView — salvar (MOV-02)', () => {
       status: 'Pago',
       dataPagamento: '2026-10-05',
       caminhoComprovante: null,
+      // PONTE-06: sem viagem, o lançamento grava como antes, com o vínculo nulo.
+      viagemId: null,
+      litros: null,
     });
     expect(screen.getByText('Movimentação registrada.')).toBeOnTheScreen();
     await waitFor(() => expect(mockBack).toHaveBeenCalled(), { timeout: 3000 });
@@ -313,6 +318,8 @@ describe('MovimentacaoFormView — editar (MOV-10)', () => {
       status: 'Pendente',
       dataPagamento: null,
       caminhoComprovante: null,
+      viagemId: null,
+      litros: null,
     });
     expect(screen.getByText('Movimentação atualizada.')).toBeOnTheScreen();
   });

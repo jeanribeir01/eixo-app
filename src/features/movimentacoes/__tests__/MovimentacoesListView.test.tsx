@@ -47,6 +47,8 @@ function mov(sobrescrever: Partial<Movimentacao>): Movimentacao {
     categoria_id: 'cat',
     forma_pagamento_id: 'fp',
     divida_id: null,
+    viagem_id: null,
+    litros: null,
     data_vencimento: '2026-10-10',
     data_pagamento: null,
     data_inclusao: '2026-10-01T12:00:00+00:00',

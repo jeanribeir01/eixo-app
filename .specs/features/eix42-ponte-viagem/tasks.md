@@ -155,10 +155,10 @@ T5 → T6 → T7 → T8
 
 **Done when**:
 
-- [ ] Litros vazio em Combustível vinculado: "Informe a quantidade em litros."; fora do limite: mensagem de LITROS-04
-- [ ] Categoria que não é Combustível grava `litros = null`
-- [ ] Repositório grava e lê `viagem_id` e `litros`
-- [ ] Gate quick passa
+- [x] Litros vazio em Combustível vinculado: "Informe a quantidade em litros."; fora do limite: mensagem de LITROS-04
+- [x] Categoria que não é Combustível grava `litros = null`
+- [x] Repositório grava e lê `viagem_id` e `litros`
+- [x] Gate quick passa
 
 **Tests**: unit
 **Gate**: quick

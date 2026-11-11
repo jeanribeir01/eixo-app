@@ -65,6 +65,8 @@ function linha(sobrescrever: Record<string, unknown> = {}) {
     categoria_id: 'cat-1',
     forma_pagamento_id: 'fp-1',
     divida_id: null,
+    viagem_id: null,
+    litros: null,
     data_vencimento: '2026-10-10',
     data_pagamento: null,
     data_inclusao: '2026-10-01T12:00:00+00:00',
@@ -85,6 +87,8 @@ const input: MovimentacaoInput = {
   status: 'Pago',
   dataPagamento: '2026-10-05',
   caminhoComprovante: '1759800000000-abc123.jpg',
+  viagemId: null,
+  litros: null,
 };
 
 beforeEach(() => {
@@ -122,6 +126,8 @@ describe('listarMovimentacoesDoMes (MOV-08)', () => {
           categoria_id: 'cat-1',
           forma_pagamento_id: 'fp-1',
           divida_id: null,
+          viagem_id: null,
+          litros: null,
           data_vencimento: '2026-10-10',
           data_pagamento: null,
           data_inclusao: '2026-10-01T12:00:00+00:00',
@@ -199,14 +205,27 @@ describe('criarMovimentacao (MOV-02)', () => {
       data_pagamento: '2026-10-05',
       status_pagamento: 'Pago',
       caminho_comprovante: '1759800000000-abc123.jpg',
+      viagem_id: null,
+      litros: null,
     });
     expect(resultado.ok && resultado.data.valorCentavos).toBe(150000);
   });
 
+  // PONTE-04 e LITROS (EIX-42): o vínculo e os litros vão para as colunas do banco.
+  it('grava viagem_id e litros', async () => {
+    const query = responder(ok(linha({ viagem_id: 'v-1', litros: 412.37 })));
+
+    const resultado = await criarMovimentacao({ ...input, viagemId: 'v-1', litros: 412.37 });
+
+    expect(query.insert).toHaveBeenCalledWith(expect.objectContaining({ viagem_id: 'v-1', litros: 412.37 }));
+    expect(resultado.ok && resultado.data.viagem_id).toBe('v-1');
+    expect(resultado.ok && resultado.data.litros).toBe(412.37);
+  });
+
   it.each([
     ['42501', 'Acesso negado. Seu perfil não tem permissão para esta ação.'],
-    ['23514', 'Valor ou data de pagamento inválidos.'],
-    ['23503', 'Categoria ou forma de pagamento não encontrada.'],
+    ['23514', 'Valor, data de pagamento ou litros inválidos.'],
+    ['23503', 'Viagem, categoria ou forma de pagamento não encontrada.'],
     ['XX000', 'Não foi possível registrar a movimentação. Tente novamente.'],
   ])('erro %s → "%s"', async (code, mensagem) => {
     responder(erro(code));
@@ -230,6 +249,9 @@ describe('atualizarMovimentacao (MOV-10)', () => {
       data_pagamento: '2026-10-05',
       status_pagamento: 'Pago',
       caminho_comprovante: '1759800000000-abc123.jpg',
+      // PONTE-05: viagem_id vai explícito como null, para o desvínculo pelo formulário chegar ao banco.
+      viagem_id: null,
+      litros: null,
     });
     expect(query.eq).toHaveBeenCalledWith('id', 'mov-1');
   });

@@ -134,6 +134,7 @@ O Financeiro registra fretes, combustível e pedágios, mas não consegue dizer 
 ## Edge Cases
 
 - IF a viagem escolhida é apagada antes de salvar THEN o banco SHALL recusar pela FK (`23503`), e o sistema SHALL mostrar "Viagem, categoria ou forma de pagamento não encontrada.".
+- IF o banco recusa o lançamento com `23514` (valor, data de pagamento ou litros) THEN o sistema SHALL mostrar "Valor, data de pagamento ou litros inválidos.".
 - WHEN o usuário troca a categoria de Combustível para outra THEN o sistema SHALL descartar os litros digitados ao salvar (`litros = null`).
 - WHEN a busca não encontra nenhuma viagem THEN o seletor SHALL mostrar "Nenhuma viagem encontrada.".
 - IF não há nenhuma viagem vinculável THEN o seletor SHALL mostrar só "Sem viagem" e a mensagem "Nenhuma viagem em andamento ou concluída nos últimos 30 dias.".

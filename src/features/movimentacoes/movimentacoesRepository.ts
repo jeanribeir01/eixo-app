@@ -16,7 +16,7 @@ export type Resultado<T> = { ok: true; data: T } | { ok: false; mensagem: string
 
 // Joins pelo nome da tabela: o PostgREST resolve pela FK e devolve um objeto em cada linha.
 const COLUNAS =
-  'id, valor, descricao, categoria_id, forma_pagamento_id, divida_id, data_vencimento, data_pagamento, ' +
+  'id, valor, descricao, categoria_id, forma_pagamento_id, divida_id, viagem_id, litros, data_vencimento, data_pagamento, ' +
   'data_inclusao, status_pagamento, caminho_comprovante, categoria(titulo, tipo, ativa), forma_pagamento(nome, ativa)';
 // Um mês de lançamentos de uma transportadora pequena fica bem abaixo disso.
 const LIMITE_LISTA = 500;
@@ -31,6 +31,8 @@ const linhaSchema = z.object({
   categoria_id: z.string(),
   forma_pagamento_id: z.string(),
   divida_id: z.string().nullable(),
+  viagem_id: z.string().nullable(),
+  litros: z.number().nullable(),
   data_vencimento: z.string().nullable(),
   data_pagamento: z.string().nullable(),
   data_inclusao: z.string(),
@@ -46,9 +48,10 @@ function traduzirErro(error: ErroSupabase, mensagemPadrao: string): string {
   if (ehAcessoNegado(error)) return MENSAGEM_ACESSO_NEGADO;
   // 23514 = check do banco (valor > 0, Pago com data). O form já barra; chegar aqui
   // significa que a regra do banco segurou algo que passou pelo app.
-  if (error.code === '23514') return 'Valor ou data de pagamento inválidos.';
-  // 23503 = FK: a categoria ou forma escolhida não existe mais.
-  if (error.code === '23503') return 'Categoria ou forma de pagamento não encontrada.';
+  // Os litros (US09) também chegam aqui, pelo trigger `valida_litros_movimentacao`.
+  if (error.code === '23514') return 'Valor, data de pagamento ou litros inválidos.';
+  // 23503 = FK: a viagem, categoria ou forma escolhida não existe mais.
+  if (error.code === '23503') return 'Viagem, categoria ou forma de pagamento não encontrada.';
   return mensagemPadrao;
 }
 
@@ -79,6 +82,8 @@ function paraLinhaDoBanco(input: MovimentacaoInput) {
     data_pagamento: input.dataPagamento,
     status_pagamento: input.status,
     caminho_comprovante: input.caminhoComprovante,
+    viagem_id: input.viagemId,
+    litros: input.litros,
   };
 }
 
