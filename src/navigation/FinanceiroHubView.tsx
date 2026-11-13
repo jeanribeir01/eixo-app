@@ -16,6 +16,13 @@ const CAIXA: Atalho[] = [
   { titulo: 'Movimentações', descricao: 'Entradas e saídas do mês', icone: 'movimentacoes', href: '/movimentacoes' },
   { titulo: 'Saldo e projeção', descricao: 'Saldo atual e previsão dos próximos meses', icone: 'saldo', href: '/caixa' },
   { titulo: 'Dívidas', descricao: 'Financiamentos e parcelas', icone: 'dividas', href: '/dividas' },
+  // US09: o que cada viagem gerou de receita e despesa.
+  {
+    titulo: 'Lançamentos por viagem',
+    descricao: 'Fretes e despesas de cada viagem',
+    icone: 'viagens',
+    href: '/viagens/lancamentos',
+  },
 ];
 
 const CADASTROS: Atalho[] = [

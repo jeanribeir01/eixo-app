@@ -14,6 +14,8 @@ export type Movimentacao = Pick<
   | 'categoria_id'
   | 'forma_pagamento_id'
   | 'divida_id'
+  | 'viagem_id'
+  | 'litros'
   | 'data_vencimento'
   | 'data_pagamento'
   | 'data_inclusao'

@@ -3,7 +3,7 @@
   "promote_threshold": 2,
   "window_days": 45,
   "quarantine_threshold": 2,
-  "next_id": 27,
+  "next_id": 29,
   "lessons": [
     {
       "id": "L-001",
@@ -478,6 +478,42 @@
       ],
       "created": "2026-10-25T18:48:52Z",
       "last_seen": "2026-10-25T18:48:52Z"
+    },
+    {
+      "id": "L-027",
+      "key": "surviving_mutant::in pglite tests of a new rpc grant default execute on functions to anon before applying the migration because the stub lacks supabase s default privileges and a missing revoke would pass unnoticed",
+      "text": "In PGlite tests of a new RPC, grant default execute on functions to anon before applying the migration, because the stub lacks Supabase's default privileges and a missing revoke would pass unnoticed",
+      "signal": "surviving_mutant",
+      "scope": "supabase, rls, grants",
+      "status": "candidate",
+      "features": [
+        "eix42-ponte-viagem"
+      ],
+      "recurrence": 1,
+      "harmful": 0,
+      "evidence": [
+        "supabase/tests/ponte_viagem.test.ts M18 (supabase, rls, grants)"
+      ],
+      "created": "2026-11-11T12:48:47Z",
+      "last_seen": "2026-11-11T12:48:47Z"
+    },
+    {
+      "id": "L-028",
+      "key": "surviving_mutant::test a multi key order by with data where the keys disagree so dropping one key changes the expected order",
+      "text": "Test a multi-key ORDER BY with data where the keys disagree, so dropping one key changes the expected order",
+      "signal": "surviving_mutant",
+      "scope": "sql-rpc, ordering",
+      "status": "candidate",
+      "features": [
+        "eix42-ponte-viagem"
+      ],
+      "recurrence": 1,
+      "harmful": 0,
+      "evidence": [
+        "supabase/tests/ponte_viagem.test.ts M3 (sql-rpc, ordering)"
+      ],
+      "created": "2026-11-11T12:48:48Z",
+      "last_seen": "2026-11-11T12:48:48Z"
     }
   ]
 }

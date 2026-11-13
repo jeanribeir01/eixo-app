@@ -168,6 +168,18 @@ Seen once or not yet corroborated. Tracked, not trusted.
 - evidence: validation.md: EIX-68 iteração 2, preferência alterada em runtime (src/ui motion acessibilidade)
 - last seen: 2026-10-25T18:48:52Z
 
+### L-027 - In PGlite tests of a new RPC, grant default execute on functions to anon before applying the migration, because the stub lacks Supabase's default privileges and a missing revoke would pass unnoticed
+- signal: `surviving_mutant` · recurrence: 1 feature(s) · scope: `supabase, rls, grants` · harmful: 0
+- features: eix42-ponte-viagem
+- evidence: supabase/tests/ponte_viagem.test.ts M18 (supabase, rls, grants)
+- last seen: 2026-11-11T12:48:47Z
+
+### L-028 - Test a multi-key ORDER BY with data where the keys disagree, so dropping one key changes the expected order
+- signal: `surviving_mutant` · recurrence: 1 feature(s) · scope: `sql-rpc, ordering` · harmful: 0
+- features: eix42-ponte-viagem
+- evidence: supabase/tests/ponte_viagem.test.ts M3 (sql-rpc, ordering)
+- last seen: 2026-11-11T12:48:48Z
+
 ## Quarantined (failed when applied - ignore)
 
 A confirmed lesson that recurred alongside failure. Kept for the maintainer to review.

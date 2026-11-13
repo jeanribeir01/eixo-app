@@ -114,6 +114,8 @@ describe('FinanceiroHubView — menu do módulo (FIN-03)', () => {
     ['Movimentações', 'Entradas e saídas do mês', '/movimentacoes'],
     ['Saldo e projeção', 'Saldo atual e previsão dos próximos meses', '/caixa'],
     ['Dívidas', 'Financiamentos e parcelas', '/dividas'],
+    // DETALHE-01 (EIX-42)
+    ['Lançamentos por viagem', 'Fretes e despesas de cada viagem', '/viagens/lancamentos'],
     ['Categorias', 'Tipos de entrada e de saída', '/categorias'],
     ['Formas de pagamento', 'Pix, boleto, cartão e TED', '/formas-pagamento'],
   ])('a linha %s tem descrição e abre %s', async (titulo, descricao, rota) => {
@@ -132,7 +134,7 @@ describe('FinanceiroHubView — menu do módulo (FIN-03)', () => {
     expect(screen.getByText('Cadastros')).toBeOnTheScreen();
     expect(screen.getByTestId('simbolo-swap_vert', { includeHiddenElements: true })).toBeOnTheScreen();
     expect(screen.getByTestId('simbolo-receipt_long', { includeHiddenElements: true })).toBeOnTheScreen();
-    expect(screen.getAllByTestId('simbolo-chevron_right', { includeHiddenElements: true })).toHaveLength(5);
+    expect(screen.getAllByTestId('simbolo-chevron_right', { includeHiddenElements: true })).toHaveLength(6);
   });
 
   it('o FAB "Nova movimentação" abre o formulário', async () => {
