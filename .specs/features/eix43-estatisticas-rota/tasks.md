@@ -20,16 +20,16 @@ Implement these tasks with the `tlc-spec-driven` skill: **activate it by name an
 
 | Code Layer | Required Test Type | Coverage Expectation | Location Pattern | Run Command |
 | --- | --- | --- | --- | --- |
-| Migration SQL (view, RPC, índice, grants) | integration (PGlite) | 1:1 com BI-01..BI-18; cada fórmula, divisão por zero, viagem sem lançamento, 42501, 22023, grants via `has_function_privilege`/`has_table_privilege` | `supabase/tests/*.test.ts` | `node --experimental-vm-modules node_modules/jest/bin/jest.js --selectProjects supabase supabase/tests/bi.test.ts` |
-| Repositório / consultas (`src/features/bi/queries.ts`) | unit (client mockado) | Caminho feliz de cada função + 42501 + 22023 + erro genérico + dado fora do schema | `src/features/<feature>/__tests__/*.test.ts` | `npx jest --selectProjects app src/features/bi` |
-| Formatação (`src/features/bi/formatar.ts`) | unit | Nulo → `—` e cada unidade (BI-23) | `src/features/<feature>/__tests__/*.test.ts` | `npx jest --selectProjects app src/features/bi` |
+| Migration SQL (view, RPC, índice, grants) | integration (PGlite) | 1:1 com BI-01..BI-18; cada fórmula, divisão por zero, viagem sem lançamento, 42501, 22023, grants via `has_function_privilege`/`has_table_privilege` | `supabase/tests/*.test.ts` | `node --experimental-vm-modules node_modules/jest/bin/jest.js supabase/tests/bi.test.ts --selectProjects supabase` |
+| Repositório / consultas (`src/features/bi/queries.ts`) | unit (client mockado) | Caminho feliz de cada função + 42501 + 22023 + erro genérico + dado fora do schema | `src/features/<feature>/__tests__/*.test.ts` | `npx jest src/features/bi --selectProjects app` |
+| Formatação (`src/features/bi/formatar.ts`) | unit | Nulo → `—` e cada unidade (BI-23) | `src/features/<feature>/__tests__/*.test.ts` | `npx jest src/features/bi --selectProjects app` |
 | Tipos gerados (`src/types/database.ts`) | none | build gate (typecheck) | - | `npm run typecheck` |
 
 ## Gate Check Commands
 
 | Gate Level | When to Use | Command |
 | --- | --- | --- |
-| Quick | Tarefas só com teste unitário do app | `npx jest --selectProjects app src/features/bi` |
+| Quick | Tarefas só com teste unitário do app | `npx jest src/features/bi --selectProjects app` |
 | Full | Tarefas de migration | `node --experimental-vm-modules node_modules/jest/bin/jest.js --selectProjects supabase` |
 | Build | Fim de fase e tarefas sem teste | `npm run typecheck && npm run lint && npm run test` |
 
@@ -160,7 +160,7 @@ T4 → T5 → T6
 
 ---
 
-### T5: Consultas tipadas `src/features/bi/queries.ts`
+### T5: Consultas tipadas `src/features/bi/queries.ts` ✅
 
 **What**: `listarEstatisticasViagens`, `listarEstatisticasRotas` e `listarEstatisticasVeiculos`, com Zod, centavos inteiros e tradução de erro, documentadas em JSDoc.
 **Where**: `src/features/bi/queries.ts` (teste em `src/features/bi/__tests__/queries.test.ts`)
@@ -175,9 +175,9 @@ T4 → T5 → T6
 
 **Done when**:
 
-- [ ] Cada função chama a RPC certa com `data_inicial`/`data_final` e devolve os campos validados
-- [ ] 42501 → `MENSAGEM_ACESSO_NEGADO`; 22023 → "Período inválido. Confira as datas do filtro."; outro erro ou schema inválido → mensagem genérica
-- [ ] Gate check passes: Quick
+- [x] Cada função chama a RPC certa com `data_inicial`/`data_final` e devolve os campos validados
+- [x] 42501 → `MENSAGEM_ACESSO_NEGADO`; 22023 → "Período inválido. Confira as datas do filtro."; outro erro ou schema inválido → mensagem genérica
+- [x] Gate check passes: Quick
 
 **Tests**: unit
 **Gate**: quick

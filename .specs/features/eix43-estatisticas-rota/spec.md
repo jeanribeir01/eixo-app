@@ -169,10 +169,10 @@ Desde a US09 (EIX-42) cada lançamento pode apontar para uma viagem, e o Combust
 | BI-16 | P1: Acesso, período e desempenho | Execute | Implementing |
 | BI-17 | P1: Acesso, período e desempenho | Execute | Implementing |
 | BI-18 | P1: Acesso, período e desempenho | Execute | Implementing |
-| BI-19 | P1: Consultas tipadas no app | Tasks | Pending |
-| BI-20 | P1: Consultas tipadas no app | Tasks | Pending |
-| BI-21 | P1: Consultas tipadas no app | Tasks | Pending |
-| BI-22 | P1: Consultas tipadas no app | Tasks | Pending |
+| BI-19 | P1: Consultas tipadas no app | Execute | Implementing |
+| BI-20 | P1: Consultas tipadas no app | Execute | Implementing |
+| BI-21 | P1: Consultas tipadas no app | Execute | Implementing |
+| BI-22 | P1: Consultas tipadas no app | Execute | Implementing |
 | BI-23 | P1: Consultas tipadas no app | Tasks | Pending |
 
 **Coverage:** 23 total, 23 mapped to tasks, 0 unmapped
