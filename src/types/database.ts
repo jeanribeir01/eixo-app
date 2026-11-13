@@ -241,6 +241,13 @@ export type Database = {
             foreignKeyName: "movimentacao_viagem_id_fkey"
             columns: ["viagem_id"]
             isOneToOne: false
+            referencedRelation: "estatistica_viagem"
+            referencedColumns: ["viagem_id"]
+          },
+          {
+            foreignKeyName: "movimentacao_viagem_id_fkey"
+            columns: ["viagem_id"]
+            isOneToOne: false
             referencedRelation: "viagem"
             referencedColumns: ["id"]
           },
@@ -527,7 +534,38 @@ export type Database = {
       }
     }
     Views: {
-      [_ in never]: never
+      estatistica_viagem: {
+        Row: {
+          data_fim: string | null
+          data_inicio: string | null
+          despesa_centavos: number | null
+          dia_inicio: string | null
+          inicio: string | null
+          km_rodado: number | null
+          litros: number | null
+          receita_centavos: number | null
+          rota_id: string | null
+          status: Database["public"]["Enums"]["status_viagem"] | null
+          veiculo_id: string | null
+          viagem_id: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "viagem_rota_id_fkey"
+            columns: ["rota_id"]
+            isOneToOne: false
+            referencedRelation: "rota"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "viagem_veiculo_id_fkey"
+            columns: ["veiculo_id"]
+            isOneToOne: false
+            referencedRelation: "veiculo"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Functions: {
       auth_perfil: {
@@ -535,6 +573,10 @@ export type Database = {
         Returns: Database["public"]["Enums"]["perfil_nome"]
       }
       auth_usuario_id: { Args: never; Returns: string }
+      bi_valida_periodo: {
+        Args: { data_final: string; data_inicial: string }
+        Returns: undefined
+      }
       buscar_viagem_vinculavel: {
         Args: { p_viagem_id: string }
         Returns: {
@@ -564,6 +606,60 @@ export type Database = {
           valor_quitacao_antecipada?: number
         }
         Returns: string
+      }
+      estatisticas_rotas: {
+        Args: { data_final: string; data_inicial: string }
+        Returns: {
+          cidade_destino: string
+          cidade_origem: string
+          custo_por_km_centavos: number
+          despesa_centavos: number
+          km_total: number
+          lucro_centavos: number
+          maior_custo: boolean
+          mais_lucrativa: boolean
+          quantidade_viagens: number
+          receita_centavos: number
+          rota_id: string
+          uf_destino: Database["public"]["Enums"]["uf"]
+          uf_origem: Database["public"]["Enums"]["uf"]
+        }[]
+      }
+      estatisticas_veiculos: {
+        Args: { data_final: string; data_inicial: string }
+        Returns: {
+          custo_por_km_centavos: number
+          despesa_centavos: number
+          km_total: number
+          marca: string
+          modelo: string
+          placa: string
+          quantidade_viagens: number
+          veiculo_id: string
+        }[]
+      }
+      estatisticas_viagens: {
+        Args: { data_final: string; data_inicial: string }
+        Returns: {
+          cidade_destino: string
+          cidade_origem: string
+          consumo_km_por_litro: number
+          custo_por_km_centavos: number
+          data_fim: string
+          data_inicio: string
+          despesa_centavos: number
+          km_rodado: number
+          litros: number
+          placa: string
+          receita_centavos: number
+          rentabilidade_centavos: number
+          rota_id: string
+          status: Database["public"]["Enums"]["status_viagem"]
+          uf_destino: Database["public"]["Enums"]["uf"]
+          uf_origem: Database["public"]["Enums"]["uf"]
+          veiculo_id: string
+          viagem_id: string
+        }[]
       }
       excluir_divida: { Args: { id: string }; Returns: Json }
       kpis_financeiros: {

@@ -26,6 +26,12 @@ Corroborated across multiple features. Safe to apply as guidance.
 - evidence: M10 supabase/migrations/20261005000100_resumo_caixa.sql:87 (supabase, rls, grants) (+1 more)
 - last seen: 2026-10-05T17:46:38Z
 
+### L-028 - Test a multi-key ORDER BY with data where the keys disagree, so dropping one key changes the expected order
+- signal: `surviving_mutant` · recurrence: 2 feature(s) · scope: `sql-rpc, ordering` · harmful: 0
+- features: eix42-ponte-viagem, eix43-estatisticas-rota
+- evidence: supabase/tests/ponte_viagem.test.ts M3 (sql-rpc, ordering) (+1 more)
+- last seen: 2026-11-13T13:46:24Z
+
 ## Candidates (under observation - do NOT load as guidance yet)
 
 Seen once or not yet corroborated. Tracked, not trusted.
@@ -174,11 +180,23 @@ Seen once or not yet corroborated. Tracked, not trusted.
 - evidence: supabase/tests/ponte_viagem.test.ts M18 (supabase, rls, grants)
 - last seen: 2026-11-11T12:48:47Z
 
-### L-028 - Test a multi-key ORDER BY with data where the keys disagree, so dropping one key changes the expected order
-- signal: `surviving_mutant` · recurrence: 1 feature(s) · scope: `sql-rpc, ordering` · harmful: 0
-- features: eix42-ponte-viagem
-- evidence: supabase/tests/ponte_viagem.test.ts M3 (sql-rpc, ordering)
-- last seen: 2026-11-11T12:48:48Z
+### L-029 - In PGlite tests set the database session timezone to UTC like Supabase, because Jest pins TZ to America/Sao_Paulo and PGlite inherits it, masking a missing AT TIME ZONE
+- signal: `surviving_mutant` · recurrence: 1 feature(s) · scope: `supabase-tests` · harmful: 0
+- features: eix43-estatisticas-rota
+- evidence: M2 supabase/migrations/20261113000100_bi.sql:52 (BI-08) (supabase-tests)
+- last seen: 2026-11-13T13:46:24Z
+
+### L-030 - Assert the value of every field an AC names in a returned row, because a column-list check passes when two same-typed columns are swapped
+- signal: `surviving_mutant` · recurrence: 1 feature(s) · scope: `supabase-tests` · harmful: 0
+- features: eix43-estatisticas-rota
+- evidence: M10, M11 supabase/migrations/20261113000100_bi.sql:139-140 (BI-01) (supabase-tests)
+- last seen: 2026-11-13T13:46:25Z
+
+### L-031 - When a test proves an ORDER BY key, make the next tiebreak disagree with it using fixed ids, because a random UUID tiebreak kills the mutant only by chance
+- signal: `surviving_mutant` · recurrence: 1 feature(s) · scope: `supabase-tests` · harmful: 0
+- features: eix43-estatisticas-rota
+- evidence: M25 supabase/migrations/20261113000100_bi.sql:227 (BI-10), bi.test.ts:558-584 (supabase-tests)
+- last seen: 2026-11-13T13:54:19Z
 
 ## Quarantined (failed when applied - ignore)
 
