@@ -27,6 +27,10 @@ jest.mock('expo-symbols', () => {
 // recebem um banco falso e migrations "já aplicadas". O banco REAL dos testes vem de
 // `criarBancoDeTeste()` (src/db/testing.ts, better-sqlite3). Quem quiser SQLite real num teste não
 // pode importar `@/db/client`: importe só `@/db/schema` e o helper.
+// O jest-expo simula o ambiente do Expo Go, e com isso isRunningInExpoGo() devolveria true em todo
+// teste, e o layout raiz mostraria o aviso da EIX-73 no lugar das rotas. Os testes representam o app
+// de desenvolvimento/APK; o teste do aviso (__tests__/routes/avisoExpoGo.test.tsx) troca o valor.
+jest.mock('expo', () => ({ ...jest.requireActual('expo'), isRunningInExpoGo: jest.fn(() => false) }));
 jest.mock('expo-sqlite', () => ({ openDatabaseSync: () => ({}) }));
 jest.mock('@/db/client', () => ({ db: {} }));
 jest.mock('drizzle-orm/expo-sqlite/migrator', () => ({
