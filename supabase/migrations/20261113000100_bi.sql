@@ -156,3 +156,77 @@ $$;
 -- Função nova nasce executável por PUBLIC, e o Supabase ainda concede a anon: fecha os dois.
 revoke execute on function estatisticas_viagens(date, date) from public, anon;
 grant execute on function estatisticas_viagens(date, date) to authenticated;
+
+-- estatisticas_rotas: uma linha por rota com ao menos uma viagem Finalizada iniciada no período.
+-- Só a finalizada entra: a em andamento tem lançamentos mas não tem KM, e somá-la misturaria lucro
+-- sem KM com KM sem lucro.
+--   lucro_centavos         soma das rentabilidades das viagens.
+--   custo_por_km_centavos  Saídas somadas ÷ KM somados (razão das somas, não média das razões).
+--   mais_lucrativa         true só na rota de maior lucro ("Rota Mais Lucrativa"). Com lucro
+--                          negativo em todas, marca a que perde menos.
+--   maior_custo            true só na rota de maior R$/KM ("Rota com Maior Custo de Operação").
+-- Ordem: maior lucro, maior KM, origem, destino. Empate total desempata por rota_id, para a mesma
+-- chamada devolver sempre a mesma lista (o Top 3 da US13 depende disso).
+create function estatisticas_rotas(data_inicial date, data_final date)
+returns table (
+  rota_id uuid,
+  cidade_origem text,
+  uf_origem uf,
+  cidade_destino text,
+  uf_destino uf,
+  quantidade_viagens bigint,
+  km_total numeric,
+  receita_centavos bigint,
+  despesa_centavos bigint,
+  lucro_centavos bigint,
+  custo_por_km_centavos bigint,
+  mais_lucrativa boolean,
+  maior_custo boolean
+)
+language plpgsql
+stable
+security definer
+set search_path = public
+as $$
+#variable_conflict use_column
+begin
+  if not coalesce(auth_perfil() in ('Admin', 'Gestor de Frota', 'Financeiro'), false) then
+    raise exception 'Sem permissão para ver as estatísticas.' using errcode = '42501';
+  end if;
+  perform bi_valida_periodo(data_inicial, data_final);
+
+  return query
+    with por_rota as (
+      select e.rota_id,
+             count(*) as quantidade_viagens,
+             sum(e.km_rodado) as km_total,
+             sum(e.receita_centavos)::bigint as receita_centavos,
+             sum(e.despesa_centavos)::bigint as despesa_centavos
+        from estatistica_viagem e
+       where e.status = 'Finalizada'
+         and e.dia_inicio between estatisticas_rotas.data_inicial and estatisticas_rotas.data_final
+       group by e.rota_id
+    ),
+    calculado as (
+      select p.*, r.cidade_origem, r.uf_origem, r.cidade_destino, r.uf_destino,
+             p.receita_centavos - p.despesa_centavos as lucro_centavos,
+             round(p.despesa_centavos / nullif(p.km_total, 0))::bigint as custo_por_km_centavos
+        from por_rota p
+        join rota r on r.id = p.rota_id
+    )
+    select c.rota_id, c.cidade_origem, c.uf_origem, c.cidade_destino, c.uf_destino,
+           c.quantidade_viagens, c.km_total, c.receita_centavos, c.despesa_centavos,
+           c.lucro_centavos, c.custo_por_km_centavos,
+           row_number() over (
+             order by c.lucro_centavos desc, c.km_total desc, c.cidade_origem, c.cidade_destino, c.rota_id
+           ) = 1,
+           c.custo_por_km_centavos is not null and row_number() over (
+             order by c.custo_por_km_centavos desc nulls last, c.km_total desc, c.cidade_origem, c.cidade_destino, c.rota_id
+           ) = 1
+      from calculado c
+     order by c.lucro_centavos desc, c.km_total desc, c.cidade_origem, c.cidade_destino, c.rota_id;
+end;
+$$;
+
+revoke execute on function estatisticas_rotas(date, date) from public, anon;
+grant execute on function estatisticas_rotas(date, date) to authenticated;

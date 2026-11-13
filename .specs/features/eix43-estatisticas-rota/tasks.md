@@ -81,7 +81,7 @@ T4 → T5 → T6
 
 ---
 
-### T2: RPC `estatisticas_rotas`
+### T2: RPC `estatisticas_rotas` ✅
 
 **What**: Consolidação por rota sobre as viagens finalizadas, com ordem e as flags `mais_lucrativa` e `maior_custo`.
 **Where**: `supabase/migrations/20261113000100_bi.sql` (modify; teste em `supabase/tests/bi.test.ts`)
@@ -96,10 +96,10 @@ T4 → T5 → T6
 
 **Done when**:
 
-- [ ] Rota com só viagem em andamento fica fora; somas só das finalizadas
-- [ ] Ordem e empates conforme BI-10; uma flag de cada, nas rotas certas (BI-11, BI-12); lista vazia sem flag
-- [ ] 42501, 22023 e grants da função
-- [ ] Gate check passes: Full
+- [x] Rota com só viagem em andamento fica fora; somas só das finalizadas
+- [x] Ordem e empates conforme BI-10; uma flag de cada, nas rotas certas (BI-11, BI-12); lista vazia sem flag
+- [x] 42501, 22023 e grants da função
+- [x] Gate check passes: Full
 
 **Tests**: integration
 **Gate**: full

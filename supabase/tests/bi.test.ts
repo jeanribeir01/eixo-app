@@ -71,6 +71,38 @@ const COLUNAS_VIAGEM = [
   'viagem_id',
 ];
 
+type EstatisticaRota = {
+  rota_id: string;
+  cidade_origem: string;
+  uf_origem: string;
+  cidade_destino: string;
+  uf_destino: string;
+  quantidade_viagens: number;
+  km_total: number;
+  receita_centavos: number;
+  despesa_centavos: number;
+  lucro_centavos: number;
+  custo_por_km_centavos: number | null;
+  mais_lucrativa: boolean;
+  maior_custo: boolean;
+};
+
+const COLUNAS_ROTA = [
+  'cidade_destino',
+  'cidade_origem',
+  'custo_por_km_centavos',
+  'despesa_centavos',
+  'km_total',
+  'lucro_centavos',
+  'maior_custo',
+  'mais_lucrativa',
+  'quantidade_viagens',
+  'receita_centavos',
+  'rota_id',
+  'uf_destino',
+  'uf_origem',
+];
+
 // O erro do PGlite traz o SQLSTATE em `code`.
 async function codigoDoErro(promessa: Promise<unknown>): Promise<string | undefined> {
   try {
@@ -162,6 +194,16 @@ describe('migration bi', () => {
         dados.pago ? '2025-01-10' : null,
       ],
     );
+  }
+
+  function estatisticasRotas(usuario: Usuario, inicial: string | null, final: string | null) {
+    return comoUsuario(db, usuario, async (tx) => {
+      const resultado = await tx.query<{ linha: EstatisticaRota }>(
+        `select to_jsonb(e) as linha from estatisticas_rotas($1::date, $2::date) e`,
+        [inicial, final],
+      );
+      return resultado.rows.map((r) => r.linha);
+    });
   }
 
   function estatisticasViagens(usuario: Usuario, inicial: string | null, final: string | null) {
@@ -350,7 +392,139 @@ describe('migration bi', () => {
     });
   });
 
+  describe('estatisticas_rotas', () => {
+    it('BI-09: soma só as viagens finalizadas da rota e deixa de fora a rota sem viagem finalizada', async () => {
+      const rotaId = await criarRota('Rota Soma', 'Destino Soma');
+      const primeira = await criarViagem({ rotaId, status: 'Finalizada', inicio: '2025-09-05T12:00:00Z' });
+      await lancar({ viagemId: primeira, categoriaId: categoria.frete, valor: '3000.00' });
+      await lancar({ viagemId: primeira, categoriaId: categoria.combustivel, valor: '1000.00', litros: 300 });
+      const segunda = await criarViagem({ rotaId, status: 'Finalizada', inicio: '2025-09-15T12:00:00Z' });
+      await lancar({ viagemId: segunda, categoriaId: categoria.frete, valor: '2000.00' });
+      await lancar({ viagemId: segunda, categoriaId: categoria.pedagio, valor: '500.00' });
+      // Em andamento na mesma rota: tem lançamento, mas não tem KM, e não entra na soma.
+      const andamento = await criarViagem({ rotaId, status: 'EmAndamento', inicio: '2025-09-20T12:00:00Z' });
+      await lancar({ viagemId: andamento, categoriaId: categoria.frete, valor: '9999.00' });
+      // Rota com só uma viagem em andamento: fica fora da lista.
+      const rotaSemFinalizada = await criarRota('Rota Aberta', 'Destino Aberta');
+      await criarViagem({ rotaId: rotaSemFinalizada, status: 'EmAndamento', inicio: '2025-09-10T12:00:00Z' });
+
+      const linhas = await estatisticasRotas(GESTOR, '2025-09-01', '2025-09-30');
+
+      expect(linhas).toHaveLength(1);
+      expect(Object.keys(linhas[0]!).sort()).toEqual(COLUNAS_ROTA);
+      expect(linhas[0]).toMatchObject({
+        rota_id: rotaId,
+        cidade_origem: 'Rota Soma',
+        cidade_destino: 'Destino Soma',
+        quantidade_viagens: 2,
+        km_total: 2000,
+        receita_centavos: 500000,
+        despesa_centavos: 150000,
+        lucro_centavos: 350000,
+        // 150000 / 2000 = 75 centavos por KM.
+        custo_por_km_centavos: 75,
+      });
+    });
+
+    it('BI-10..12: ordena por lucro e marca a mais lucrativa e a de maior R$/KM', async () => {
+      // A: lucro R$ 900, 1000 KM, R$/KM 10. B: lucro R$ 200, 100 KM, R$/KM 300.
+      // C: lucro R$ 900 (empata com A), 500 KM, R$/KM 20: perde para A no KM.
+      const rotaA = await criarRota('Rota A', 'Destino A');
+      const viagemA = await criarViagem({ rotaId: rotaA, status: 'Finalizada', inicio: '2025-10-05T12:00:00Z' });
+      await lancar({ viagemId: viagemA, categoriaId: categoria.frete, valor: '1000.00' });
+      await lancar({ viagemId: viagemA, categoriaId: categoria.pedagio, valor: '100.00' });
+
+      const rotaB = await criarRota('Rota B', 'Destino B');
+      const viagemB = await criarViagem({
+        rotaId: rotaB,
+        status: 'Finalizada',
+        inicio: '2025-10-06T12:00:00Z',
+        hodometroInicial: 0,
+        hodometroFinal: 100,
+      });
+      await lancar({ viagemId: viagemB, categoriaId: categoria.frete, valor: '500.00' });
+      await lancar({ viagemId: viagemB, categoriaId: categoria.pedagio, valor: '300.00' });
+
+      const rotaC = await criarRota('Rota C', 'Destino C');
+      const viagemC = await criarViagem({
+        rotaId: rotaC,
+        status: 'Finalizada',
+        inicio: '2025-10-07T12:00:00Z',
+        hodometroInicial: 0,
+        hodometroFinal: 500,
+      });
+      await lancar({ viagemId: viagemC, categoriaId: categoria.frete, valor: '1000.00' });
+      await lancar({ viagemId: viagemC, categoriaId: categoria.pedagio, valor: '100.00' });
+
+      const linhas = await estatisticasRotas(FINANCEIRO, '2025-10-01', '2025-10-31');
+
+      expect(linhas.map((l) => l.rota_id)).toEqual([rotaA, rotaC, rotaB]);
+      expect(linhas.map((l) => l.lucro_centavos)).toEqual([90000, 90000, 20000]);
+      expect(linhas.map((l) => l.custo_por_km_centavos)).toEqual([10, 20, 300]);
+      expect(linhas.map((l) => l.mais_lucrativa)).toEqual([true, false, false]);
+      expect(linhas.map((l) => l.maior_custo)).toEqual([false, false, true]);
+    });
+
+    it('BI-10..12: empate em lucro, KM e R$/KM desempata pela origem em ordem alfabética', async () => {
+      const beta = await criarRota('Beta', 'Destino Empate');
+      const alfa = await criarRota('Alfa', 'Destino Empate');
+      for (const [rotaId, dia] of [
+        [beta, '2025-11-05'],
+        [alfa, '2025-11-06'],
+      ] as const) {
+        const viagemId = await criarViagem({ rotaId, status: 'Finalizada', inicio: `${dia}T12:00:00Z` });
+        await lancar({ viagemId, categoriaId: categoria.frete, valor: '100.00' });
+        await lancar({ viagemId, categoriaId: categoria.pedagio, valor: '50.00' });
+      }
+
+      const linhas = await estatisticasRotas(ADMIN, '2025-11-01', '2025-11-30');
+
+      expect(linhas.map((l) => l.rota_id)).toEqual([alfa, beta]);
+      expect(linhas.map((l) => l.mais_lucrativa)).toEqual([true, false]);
+      expect(linhas.map((l) => l.maior_custo)).toEqual([true, false]);
+    });
+
+    it('BI-11, BI-12: lucro negativo ainda marca a rota que perde menos', async () => {
+      const rotaId = await criarRota('Rota Prejuizo', 'Destino Prejuizo');
+      const viagemId = await criarViagem({ rotaId, status: 'Finalizada', inicio: '2026-01-05T12:00:00Z' });
+      await lancar({ viagemId, categoriaId: categoria.pedagio, valor: '100.00' });
+
+      const [linha] = await estatisticasRotas(ADMIN, '2026-01-01', '2026-01-31');
+
+      expect(linha).toMatchObject({ lucro_centavos: -10000, mais_lucrativa: true, maior_custo: true });
+    });
+
+    it('BI-11, BI-12: período sem viagem finalizada devolve lista vazia, sem destaque', async () => {
+      const rotaId = await criarRota();
+      await criarViagem({ rotaId, status: 'EmAndamento', inicio: '2025-12-10T12:00:00Z' });
+
+      await expect(estatisticasRotas(ADMIN, '2025-12-01', '2025-12-31')).resolves.toEqual([]);
+    });
+
+    it('BI-15, BI-16: Motorista recebe 42501 e período invertido recebe 22023', async () => {
+      const rotaId = await criarRota();
+      await criarViagem({ rotaId, status: 'Finalizada', inicio: '2026-02-10T12:00:00Z' });
+
+      await expect(estatisticasRotas(GESTOR, '2026-02-01', '2026-02-28')).resolves.toHaveLength(1);
+      await expect(estatisticasRotas(FINANCEIRO, '2026-02-01', '2026-02-28')).resolves.toHaveLength(1);
+      expect(await codigoDoErro(estatisticasRotas(MOTORISTA, '2026-02-01', '2026-02-28'))).toBe('42501');
+      expect(await codigoDoErro(estatisticasRotas(PENDENTE, '2026-02-01', '2026-02-28'))).toBe('42501');
+      expect(await codigoDoErro(estatisticasRotas(ADMIN, '2025-09-30', '2025-09-01'))).toBe('22023');
+      expect(await codigoDoErro(estatisticasRotas(ADMIN, null, '2025-09-01'))).toBe('22023');
+      expect(await codigoDoErro(estatisticasRotas(ADMIN, '2024-01-01', '2025-01-01'))).toBe('22023');
+    });
+  });
+
   describe('acesso e índices', () => {
+    it('BI-17: só authenticated executa estatisticas_rotas', async () => {
+      const resultado = await db.query<{ anon: boolean; publico: boolean; autenticado: boolean }>(
+        `select has_function_privilege('anon', 'estatisticas_rotas(date, date)', 'execute') as anon,
+                has_function_privilege('public', 'estatisticas_rotas(date, date)', 'execute') as publico,
+                has_function_privilege('authenticated', 'estatisticas_rotas(date, date)', 'execute') as autenticado`,
+      );
+      expect(resultado.rows[0]).toEqual({ anon: false, publico: false, autenticado: true });
+    });
+
     it('BI-17: só authenticated executa estatisticas_viagens', async () => {
       const resultado = await db.query<{ anon: boolean; publico: boolean; autenticado: boolean }>(
         `select has_function_privilege('anon', 'estatisticas_viagens(date, date)', 'execute') as anon,

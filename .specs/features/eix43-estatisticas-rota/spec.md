@@ -159,10 +159,10 @@ Desde a US09 (EIX-42) cada lançamento pode apontar para uma viagem, e o Combust
 | BI-06 | P1: Estatística por viagem | Execute | Implementing |
 | BI-07 | P1: Estatística por viagem | Execute | Implementing |
 | BI-08 | P1: Estatística por viagem | Execute | Implementing |
-| BI-09 | P1: Consolidação por rota | Tasks | Pending |
-| BI-10 | P1: Consolidação por rota | Tasks | Pending |
-| BI-11 | P1: Consolidação por rota | Tasks | Pending |
-| BI-12 | P1: Consolidação por rota | Tasks | Pending |
+| BI-09 | P1: Consolidação por rota | Execute | Implementing |
+| BI-10 | P1: Consolidação por rota | Execute | Implementing |
+| BI-11 | P1: Consolidação por rota | Execute | Implementing |
+| BI-12 | P1: Consolidação por rota | Execute | Implementing |
 | BI-13 | P1: Consolidação por veículo | Tasks | Pending |
 | BI-14 | P1: Consolidação por veículo | Tasks | Pending |
 | BI-15 | P1: Acesso, período e desempenho | Tasks | Pending |
