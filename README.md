@@ -255,7 +255,7 @@ keytool -list -v -keystore android/app/debug.keystore -alias androiddebugkey -st
 
 > O APK do EAS ([Rodar no celular](#rodar-no-celular)) é assinado com **outro** certificado, que
 > o EAS gera e guarda. Ele precisa de um segundo client Android com o mesmo package e o SHA-1 desse
-> certificado. Para ver o SHA-1: `npx eas-cli@latest credentials --platform android` → perfil
+> certificado, que hoje é `05:93:09:D2:13:B8:8D:39:3B:BB:B0:CB:72:79:BD:89:B0:D6:F4:FE`. Para conferir: `npx eas-cli@latest credentials --platform android` → perfil
 > `development` → **Keystore**. O EAS usa o mesmo certificado em todos os perfis do app, então esse
 > client também vale para o APK de release.
 
