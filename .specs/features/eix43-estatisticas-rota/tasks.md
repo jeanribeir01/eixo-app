@@ -108,7 +108,7 @@ T4 → T5 → T6
 
 ---
 
-### T3: RPC `estatisticas_veiculos`
+### T3: RPC `estatisticas_veiculos` ✅
 
 **What**: Custo por KM acumulado por veículo sobre as viagens finalizadas, ordenado para o ranking.
 **Where**: `supabase/migrations/20261113000100_bi.sql` (modify; teste em `supabase/tests/bi.test.ts`)
@@ -123,10 +123,10 @@ T4 → T5 → T6
 
 **Done when**:
 
-- [ ] R$/KM do veículo é a razão das somas (200), não a média das razões
-- [ ] Ordem e empates conforme BI-14
-- [ ] 42501, 22023 e grants da função
-- [ ] Gate check passes: Build (fim da fase)
+- [x] R$/KM do veículo é a razão das somas (200), não a média das razões
+- [x] Ordem e empates conforme BI-14
+- [x] 42501, 22023 e grants da função
+- [x] Gate check passes: Build (fim da fase)
 
 **Tests**: integration
 **Gate**: build

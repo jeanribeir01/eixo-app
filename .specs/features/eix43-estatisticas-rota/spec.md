@@ -163,11 +163,11 @@ Desde a US09 (EIX-42) cada lançamento pode apontar para uma viagem, e o Combust
 | BI-10 | P1: Consolidação por rota | Execute | Implementing |
 | BI-11 | P1: Consolidação por rota | Execute | Implementing |
 | BI-12 | P1: Consolidação por rota | Execute | Implementing |
-| BI-13 | P1: Consolidação por veículo | Tasks | Pending |
-| BI-14 | P1: Consolidação por veículo | Tasks | Pending |
-| BI-15 | P1: Acesso, período e desempenho | Tasks | Pending |
-| BI-16 | P1: Acesso, período e desempenho | Tasks | Pending |
-| BI-17 | P1: Acesso, período e desempenho | Tasks | Pending |
+| BI-13 | P1: Consolidação por veículo | Execute | Implementing |
+| BI-14 | P1: Consolidação por veículo | Execute | Implementing |
+| BI-15 | P1: Acesso, período e desempenho | Execute | Implementing |
+| BI-16 | P1: Acesso, período e desempenho | Execute | Implementing |
+| BI-17 | P1: Acesso, período e desempenho | Execute | Implementing |
 | BI-18 | P1: Acesso, período e desempenho | Execute | Implementing |
 | BI-19 | P1: Consultas tipadas no app | Tasks | Pending |
 | BI-20 | P1: Consultas tipadas no app | Tasks | Pending |

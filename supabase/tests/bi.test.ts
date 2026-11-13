@@ -103,6 +103,28 @@ const COLUNAS_ROTA = [
   'uf_origem',
 ];
 
+type EstatisticaVeiculo = {
+  veiculo_id: string;
+  placa: string;
+  marca: string;
+  modelo: string;
+  quantidade_viagens: number;
+  km_total: number;
+  despesa_centavos: number;
+  custo_por_km_centavos: number | null;
+};
+
+const COLUNAS_VEICULO = [
+  'custo_por_km_centavos',
+  'despesa_centavos',
+  'km_total',
+  'marca',
+  'modelo',
+  'placa',
+  'quantidade_viagens',
+  'veiculo_id',
+];
+
 // O erro do PGlite traz o SQLSTATE em `code`.
 async function codigoDoErro(promessa: Promise<unknown>): Promise<string | undefined> {
   try {
@@ -194,6 +216,16 @@ describe('migration bi', () => {
         dados.pago ? '2025-01-10' : null,
       ],
     );
+  }
+
+  function estatisticasVeiculos(usuario: Usuario, inicial: string | null, final: string | null) {
+    return comoUsuario(db, usuario, async (tx) => {
+      const resultado = await tx.query<{ linha: EstatisticaVeiculo }>(
+        `select to_jsonb(e) as linha from estatisticas_veiculos($1::date, $2::date) e`,
+        [inicial, final],
+      );
+      return resultado.rows.map((r) => r.linha);
+    });
   }
 
   function estatisticasRotas(usuario: Usuario, inicial: string | null, final: string | null) {
@@ -515,7 +547,113 @@ describe('migration bi', () => {
     });
   });
 
+  describe('estatisticas_veiculos', () => {
+    it('BI-13: R$/KM do veículo é a razão das somas das viagens finalizadas, não a média das razões', async () => {
+      const rotaId = await criarRota();
+      const veiculoId = await criarVeiculo('VEI0001');
+      // 100 KM com R$ 300 (R$/KM 300) e 300 KM com R$ 500 (R$/KM 166,67). Média das razões: 233.
+      const primeira = await criarViagem({
+        rotaId,
+        veiculoId,
+        status: 'Finalizada',
+        inicio: '2026-03-05T12:00:00Z',
+        hodometroInicial: 0,
+        hodometroFinal: 100,
+      });
+      await lancar({ viagemId: primeira, categoriaId: categoria.pedagio, valor: '300.00' });
+      const segunda = await criarViagem({
+        rotaId,
+        veiculoId,
+        status: 'Finalizada',
+        inicio: '2026-03-10T12:00:00Z',
+        hodometroInicial: 100,
+        hodometroFinal: 400,
+      });
+      await lancar({ viagemId: segunda, categoriaId: categoria.pedagio, valor: '500.00' });
+      // Em andamento no mesmo veículo: não entra na soma.
+      const andamento = await criarViagem({
+        rotaId,
+        veiculoId,
+        status: 'EmAndamento',
+        inicio: '2026-03-20T12:00:00Z',
+        hodometroInicial: 400,
+      });
+      await lancar({ viagemId: andamento, categoriaId: categoria.pedagio, valor: '999.00' });
+      // Veículo com só uma viagem em andamento: fica fora da lista.
+      await criarViagem({ rotaId, status: 'EmAndamento', inicio: '2026-03-15T12:00:00Z' });
+
+      const linhas = await estatisticasVeiculos(GESTOR, '2026-03-01', '2026-03-31');
+
+      expect(linhas).toHaveLength(1);
+      expect(Object.keys(linhas[0]!).sort()).toEqual(COLUNAS_VEICULO);
+      expect(linhas[0]).toEqual({
+        veiculo_id: veiculoId,
+        placa: 'VEI0001',
+        marca: 'Volvo',
+        modelo: 'FH',
+        quantidade_viagens: 2,
+        km_total: 400,
+        despesa_centavos: 80000,
+        // 80000 / 400 = 200.
+        custo_por_km_centavos: 200,
+      });
+    });
+
+    it('BI-14: ordena por maior R$/KM, depois maior KM, depois placa', async () => {
+      const rotaId = await criarRota();
+      const cenarios = [
+        // [placa, KM, Saída em reais] → R$/KM
+        ['ZZZ0001', 500, '500.00'], // 100, 500 KM
+        ['VEI0100', 100, '300.00'], // 300
+        ['AAA0001', 500, '500.00'], // 100, 500 KM: empata com ZZZ0001 e vence pela placa
+        ['VEI0200', 1000, '1000.00'], // 100, 1000 KM
+      ] as const;
+      const ids: Record<string, string> = {};
+      for (const [placa, km, valor] of cenarios) {
+        const veiculoId = await criarVeiculo(placa);
+        ids[placa] = veiculoId;
+        const viagemId = await criarViagem({
+          rotaId,
+          veiculoId,
+          status: 'Finalizada',
+          inicio: '2026-04-10T12:00:00Z',
+          hodometroInicial: 0,
+          hodometroFinal: km,
+        });
+        await lancar({ viagemId, categoriaId: categoria.pedagio, valor });
+      }
+
+      const linhas = await estatisticasVeiculos(FINANCEIRO, '2026-04-01', '2026-04-30');
+
+      expect(linhas.map((l) => l.placa)).toEqual(['VEI0100', 'VEI0200', 'AAA0001', 'ZZZ0001']);
+      expect(linhas.map((l) => l.custo_por_km_centavos)).toEqual([300, 100, 100, 100]);
+    });
+
+    it('BI-15, BI-16: Motorista recebe 42501 e período inválido recebe 22023', async () => {
+      const rotaId = await criarRota();
+      await criarViagem({ rotaId, status: 'Finalizada', inicio: '2026-05-10T12:00:00Z' });
+
+      await expect(estatisticasVeiculos(ADMIN, '2026-05-01', '2026-05-31')).resolves.toHaveLength(1);
+      await expect(estatisticasVeiculos(GESTOR, '2026-05-01', '2026-05-31')).resolves.toHaveLength(1);
+      await expect(estatisticasVeiculos(FINANCEIRO, '2026-05-01', '2026-05-31')).resolves.toHaveLength(1);
+      expect(await codigoDoErro(estatisticasVeiculos(MOTORISTA, '2026-05-01', '2026-05-31'))).toBe('42501');
+      expect(await codigoDoErro(estatisticasVeiculos(PENDENTE, '2026-05-01', '2026-05-31'))).toBe('42501');
+      expect(await codigoDoErro(estatisticasVeiculos(ADMIN, '2026-05-31', '2026-05-01'))).toBe('22023');
+      expect(await codigoDoErro(estatisticasVeiculos(ADMIN, '2026-05-01', null))).toBe('22023');
+      expect(await codigoDoErro(estatisticasVeiculos(ADMIN, '2024-01-01', '2025-01-01'))).toBe('22023');
+    });
+  });
+
   describe('acesso e índices', () => {
+    it('BI-17: só authenticated executa estatisticas_veiculos', async () => {
+      const resultado = await db.query<{ anon: boolean; publico: boolean; autenticado: boolean }>(
+        `select has_function_privilege('anon', 'estatisticas_veiculos(date, date)', 'execute') as anon,
+                has_function_privilege('public', 'estatisticas_veiculos(date, date)', 'execute') as publico,
+                has_function_privilege('authenticated', 'estatisticas_veiculos(date, date)', 'execute') as autenticado`,
+      );
+      expect(resultado.rows[0]).toEqual({ anon: false, publico: false, autenticado: true });
+    });
+
     it('BI-17: só authenticated executa estatisticas_rotas', async () => {
       const resultado = await db.query<{ anon: boolean; publico: boolean; autenticado: boolean }>(
         `select has_function_privilege('anon', 'estatisticas_rotas(date, date)', 'execute') as anon,

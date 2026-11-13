@@ -230,3 +230,55 @@ $$;
 
 revoke execute on function estatisticas_rotas(date, date) from public, anon;
 grant execute on function estatisticas_rotas(date, date) to authenticated;
+
+-- estatisticas_veiculos: custo por KM acumulado de cada veículo com ao menos uma viagem Finalizada
+-- iniciada no período. Entram só as Saídas vinculadas às viagens (decisão de 13/11/2026: a despesa
+-- de manutenção da US06-b fica de fora).
+--   custo_por_km_centavos  Saídas somadas ÷ KM somados (razão das somas, não média das razões).
+-- Ordem: maior R$/KM, maior KM, placa. É a ordem do "Top 3 Veículos com Maior Custo por KM" (US13).
+-- Veículo inativo aparece se rodou no período: o custo dele aconteceu.
+create function estatisticas_veiculos(data_inicial date, data_final date)
+returns table (
+  veiculo_id uuid,
+  placa text,
+  marca text,
+  modelo text,
+  quantidade_viagens bigint,
+  km_total numeric,
+  despesa_centavos bigint,
+  custo_por_km_centavos bigint
+)
+language plpgsql
+stable
+security definer
+set search_path = public
+as $$
+#variable_conflict use_column
+begin
+  if not coalesce(auth_perfil() in ('Admin', 'Gestor de Frota', 'Financeiro'), false) then
+    raise exception 'Sem permissão para ver as estatísticas.' using errcode = '42501';
+  end if;
+  perform bi_valida_periodo(data_inicial, data_final);
+
+  return query
+    with por_veiculo as (
+      select e.veiculo_id,
+             count(*) as quantidade_viagens,
+             sum(e.km_rodado) as km_total,
+             sum(e.despesa_centavos)::bigint as despesa_centavos
+        from estatistica_viagem e
+       where e.status = 'Finalizada'
+         and e.dia_inicio between estatisticas_veiculos.data_inicial and estatisticas_veiculos.data_final
+       group by e.veiculo_id
+    )
+    select p.veiculo_id, ve.placa, ve.marca, ve.modelo,
+           p.quantidade_viagens, p.km_total, p.despesa_centavos,
+           round(p.despesa_centavos / nullif(p.km_total, 0))::bigint as custo
+      from por_veiculo p
+      join veiculo ve on ve.id = p.veiculo_id
+     order by custo desc nulls last, p.km_total desc, ve.placa;
+end;
+$$;
+
+revoke execute on function estatisticas_veiculos(date, date) from public, anon;
+grant execute on function estatisticas_veiculos(date, date) to authenticated;
