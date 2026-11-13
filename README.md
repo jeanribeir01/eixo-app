@@ -32,6 +32,7 @@ estão em construção.
 4. [Configurar o Google Cloud](#4-configurar-o-google-cloud)
 5. [Variáveis de ambiente](#5-variáveis-de-ambiente)
 6. [Rodar o app](#6-rodar-o-app)
+   - [Rodar no celular](#rodar-no-celular)
 7. [Perfis de teste: Admin e Motorista](#7-perfis-de-teste-admin-e-motorista)
 8. [Testes, lint e typecheck](#8-testes-lint-e-typecheck)
 9. [Problemas comuns](#9-problemas-comuns)
@@ -73,7 +74,9 @@ Motorista em **Viagens**.
 | Git | Qualquer recente | `git --version` |
 
 > **Expo Go não funciona neste projeto.** O login com Google usa código nativo, então o app roda
-> como *development build* (gerado pelo `npx expo run:android`). macOS não é necessário.
+> como *development build*: no emulador, gerado pelo `npx expo run:android`; no celular, pelo APK do
+> EAS ([Rodar no celular](#rodar-no-celular)). Aberto no Expo Go, o app só mostra o aviso "Este app
+> não abre no Expo Go". macOS não é necessário.
 
 ---
 
@@ -250,8 +253,11 @@ Para conferir na sua máquina (depois de rodar o app uma vez, que gera a pasta `
 keytool -list -v -keystore android/app/debug.keystore -alias androiddebugkey -storepass android -keypass android
 ```
 
-> Builds de release/EAS usam **outro** certificado e precisarão de outro client Android com o SHA-1
-> correspondente.
+> O APK do EAS ([Rodar no celular](#rodar-no-celular)) é assinado com **outro** certificado, que
+> o EAS gera e guarda. Ele precisa de um segundo client Android com o mesmo package e o SHA-1 desse
+> certificado, que hoje é `05:93:09:D2:13:B8:8D:39:3B:BB:B0:CB:72:79:BD:89:B0:D6:F4:FE`. Para conferir: `npx eas-cli@latest credentials --platform android` → perfil
+> `development` → **Keystore**. O EAS usa o mesmo certificado em todos os perfis do app, então esse
+> client também vale para o APK de release.
 
 ---
 
@@ -308,6 +314,45 @@ O `npx expo run:android` só recompila a pasta `android/` que já existe: ele **
 `app.config.ts`. Sem o `prebuild`, o ícone, a splash e as permissões continuam os antigos. O
 `prebuild` recria a pasta `android/` do zero, o que é seguro: ela é gerada e fica fora do Git, e o
 certificado de debug continua o mesmo, então o login com Google não quebra.
+
+### Rodar no celular
+
+O app **não abre no Expo Go** (seção 1). No celular, use o **app de desenvolvimento** do Eixo
+Certo: ele tem o código nativo do projeto e busca o JavaScript no Metro do seu computador, então
+toda mudança de código aparece sem reinstalar.
+
+**Opção A: APK do EAS (sem cabo, sem Android Studio)**
+
+1. Abra no celular o link de instalação que o Jean compartilhou (ou a página do build mais recente
+   em [expo.dev](https://expo.dev), projeto **eixo-app** → Builds). Baixe o APK.
+2. Permita a instalação de apps de fontes desconhecidas quando o Android pedir e instale.
+3. No computador, rode `npm start`. Celular e computador precisam estar **na mesma rede Wi-Fi**.
+4. Abra o app **Eixo Certo** no celular (não o Expo Go). Ele lista o Metro da rede. Se não listar,
+   leia o QR code do terminal com a câmera do celular ou pelo próprio app.
+
+**Opção B: cabo USB**
+
+1. Ative as **Opções do desenvolvedor** e a **Depuração USB** no celular e conecte o cabo.
+2. Confira com `adb devices` (o celular aparece como `device`; aceite o aviso de depuração na tela).
+3. Rode `npx expo run:android --device` e escolha o celular. A primeira vez compila o projeto nativo
+   (como na seção 6) e instala o app.
+
+Com o cabo, `adb reverse tcp:8081 tcp:8081` faz o celular achar o Metro mesmo fora do Wi-Fi.
+
+**Login com Google:** o APK do EAS é assinado com o certificado do EAS. Se o login der "Não foi
+possível entrar", falta o client Android com o SHA-1 dele (seção 4.3). Na opção B, o app é
+assinado com o certificado de debug e usa o client que já existe.
+
+**Quando gerar um APK novo:** o APK traz o código nativo. Mudança só em TypeScript não exige APK
+novo, mas **toda dependência nativa nova** (biblioteca com código Android, plugin no
+`app.config.ts`) exige. O PR que adiciona uma dessas avisa na descrição: "⚠️ Exige build novo do
+app de desenvolvimento". Depois do merge, o Jean gera e compartilha o APK:
+
+```bash
+npx eas-cli@latest build --profile development --platform android
+```
+
+O perfil `development` está no `eas.json` (development client, distribuição interna, APK).
 
 ### Testando o login
 
@@ -385,6 +430,8 @@ que existe.
 | Erro de acesso bloqueado na tela do Google | E-mail não está em *Test users* | Seção 4.1 |
 | Mudou `.env` e nada aconteceu | Metro guardou o valor antigo em cache | `npm start -- --clear` |
 | Tela **Aguardando liberação** depois do login | Conta nova, ainda não aprovada | Seção 7 |
+| "Este app não abre no Expo Go" | O projeto foi aberto no Expo Go, que não tem o login com Google | Instale o app de desenvolvimento ([Rodar no celular](#rodar-no-celular)) e abra por ele |
+| O app no celular não acha o Metro | Celular em outra rede, ou firewall do Windows bloqueando a porta 8081 | Mesma rede Wi-Fi; libere o Node.js no firewall (rede privada). Com cabo: `adb reverse tcp:8081 tcp:8081` |
 | App fecha ao abrir uma tela depois de um `git pull` | Entrou uma biblioteca nativa nova e o app instalado é o antigo | `npm install` e `npx expo run:android` de novo |
 | Ícone ou splash continuam os antigos | A pasta `android/` é anterior à mudança no `app.config.ts` | `npx expo prebuild --platform android` e `npx expo run:android`. Se o launcher ainda mostrar o ícone antigo, é cache: `adb uninstall com.eixocerto.app` e rode de novo |
 | `Type '"/rotas"' is not assignable to type ...` no `npm run typecheck` | `.expo/types/router.d.ts` desatualizado: ele é gerado pelo `expo start` e não conhece a rota nova | `npm start` uma vez, até o Metro subir, e rode o typecheck de novo (seção 8) |
@@ -441,5 +488,7 @@ Closes EIX-21
 
 - Título no mesmo padrão do commit principal; na descrição, o que muda, a US e `Closes EIX-NN`.
 - Print ou vídeo quando houver mudança de UI.
+- Dependência nativa nova (biblioteca com código Android ou plugin no `app.config.ts`): avise
+  "⚠️ Exige build novo do app de desenvolvimento" na descrição ([Rodar no celular](#rodar-no-celular)).
 - Precisa passar em `npm test`, `npm run lint` e `npm run typecheck`.
 - PR que cria tabela sem RLS, ou muda schema sem a migration local correspondente, não é aprovado.

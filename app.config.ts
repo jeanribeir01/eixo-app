@@ -56,6 +56,14 @@ const config: ExpoConfig = {
   experiments: {
     typedRoutes: true,
   },
+  // Projeto no EAS (EIX-73), criado com `eas init`: os builds do app de desenvolvimento saem dele.
+  // O id não é segredo, só aponta o projeto na conta do Expo.
+  owner: 'jeanribeir01',
+  extra: {
+    eas: {
+      projectId: 'b8f78fcf-a8dc-4522-a569-81684e85d982',
+    },
+  },
 };
 
 export default config;

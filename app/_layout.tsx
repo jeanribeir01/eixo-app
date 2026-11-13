@@ -1,4 +1,5 @@
 import { useMigrations } from 'drizzle-orm/expo-sqlite/migrator';
+import { isRunningInExpoGo } from 'expo';
 import { useFonts } from 'expo-font';
 import { Stack } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
@@ -17,6 +18,40 @@ import { EmptyState, fontAssets, Screen, colors } from '@/ui';
 SplashScreen.preventAutoHideAsync();
 
 export default function RootLayout() {
+  // O Expo Go não traz módulos nativos do projeto (Google Sign-In): o app só roda no app de
+  // desenvolvimento ou no APK. A decisão não muda durante a execução, então fica fora dos hooks.
+  if (isRunningInExpoGo()) return <AvisoExpoGo />;
+  return <AppLayout />;
+}
+
+// Aviso para quem abriu o projeto no Expo Go, em vez da tela vermelha (EIX-73). Sem ação: tentar
+// de novo não resolve, a saída é instalar o app de desenvolvimento.
+function AvisoExpoGo() {
+  const [fontesCarregadas, erroDasFontes] = useFonts(fontAssets);
+  // Com erro nas fontes, mostra o aviso com a fonte do sistema em vez de ficar preso na splash.
+  const pronto = fontesCarregadas || erroDasFontes !== null;
+
+  useEffect(() => {
+    if (pronto) SplashScreen.hideAsync();
+  }, [pronto]);
+
+  if (!pronto) return null;
+
+  return (
+    <Screen align="center">
+      <EmptyState
+        icon="alerta"
+        title="Este app não abre no Expo Go"
+        description={
+          'O Eixo Certo usa o login com Google, que o Expo Go não tem. Instale o app de desenvolvimento ' +
+          'do Eixo Certo e abra por ele. O passo a passo está no README, na seção "Rodar no celular".'
+        }
+      />
+    </Screen>
+  );
+}
+
+function AppLayout() {
   const [fontsLoaded] = useFonts(fontAssets);
   const session = useSessionStore((state) => state.session);
   const isRestoring = useSessionStore((state) => state.isRestoring);
