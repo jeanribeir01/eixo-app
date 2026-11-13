@@ -10,7 +10,7 @@ Implement these tasks with the `tlc-spec-driven` skill: **activate it by name an
 
 **Spec**: `.specs/features/eix43-estatisticas-rota/spec.md`
 **Design**: inline (sem `design.md`): view interna `estatistica_viagem` + três RPCs `security definer` no molde de `kpis_dashboard` e `ponte_viagem`; `src/features/bi/` no molde de `ponteRepository.ts`.
-**Status**: In Progress
+**Status**: Done (aguardando o Verifier)
 
 ---
 
@@ -186,7 +186,7 @@ T4 → T5 → T6
 
 ---
 
-### T6: `formatarIndicador`
+### T6: `formatarIndicador` ✅
 
 **What**: Formata moeda, R$/KM e KM/L no padrão brasileiro e devolve `—` para nulo.
 **Where**: `src/features/bi/formatar.ts` (teste em `src/features/bi/__tests__/formatar.test.ts`)
@@ -201,8 +201,8 @@ T4 → T5 → T6
 
 **Done when**:
 
-- [ ] Nulo → `—` nas três unidades; `R$ 1,33/km`; `3,33 km/L`; moeda igual a `formatarMoeda`
-- [ ] Gate check passes: Build (fim da fase)
+- [x] Nulo → `—` nas três unidades; `R$ 1,33/km`; `3,33 km/L`; moeda igual a `formatarMoeda`
+- [x] Gate check passes: Build (fim da fase)
 
 **Tests**: unit
 **Gate**: build

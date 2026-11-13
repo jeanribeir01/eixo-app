@@ -143,6 +143,7 @@ Desde a US09 (EIX-42) cada lançamento pode apontar para uma viagem, e o Combust
 - IF a única viagem da rota está `EmAndamento` THEN a rota não aparece em `estatisticas_rotas` (BI-09).
 - WHEN o período não tem viagem finalizada THEN `estatisticas_rotas` e `estatisticas_veiculos` devolvem lista vazia, sem destaque (BI-11, BI-12).
 - WHEN o valor não é exato em ponto flutuante (R$ 1.234,57) THEN os centavos saem exatos, porque a soma acontece em `numeric` (lição L-005).
+- WHEN `formatarIndicador` recebe moeda negativa (lucro de −R$ 100,00) THEN devolve `− R$ 100,00`, com o sinal tipográfico, como o Caixa (`formatarMoedaComSinal`). Zero é dado, não falta de dado: R$/KM 0 vira `R$ 0,00/km`, não `—` (BI-23).
 - WHEN a viagem começou às 23h30 do último dia do período no fuso do Brasil (02h30 UTC do dia seguinte) THEN ela entra no período (BI-08, lição L-001).
 
 ---
@@ -173,7 +174,7 @@ Desde a US09 (EIX-42) cada lançamento pode apontar para uma viagem, e o Combust
 | BI-20 | P1: Consultas tipadas no app | Execute | Implementing |
 | BI-21 | P1: Consultas tipadas no app | Execute | Implementing |
 | BI-22 | P1: Consultas tipadas no app | Execute | Implementing |
-| BI-23 | P1: Consultas tipadas no app | Tasks | Pending |
+| BI-23 | P1: Consultas tipadas no app | Execute | Implementing |
 
 **Coverage:** 23 total, 23 mapped to tasks, 0 unmapped
 
