@@ -106,7 +106,24 @@
 - **Date**: 2026-11-11
 - **Status**: active
 
+### AD-015
+- **Decision**: As estatísticas de BI (US10) saem de três RPCs `security definer` (`estatisticas_viagens`, `estatisticas_rotas`, `estatisticas_veiculos`) chamáveis por Admin, Gestor de Frota e Financeiro, que devolvem só agregados. As três leem a view interna `estatistica_viagem` (`security_invoker`, sem grant para `anon` e `authenticated`). Entram as movimentações pagas e pendentes; rota e veículo somam só viagens `Finalizada`; o R$/KM consolidado é razão das somas; a manutenção não entra no R$/KM do veículo.
+- **Reason**: Decidido com o usuário em 13/11/2026. O cálculo cruza Caixa e Frota, que o RLS separa; o molde da AD-013/AD-014 expõe só o que a tela precisa sem mudar policy. Uma view única evita três cópias da fórmula.
+- **Trade-off**: O Gestor de Frota passa a ver totais financeiros por viagem, rota e veículo (nunca lançamentos). O período filtra pelo dia de início da viagem, então uma viagem que cruza o fim do mês conta no mês em que começou.
+- **Scope**: `supabase/migrations/20261113000100_bi.sql`, `src/features/bi`, EIX-43, EIX-44, EIX-45, EIX-46.
+- **Date**: 2026-11-13
+- **Status**: active
+
 ## Handoff
+
+### EIX-43 — US10 motor de estatísticas de rota e custo por KM
+
+- **Feature**: `.specs/features/eix43-estatisticas-rota`, T1–T6 concluídas
+- **Completed**: migration `20261113000100_bi.sql` aplicada na nuvem (db push --remote aprovado pelo usuário em 13/11/2026) e tipos regerados; `src/features/bi/queries.ts` e `formatar.ts`
+- **Validation**: typecheck e lint exit 0; app 1448 testes, PGlite 410 testes; Verifier em `validation.md`
+- **Next step**: usuário revisa as premissas `n` da spec (viagens que entram, período pelo início, zero sem lançamento, desempates, lucro negativo); a PR depende da #48 (EIX-42), então abre depois do merge dela ou empilhada sobre ela (revisor: Eduardo)
+- **Blockers**: PR #48 (EIX-42) precisa entrar antes
+- **Branch**: `feat/eix-43-us10-motor-estatisticas`, criada a partir da `feat/eix-42-us09-integracao-viagem-caixa` com a main mesclada; sem push; Linear não alterado
 
 ### EIX-42 — US09 ponte Caixa ↔ Viagens
 
