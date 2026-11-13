@@ -74,15 +74,15 @@ Aberto no Expo Go, o app quebra na hora: o `import` de `@react-native-google-sig
 
 | Requirement ID | Story | Phase | Status |
 | --- | --- | --- | --- |
-| DEV-01 | P1: Aviso no Expo Go | Execute | Pending |
-| DEV-02 | P1: Aviso no Expo Go | Execute | Pending |
-| DEV-03 | P1: Aviso no Expo Go | Execute | Pending |
-| DEV-04 | P1: Aviso no Expo Go | Execute | Pending |
-| DEV-05 | P1: Build e guia | Execute | Pending |
-| DEV-06 | P1: Build e guia | Execute | Pending |
-| DEV-07 | P1: Build e guia | Execute | Pending |
-| DEV-08 | P1: Build e guia | Execute | Pending |
-| DEV-09 | P1: Build e guia | Execute (manual, Jean) | Pending |
+| DEV-01 | P1: Aviso no Expo Go | Execute | Verified |
+| DEV-02 | P1: Aviso no Expo Go | Execute | Verified |
+| DEV-03 | P1: Aviso no Expo Go | Execute | Verified |
+| DEV-04 | P1: Aviso no Expo Go | Execute | Verified |
+| DEV-05 | P1: Build e guia | Execute | Verified |
+| DEV-06 | P1: Build e guia | Execute | Verified |
+| DEV-07 | P1: Build e guia | Execute | Verified |
+| DEV-08 | P1: Build e guia | Execute | Verified |
+| DEV-09 | P1: Build e guia | Execute (manual, Jean) | Pending: SHA-1 no Google Cloud e teste no celular |
 
 **Coverage:** 9 total, 9 mapped, 0 unmapped
 
