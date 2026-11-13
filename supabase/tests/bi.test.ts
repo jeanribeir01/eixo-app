@@ -253,6 +253,9 @@ describe('migration bi', () => {
     // authenticated (privilégio padrão do schema public); o stub do PGlite não. Sem imitar isso, o
     // teste dos grants passaria mesmo sem os `revoke` da migration (lição L-006).
     db = await criarBanco({ antesDe: MIGRATION });
+    // O jest.global-setup.js fixa TZ=America/Sao_Paulo, e o PGlite herda esse fuso. O Supabase roda
+    // em UTC: sem esta linha, tirar o `at time zone` da view passaria nos testes (borda das 23h30).
+    await db.exec(`set timezone to 'UTC'`);
     await db.exec(`
       alter default privileges in schema public grant execute on functions to anon, authenticated;
       alter default privileges in schema public grant select on tables to anon, authenticated;
@@ -297,6 +300,10 @@ describe('migration bi', () => {
       const linha = linhas[0]!;
       expect(linha.viagem_id).toBe(viagemId);
       expect(linha.rota_id).toBe(rotaId);
+      expect(linha.uf_origem).toBe('SP');
+      expect(linha.uf_destino).toBe('PR');
+      expect(new Date(linha.data_inicio!).toISOString()).toBe('2025-01-15T12:00:00.000Z');
+      expect(new Date(linha.data_fim!).toISOString()).toBe('2025-01-16T12:00:00.000Z');
       expect(linha.cidade_origem).toBe('Sao Paulo');
       expect(linha.cidade_destino).toBe('Curitiba');
       expect(linha.status).toBe('Finalizada');
@@ -514,6 +521,67 @@ describe('migration bi', () => {
       expect(linhas.map((l) => l.rota_id)).toEqual([alfa, beta]);
       expect(linhas.map((l) => l.mais_lucrativa)).toEqual([true, false]);
       expect(linhas.map((l) => l.maior_custo)).toEqual([true, false]);
+    });
+
+    it('BI-12: empate no R$/KM dá o maior custo à rota de mais KM, mesmo vindo depois na ordem', async () => {
+      // Alfa: 500 KM, Saída R$ 50 (R$/KM 10), lucro R$ 1.950. Zeta: 1000 KM, Saída R$ 100 (R$/KM 10),
+      // lucro R$ 0. Alfa vem antes no lucro e no alfabeto; o maior custo vai para Zeta pelo KM.
+      const alfa = await criarRota('Alfa', 'Destino Custo');
+      const viagemAlfa = await criarViagem({
+        rotaId: alfa,
+        status: 'Finalizada',
+        inicio: '2026-06-05T12:00:00Z',
+        hodometroInicial: 0,
+        hodometroFinal: 500,
+      });
+      await lancar({ viagemId: viagemAlfa, categoriaId: categoria.frete, valor: '2000.00' });
+      await lancar({ viagemId: viagemAlfa, categoriaId: categoria.pedagio, valor: '50.00' });
+      const zeta = await criarRota('Zeta', 'Destino Custo');
+      const viagemZeta = await criarViagem({
+        rotaId: zeta,
+        status: 'Finalizada',
+        inicio: '2026-06-06T12:00:00Z',
+        hodometroInicial: 0,
+        hodometroFinal: 1000,
+      });
+      await lancar({ viagemId: viagemZeta, categoriaId: categoria.frete, valor: '100.00' });
+      await lancar({ viagemId: viagemZeta, categoriaId: categoria.pedagio, valor: '100.00' });
+
+      const linhas = await estatisticasRotas(ADMIN, '2026-06-01', '2026-06-30');
+
+      expect(linhas.map((l) => l.rota_id)).toEqual([alfa, zeta]);
+      expect(linhas.map((l) => l.custo_por_km_centavos)).toEqual([10, 10]);
+      expect(linhas.map((l) => l.mais_lucrativa)).toEqual([true, false]);
+      expect(linhas.map((l) => l.maior_custo)).toEqual([false, true]);
+    });
+
+    it('BI-10..12: empate total ordena pela origem e, com a mesma origem, pelo destino', async () => {
+      // A ordem pela origem discorda da ordem pelo destino: trocar as duas chaves muda a lista.
+      const trechos = [
+        ['Maringa', 'Bauru'],
+        ['Barueri', 'Anapolis'],
+        ['Maringa', 'Assis'],
+        ['Abaete', 'Zelia'],
+      ] as const;
+      const ids: Record<string, string> = {};
+      for (const [origem, destino] of trechos) {
+        const rotaId = await criarRota(origem, destino);
+        ids[`${origem}-${destino}`] = rotaId;
+        const viagemId = await criarViagem({ rotaId, status: 'Finalizada', inicio: '2026-07-10T12:00:00Z' });
+        await lancar({ viagemId, categoriaId: categoria.frete, valor: '100.00' });
+        await lancar({ viagemId, categoriaId: categoria.pedagio, valor: '50.00' });
+      }
+
+      const linhas = await estatisticasRotas(ADMIN, '2026-07-01', '2026-07-31');
+
+      expect(linhas.map((l) => l.rota_id)).toEqual([
+        ids['Abaete-Zelia'],
+        ids['Barueri-Anapolis'],
+        ids['Maringa-Assis'],
+        ids['Maringa-Bauru'],
+      ]);
+      expect(linhas.map((l) => l.mais_lucrativa)).toEqual([true, false, false, false]);
+      expect(linhas.map((l) => l.maior_custo)).toEqual([true, false, false, false]);
     });
 
     it('BI-11, BI-12: lucro negativo ainda marca a rota que perde menos', async () => {
