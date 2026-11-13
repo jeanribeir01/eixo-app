@@ -120,7 +120,7 @@
 
 - **Feature**: `.specs/features/eix43-estatisticas-rota`, T1–T6 concluídas
 - **Completed**: migration `20261113000100_bi.sql` aplicada na nuvem (db push --remote aprovado pelo usuário em 13/11/2026) e tipos regerados; `src/features/bi/queries.ts` e `formatar.ts`
-- **Validation**: typecheck e lint exit 0; app 1448 testes, PGlite 410 testes; Verifier em `validation.md`
+- **Validation**: typecheck e lint exit 0; app 1448 testes, PGlite 412 testes; Verifier PASS na rodada 3 (35/35 mutantes mortos, `validation.md`). As rodadas 1 e 2 acharam só lacunas de teste (fuso do PGlite, desempates, valor de UF e datas)
 - **Next step**: usuário revisa as premissas `n` da spec (viagens que entram, período pelo início, zero sem lançamento, desempates, lucro negativo); a PR depende da #48 (EIX-42), então abre depois do merge dela ou empilhada sobre ela (revisor: Eduardo)
 - **Blockers**: PR #48 (EIX-42) precisa entrar antes
 - **Branch**: `feat/eix-43-us10-motor-estatisticas`, criada a partir da `feat/eix-42-us09-integracao-viagem-caixa` com a main mesclada; sem push; Linear não alterado

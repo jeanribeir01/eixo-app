@@ -152,29 +152,29 @@ Desde a US09 (EIX-42) cada lançamento pode apontar para uma viagem, e o Combust
 
 | Requirement ID | Story | Phase | Status |
 | --- | --- | --- | --- |
-| BI-01 | P1: Estatística por viagem | Execute | Implementing |
-| BI-02 | P1: Estatística por viagem | Execute | Implementing |
-| BI-03 | P1: Estatística por viagem | Execute | Implementing |
-| BI-04 | P1: Estatística por viagem | Execute | Implementing |
-| BI-05 | P1: Estatística por viagem | Execute | Implementing |
-| BI-06 | P1: Estatística por viagem | Execute | Implementing |
-| BI-07 | P1: Estatística por viagem | Execute | Implementing |
-| BI-08 | P1: Estatística por viagem | Execute | Implementing |
-| BI-09 | P1: Consolidação por rota | Execute | Implementing |
-| BI-10 | P1: Consolidação por rota | Execute | Implementing |
-| BI-11 | P1: Consolidação por rota | Execute | Implementing |
-| BI-12 | P1: Consolidação por rota | Execute | Implementing |
-| BI-13 | P1: Consolidação por veículo | Execute | Implementing |
-| BI-14 | P1: Consolidação por veículo | Execute | Implementing |
-| BI-15 | P1: Acesso, período e desempenho | Execute | Implementing |
-| BI-16 | P1: Acesso, período e desempenho | Execute | Implementing |
-| BI-17 | P1: Acesso, período e desempenho | Execute | Implementing |
-| BI-18 | P1: Acesso, período e desempenho | Execute | Implementing |
-| BI-19 | P1: Consultas tipadas no app | Execute | Implementing |
-| BI-20 | P1: Consultas tipadas no app | Execute | Implementing |
-| BI-21 | P1: Consultas tipadas no app | Execute | Implementing |
-| BI-22 | P1: Consultas tipadas no app | Execute | Implementing |
-| BI-23 | P1: Consultas tipadas no app | Execute | Implementing |
+| BI-01 | P1: Estatística por viagem | Execute | Verified |
+| BI-02 | P1: Estatística por viagem | Execute | Verified |
+| BI-03 | P1: Estatística por viagem | Execute | Verified |
+| BI-04 | P1: Estatística por viagem | Execute | Verified |
+| BI-05 | P1: Estatística por viagem | Execute | Verified |
+| BI-06 | P1: Estatística por viagem | Execute | Verified |
+| BI-07 | P1: Estatística por viagem | Execute | Verified |
+| BI-08 | P1: Estatística por viagem | Execute | Verified |
+| BI-09 | P1: Consolidação por rota | Execute | Verified |
+| BI-10 | P1: Consolidação por rota | Execute | Verified |
+| BI-11 | P1: Consolidação por rota | Execute | Verified |
+| BI-12 | P1: Consolidação por rota | Execute | Verified |
+| BI-13 | P1: Consolidação por veículo | Execute | Verified |
+| BI-14 | P1: Consolidação por veículo | Execute | Verified |
+| BI-15 | P1: Acesso, período e desempenho | Execute | Verified |
+| BI-16 | P1: Acesso, período e desempenho | Execute | Verified |
+| BI-17 | P1: Acesso, período e desempenho | Execute | Verified |
+| BI-18 | P1: Acesso, período e desempenho | Execute | Verified |
+| BI-19 | P1: Consultas tipadas no app | Execute | Verified |
+| BI-20 | P1: Consultas tipadas no app | Execute | Verified |
+| BI-21 | P1: Consultas tipadas no app | Execute | Verified |
+| BI-22 | P1: Consultas tipadas no app | Execute | Verified |
+| BI-23 | P1: Consultas tipadas no app | Execute | Verified |
 
 **Coverage:** 23 total, 23 mapped to tasks, 0 unmapped
 

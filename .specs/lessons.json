@@ -3,7 +3,7 @@
   "promote_threshold": 2,
   "window_days": 45,
   "quarantine_threshold": 2,
-  "next_id": 29,
+  "next_id": 32,
   "lessons": [
     {
       "id": "L-001",
@@ -503,17 +503,73 @@
       "text": "Test a multi-key ORDER BY with data where the keys disagree, so dropping one key changes the expected order",
       "signal": "surviving_mutant",
       "scope": "sql-rpc, ordering",
+      "status": "confirmed",
+      "features": [
+        "eix42-ponte-viagem",
+        "eix43-estatisticas-rota"
+      ],
+      "recurrence": 2,
+      "harmful": 0,
+      "evidence": [
+        "supabase/tests/ponte_viagem.test.ts M3 (sql-rpc, ordering)",
+        "M6, M19 supabase/migrations/20261113000100_bi.sql:221-227 (BI-10, BI-12)"
+      ],
+      "created": "2026-11-11T12:48:48Z",
+      "last_seen": "2026-11-13T13:46:24Z"
+    },
+    {
+      "id": "L-029",
+      "key": "surviving_mutant::in pglite tests set the database session timezone to utc like supabase because jest pins tz to america sao paulo and pglite inherits it masking a missing at time zone",
+      "text": "In PGlite tests set the database session timezone to UTC like Supabase, because Jest pins TZ to America/Sao_Paulo and PGlite inherits it, masking a missing AT TIME ZONE",
+      "signal": "surviving_mutant",
+      "scope": "supabase-tests",
       "status": "candidate",
       "features": [
-        "eix42-ponte-viagem"
+        "eix43-estatisticas-rota"
       ],
       "recurrence": 1,
       "harmful": 0,
       "evidence": [
-        "supabase/tests/ponte_viagem.test.ts M3 (sql-rpc, ordering)"
+        "M2 supabase/migrations/20261113000100_bi.sql:52 (BI-08) (supabase-tests)"
       ],
-      "created": "2026-11-11T12:48:48Z",
-      "last_seen": "2026-11-11T12:48:48Z"
+      "created": "2026-11-13T13:46:24Z",
+      "last_seen": "2026-11-13T13:46:24Z"
+    },
+    {
+      "id": "L-030",
+      "key": "surviving_mutant::assert the value of every field an ac names in a returned row because a column list check passes when two same typed columns are swapped",
+      "text": "Assert the value of every field an AC names in a returned row, because a column-list check passes when two same-typed columns are swapped",
+      "signal": "surviving_mutant",
+      "scope": "supabase-tests",
+      "status": "candidate",
+      "features": [
+        "eix43-estatisticas-rota"
+      ],
+      "recurrence": 1,
+      "harmful": 0,
+      "evidence": [
+        "M10, M11 supabase/migrations/20261113000100_bi.sql:139-140 (BI-01) (supabase-tests)"
+      ],
+      "created": "2026-11-13T13:46:25Z",
+      "last_seen": "2026-11-13T13:46:25Z"
+    },
+    {
+      "id": "L-031",
+      "key": "surviving_mutant::when a test proves an order by key make the next tiebreak disagree with it using fixed ids because a random uuid tiebreak kills the mutant only by chance",
+      "text": "When a test proves an ORDER BY key, make the next tiebreak disagree with it using fixed ids, because a random UUID tiebreak kills the mutant only by chance",
+      "signal": "surviving_mutant",
+      "scope": "supabase-tests",
+      "status": "candidate",
+      "features": [
+        "eix43-estatisticas-rota"
+      ],
+      "recurrence": 1,
+      "harmful": 0,
+      "evidence": [
+        "M25 supabase/migrations/20261113000100_bi.sql:227 (BI-10), bi.test.ts:558-584 (supabase-tests)"
+      ],
+      "created": "2026-11-13T13:54:19Z",
+      "last_seen": "2026-11-13T13:54:19Z"
     }
   ]
 }

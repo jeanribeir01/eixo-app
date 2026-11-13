@@ -10,7 +10,7 @@ Implement these tasks with the `tlc-spec-driven` skill: **activate it by name an
 
 **Spec**: `.specs/features/eix43-estatisticas-rota/spec.md`
 **Design**: inline (sem `design.md`): view interna `estatistica_viagem` + três RPCs `security definer` no molde de `kpis_dashboard` e `ponte_viagem`; `src/features/bi/` no molde de `ponteRepository.ts`.
-**Status**: Done (aguardando o Verifier)
+**Status**: Done (Verifier PASS na rodada 3, `validation.md`)
 
 ---
 
