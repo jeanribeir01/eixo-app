@@ -135,7 +135,7 @@ T4 → T5 → T6
 
 ---
 
-### T4: Regerar os tipos do banco
+### T4: Regerar os tipos do banco ✅
 
 **What**: Aplicar a migration na nuvem (com autorização do usuário) e regerar `src/types/database.ts` com as três RPCs.
 **Where**: `src/types/database.ts`
@@ -148,10 +148,10 @@ T4 → T5 → T6
 - MCP: NONE
 - Skill: NONE
 
-**Done when**:
+**Done when** (migration aplicada na nuvem em 13/11/2026 com autorização do usuário):
 
-- [ ] `estatisticas_viagens`, `estatisticas_rotas` e `estatisticas_veiculos` aparecem em `Functions`
-- [ ] Gate check passes: Build
+- [x] `estatisticas_viagens`, `estatisticas_rotas` e `estatisticas_veiculos` aparecem em `Functions`
+- [x] Gate check passes: Build
 
 **Tests**: none
 **Gate**: build
