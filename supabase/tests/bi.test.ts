@@ -152,12 +152,13 @@ describe('migration bi', () => {
   }
 
   // Cidades únicas por rota: o banco recusa dois trechos iguais ativos.
-  async function criarRota(origem?: string, destino?: string) {
+  // `id` fixo só quando o teste depende da ordem dos ids (último desempate do ORDER BY).
+  async function criarRota(origem?: string, destino?: string, id?: string) {
     rotas += 1;
     const resultado = await db.query<{ id: string }>(
-      `insert into rota (cidade_origem, uf_origem, cidade_destino, uf_destino, distancia_estimada_km)
-       values ($1, 'SP', $2, 'PR', 400) returning id`,
-      [origem ?? `Origem ${rotas}`, destino ?? `Destino ${rotas}`],
+      `insert into rota (id, cidade_origem, uf_origem, cidade_destino, uf_destino, distancia_estimada_km)
+       values (coalesce($3::uuid, gen_random_uuid()), $1, 'SP', $2, 'PR', 400) returning id`,
+      [origem ?? `Origem ${rotas}`, destino ?? `Destino ${rotas}`, id ?? null],
     );
     return resultado.rows[0]!.id;
   }
@@ -557,15 +558,17 @@ describe('migration bi', () => {
 
     it('BI-10..12: empate total ordena pela origem e, com a mesma origem, pelo destino', async () => {
       // A ordem pela origem discorda da ordem pelo destino: trocar as duas chaves muda a lista.
+      // As duas de Maringa têm ids na ordem contrária à dos destinos: sem a chave do destino, o
+      // desempate final (rota_id) inverteria as duas sempre, e não só por sorteio.
       const trechos = [
-        ['Maringa', 'Bauru'],
-        ['Barueri', 'Anapolis'],
-        ['Maringa', 'Assis'],
-        ['Abaete', 'Zelia'],
+        ['Maringa', 'Bauru', '43000000-0000-0000-0000-00000000aa01'],
+        ['Barueri', 'Anapolis', undefined],
+        ['Maringa', 'Assis', '43000000-0000-0000-0000-00000000aa02'],
+        ['Abaete', 'Zelia', undefined],
       ] as const;
       const ids: Record<string, string> = {};
-      for (const [origem, destino] of trechos) {
-        const rotaId = await criarRota(origem, destino);
+      for (const [origem, destino, id] of trechos) {
+        const rotaId = await criarRota(origem, destino, id);
         ids[`${origem}-${destino}`] = rotaId;
         const viagemId = await criarViagem({ rotaId, status: 'Finalizada', inicio: '2026-07-10T12:00:00Z' });
         await lancar({ viagemId, categoriaId: categoria.frete, valor: '100.00' });
