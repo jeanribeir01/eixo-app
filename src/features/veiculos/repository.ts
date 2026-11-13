@@ -4,7 +4,7 @@ import { supabase } from '@/supabase/client';
 import { Constants } from '@/types/database';
 
 import { normalizarPlaca } from './placa';
-import type { FiltroVeiculos, Veiculo, VeiculoInput } from './types';
+import type { FiltroVeiculos, StatusVeiculo, Veiculo, VeiculoInput } from './types';
 
 // Camada de acesso a dados isolada da tela (AGENTS.md §2.3, skill supabase-query): as telas só
 // conhecem estas funções e o formato de resultado abaixo, nunca o Supabase. A autorização
@@ -179,25 +179,48 @@ export async function atualizarVeiculo(id: string, input: VeiculoInput): Promise
   return validarVeiculo(data);
 }
 
-export async function inativarVeiculo(id: string): Promise<Resultado<Veiculo>> {
-  // Guarda no mesmo UPDATE: uma viagem pode ter começado depois de a lista carregar.
-  // O RLS continua decidindo quem pode escrever. Sem DELETE, histórico é preservado.
+type MensagensTrocaStatus = { falha: string; semLinha: string };
+
+// Inativar e reativar são o mesmo UPDATE: troca `de` → `para` com a guarda no próprio UPDATE
+// (`.eq('status', de)`), para que dois toques ou duas sessões não troquem um veículo que já
+// mudou de status. O RLS continua decidindo quem pode escrever. Sem DELETE, histórico é preservado.
+async function trocarStatusVeiculo(
+  id: string,
+  de: StatusVeiculo,
+  para: StatusVeiculo,
+  mensagens: MensagensTrocaStatus,
+): Promise<Resultado<Veiculo>> {
   const { data, error } = await supabase
     .from('veiculo')
-    .update({ status: 'Inativo' })
+    .update({ status: para })
     .eq('id', id)
-    .eq('status', 'Disponivel')
+    .eq('status', de)
     .select(COLUNAS)
     .maybeSingle();
 
-  if (error) return traduzirErro(error, 'Não foi possível inativar o veículo. Tente novamente.');
-  if (!data) {
-    return {
-      ok: false,
-      mensagem: 'Não foi possível inativar. O veículo pode não estar mais disponível ou você não tem permissão. Atualize a lista e tente novamente.',
-    };
-  }
+  if (error) return traduzirErro(error, mensagens.falha);
+  // Sem linha: id inexistente, RLS recusou ou o status mudou em outra sessão.
+  if (!data) return { ok: false, mensagem: mensagens.semLinha };
   return validarVeiculo(data);
+}
+
+export function inativarVeiculo(id: string): Promise<Resultado<Veiculo>> {
+  // Só de Disponivel: uma viagem pode ter começado depois de a lista carregar.
+  return trocarStatusVeiculo(id, 'Disponivel', 'Inativo', {
+    falha: 'Não foi possível inativar o veículo. Tente novamente.',
+    semLinha: 'Não foi possível inativar. O veículo pode não estar mais disponível ou você não tem permissão. Atualize a lista e tente novamente.',
+  });
+}
+
+// Desfaz uma inativação feita por engano (EIX-81). O pedido é Disponivel, mas quem decide o
+// status final é o trigger `veiculo_corrige_status_reativacao` (20261111000200_veiculo_reativacao.sql):
+// com viagem ou manutenção aberta, o veículo volta como EmViagem ou EmManutencao. Por isso a tela
+// lê o status do veículo devolvido, e não supõe Disponivel.
+export function reativarVeiculo(id: string): Promise<Resultado<Veiculo>> {
+  return trocarStatusVeiculo(id, 'Inativo', 'Disponivel', {
+    falha: 'Não foi possível reativar o veículo. Tente novamente.',
+    semLinha: 'Não foi possível reativar. O veículo pode já ter sido reativado ou você não tem permissão. Atualize a lista e tente novamente.',
+  });
 }
 
 // Contrato compartilhado com EIX-39/EIX-40. Uma lista permitida no banco exclui

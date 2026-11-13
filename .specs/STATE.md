@@ -117,3 +117,14 @@
 - **Next step**: usuário confirma as duas premissas `n` da spec (janela de 30 dias e pasta `ponte-viagem`), testa no aparelho e abre o PR (revisor: Diogo). O `database.ts` traz `kpis_*` do PR #46, que já está na nuvem; quem fizer merge depois resolve o conflito com o arquivo gerado.
 - **Blockers**: nenhum
 - **Branch**: `feat/eix-42-us09-integracao-viagem-caixa`; sem push; Linear não alterado
+
+### EIX-81 — Reativar veículo inativo
+
+- **Feature**: `.specs/features/eix81-reativar-veiculo`, T1–T3 / REA-01..REA-10
+- **Phase / Task**: implementação concluída; verificação independente em `validation.md`
+- **Completed**: `reativarVeiculo` no repositório, com UPDATE para Disponivel condicionado a id e status Inativo, sem delete; botão Reativar na lista só para Inativo, com confirmação, loading, Snackbar e recarga com o filtro atual
+- **Decision**: revista após a revisão da PR #47 (11/11/2026). O guard da tela não bastava: a edição e um PATCH direto inativam veículo com viagem/manutenção aberta. O trigger `veiculo_corrige_status_reativacao` (migration 20261111000200) grava EmViagem/EmManutencao/Disponivel conforme o que está aberto, em vez de recusar
+- **Validation**: typecheck e lint exit 0; 1332 testes app + 326 Supabase verdes
+- **Next step**: teste manual em dispositivo; push e PR para revisão do Jean, Squash and merge após aprovação
+- **Blockers**: nenhum
+- **Branch**: `feat/eix-81-us06-reativar-veiculo`; Linear não encerrado; migration `20261111000200_veiculo_reativacao.sql` aplicada na nuvem em 11/11/2026 (renomeada de 000100, que colidia com a `ponte_viagem` da PR #48)
