@@ -33,6 +33,7 @@ estão em construção.
 5. [Variáveis de ambiente](#5-variáveis-de-ambiente)
 6. [Rodar o app](#6-rodar-o-app)
    - [Rodar no celular](#rodar-no-celular)
+   - [APK de release](#apk-de-release)
 7. [Perfis de teste: Admin e Motorista](#7-perfis-de-teste-admin-e-motorista)
 8. [Testes, lint e typecheck](#8-testes-lint-e-typecheck)
 9. [Problemas comuns](#9-problemas-comuns)
@@ -354,6 +355,47 @@ npx eas-cli@latest build --profile development --platform android
 
 O perfil `development` está no `eas.json` (development client, distribuição interna, APK).
 
+### APK de release
+
+O APK de release é o app completo: o JavaScript vai **dentro** do APK, então ele abre sem Metro,
+sem computador e sem Wi-Fi compartilhado. É o que se instala nos celulares para o QA e para a
+entrega. Ele sai do perfil `preview` do `eas.json` (distribuição interna, APK em vez de AAB).
+
+**Uma vez só: variáveis no EAS.** O build roda na nuvem do EAS, que não recebe o `.env` (ele não é
+versionado). As variáveis da [seção 5](#5-variáveis-de-ambiente) ficam cadastradas no ambiente
+`preview` do projeto no expo.dev, com os mesmos valores do `.env`:
+
+```bash
+npx eas-cli@latest env:create --environment preview --visibility plaintext --name EXPO_PUBLIC_SUPABASE_URL --value "https://SEU-PROJETO.supabase.co"
+npx eas-cli@latest env:create --environment preview --visibility sensitive --name EXPO_PUBLIC_SUPABASE_ANON_KEY --value "SUA-ANON-KEY"
+npx eas-cli@latest env:create --environment preview --visibility plaintext --name EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID --value "SEU-CLIENT-WEB.apps.googleusercontent.com"
+npx eas-cli@latest env:list --environment preview
+```
+
+O `EXPO_PUBLIC_LOGIN_EMAIL_HABILITADO` não entra aí: ele já vem ligado no próprio perfil `preview`,
+para o QA e a banca entrarem com as contas de teste da [seção 7](#7-perfis-de-teste-admin-e-motorista)
+sem depender do Google em cada celular.
+
+**Gerar o APK:**
+
+```bash
+npx eas-cli@latest build --profile preview --platform android
+```
+
+No fim, o terminal mostra o link e o QR code de instalação. O build também fica em
+[expo.dev](https://expo.dev), projeto **eixo-app** → Builds.
+
+**Instalar no celular:**
+
+1. Abra o link (ou leia o QR code com a câmera) no celular e baixe o APK.
+2. Permita a instalação de apps de fontes desconhecidas quando o Android pedir e instale.
+3. Abra o **Eixo Certo** e entre com o Google ou com uma conta de teste.
+
+O APK de release tem o mesmo package (`com.eixocerto.app`) e o mesmo certificado do app de
+desenvolvimento, então **um substitui o outro** no celular. Para voltar a desenvolver pelo Metro,
+reinstale o APK do perfil `development`. Pelo mesmo motivo, o login com Google usa o client
+Android do certificado do EAS que já existe ([seção 4.3](#43-client-android)).
+
 ### Testando o login
 
 1. O app abre na tela **Entre para continuar**.
@@ -431,6 +473,7 @@ que existe.
 | Mudou `.env` e nada aconteceu | Metro guardou o valor antigo em cache | `npm start -- --clear` |
 | Tela **Aguardando liberação** depois do login | Conta nova, ainda não aprovada | Seção 7 |
 | "Este app não abre no Expo Go" | O projeto foi aberto no Expo Go, que não tem o login com Google | Instale o app de desenvolvimento ([Rodar no celular](#rodar-no-celular)) e abra por ele |
+| O APK de release fecha logo ao abrir | Falta variável no ambiente `preview` do EAS: o app valida `EXPO_PUBLIC_*` na abertura e para se alguma estiver ausente | `npx eas-cli@latest env:list --environment preview`, cadastre a que faltar ([APK de release](#apk-de-release)) e gere o APK de novo |
 | O app no celular não acha o Metro | Celular em outra rede, ou firewall do Windows bloqueando a porta 8081 | Mesma rede Wi-Fi; libere o Node.js no firewall (rede privada). Com cabo: `adb reverse tcp:8081 tcp:8081` |
 | App fecha ao abrir uma tela depois de um `git pull` | Entrou uma biblioteca nativa nova e o app instalado é o antigo | `npm install` e `npx expo run:android` de novo |
 | Ícone ou splash continuam os antigos | A pasta `android/` é anterior à mudança no `app.config.ts` | `npx expo prebuild --platform android` e `npx expo run:android`. Se o launcher ainda mostrar o ícone antigo, é cache: `adb uninstall com.eixocerto.app` e rode de novo |
