@@ -1,4 +1,4 @@
-import { act, fireEvent, render, screen, waitFor } from '@testing-library/react-native';
+import { act, fireEvent, render, screen, waitFor, within } from '@testing-library/react-native';
 import { Alert, ScrollView } from 'react-native';
 
 import { VeiculosListView } from '../VeiculosListView';
@@ -139,7 +139,10 @@ describe('VeiculosListView', () => {
     (listarVeiculos as jest.Mock).mockResolvedValue({ ok: true, data: [] });
     render(<VeiculosListView />);
     await screen.findByText('Nenhum veículo cadastrado');
-    expect(screen.UNSAFE_getByType(ScrollView).props.horizontal).toBe(true);
+    // A rolagem agora vem do próprio Tabs (variante `scrollable`, EIX-82), não de um ScrollView da tela.
+    const filtro = screen.UNSAFE_getByType(ScrollView);
+    expect(filtro.props.horizontal).toBe(true);
+    expect(within(filtro).getByRole('tab', { name: 'Inativo' })).toBeOnTheScreen();
     fireEvent.press(screen.getByRole('tab', { name: 'Inativo' }));
     await waitFor(() => expect(listarVeiculos).toHaveBeenLastCalledWith({ busca: undefined, status: 'Inativo' }));
     expect(await screen.findByText('Nenhum veículo encontrado')).toBeOnTheScreen();

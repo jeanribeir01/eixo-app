@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useFocusEffect, useRouter } from 'expo-router';
-import { ActivityIndicator, Alert, ScrollView } from 'react-native';
+import { ActivityIndicator, Alert } from 'react-native';
 
 import { List, Badge, Button, Column, EmptyState, Input, ListItem, Screen, Snackbar, Tabs, Text, colors, type BadgeTone } from '@/ui';
 
@@ -154,9 +154,7 @@ export function VeiculosListView() {
         autoCorrect={false}
       />
 
-      <ScrollView horizontal style={{ flexGrow: 0 }} keyboardShouldPersistTaps="handled">
-        <Tabs options={opcoesFiltro} value={filtroStatus} onChange={setFiltroStatus} accessibilityLabel="Filtrar por status" />
-      </ScrollView>
+      <Tabs options={opcoesFiltro} value={filtroStatus} onChange={setFiltroStatus} accessibilityLabel="Filtrar por status" scrollable />
 
       {/* Único elemento cyan preenchido da tela: a ação primária (DESIGN_CYAN §1). */}
       <Button label="Novo veículo" onPress={() => router.push('/frota/novo')} />
