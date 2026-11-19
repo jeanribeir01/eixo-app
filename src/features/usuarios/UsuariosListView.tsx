@@ -1,5 +1,6 @@
+import { memo, useCallback } from 'react';
 import { useRouter } from 'expo-router';
-import { RefreshControl, StyleSheet } from 'react-native';
+import { RefreshControl, StyleSheet, type ListRenderItemInfo } from 'react-native';
 
 import { rotuloPerfil, rotuloStatus } from '@/features/auth/permissions';
 import { useDadosDaTela } from '@/lib/useDadosDaTela';
@@ -28,12 +29,43 @@ function rotuloDoBadge(usuario: Usuario): string {
   return rotuloPerfil[usuario.perfil.nome];
 }
 
+type LinhaProps = {
+  usuario: Usuario;
+  onAbrir: (id: string) => void;
+};
+
+// Linha memoizada (EIX-71): um Snackbar ou o pull-to-refresh re-renderizam a tela, mas a linha só
+// renderiza de novo quando o próprio usuário muda. Por isso o callback do pai é estável (useCallback).
+const UsuarioLinha = memo(function UsuarioLinha({ usuario, onAbrir }: LinhaProps) {
+  return (
+    <ListItem
+      title={usuario.nome}
+      subtitle={usuario.email}
+      trailing={<Badge label={rotuloDoBadge(usuario)} />}
+      accessibilityLabel={`Gerenciar ${usuario.nome}`}
+      onPress={() => onAbrir(usuario.id)}
+    />
+  );
+});
+
+// Fora do componente: a mesma função em todo render, sem precisar de useCallback.
+function chaveDoUsuario(usuario: Usuario): string {
+  return usuario.id;
+}
+
 // Tela só do Admin (US16): a rota nem é registrada para outros perfis — ver app/(app)/_layout.tsx.
 export function UsuariosListView() {
   const router = useRouter();
   // Carrega ao abrir e ao voltar do detalhe (o perfil/status pode ter mudado), sem a lista piscar.
   const tela = useDadosDaTela(listarUsuarios);
   const coluna = useScreenColumn();
+
+  const abrir = useCallback((id: string) => router.push(`/usuarios/${id}`), [router]);
+
+  const renderLinha = useCallback(
+    ({ item }: ListRenderItemInfo<Usuario>) => <UsuarioLinha usuario={item} onAbrir={abrir} />,
+    [abrir],
+  );
 
   return (
     <Screen
@@ -71,7 +103,7 @@ export function UsuariosListView() {
       {tela.status === 'pronto' && (
         <List
           data={tela.dados ?? []}
-          keyExtractor={(item) => item.id}
+          keyExtractor={chaveDoUsuario}
           style={styles.lista}
           contentContainerStyle={coluna}
           refreshControl={
@@ -91,15 +123,7 @@ export function UsuariosListView() {
               description="Contas aparecem aqui depois do primeiro login."
             />
           }
-          renderItem={({ item }) => (
-            <ListItem
-              title={item.nome}
-              subtitle={item.email}
-              trailing={<Badge label={rotuloDoBadge(item)} />}
-              accessibilityLabel={`Gerenciar ${item.nome}`}
-              onPress={() => router.push(`/usuarios/${item.id}`)}
-            />
-          )}
+          renderItem={renderLinha}
         />
       )}
     </Screen>
