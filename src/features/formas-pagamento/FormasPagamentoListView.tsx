@@ -1,6 +1,6 @@
-import { useState } from 'react';
+import { memo, useCallback, useMemo, useState } from 'react';
 import { useRouter } from 'expo-router';
-import { RefreshControl, StyleSheet } from 'react-native';
+import { RefreshControl, StyleSheet, type ListRenderItemInfo } from 'react-native';
 
 import { useDadosDaTela } from '@/lib/useDadosDaTela';
 import {
@@ -31,39 +31,105 @@ function subtitulo(forma: FormaPagamento): string | undefined {
   return forma.ativa ? undefined : 'Desativada';
 }
 
+type LinhaProps = {
+  forma: FormaPagamento;
+  // Booleano, não o id em processamento: só a linha cujo switch mudou re-renderiza.
+  processando: boolean;
+  onAbrir: (id: string) => void;
+  onAlternarAtiva: (forma: FormaPagamento) => void;
+};
+
+// Linha memoizada (EIX-71): digitar na busca re-renderiza a tela a cada letra; com memo, só as linhas
+// que entram ou saem do filtro renderizam. Por isso os callbacks do pai são estáveis (useCallback).
+const FormaPagamentoLinha = memo(function FormaPagamentoLinha({
+  forma,
+  processando,
+  onAbrir,
+  onAlternarAtiva,
+}: LinhaProps) {
+  const fixa = isFormaFixa(forma.nome);
+  return (
+    <ListItem
+      title={forma.nome}
+      subtitle={subtitulo(forma)}
+      // A regra das fixas continua: sem edição e sem switch.
+      onPress={fixa ? undefined : () => onAbrir(forma.id)}
+      control={
+        fixa ? undefined : (
+          <Switch
+            label="Ativa"
+            accessibilityLabel={`Ativa: ${forma.nome}`}
+            value={forma.ativa}
+            disabled={processando}
+            onValueChange={() => onAlternarAtiva(forma)}
+          />
+        )
+      }
+    />
+  );
+});
+
+// Fora do componente: a mesma função em todo render, sem precisar de useCallback.
+function chaveDaForma(forma: FormaPagamento): string {
+  return forma.id;
+}
+
 export function FormasPagamentoListView() {
   const router = useRouter();
   // Carrega ao abrir e ao voltar da criação/edição, sem a lista piscar (EIX-63).
   const tela = useDadosDaTela(listarFormasPagamento);
+  const { atualizarDados } = tela;
   const [busca, setBusca] = useState('');
   const [mostrarDesativadas, setMostrarDesativadas] = useState(false);
   const [processandoId, setProcessandoId] = useState<string | null>(null);
   const [feedback, setFeedback] = useState<Feedback | null>(null);
   const coluna = useScreenColumn();
 
-  async function handleAlternarAtiva(forma: FormaPagamento) {
-    setProcessandoId(forma.id);
-    const resultado = await definirAtivaFormaPagamento(forma.id, !forma.ativa);
-    setProcessandoId(null);
+  const handleAlternarAtiva = useCallback(
+    async (forma: FormaPagamento) => {
+      setProcessandoId(forma.id);
+      const resultado = await definirAtivaFormaPagamento(forma.id, !forma.ativa);
+      setProcessandoId(null);
 
-    if (!resultado.ok) {
-      setFeedback({ mensagem: resultado.mensagem, tone: 'error' });
-      return;
-    }
+      if (!resultado.ok) {
+        setFeedback({ mensagem: resultado.mensagem, tone: 'error' });
+        return;
+      }
 
-    tela.atualizarDados((atuais) => atuais.map((item) => (item.id === forma.id ? resultado.data : item)));
-    setFeedback({
-      mensagem: resultado.data.ativa ? 'Forma de pagamento reativada.' : 'Forma de pagamento desativada.',
-      tone: 'success',
-    });
-  }
+      atualizarDados((atuais) => atuais.map((item) => (item.id === forma.id ? resultado.data : item)));
+      setFeedback({
+        mensagem: resultado.data.ativa ? 'Forma de pagamento reativada.' : 'Forma de pagamento desativada.',
+        tone: 'success',
+      });
+    },
+    [atualizarDados],
+  );
+
+  const abrir = useCallback((id: string) => router.push(`/formas-pagamento/${id}/editar`), [router]);
+
+  const renderLinha = useCallback(
+    ({ item }: ListRenderItemInfo<FormaPagamento>) => (
+      <FormaPagamentoLinha
+        forma={item}
+        processando={processandoId === item.id}
+        onAbrir={abrir}
+        onAlternarAtiva={handleAlternarAtiva}
+      />
+    ),
+    [processandoId, abrir, handleAlternarAtiva],
+  );
 
   const termo = busca.trim().toLowerCase();
-  const filtradas = (tela.dados ?? []).filter((forma) => {
-    if (!mostrarDesativadas && !forma.ativa) return false;
-    if (!termo) return true;
-    return forma.nome.toLowerCase().includes(termo);
-  });
+  // O useMemo mantém o mesmo array enquanto dados, busca e switch não mudam.
+  const filtradas = useMemo(
+    () =>
+      (tela.dados ?? []).filter((forma) => {
+        if (!mostrarDesativadas && !forma.ativa) return false;
+        if (!termo) return true;
+        return forma.nome.toLowerCase().includes(termo);
+      }),
+    [tela.dados, mostrarDesativadas, termo],
+  );
 
   // Um Snackbar só: o retorno da ação vem antes do aviso de recarga que falhou.
   const snackbar = feedback ?? (tela.feedbackErro ? { mensagem: tela.feedbackErro, tone: 'error' as const } : null);
@@ -111,7 +177,7 @@ export function FormasPagamentoListView() {
       {tela.status === 'pronto' && (
         <List
           data={filtradas}
-          keyExtractor={(item) => item.id}
+          keyExtractor={chaveDaForma}
           style={styles.lista}
           contentContainerStyle={[coluna, styles.espacoDoFab]}
           refreshControl={
@@ -130,28 +196,7 @@ export function FormasPagamentoListView() {
               description={termo ? 'Tente buscar por outro nome.' : 'Crie a primeira forma de pagamento para começar.'}
             />
           }
-          renderItem={({ item }) => {
-            const fixa = isFormaFixa(item.nome);
-            return (
-              <ListItem
-                title={item.nome}
-                subtitle={subtitulo(item)}
-                // A regra das fixas continua: sem edição e sem switch.
-                onPress={fixa ? undefined : () => router.push(`/formas-pagamento/${item.id}/editar`)}
-                control={
-                  fixa ? undefined : (
-                    <Switch
-                      label="Ativa"
-                      accessibilityLabel={`Ativa: ${item.nome}`}
-                      value={item.ativa}
-                      disabled={processandoId === item.id}
-                      onValueChange={() => handleAlternarAtiva(item)}
-                    />
-                  )
-                }
-              />
-            );
-          }}
+          renderItem={renderLinha}
         />
       )}
     </Screen>

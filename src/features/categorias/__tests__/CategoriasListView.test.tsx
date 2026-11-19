@@ -2,7 +2,7 @@ import { act, fireEvent, render, screen, within } from '@testing-library/react-n
 import { FlatList, RefreshControl, StyleSheet, useWindowDimensions } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-import { FAB_ALTURA_RESERVADA, Skeleton, colors, spacing } from '@/ui';
+import { FAB_ALTURA_RESERVADA, ListItem, Skeleton, colors, spacing } from '@/ui';
 
 import { CategoriasListView } from '../CategoriasListView';
 import { definirAtivaCategoria, listarCategorias } from '../categoriasRepository';
@@ -20,8 +20,11 @@ let mockAoFocar: (() => void) | null = null;
 jest.mock('expo-router', () => {
   // eslint-disable-next-line @typescript-eslint/no-require-imports
   const react = require('react');
+  // Mesmo objeto em todo render, como o useRouter real (devolve o router global do expo-router).
+  // Um objeto novo por render mudaria os callbacks das linhas e desfaria o memo (EIX-71).
+  const roteador = { push: (...args: unknown[]) => mockPush(...args) };
   return {
-    useRouter: () => ({ push: mockPush }),
+    useRouter: () => roteador,
     useFocusEffect: (callback: () => void) => {
       mockAoFocar = callback;
       react.useEffect(callback, [callback]);
@@ -33,6 +36,16 @@ jest.mock('../categoriasRepository', () => ({
   listarCategorias: jest.fn(),
   definirAtivaCategoria: jest.fn(),
 }));
+
+// O ListItem real, só embrulhado num jest.fn: o teste de memo (EIX-71) conta quantas vezes cada linha renderiza.
+jest.mock('@/ui', () => {
+  const real = jest.requireActual('@/ui');
+  return { ...real, ListItem: jest.fn(real.ListItem) };
+});
+
+function rendersDaLinha(titulo: string): number {
+  return jest.mocked(ListItem).mock.calls.filter(([props]) => props.title === titulo).length;
+}
 
 // Largura da janela controlada pelo teste: 412 é celular, 800 é tablet (EIX-94).
 jest.mock('react-native/Libraries/Utilities/useWindowDimensions', () => ({
@@ -175,6 +188,26 @@ describe('CategoriasListView — linha (LST-01)', () => {
 
     expect(screen.getByRole('alert')).toHaveTextContent('Não foi possível atualizar a categoria.');
     expect(screen.getByRole('switch', { name: 'Ativa: Combustível' })).toBeChecked();
+  });
+
+  it('o switch de uma linha re-renderiza só ela: as outras são memoizadas (EIX-71)', async () => {
+    let concluir: (valor: Awaited<ReturnType<typeof definirAtivaCategoria>>) => void = () => undefined;
+    mockDefinirAtiva.mockReturnValue(new Promise((resolve) => (concluir = resolve)));
+    await renderComLista();
+    const freteAntes = rendersDaLinha('Frete');
+    const combustivelAntes = rendersDaLinha('Combustível');
+
+    fireEvent(screen.getByRole('switch', { name: 'Ativa: Combustível' }), 'valueChange', false);
+
+    // A linha do switch renderiza para ficar desabilitada enquanto salva.
+    expect(screen.getByRole('switch', { name: 'Ativa: Combustível' })).toBeDisabled();
+    expect(rendersDaLinha('Combustível')).toBeGreaterThan(combustivelAntes);
+
+    await act(async () => concluir({ ok: true, data: { ...categorias[1]!, ativa: false } }));
+
+    // Salvou, a tela mostrou o Snackbar e a lista mudou; a vizinha, que não mudou, não renderizou nenhuma vez.
+    expect(screen.getByRole('alert')).toHaveTextContent('Categoria desativada.');
+    expect(rendersDaLinha('Frete')).toBe(freteAntes);
   });
 
   it('o switch fica fora do botão da linha: o leitor de tela alcança os dois', async () => {

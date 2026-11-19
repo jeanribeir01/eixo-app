@@ -2,7 +2,7 @@ import { act, fireEvent, render, screen, within } from '@testing-library/react-n
 import { FlatList, RefreshControl, StyleSheet, useWindowDimensions } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-import { FAB_ALTURA_RESERVADA, Skeleton, colors, spacing } from '@/ui';
+import { FAB_ALTURA_RESERVADA, ListItem, Skeleton, colors, spacing } from '@/ui';
 
 import { FormasPagamentoListView } from '../FormasPagamentoListView';
 import { definirAtivaFormaPagamento, listarFormasPagamento } from '../formasPagamentoRepository';
@@ -26,8 +26,11 @@ let mockAoFocar: (() => void) | null = null;
 jest.mock('expo-router', () => {
   // eslint-disable-next-line @typescript-eslint/no-require-imports
   const react = require('react');
+  // Mesmo objeto em todo render, como o useRouter real (devolve o router global do expo-router).
+  // Um objeto novo por render mudaria os callbacks das linhas e desfaria o memo (EIX-71).
+  const roteador = { push: (...args: unknown[]) => mockPush(...args) };
   return {
-    useRouter: () => ({ push: mockPush }),
+    useRouter: () => roteador,
     useFocusEffect: (callback: () => void) => {
       mockAoFocar = callback;
       react.useEffect(callback, [callback]);
@@ -39,6 +42,16 @@ jest.mock('../formasPagamentoRepository', () => ({
   listarFormasPagamento: jest.fn(),
   definirAtivaFormaPagamento: jest.fn(),
 }));
+
+// O ListItem real, só embrulhado num jest.fn: o teste de memo (EIX-71) conta quantas vezes cada linha renderiza.
+jest.mock('@/ui', () => {
+  const real = jest.requireActual('@/ui');
+  return { ...real, ListItem: jest.fn(real.ListItem) };
+});
+
+function rendersDaLinha(nome: string): number {
+  return jest.mocked(ListItem).mock.calls.filter(([props]) => props.title === nome).length;
+}
 
 const mockListar = listarFormasPagamento as jest.MockedFunction<typeof listarFormasPagamento>;
 const mockDefinirAtiva = definirAtivaFormaPagamento as jest.MockedFunction<typeof definirAtivaFormaPagamento>;
@@ -148,6 +161,26 @@ describe('FormasPagamentoListView — linha (LST-01)', () => {
 
     await act(async () => concluir({ ok: true, data: { id: '2', nome: 'Dinheiro', ativa: false } }));
     expect(screen.getByRole('alert')).toHaveTextContent('Forma de pagamento desativada.');
+  });
+
+  it('o switch de uma linha re-renderiza só ela: as outras são memoizadas (EIX-71)', async () => {
+    let concluir: (valor: Awaited<ReturnType<typeof definirAtivaFormaPagamento>>) => void = () => undefined;
+    mockDefinirAtiva.mockReturnValue(new Promise((resolve) => (concluir = resolve)));
+    await renderComLista();
+    const pixAntes = rendersDaLinha('Pix');
+    const dinheiroAntes = rendersDaLinha('Dinheiro');
+
+    fireEvent(screen.getByRole('switch', { name: 'Ativa: Dinheiro' }), 'valueChange', false);
+
+    // A linha do switch renderiza para ficar desabilitada enquanto salva.
+    expect(screen.getByRole('switch', { name: 'Ativa: Dinheiro' })).toBeDisabled();
+    expect(rendersDaLinha('Dinheiro')).toBeGreaterThan(dinheiroAntes);
+
+    await act(async () => concluir({ ok: true, data: { id: '2', nome: 'Dinheiro', ativa: false } }));
+
+    // Salvou, a tela mostrou o Snackbar e a lista mudou; a vizinha, que não mudou, não renderizou nenhuma vez.
+    expect(screen.getByRole('alert')).toHaveTextContent('Forma de pagamento desativada.');
+    expect(rendersDaLinha('Pix')).toBe(pixAntes);
   });
 
   it('não existe botão "Editar" nem "Desativar" na linha', async () => {
