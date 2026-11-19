@@ -43,8 +43,15 @@ ficar interativa é maior; ele entra na coluna "até a Home" cronometrada no ví
 
 ### Antes (commit da `main` sem as mudanças da EIX-71)
 
-**A. APK de release:** `npx eas-cli@latest build --profile preview --platform android` a partir desta
-branch **antes** dos commits de `perf(...)`, e instale (README → APK de release). Entre como Admin.
+O "antes" é o commit `91c20ac` (só o seed e este arquivo, nenhuma mudança no app). O EAS envia a
+pasta do jeito que ela está, então faça o checkout antes de gerar o build:
+
+```powershell
+git checkout 91c20ac
+```
+
+**A. APK de release:** `npx eas-cli@latest build --profile preview --platform android` e instale
+(README → APK de release). Entre como Admin.
 
 1. Cold start, 5 vezes, anote a mediana:
 
@@ -77,8 +84,8 @@ parte do tempo. Repita 3 vezes.
 ### Depois (branch com as linhas memoizadas)
 
 Mesmos passos, na ordem inversa para reinstalar menos: primeiro o **B** (o app de desenvolvimento já
-está instalado; basta `git checkout` desta branch e o mesmo `npx expo start`), depois o **A** com um
-APK de release novo gerado desta branch.
+está instalado; basta `git checkout perf/eix-71-listas-cold-start` e o mesmo `npx expo start`), depois
+o **A** com um APK de release novo gerado da branch.
 
 ## Aparelho
 
@@ -92,7 +99,7 @@ APK de release novo gerado desta branch.
 
 ## Linha de base (antes)
 
-Commit medido: `________`
+Commit medido: `91c20ac`
 
 | Métrica | Medição 1 | 2 | 3 | 4 | 5 | Mediana |
 | --- | --- | --- | --- | --- | --- | --- |
@@ -108,7 +115,7 @@ Commit medido: `________`
 
 ## Depois
 
-Commit medido: `________`
+Commit medido: `5af7e1c` (linhas memoizadas em Movimentações, Categorias, Formas e Usuários)
 
 | Métrica | Medição 1 | 2 | 3 | 4 | 5 | Mediana |
 | --- | --- | --- | --- | --- | --- | --- |
