@@ -2,7 +2,7 @@ import { act, fireEvent, render, screen, within } from '@testing-library/react-n
 import { Alert, FlatList, RefreshControl, StyleSheet, useWindowDimensions } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-import { FAB_ALTURA_RESERVADA, Skeleton, colors, spacing } from '@/ui';
+import { FAB_ALTURA_RESERVADA, ListItem, Skeleton, colors, spacing } from '@/ui';
 
 import { MovimentacoesListView } from '../MovimentacoesListView';
 import { excluirMovimentacao, listarMovimentacoesDoMes } from '../movimentacoesRepository';
@@ -17,8 +17,11 @@ let mockAoFocar: (() => void) | null = null;
 jest.mock('expo-router', () => {
   // eslint-disable-next-line @typescript-eslint/no-require-imports
   const react = require('react');
+  // Mesmo objeto em todo render, como o useRouter real (devolve o router global do expo-router).
+  // Um objeto novo por render mudaria os callbacks das linhas e desfaria o memo (EIX-71).
+  const roteador = { push: (...args: unknown[]) => mockPush(...args) };
   return {
-    useRouter: () => ({ push: mockPush }),
+    useRouter: () => roteador,
     useFocusEffect: (callback: () => void) => {
       mockAoFocar = callback;
       react.useEffect(callback, [callback]);
@@ -35,6 +38,12 @@ jest.mock('../movimentacoesRepository', () => ({
   listarMovimentacoesDoMes: jest.fn(),
   excluirMovimentacao: jest.fn(),
 }));
+
+// O ListItem real, só embrulhado num jest.fn: o teste de memo (EIX-71) conta quantas vezes ele renderiza.
+jest.mock('@/ui', () => {
+  const real = jest.requireActual('@/ui');
+  return { ...real, ListItem: jest.fn(real.ListItem) };
+});
 
 // Largura da janela controlada pelo teste: 412 é celular, 800 é tablet (EIX-94).
 jest.mock('react-native/Libraries/Utilities/useWindowDimensions', () => ({
@@ -329,6 +338,19 @@ describe('MovimentacoesListView — editar e excluir (LST-02)', () => {
 
     expect(screen.getByRole('alert')).toHaveTextContent('Movimentação não encontrada ou não pode ser excluída.');
     expect(screen.getByText('Diesel')).toBeOnTheScreen();
+  });
+
+  it('a tela re-renderizar (Snackbar de erro) não re-renderiza as linhas: elas são memoizadas (EIX-71)', async () => {
+    mockExcluir.mockResolvedValue({ ok: false, mensagem: 'Sem conexão.' });
+    await renderLista();
+    const { botoes } = abrirMaisOpcoes('Diesel');
+    const rendersAntes = jest.mocked(ListItem).mock.calls.length;
+
+    await act(async () => botoes.find((botao) => botao.text === 'Excluir')?.onPress?.());
+
+    // A tela mudou (o Snackbar apareceu), mas nenhuma movimentação mudou: nenhuma linha renderiza de novo.
+    expect(screen.getByRole('alert')).toHaveTextContent('Sem conexão.');
+    expect(jest.mocked(ListItem).mock.calls.length).toBe(rendersAntes);
   });
 
   it('parcela de dívida não tem "Mais opções"', async () => {

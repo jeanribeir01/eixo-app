@@ -1,6 +1,6 @@
-import { useCallback, useState } from 'react';
+import { memo, useCallback, useMemo, useState } from 'react';
 import { useRouter } from 'expo-router';
-import { Alert, RefreshControl, StyleSheet } from 'react-native';
+import { Alert, RefreshControl, StyleSheet, type ListRenderItemInfo } from 'react-native';
 
 import { isoParaDataBR, mesDeHoje, nomeDoMes, somarMeses } from '@/lib/datas';
 import { formatarMoeda } from '@/lib/money';
@@ -62,6 +62,42 @@ function subtitulo(movimentacao: Movimentacao): string {
   return partes.join(' · ');
 }
 
+type LinhaProps = {
+  movimentacao: Movimentacao;
+  onAbrir: (id: string) => void;
+  onMaisOpcoes: (movimentacao: Movimentacao) => void;
+};
+
+// Linha memoizada (EIX-71): com 200 lançamentos no mês, qualquer mudança na tela (Snackbar, filtro,
+// pull-to-refresh) re-renderizava todas as linhas visíveis. Com memo, a linha só re-renderiza quando
+// a própria movimentação ou um callback muda; por isso os callbacks do pai são estáveis (useCallback).
+const MovimentacaoLinha = memo(function MovimentacaoLinha({ movimentacao, onAbrir, onMaisOpcoes }: LinhaProps) {
+  return (
+    <ListItem
+      title={movimentacao.descricao}
+      subtitle={subtitulo(movimentacao)}
+      trailing={<ValorComSinal movimentacao={movimentacao} />}
+      onPress={() => onAbrir(movimentacao.id)}
+      // Parcela pertence à dívida (US04): não tem a opção de excluir.
+      control={
+        movimentacao.divida_id === null ? (
+          <Button
+            variant="icon"
+            icon="maisOpcoes"
+            label={`Mais opções: ${movimentacao.descricao}`}
+            onPress={() => onMaisOpcoes(movimentacao)}
+          />
+        ) : undefined
+      }
+    />
+  );
+});
+
+// Fora do componente: a mesma função em todo render, sem precisar de useCallback.
+function chaveDaMovimentacao(movimentacao: Movimentacao): string {
+  return movimentacao.id;
+}
+
 export function MovimentacoesListView() {
   const router = useRouter();
   const [periodo, setPeriodo] = useState(mesDeHoje);
@@ -73,34 +109,55 @@ export function MovimentacoesListView() {
   // Cada mês é uma consulta: trocar de mês volta ao skeleton em vez de mostrar o mês anterior.
   const buscar = useCallback(() => listarMovimentacoesDoMes(periodo.ano, periodo.mes), [periodo]);
   const tela = useDadosDaTela(buscar);
+  const { atualizarDados } = tela;
 
   function mudarMes(delta: number) {
     setPeriodo((atual) => somarMeses(atual, delta));
   }
 
-  async function excluir(movimentacao: Movimentacao) {
-    const resultado = await excluirMovimentacao(movimentacao.id);
-    if (!resultado.ok) {
-      setFeedback({ mensagem: resultado.mensagem, tone: 'error' });
-      return;
-    }
-    tela.atualizarDados((atuais) => atuais.filter((item) => item.id !== movimentacao.id));
-    setFeedback({ mensagem: 'Movimentação excluída.', tone: 'success' });
-  }
+  const excluir = useCallback(
+    async (movimentacao: Movimentacao) => {
+      const resultado = await excluirMovimentacao(movimentacao.id);
+      if (!resultado.ok) {
+        setFeedback({ mensagem: resultado.mensagem, tone: 'error' });
+        return;
+      }
+      atualizarDados((atuais) => atuais.filter((item) => item.id !== movimentacao.id));
+      setFeedback({ mensagem: 'Movimentação excluída.', tone: 'success' });
+    },
+    [atualizarDados],
+  );
 
   // Delete é físico e sem volta: confirmação no diálogo nativo do sistema.
-  function confirmarExclusao(movimentacao: Movimentacao) {
-    Alert.alert('Excluir movimentação?', movimentacao.descricao, [
-      { text: 'Cancelar', style: 'cancel' },
-      { text: 'Excluir', style: 'destructive', onPress: () => excluir(movimentacao) },
-    ]);
-  }
+  const confirmarExclusao = useCallback(
+    (movimentacao: Movimentacao) => {
+      Alert.alert('Excluir movimentação?', movimentacao.descricao, [
+        { text: 'Cancelar', style: 'cancel' },
+        { text: 'Excluir', style: 'destructive', onPress: () => excluir(movimentacao) },
+      ]);
+    },
+    [excluir],
+  );
 
-  // Um mês cabe na memória: tipo e status filtram aqui, sem nova chamada ao banco.
-  const filtradas = (tela.dados ?? []).filter(
-    (movimentacao) =>
-      (filtroTipo === 'todas' || movimentacao.categoria.tipo === filtroTipo) &&
-      (filtroStatus === 'todos' || movimentacao.status_pagamento === filtroStatus),
+  const abrir = useCallback((id: string) => router.push(`/movimentacoes/${id}/editar`), [router]);
+
+  const renderLinha = useCallback(
+    ({ item }: ListRenderItemInfo<Movimentacao>) => (
+      <MovimentacaoLinha movimentacao={item} onAbrir={abrir} onMaisOpcoes={confirmarExclusao} />
+    ),
+    [abrir, confirmarExclusao],
+  );
+
+  // Um mês cabe na memória: tipo e status filtram aqui, sem nova chamada ao banco. O useMemo mantém o
+  // mesmo array enquanto dados e filtros não mudam (um Snackbar aparecendo não recria a lista).
+  const filtradas = useMemo(
+    () =>
+      (tela.dados ?? []).filter(
+        (movimentacao) =>
+          (filtroTipo === 'todas' || movimentacao.categoria.tipo === filtroTipo) &&
+          (filtroStatus === 'todos' || movimentacao.status_pagamento === filtroStatus),
+      ),
+    [tela.dados, filtroTipo, filtroStatus],
   );
   const comFiltro = filtroTipo !== 'todas' || filtroStatus !== 'todos';
 
@@ -165,7 +222,7 @@ export function MovimentacoesListView() {
       {tela.status === 'pronto' && (
         <List
           data={filtradas}
-          keyExtractor={(item) => item.id}
+          keyExtractor={chaveDaMovimentacao}
           style={styles.lista}
           contentContainerStyle={[coluna, styles.espacoDoFab]}
           refreshControl={
@@ -184,25 +241,7 @@ export function MovimentacoesListView() {
               description="Registre uma entrada ou saída para começar."
             />
           }
-          renderItem={({ item }) => (
-            <ListItem
-              title={item.descricao}
-              subtitle={subtitulo(item)}
-              trailing={<ValorComSinal movimentacao={item} />}
-              onPress={() => router.push(`/movimentacoes/${item.id}/editar`)}
-              // Parcela pertence à dívida (US04): não tem a opção de excluir.
-              control={
-                item.divida_id === null ? (
-                  <Button
-                    variant="icon"
-                    icon="maisOpcoes"
-                    label={`Mais opções: ${item.descricao}`}
-                    onPress={() => confirmarExclusao(item)}
-                  />
-                ) : undefined
-              }
-            />
-          )}
+          renderItem={renderLinha}
         />
       )}
     </Screen>
