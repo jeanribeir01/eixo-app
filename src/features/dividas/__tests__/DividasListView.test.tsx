@@ -1,12 +1,22 @@
 import { act, fireEvent, render, screen } from '@testing-library/react-native';
-import { FlatList, StyleSheet } from 'react-native';
+import { FlatList, StyleSheet, useWindowDimensions } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-import { FAB_ALTURA_RESERVADA } from '@/ui';
+import { FAB_ALTURA_RESERVADA, spacing } from '@/ui';
 
 import { DividasListView } from '../components/DividasListView';
 import { listarDividas } from '../dividasRepository';
 import type { Divida } from '../types';
+
+// Largura da janela controlada pelo teste: 412 é celular, 800 é tablet (EIX-94).
+jest.mock('react-native/Libraries/Utilities/useWindowDimensions', () => ({
+  __esModule: true,
+  default: jest.fn(() => ({ width: 412, height: 900, scale: 1, fontScale: 1 })),
+}));
+
+function mockLargura(width: number) {
+  jest.mocked(useWindowDimensions).mockReturnValue({ width, height: 900, scale: 1, fontScale: 1 });
+}
 
 jest.setTimeout(15000);
 
@@ -122,5 +132,38 @@ describe('DividasListView (EIX-50)', () => {
 
     expect(mockListar).toHaveBeenCalledTimes(2);
     expect(screen.getByText('Financiamento do caminhão')).toBeOnTheScreen();
+  });
+});
+
+describe('DividasListView — tablet (EIX-94)', () => {
+  afterEach(() => mockLargura(412));
+
+  function estiloDoConteudo() {
+    return StyleSheet.flatten(screen.getByTestId('screen-conteudo').props.style);
+  }
+
+  function estiloDaLista() {
+    return StyleSheet.flatten(screen.UNSAFE_getByType(FlatList).props.contentContainerStyle);
+  }
+
+  it('412: nada muda, o respiro lateral continua no Screen e a lista não ganha coluna', async () => {
+    mockListar.mockResolvedValue({ ok: true, data: [divida()] });
+    render(<DividasListView />);
+    await screen.findByText('Financiamento do caminhão');
+
+    expect(estiloDoConteudo()).toMatchObject({ paddingHorizontal: spacing.base });
+    expect(estiloDaLista()?.maxWidth).toBeUndefined();
+  });
+
+  it('800: a lista rola na largura toda e o conteúdo fica na coluna de 720', async () => {
+    mockLargura(800);
+    mockListar.mockResolvedValue({ ok: true, data: [divida()] });
+    render(<DividasListView />);
+    await screen.findByText('Financiamento do caminhão');
+
+    expect(estiloDoConteudo().maxWidth).toBeUndefined();
+    expect(estiloDoConteudo().paddingHorizontal).toBeUndefined();
+    expect(estiloDaLista()).toMatchObject({ maxWidth: 720, alignSelf: 'center' });
+    expect(screen.queryByTestId('screen-coluna')).toBeNull();
   });
 });

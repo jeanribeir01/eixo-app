@@ -15,9 +15,11 @@ import {
   FAB_ALTURA_RESERVADA,
   ListItem,
   Screen,
+  ScreenColumn,
   Skeleton,
   Snackbar,
   colors,
+  useScreenColumn,
 } from '@/ui';
 
 import { concluirManutencao, listarManutencoes } from './manutencaoRepository';
@@ -55,6 +57,7 @@ export function ManutencoesListView() {
   // depois dela com a linha ainda em aberto; a marca local vale até o banco devolver a conclusão.
   const [concluidasAqui, setConcluidasAqui] = useState<Readonly<Record<string, string>>>({});
   const [feedback, setFeedback] = useState<Feedback | null>(null);
+  const coluna = useScreenColumn();
 
   async function handleConcluir(manutencao: ManutencaoComPlaca) {
     setConcluindo((atuais) => new Set(atuais).add(manutencao.id));
@@ -87,6 +90,7 @@ export function ManutencoesListView() {
   return (
     <Screen
       underHeader
+      list
       overlay={
         snackbar && (
           <Snackbar
@@ -99,29 +103,32 @@ export function ManutencoesListView() {
       // O FAB é a ação de criar e o único cyan da tela (DESIGN_CYAN §7).
       fab={<FAB label="Nova manutenção" onPress={() => router.push('/manutencoes/nova')} />}
     >
-      {tela.status === 'carregando' && (
-        <Column gap="sm">
-          <Skeleton height="xxl" accessibilityLabel="Carregando manutenções" />
-          <Skeleton height="xxl" />
-          <Skeleton height="xxl" />
-        </Column>
-      )}
+      {/* Fora da lista, na coluna: no tablet fica alinhado com as linhas (EIX-94). */}
+      <ScreenColumn>
+        {tela.status === 'carregando' && (
+          <Column gap="sm">
+            <Skeleton height="xxl" accessibilityLabel="Carregando manutenções" />
+            <Skeleton height="xxl" />
+            <Skeleton height="xxl" />
+          </Column>
+        )}
 
-      {tela.status === 'erro' && (
-        <EmptyState
-          title="Não foi possível carregar"
-          description={tela.erro ?? undefined}
-          actionLabel="Tentar novamente"
-          onAction={tela.recarregar}
-        />
-      )}
+        {tela.status === 'erro' && (
+          <EmptyState
+            title="Não foi possível carregar"
+            description={tela.erro ?? undefined}
+            actionLabel="Tentar novamente"
+            onAction={tela.recarregar}
+          />
+        )}
+      </ScreenColumn>
 
       {tela.status === 'pronto' && (
         <List
           data={manutencoes}
           keyExtractor={(item) => item.id}
           style={styles.lista}
-          contentContainerStyle={styles.espacoDoFab}
+          contentContainerStyle={[coluna, styles.espacoDoFab]}
           refreshControl={
             <RefreshControl
               refreshing={tela.atualizando}

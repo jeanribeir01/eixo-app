@@ -1,9 +1,21 @@
-import { Alert } from 'react-native';
+import { Alert, FlatList, StyleSheet, useWindowDimensions } from 'react-native';
 import { act, fireEvent, render, screen, waitFor } from '@testing-library/react-native';
+
+import { spacing } from '@/ui';
 
 import { RevisoesViagensView } from '../RevisoesViagensView';
 import { listarRevisoesPendentes, resolverRevisao } from '../revisoesRepository';
 import type { RevisaoViagem } from '../types';
+
+// Largura da janela controlada pelo teste: 412 é celular, 800 é tablet (EIX-94).
+jest.mock('react-native/Libraries/Utilities/useWindowDimensions', () => ({
+  __esModule: true,
+  default: jest.fn(() => ({ width: 412, height: 900, scale: 1, fontScale: 1 })),
+}));
+
+function mockLargura(width: number) {
+  jest.mocked(useWindowDimensions).mockReturnValue({ width, height: 900, scale: 1, fontScale: 1 });
+}
 
 jest.mock('expo-router', () => ({
   useFocusEffect: (callback: () => void) => {
@@ -166,5 +178,36 @@ describe('RevisoesViagensView', () => {
       screen.getByText('Não foi possível carregar as revisões. Tente novamente.'),
     ).toBeOnTheScreen();
     expect(screen.getByText('Tentar novamente')).toBeOnTheScreen();
+  });
+
+  describe('RevisoesViagensView — tablet (EIX-94)', () => {
+    afterEach(() => mockLargura(412));
+
+    function estiloDoConteudo() {
+      return StyleSheet.flatten(screen.getByTestId('screen-conteudo').props.style);
+    }
+
+    function estiloDaLista() {
+      return StyleSheet.flatten(screen.UNSAFE_getByType(FlatList).props.contentContainerStyle);
+    }
+
+    it('412: nada muda, o respiro lateral continua no Screen e a lista não ganha coluna', async () => {
+      render(<RevisoesViagensView />);
+      await screen.findByText('Nenhuma revisão pendente');
+
+      expect(estiloDoConteudo()).toMatchObject({ paddingHorizontal: spacing.base });
+      expect(estiloDaLista()?.maxWidth).toBeUndefined();
+    });
+
+    it('800: a lista rola na largura toda e o conteúdo fica na coluna de 720', async () => {
+      mockLargura(800);
+      render(<RevisoesViagensView />);
+      await screen.findByText('Nenhuma revisão pendente');
+
+      expect(estiloDoConteudo().maxWidth).toBeUndefined();
+      expect(estiloDoConteudo().paddingHorizontal).toBeUndefined();
+      expect(estiloDaLista()).toMatchObject({ maxWidth: 720, alignSelf: 'center' });
+      expect(screen.queryByTestId('screen-coluna')).toBeNull();
+    });
   });
 });

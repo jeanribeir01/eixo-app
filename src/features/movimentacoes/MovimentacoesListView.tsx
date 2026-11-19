@@ -14,11 +14,13 @@ import {
   FAB_ALTURA_RESERVADA,
   ListItem,
   Screen,
+  ScreenColumn,
   Skeleton,
   Snackbar,
   Tabs,
   Text,
   colors,
+  useScreenColumn,
 } from '@/ui';
 
 import { dataDeReferencia, excluirMovimentacao, listarMovimentacoesDoMes } from './movimentacoesRepository';
@@ -66,6 +68,7 @@ export function MovimentacoesListView() {
   const [filtroTipo, setFiltroTipo] = useState<FiltroTipo>('todas');
   const [filtroStatus, setFiltroStatus] = useState<FiltroStatus>('todos');
   const [feedback, setFeedback] = useState<Feedback | null>(null);
+  const coluna = useScreenColumn();
 
   // Cada mês é uma consulta: trocar de mês volta ao skeleton em vez de mostrar o mês anterior.
   const buscar = useCallback(() => listarMovimentacoesDoMes(periodo.ano, periodo.mes), [periodo]);
@@ -107,6 +110,7 @@ export function MovimentacoesListView() {
   return (
     <Screen
       underHeader
+      list
       overlay={
         snackbar && (
           <Snackbar
@@ -119,48 +123,51 @@ export function MovimentacoesListView() {
       // O FAB é a ação de criar e o único cyan da tela (DESIGN_CYAN §7).
       fab={<FAB label="Nova movimentação" onPress={() => router.push('/movimentacoes/nova')} />}
     >
-      <Column direction="row" align="center" gap="sm">
-        <Button variant="icon" icon="voltarMes" label="Mês anterior" onPress={() => mudarMes(-1)} />
-        <Text variant="subheading">{nomeDoMes(periodo.ano, periodo.mes)}</Text>
-        <Button variant="icon" icon="avancarMes" label="Próximo mês" onPress={() => mudarMes(1)} />
-      </Column>
-
-      <Tabs
-        accessibilityLabel="Filtrar por tipo"
-        options={OPCOES_TIPO}
-        value={filtroTipo}
-        onChange={(valor) => setFiltroTipo(valor as FiltroTipo)}
-      />
-      <Tabs
-        accessibilityLabel="Filtrar por status"
-        options={OPCOES_STATUS}
-        value={filtroStatus}
-        onChange={(valor) => setFiltroStatus(valor as FiltroStatus)}
-      />
-
-      {tela.status === 'carregando' && (
-        <Column gap="sm">
-          <Skeleton height="xxl" accessibilityLabel="Carregando movimentações" />
-          <Skeleton height="xxl" />
-          <Skeleton height="xxl" />
+      {/* Fora da lista, na coluna: no tablet fica alinhado com as linhas (EIX-94). */}
+      <ScreenColumn>
+        <Column direction="row" align="center" gap="sm">
+          <Button variant="icon" icon="voltarMes" label="Mês anterior" onPress={() => mudarMes(-1)} />
+          <Text variant="subheading">{nomeDoMes(periodo.ano, periodo.mes)}</Text>
+          <Button variant="icon" icon="avancarMes" label="Próximo mês" onPress={() => mudarMes(1)} />
         </Column>
-      )}
 
-      {tela.status === 'erro' && (
-        <EmptyState
-          title="Não foi possível carregar"
-          description={tela.erro ?? undefined}
-          actionLabel="Tentar novamente"
-          onAction={tela.recarregar}
+        <Tabs
+          accessibilityLabel="Filtrar por tipo"
+          options={OPCOES_TIPO}
+          value={filtroTipo}
+          onChange={(valor) => setFiltroTipo(valor as FiltroTipo)}
         />
-      )}
+        <Tabs
+          accessibilityLabel="Filtrar por status"
+          options={OPCOES_STATUS}
+          value={filtroStatus}
+          onChange={(valor) => setFiltroStatus(valor as FiltroStatus)}
+        />
+
+        {tela.status === 'carregando' && (
+          <Column gap="sm">
+            <Skeleton height="xxl" accessibilityLabel="Carregando movimentações" />
+            <Skeleton height="xxl" />
+            <Skeleton height="xxl" />
+          </Column>
+        )}
+
+        {tela.status === 'erro' && (
+          <EmptyState
+            title="Não foi possível carregar"
+            description={tela.erro ?? undefined}
+            actionLabel="Tentar novamente"
+            onAction={tela.recarregar}
+          />
+        )}
+      </ScreenColumn>
 
       {tela.status === 'pronto' && (
         <List
           data={filtradas}
           keyExtractor={(item) => item.id}
           style={styles.lista}
-          contentContainerStyle={styles.espacoDoFab}
+          contentContainerStyle={[coluna, styles.espacoDoFab]}
           refreshControl={
             <RefreshControl
               refreshing={tela.atualizando}

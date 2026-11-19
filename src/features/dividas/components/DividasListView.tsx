@@ -3,7 +3,19 @@ import { useFocusEffect, useRouter } from 'expo-router';
 import { ActivityIndicator, StyleSheet } from 'react-native';
 
 import { formatarMoeda } from '@/lib/money';
-import { List, Column, EmptyState, FAB, FAB_ALTURA_RESERVADA, ListItem, Screen, Text, colors } from '@/ui';
+import {
+  List,
+  Column,
+  EmptyState,
+  FAB,
+  FAB_ALTURA_RESERVADA,
+  ListItem,
+  Screen,
+  ScreenColumn,
+  Text,
+  colors,
+  useScreenColumn,
+} from '@/ui';
 
 import { listarDividas } from '../dividasRepository';
 import type { Divida } from '../types';
@@ -22,6 +34,7 @@ export function DividasListView() {
   const [erro, setErro] = useState<string | null>(null);
   // Cada carga ganha um número; só a mais recente pode escrever na tela (mesmo padrão de Movimentações).
   const ultimoPedido = useRef(0);
+  const coluna = useScreenColumn();
 
   const carregar = useCallback(async () => {
     const pedido = ++ultimoPedido.current;
@@ -47,35 +60,38 @@ export function DividasListView() {
 
   return (
     // O FAB é a ação de criar e o único cyan da tela (DESIGN_CYAN §7).
-    <Screen underHeader fab={<FAB label="Nova dívida" onPress={() => router.push('/dividas/nova')} />}>
-      {status === 'carregando' && (
-        <Column align="center">
-          <ActivityIndicator size="small" color={colors.accent} accessibilityLabel="Carregando dívidas" />
-        </Column>
-      )}
+    <Screen underHeader list fab={<FAB label="Nova dívida" onPress={() => router.push('/dividas/nova')} />}>
+      {/* Fora da lista, na coluna: no tablet fica alinhado com as linhas (EIX-94). */}
+      <ScreenColumn>
+        {status === 'carregando' && (
+          <Column align="center">
+            <ActivityIndicator size="small" color={colors.accent} accessibilityLabel="Carregando dívidas" />
+          </Column>
+        )}
 
-      {status === 'erro' && (
-        <EmptyState
-          title="Não foi possível carregar"
-          description={erro ?? undefined}
-          actionLabel="Tentar novamente"
-          onAction={carregar}
-        />
-      )}
+        {status === 'erro' && (
+          <EmptyState
+            title="Não foi possível carregar"
+            description={erro ?? undefined}
+            actionLabel="Tentar novamente"
+            onAction={carregar}
+          />
+        )}
 
-      {/* Sem ação no estado vazio: o FAB "Nova dívida" já está na tela. */}
-      {status === 'pronto' && dividas.length === 0 && (
-        <EmptyState
-          title="Nenhuma dívida cadastrada"
-          description="Cadastre um financiamento para gerar as parcelas no caixa."
-        />
-      )}
+        {/* Sem ação no estado vazio: o FAB "Nova dívida" já está na tela. */}
+        {status === 'pronto' && dividas.length === 0 && (
+          <EmptyState
+            title="Nenhuma dívida cadastrada"
+            description="Cadastre um financiamento para gerar as parcelas no caixa."
+          />
+        )}
+      </ScreenColumn>
 
       {status === 'pronto' && dividas.length > 0 && (
         <List
           data={dividas}
           keyExtractor={(divida) => divida.id}
-          contentContainerStyle={styles.espacoDoFab}
+          contentContainerStyle={[coluna, styles.espacoDoFab]}
           renderItem={({ item }) => (
             <ListItem
               title={item.descricao}
