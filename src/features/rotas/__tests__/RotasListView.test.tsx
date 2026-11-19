@@ -1,11 +1,21 @@
 import { act, fireEvent, render, screen, within } from '@testing-library/react-native';
-import { FlatList, RefreshControl, StyleSheet } from 'react-native';
+import { FlatList, RefreshControl, StyleSheet, useWindowDimensions } from 'react-native';
 
-import { FAB_ALTURA_RESERVADA, Skeleton, colors } from '@/ui';
+import { FAB_ALTURA_RESERVADA, Skeleton, colors, spacing } from '@/ui';
 
 import { RotasListView } from '../RotasListView';
 import { definirAtivaRota, listarRotas } from '../rotasRepository';
 import type { RotaComViagens } from '../types';
+
+// Largura da janela controlada pelo teste: 412 é celular, 800 é tablet (EIX-94).
+jest.mock('react-native/Libraries/Utilities/useWindowDimensions', () => ({
+  __esModule: true,
+  default: jest.fn(() => ({ width: 412, height: 900, scale: 1, fontScale: 1 })),
+}));
+
+function mockLargura(width: number) {
+  jest.mocked(useWindowDimensions).mockReturnValue({ width, height: 900, scale: 1, fontScale: 1 });
+}
 
 // O runner do GitHub Actions é mais lento que a máquina local: o padrão de 5s estourava no CI.
 jest.setTimeout(15000);
@@ -276,5 +286,36 @@ describe('RotasListView — filtros e FAB', () => {
     fireEvent.press(screen.getByRole('button', { name: 'Nova rota' }));
 
     expect(mockPush).toHaveBeenCalledWith('/rotas/nova');
+  });
+});
+
+describe('RotasListView — tablet (EIX-94)', () => {
+  afterEach(() => mockLargura(412));
+
+  function estiloDoConteudo() {
+    return StyleSheet.flatten(screen.getByTestId('screen-conteudo').props.style);
+  }
+
+  function estiloDaLista() {
+    return StyleSheet.flatten(screen.UNSAFE_getByType(FlatList).props.contentContainerStyle);
+  }
+
+  it('412: nada muda, o respiro lateral continua no Screen e a lista não ganha coluna', async () => {
+    await renderComLista();
+
+    expect(estiloDoConteudo()).toMatchObject({ paddingHorizontal: spacing.base });
+    expect(estiloDaLista()?.maxWidth).toBeUndefined();
+  });
+
+  it('800: a lista rola na largura toda e o conteúdo fica na coluna de 720', async () => {
+    mockLargura(800);
+    await renderComLista();
+
+    expect(estiloDoConteudo().maxWidth).toBeUndefined();
+    expect(estiloDoConteudo().paddingHorizontal).toBeUndefined();
+    expect(estiloDaLista()).toMatchObject({ maxWidth: 720, alignSelf: 'center' });
+    const coluna = screen.getByTestId('screen-coluna');
+    expect(StyleSheet.flatten(coluna.props.style)).toMatchObject({ maxWidth: 720, alignSelf: 'center' });
+    expect(within(coluna).getByLabelText('Buscar')).toBeOnTheScreen();
   });
 });

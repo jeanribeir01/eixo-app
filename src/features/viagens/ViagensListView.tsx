@@ -13,11 +13,13 @@ import {
   FAB,
   FAB_ALTURA_RESERVADA,
   Screen,
+  ScreenColumn,
   Snackbar,
   Tabs,
   Text,
   colors,
   spacing,
+  useScreenColumn,
   type TabOption,
 } from '@/ui';
 
@@ -44,6 +46,7 @@ export function ViagensListView() {
   const ehAdminOuGestor = usuario?.perfil === 'Admin' || usuario?.perfil === 'Gestor de Frota';
 
   const [filtroStatus, setFiltroStatus] = useState<FiltroStatus>('Todos');
+  const coluna = useScreenColumn();
   const sincronizando = useSyncStore((state) => state.sincronizando);
   const ultimaSincronizacaoEm = useSyncStore((state) => state.ultimaSincronizacaoEm);
 
@@ -108,6 +111,7 @@ export function ViagensListView() {
 
   return (
     <Screen
+      list
       fab={
         <FAB
           label="Abrir viagem"
@@ -121,41 +125,44 @@ export function ViagensListView() {
         ) : undefined
       }
     >
-      {/* Aba não tem header nativo; o título fica no conteúdo (DESIGN_CYAN §7) */}
-      <Text variant="heading">Viagens</Text>
+      {/* Fora da lista, na coluna: no tablet fica alinhado com os cartões (EIX-94). */}
+      <ScreenColumn>
+        {/* Aba não tem header nativo; o título fica no conteúdo (DESIGN_CYAN §7) */}
+        <Text variant="heading">Viagens</Text>
 
-      <Tabs
-        options={opcoesFiltro}
-        value={filtroStatus}
-        onChange={(val) => {
-          // O snackbar de erro pertence à consulta anterior; não deve sobreviver ao filtro novo.
-          tela.limparFeedbackErro();
-          setFiltroStatus(val as FiltroStatus);
-        }}
-      />
-
-      {tela.status === 'carregando' && (
-        <View style={styles.centro}>
-          <ActivityIndicator size="large" color={colors.accent} accessibilityLabel="Carregando viagens" />
-        </View>
-      )}
-
-      {tela.status === 'erro' && (
-        <EmptyState
-          icon="viagens"
-          title="Não foi possível carregar as viagens"
-          description={tela.erro ?? 'Verifique sua conexão e tente novamente.'}
-          actionLabel="Tentar novamente"
-          onAction={tela.recarregar}
+        <Tabs
+          options={opcoesFiltro}
+          value={filtroStatus}
+          onChange={(val) => {
+            // O snackbar de erro pertence à consulta anterior; não deve sobreviver ao filtro novo.
+            tela.limparFeedbackErro();
+            setFiltroStatus(val as FiltroStatus);
+          }}
         />
-      )}
+
+        {tela.status === 'carregando' && (
+          <View style={styles.centro}>
+            <ActivityIndicator size="large" color={colors.accent} accessibilityLabel="Carregando viagens" />
+          </View>
+        )}
+
+        {tela.status === 'erro' && (
+          <EmptyState
+            icon="viagens"
+            title="Não foi possível carregar as viagens"
+            description={tela.erro ?? 'Verifique sua conexão e tente novamente.'}
+            actionLabel="Tentar novamente"
+            onAction={tela.recarregar}
+          />
+        )}
+      </ScreenColumn>
 
       {tela.status === 'pronto' && (
         <FlatList
           data={tela.dados ?? []}
           keyExtractor={(item) => item.id}
           style={styles.lista}
-          contentContainerStyle={styles.conteudoLista}
+          contentContainerStyle={[coluna, styles.conteudoLista]}
           ListHeaderComponent={cabecalho}
           refreshControl={
             <RefreshControl

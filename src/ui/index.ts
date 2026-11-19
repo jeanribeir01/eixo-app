@@ -16,7 +16,7 @@ export { ListItem, type ListItemProps } from './ListItem';
 export { List } from './List';
 export { ListSection } from './ListSection';
 export { Logo, type LogoProps } from './Logo';
-export { Screen } from './Screen';
+export { Screen, ScreenColumn, useScreenColumn } from './Screen';
 export { Select, type SelectOption, type SelectProps } from './Select';
 export { Skeleton, type SkeletonProps } from './Skeleton';
 export { Snackbar, type SnackbarProps, type SnackbarTone } from './Snackbar';

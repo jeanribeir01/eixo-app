@@ -1,8 +1,8 @@
 import { act, fireEvent, render, screen, within } from '@testing-library/react-native';
-import { Alert, FlatList, RefreshControl, StyleSheet } from 'react-native';
+import { Alert, FlatList, RefreshControl, StyleSheet, useWindowDimensions } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-import { FAB_ALTURA_RESERVADA, Skeleton, colors } from '@/ui';
+import { FAB_ALTURA_RESERVADA, Skeleton, colors, spacing } from '@/ui';
 
 import { MovimentacoesListView } from '../MovimentacoesListView';
 import { excluirMovimentacao, listarMovimentacoesDoMes } from '../movimentacoesRepository';
@@ -35,6 +35,16 @@ jest.mock('../movimentacoesRepository', () => ({
   listarMovimentacoesDoMes: jest.fn(),
   excluirMovimentacao: jest.fn(),
 }));
+
+// Largura da janela controlada pelo teste: 412 é celular, 800 é tablet (EIX-94).
+jest.mock('react-native/Libraries/Utilities/useWindowDimensions', () => ({
+  __esModule: true,
+  default: jest.fn(() => ({ width: 412, height: 900, scale: 1, fontScale: 1 })),
+}));
+
+function mockLargura(width: number) {
+  jest.mocked(useWindowDimensions).mockReturnValue({ width, height: 900, scale: 1, fontScale: 1 });
+}
 
 const mockListar = listarMovimentacoesDoMes as jest.MockedFunction<typeof listarMovimentacoesDoMes>;
 const mockExcluir = excluirMovimentacao as jest.MockedFunction<typeof excluirMovimentacao>;
@@ -326,5 +336,51 @@ describe('MovimentacoesListView — editar e excluir (LST-02)', () => {
 
     expect(screen.queryByRole('button', { name: 'Mais opções: Financiamento (1/12)' })).not.toBeOnTheScreen();
     expect(screen.getByRole('button', { name: 'Mais opções: Diesel' })).toBeOnTheScreen();
+  });
+});
+
+describe('MovimentacoesListView — tablet (EIX-94)', () => {
+  afterEach(() => mockLargura(412));
+
+  function estiloDoConteudo() {
+    return StyleSheet.flatten(screen.getByTestId('screen-conteudo').props.style);
+  }
+
+  function estiloDaLista() {
+    return StyleSheet.flatten(screen.UNSAFE_getByType(FlatList).props.contentContainerStyle);
+  }
+
+  it('412: nada muda, o respiro lateral continua no Screen e a lista não ganha coluna', async () => {
+    await renderLista();
+
+    expect(estiloDoConteudo()).toMatchObject({ paddingHorizontal: spacing.base });
+    expect(estiloDaLista().maxWidth).toBeUndefined();
+  });
+
+  it('800: a lista rola na largura toda; mês, abas e linhas ficam na mesma coluna de 720', async () => {
+    mockLargura(800);
+    await renderLista();
+
+    expect(estiloDoConteudo().maxWidth).toBeUndefined();
+    expect(estiloDoConteudo().paddingHorizontal).toBeUndefined();
+    expect(estiloDaLista()).toMatchObject({ maxWidth: 720, alignSelf: 'center', paddingBottom: FAB_ALTURA_RESERVADA });
+
+    const coluna = screen.getByTestId('screen-coluna');
+    expect(StyleSheet.flatten(coluna.props.style)).toMatchObject({ maxWidth: 720, alignSelf: 'center' });
+    expect(within(coluna).getByRole('button', { name: 'Mês anterior' })).toBeOnTheScreen();
+    expect(within(coluna).getByRole('tab', { name: 'Entradas' })).toBeOnTheScreen();
+  });
+
+  it('celular → tablet com a tela aberta: o filtro escolhido continua valendo e a lista ganha a coluna', async () => {
+    const { rerender } = render(<MovimentacoesListView />);
+    await screen.findByText('Frete Curitiba');
+    fireEvent.press(screen.getByRole('tab', { name: 'Saídas' }));
+
+    mockLargura(800);
+    rerender(<MovimentacoesListView />);
+
+    expect(estiloDaLista()).toMatchObject({ maxWidth: 720, alignSelf: 'center' });
+    expect(screen.queryByText('Frete Curitiba')).not.toBeOnTheScreen();
+    expect(screen.getByText('Diesel')).toBeOnTheScreen();
   });
 });

@@ -2,7 +2,7 @@ import { useRouter } from 'expo-router';
 import { ActivityIndicator, FlatList, RefreshControl } from 'react-native';
 
 import { useDadosDaTela } from '@/lib/useDadosDaTela';
-import { EmptyState, ListItem, Screen, Snackbar, colors } from '@/ui';
+import { EmptyState, ListItem, Screen, Snackbar, colors, useScreenColumn } from '@/ui';
 
 import { descricaoViagem, listarViagensVinculaveis, rotuloViagem } from './ponteRepository';
 
@@ -12,6 +12,7 @@ export function ViagensLancamentosListView() {
   const router = useRouter();
   // A função do repositório é estável (import do módulo): o hook não refaz a consulta à toa.
   const tela = useDadosDaTela(listarViagensVinculaveis);
+  const coluna = useScreenColumn();
 
   if (tela.status === 'carregando') {
     return (
@@ -38,6 +39,8 @@ export function ViagensLancamentosListView() {
   return (
     <Screen
       underHeader
+      // No tablet a rolagem usa a largura toda e as linhas ficam na coluna (EIX-94).
+      list
       overlay={
         tela.feedbackErro ? (
           <Snackbar message={tela.feedbackErro} tone="error" onDismiss={tela.limparFeedbackErro} />
@@ -47,6 +50,7 @@ export function ViagensLancamentosListView() {
       <FlatList
         data={tela.dados}
         keyExtractor={(viagem) => viagem.id}
+        contentContainerStyle={coluna}
         refreshControl={
           <RefreshControl
             refreshing={tela.atualizando}

@@ -1,8 +1,8 @@
 import { act, fireEvent, render, screen, within } from '@testing-library/react-native';
-import { FlatList, RefreshControl, StyleSheet } from 'react-native';
+import { FlatList, RefreshControl, StyleSheet, useWindowDimensions } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-import { FAB_ALTURA_RESERVADA, Skeleton, colors } from '@/ui';
+import { FAB_ALTURA_RESERVADA, Skeleton, colors, spacing } from '@/ui';
 
 import { CategoriasListView } from '../CategoriasListView';
 import { definirAtivaCategoria, listarCategorias } from '../categoriasRepository';
@@ -33,6 +33,16 @@ jest.mock('../categoriasRepository', () => ({
   listarCategorias: jest.fn(),
   definirAtivaCategoria: jest.fn(),
 }));
+
+// Largura da janela controlada pelo teste: 412 é celular, 800 é tablet (EIX-94).
+jest.mock('react-native/Libraries/Utilities/useWindowDimensions', () => ({
+  __esModule: true,
+  default: jest.fn(() => ({ width: 412, height: 900, scale: 1, fontScale: 1 })),
+}));
+
+function mockLargura(width: number) {
+  jest.mocked(useWindowDimensions).mockReturnValue({ width, height: 900, scale: 1, fontScale: 1 });
+}
 
 const mockListar = listarCategorias as jest.MockedFunction<typeof listarCategorias>;
 const mockDefinirAtiva = definirAtivaCategoria as jest.MockedFunction<typeof definirAtivaCategoria>;
@@ -209,5 +219,53 @@ describe('CategoriasListView — filtros e FAB (LST-01)', () => {
     fireEvent.press(screen.getByRole('button', { name: 'Nova categoria' }));
 
     expect(mockPush).toHaveBeenCalledWith('/categorias/nova');
+  });
+});
+
+describe('CategoriasListView — tablet (EIX-94)', () => {
+  afterEach(() => mockLargura(412));
+
+  function estiloDoConteudo() {
+    return StyleSheet.flatten(screen.getByTestId('screen-conteudo').props.style);
+  }
+
+  function estiloDaLista() {
+    return StyleSheet.flatten(screen.UNSAFE_getByType(FlatList).props.contentContainerStyle);
+  }
+
+  it('412: nada muda, o respiro lateral continua no Screen e a lista não ganha coluna', async () => {
+    await renderComLista();
+
+    expect(estiloDoConteudo()).toMatchObject({ paddingHorizontal: spacing.base });
+    expect(estiloDaLista().maxWidth).toBeUndefined();
+  });
+
+  it('800: a lista rola na largura toda; busca, filtro e linhas ficam na mesma coluna de 720', async () => {
+    mockLargura(800);
+    await renderComLista();
+
+    expect(estiloDoConteudo().maxWidth).toBeUndefined();
+    expect(estiloDoConteudo().paddingHorizontal).toBeUndefined();
+    expect(estiloDaLista()).toMatchObject({ maxWidth: 720, alignSelf: 'center', paddingBottom: FAB_ALTURA_RESERVADA });
+
+    const coluna = screen.getByTestId('screen-coluna');
+    expect(StyleSheet.flatten(coluna.props.style)).toMatchObject({ maxWidth: 720, alignSelf: 'center' });
+    expect(within(coluna).getByLabelText('Buscar')).toBeOnTheScreen();
+    expect(within(coluna).getByRole('switch', { name: 'Mostrar desativadas' })).toBeOnTheScreen();
+  });
+
+  it('celular → tablet com a tela aberta: a busca digitada continua valendo e a lista ganha a coluna', async () => {
+    mockListar.mockResolvedValue({ ok: true, data: categorias });
+    const { rerender } = render(<CategoriasListView />);
+    await screen.findByText('Frete');
+    fireEvent.changeText(screen.getByLabelText('Buscar'), 'combust');
+
+    mockLargura(800);
+    rerender(<CategoriasListView />);
+
+    expect(estiloDaLista()).toMatchObject({ maxWidth: 720, alignSelf: 'center' });
+    expect(screen.getByLabelText('Buscar').props.value).toBe('combust');
+    expect(screen.queryByText('Frete')).not.toBeOnTheScreen();
+    expect(screen.getByText('Combustível')).toBeOnTheScreen();
   });
 });

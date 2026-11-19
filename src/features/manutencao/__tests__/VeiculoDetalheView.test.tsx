@@ -1,12 +1,22 @@
 import { act, fireEvent, render, screen } from '@testing-library/react-native';
-import { RefreshControl } from 'react-native';
+import { FlatList, RefreshControl, StyleSheet, useWindowDimensions } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-import { ListItem } from '@/ui';
+import { ListItem, spacing } from '@/ui';
 
 import { VeiculoDetalheView } from '../VeiculoDetalheView';
 import { buscarVeiculoComHistorico } from '../manutencaoRepository';
 import type { VeiculoComHistorico } from '../types';
+
+// Largura da janela controlada pelo teste: 412 é celular, 800 é tablet (EIX-94).
+jest.mock('react-native/Libraries/Utilities/useWindowDimensions', () => ({
+  __esModule: true,
+  default: jest.fn(() => ({ width: 412, height: 900, scale: 1, fontScale: 1 })),
+}));
+
+function mockLargura(width: number) {
+  jest.mocked(useWindowDimensions).mockReturnValue({ width, height: 900, scale: 1, fontScale: 1 });
+}
 
 // O runner do GitHub Actions é mais lento que a máquina local: o padrão de 5s estourava no CI.
 jest.setTimeout(15000);
@@ -149,5 +159,39 @@ describe('VeiculoDetalheView', () => {
 
     expect(screen.getByRole('alert')).toHaveTextContent('Não foi possível carregar o veículo. Tente novamente.');
     expect(screen.getByText('Troca de pneus')).toBeOnTheScreen();
+  });
+});
+
+describe('VeiculoDetalheView — tablet (EIX-94)', () => {
+  afterEach(() => mockLargura(412));
+
+  function estiloDoConteudo() {
+    return StyleSheet.flatten(screen.getByTestId('screen-conteudo').props.style);
+  }
+
+  function estiloDaLista() {
+    return StyleSheet.flatten(screen.UNSAFE_getByType(FlatList).props.contentContainerStyle);
+  }
+
+  it('412: nada muda, o respiro lateral continua no Screen e a lista não ganha coluna', async () => {
+    mockBuscar.mockResolvedValue({ ok: true, data: volvo });
+    render(<VeiculoDetalheView veiculoId="v1" />);
+    await screen.findByText('ABC-1234');
+
+    expect(estiloDoConteudo()).toMatchObject({ paddingHorizontal: spacing.base });
+    expect(estiloDaLista()?.maxWidth).toBeUndefined();
+  });
+
+  it('800: a lista rola na largura toda e o conteúdo fica na coluna de 720', async () => {
+    mockLargura(800);
+    mockBuscar.mockResolvedValue({ ok: true, data: volvo });
+    render(<VeiculoDetalheView veiculoId="v1" />);
+    await screen.findByText('ABC-1234');
+
+    expect(estiloDoConteudo().maxWidth).toBeUndefined();
+    expect(estiloDoConteudo().paddingHorizontal).toBeUndefined();
+    expect(estiloDaLista()).toMatchObject({ maxWidth: 720, alignSelf: 'center' });
+    // O cartão do veículo é o cabeçalho da lista: fica na mesma coluna do histórico.
+    expect(screen.getByText('Histórico de manutenções')).toBeOnTheScreen();
   });
 });

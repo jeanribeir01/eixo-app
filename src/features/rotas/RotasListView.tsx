@@ -12,10 +12,12 @@ import {
   Input,
   ListItem,
   Screen,
+  ScreenColumn,
   Skeleton,
   Snackbar,
   Switch,
   colors,
+  useScreenColumn,
 } from '@/ui';
 
 import { chaveCidade } from './cidade';
@@ -45,6 +47,7 @@ export function RotasListView() {
   const [mostrarInativas, setMostrarInativas] = useState(false);
   const [processandoId, setProcessandoId] = useState<string | null>(null);
   const [feedback, setFeedback] = useState<Feedback | null>(null);
+  const coluna = useScreenColumn();
 
   async function handleAlternarAtiva(rota: RotaComViagens) {
     setProcessandoId(rota.id);
@@ -78,6 +81,7 @@ export function RotasListView() {
   return (
     <Screen
       underHeader
+      list
       overlay={
         snackbar && (
           <Snackbar
@@ -90,33 +94,36 @@ export function RotasListView() {
       // O FAB é a ação de criar e o único cyan da tela (DESIGN_CYAN §7).
       fab={<FAB label="Nova rota" onPress={() => router.push('/rotas/nova')} />}
     >
-      <Input label="Buscar" placeholder="Buscar por cidade" value={busca} onChangeText={setBusca} />
+      {/* Fora da lista, na coluna: no tablet fica alinhado com as linhas (EIX-94). */}
+      <ScreenColumn>
+        <Input label="Buscar" placeholder="Buscar por cidade" value={busca} onChangeText={setBusca} />
 
-      <Switch label="Mostrar inativas" value={mostrarInativas} onValueChange={setMostrarInativas} />
+        <Switch label="Mostrar inativas" value={mostrarInativas} onValueChange={setMostrarInativas} />
 
-      {tela.status === 'carregando' && (
-        <Column gap="sm">
-          <Skeleton height="xxl" accessibilityLabel="Carregando rotas" />
-          <Skeleton height="xxl" />
-          <Skeleton height="xxl" />
-        </Column>
-      )}
+        {tela.status === 'carregando' && (
+          <Column gap="sm">
+            <Skeleton height="xxl" accessibilityLabel="Carregando rotas" />
+            <Skeleton height="xxl" />
+            <Skeleton height="xxl" />
+          </Column>
+        )}
 
-      {tela.status === 'erro' && (
-        <EmptyState
-          title="Não foi possível carregar"
-          description={tela.erro ?? undefined}
-          actionLabel="Tentar novamente"
-          onAction={tela.recarregar}
-        />
-      )}
+        {tela.status === 'erro' && (
+          <EmptyState
+            title="Não foi possível carregar"
+            description={tela.erro ?? undefined}
+            actionLabel="Tentar novamente"
+            onAction={tela.recarregar}
+          />
+        )}
+      </ScreenColumn>
 
       {tela.status === 'pronto' && (
         <List
           data={rotasFiltradas}
           keyExtractor={(item) => item.id}
           style={styles.lista}
-          contentContainerStyle={styles.espacoDoFab}
+          contentContainerStyle={[coluna, styles.espacoDoFab]}
           refreshControl={
             <RefreshControl
               refreshing={tela.atualizando}

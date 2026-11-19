@@ -4,7 +4,7 @@ import { ActivityIndicator, FlatList, StyleSheet } from 'react-native';
 import { rotuloStatus } from '@/features/movimentacoes/types';
 import { isoParaDataBR } from '@/lib/datas';
 import { formatarMoeda } from '@/lib/money';
-import { Card, Column, EmptyState, ListItem, Screen, Text, colors, spacing } from '@/ui';
+import { Card, Column, EmptyState, ListItem, Screen, Text, colors, spacing, useScreenColumn } from '@/ui';
 
 import { buscarDivida } from '../dividasRepository';
 import type { DividaDetalhe, Parcela } from '../types';
@@ -33,6 +33,7 @@ export function DividaDetalheView({ id }: { id: string }) {
   const [erro, setErro] = useState<string | null>(null);
   // Mudar a tentativa dispara a carga de novo ("Tentar novamente").
   const [tentativa, setTentativa] = useState(0);
+  const coluna = useScreenColumn();
 
   useEffect(() => {
     let cancelado = false;
@@ -81,10 +82,12 @@ export function DividaDetalheView({ id }: { id: string }) {
 
   return (
     // O título "Dívida" fica no header; a descrição aparece no cartão porque é dado, não título.
-    <Screen underHeader>
+    // `list`: no tablet a rolagem usa a largura toda e o cartão e as parcelas ficam na coluna (EIX-94).
+    <Screen underHeader list>
       <FlatList
         data={divida.parcelas}
         keyExtractor={(parcela) => parcela.id}
+        contentContainerStyle={coluna}
         ListHeaderComponentStyle={styles.cabecalho}
         ListHeaderComponent={
           <Column gap="lg">
