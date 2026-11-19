@@ -3,7 +3,20 @@ import { RefreshControl, StyleSheet } from 'react-native';
 
 import { rotuloPerfil, rotuloStatus } from '@/features/auth/permissions';
 import { useDadosDaTela } from '@/lib/useDadosDaTela';
-import { List, Badge, Column, EmptyState, ListItem, Screen, Skeleton, Snackbar, Text, colors } from '@/ui';
+import {
+  List,
+  Badge,
+  Column,
+  EmptyState,
+  ListItem,
+  Screen,
+  ScreenColumn,
+  Skeleton,
+  Snackbar,
+  Text,
+  colors,
+  useScreenColumn,
+} from '@/ui';
 
 import type { Usuario } from './types';
 import { listarUsuarios } from './usuariosRepository';
@@ -20,10 +33,12 @@ export function UsuariosListView() {
   const router = useRouter();
   // Carrega ao abrir e ao voltar do detalhe (o perfil/status pode ter mudado), sem a lista piscar.
   const tela = useDadosDaTela(listarUsuarios);
+  const coluna = useScreenColumn();
 
   return (
     <Screen
       underHeader
+      list
       // Recarga que falhou com a lista já na tela: aviso no Snackbar, sem apagar a lista.
       overlay={
         tela.feedbackErro ? (
@@ -31,30 +46,34 @@ export function UsuariosListView() {
         ) : null
       }
     >
-      <Text tone="body">Toque em um usuário para alterar o perfil, aprovar ou bloquear.</Text>
+      {/* Fora da lista, na coluna: no tablet fica alinhado com as linhas (EIX-94). */}
+      <ScreenColumn>
+        <Text tone="body">Toque em um usuário para alterar o perfil, aprovar ou bloquear.</Text>
 
-      {tela.status === 'carregando' && (
-        <Column gap="sm">
-          <Skeleton height="xxl" accessibilityLabel="Carregando usuários" />
-          <Skeleton height="xxl" />
-          <Skeleton height="xxl" />
-        </Column>
-      )}
+        {tela.status === 'carregando' && (
+          <Column gap="sm">
+            <Skeleton height="xxl" accessibilityLabel="Carregando usuários" />
+            <Skeleton height="xxl" />
+            <Skeleton height="xxl" />
+          </Column>
+        )}
 
-      {tela.status === 'erro' && (
-        <EmptyState
-          title="Não foi possível carregar"
-          description={tela.erro ?? undefined}
-          actionLabel="Tentar novamente"
-          onAction={tela.recarregar}
-        />
-      )}
+        {tela.status === 'erro' && (
+          <EmptyState
+            title="Não foi possível carregar"
+            description={tela.erro ?? undefined}
+            actionLabel="Tentar novamente"
+            onAction={tela.recarregar}
+          />
+        )}
+      </ScreenColumn>
 
       {tela.status === 'pronto' && (
         <List
           data={tela.dados ?? []}
           keyExtractor={(item) => item.id}
           style={styles.lista}
+          contentContainerStyle={coluna}
           refreshControl={
             <RefreshControl
               refreshing={tela.atualizando}

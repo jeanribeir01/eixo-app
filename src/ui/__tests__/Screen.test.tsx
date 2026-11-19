@@ -1,10 +1,10 @@
 import { render, screen } from '@testing-library/react-native';
 import { HeaderHeightContext } from 'expo-router/react-navigation';
-import { KeyboardAvoidingView, ScrollView, StyleSheet, Text, useWindowDimensions } from 'react-native';
+import { FlatList, KeyboardAvoidingView, ScrollView, StyleSheet, Text, useWindowDimensions } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { FAB_ALTURA_RESERVADA } from '../FAB';
-import { Screen } from '../Screen';
+import { Screen, ScreenColumn, useScreenColumn } from '../Screen';
 import { colors, spacing } from '../tokens';
 
 jest.mock('react-native/Libraries/Utilities/useWindowDimensions', () => ({
@@ -202,5 +202,119 @@ describe('Screen responsivo (TAB-01)', () => {
     expect(StyleSheet.flatten(camadaFlutuante().props.style)).toMatchObject({ maxWidth: 720, alignSelf: 'center' });
     expect(screen.getByText('Mensagem')).toBeOnTheScreen();
     expect(screen.getByText('Botão flutuante')).toBeOnTheScreen();
+  });
+});
+
+// Tela de lista como as das features: campos na coluna, FlatList com a coluna no contentContainerStyle.
+function TelaDeLista() {
+  const coluna = useScreenColumn();
+  return (
+    <Screen list overlay={<Text>Mensagem</Text>} fab={<Text>Botão flutuante</Text>}>
+      <ScreenColumn>
+        <Text>Buscar</Text>
+      </ScreenColumn>
+      <FlatList
+        data={['Diesel']}
+        keyExtractor={(item) => item}
+        renderItem={({ item }) => <Text>{item}</Text>}
+        contentContainerStyle={coluna}
+      />
+    </Screen>
+  );
+}
+
+const COLUNA_TABLET = { width: '100%', maxWidth: 720, alignSelf: 'center', paddingHorizontal: spacing.base };
+
+function estiloConteudo() {
+  return screen.getByTestId('screen-conteudo').props.style;
+}
+
+function estiloDaLista() {
+  return StyleSheet.flatten(screen.UNSAFE_getByType(FlatList).props.contentContainerStyle) ?? {};
+}
+
+describe('Screen list (EIX-94)', () => {
+  afterEach(() => mockLargura(412));
+
+  it('412: nada muda, o respiro lateral continua no Screen e a coluna não acrescenta nada', () => {
+    mockLargura(412);
+    render(<TelaDeLista />);
+
+    expect(StyleSheet.flatten(estiloConteudo())).toMatchObject({ paddingHorizontal: spacing.base });
+    expect(StyleSheet.flatten(estiloConteudo()).maxWidth).toBeUndefined();
+    expect(chavesDeclaradas(screen.getByTestId('screen-coluna').props.style)).not.toContain('maxWidth');
+    expect(estiloDaLista().maxWidth).toBeUndefined();
+    expect(estiloDaLista().paddingHorizontal).toBeUndefined();
+  });
+
+  it('800: a rolagem ocupa a largura toda e linhas e campos ficam na mesma coluna de 720', () => {
+    mockLargura(800);
+    render(<TelaDeLista />);
+
+    // A View que contém a FlatList não limita a largura nem tira o respiro lateral da borda.
+    const chaves = chavesDeclaradas(estiloConteudo());
+    expect(chaves).not.toContain('maxWidth');
+    expect(chaves).not.toContain('paddingHorizontal');
+    expect(StyleSheet.flatten(estiloConteudo())).toMatchObject({ flex: 1, paddingVertical: spacing.lg });
+
+    // Campos acima da lista e conteúdo da lista: mesma coluna, então ficam alinhados.
+    expect(StyleSheet.flatten(screen.getByTestId('screen-coluna').props.style)).toMatchObject(COLUNA_TABLET);
+    expect(estiloDaLista()).toMatchObject(COLUNA_TABLET);
+  });
+
+  it('800: FAB e Snackbar continuam na coluna centralizada', () => {
+    mockLargura(800);
+    render(<TelaDeLista />);
+
+    expect(StyleSheet.flatten(camadaFlutuante().props.style)).toMatchObject({ maxWidth: 720, alignSelf: 'center' });
+    expect(screen.getByText('Mensagem')).toBeOnTheScreen();
+    expect(screen.getByText('Botão flutuante')).toBeOnTheScreen();
+  });
+
+  it('celular → tablet com a tela aberta: a mesma View deixa de declarar o respiro lateral e a lista ganha a coluna', () => {
+    mockLargura(412);
+    const { rerender } = render(<TelaDeLista />);
+    const conteudoAntes = screen.getByTestId('screen-conteudo');
+    expect(chavesDeclaradas(estiloConteudo())).toContain('paddingHorizontal');
+
+    mockLargura(800);
+    rerender(<TelaDeLista />);
+
+    // Atualização da View montada, não montagem nova: a chave some do estilo em vez de virar undefined.
+    expect(screen.getByTestId('screen-conteudo')).toBe(conteudoAntes);
+    expect(chavesDeclaradas(estiloConteudo())).not.toContain('paddingHorizontal');
+    expect(estiloDaLista()).toMatchObject(COLUNA_TABLET);
+    expect(screen.getByText('Diesel')).toBeOnTheScreen();
+  });
+
+  it('tablet → celular: a coluna sai e o respiro lateral volta para o Screen', () => {
+    mockLargura(800);
+    const { rerender } = render(<TelaDeLista />);
+
+    mockLargura(412);
+    rerender(<TelaDeLista />);
+
+    expect(StyleSheet.flatten(estiloConteudo())).toMatchObject({ paddingHorizontal: spacing.base });
+    expect(chavesDeclaradas(screen.getByTestId('screen-coluna').props.style)).not.toContain('maxWidth');
+    expect(estiloDaLista().maxWidth).toBeUndefined();
+  });
+
+  it('ScreenColumn sem filhos não desenha nada (nenhum gap a mais acima da lista)', () => {
+    mockLargura(800);
+    render(
+      <Screen list>
+        <ScreenColumn>{false}</ScreenColumn>
+        <Text>Lista</Text>
+      </Screen>,
+    );
+
+    expect(screen.queryByTestId('screen-coluna')).toBeNull();
+  });
+
+  it('sem list, o tablet continua limitando a View inteira (telas que não são de lista)', () => {
+    mockLargura(800);
+    render(<Screen><Text>Conteúdo</Text></Screen>);
+
+    expect(StyleSheet.flatten(estiloConteudo())).toMatchObject({ maxWidth: 720, paddingHorizontal: spacing.base });
   });
 });

@@ -7,7 +7,19 @@ import { rotuloStatusVeiculo } from '@/features/veiculos/types';
 import { isoParaDataBR } from '@/lib/datas';
 import { formatarMoeda } from '@/lib/money';
 import { useDadosDaTela } from '@/lib/useDadosDaTela';
-import { Button, Card, Column, EmptyState, ListItem, Screen, Snackbar, Text, colors, spacing } from '@/ui';
+import {
+  Button,
+  Card,
+  Column,
+  EmptyState,
+  ListItem,
+  Screen,
+  Snackbar,
+  Text,
+  colors,
+  spacing,
+  useScreenColumn,
+} from '@/ui';
 
 import { buscarVeiculoComHistorico } from './manutencaoRepository';
 import type { ManutencaoItem } from './types';
@@ -31,6 +43,7 @@ export function VeiculoDetalheView({ veiculoId }: VeiculoDetalheViewProps) {
   const buscar = useCallback(() => buscarVeiculoComHistorico(veiculoId), [veiculoId]);
   const tela = useDadosDaTela(buscar);
   const veiculo = tela.dados;
+  const coluna = useScreenColumn();
 
   if (tela.status === 'carregando') {
     return (
@@ -60,6 +73,8 @@ export function VeiculoDetalheView({ veiculoId }: VeiculoDetalheViewProps) {
     // O título "Veículo" fica no header; a placa aparece no cartão porque é dado, não título.
     <Screen
       underHeader
+      // No tablet a rolagem usa a largura toda e o cartão e o histórico ficam na coluna (EIX-94).
+      list
       // Recarga que falha com o histórico já na tela: avisa sem apagar o que está ali.
       overlay={
         tela.feedbackErro ? (
@@ -70,6 +85,7 @@ export function VeiculoDetalheView({ veiculoId }: VeiculoDetalheViewProps) {
       <FlatList
         data={veiculo.manutencoes}
         keyExtractor={(manutencao) => manutencao.id}
+        contentContainerStyle={coluna}
         refreshControl={
           <RefreshControl
             refreshing={tela.atualizando}

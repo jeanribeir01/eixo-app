@@ -2,7 +2,23 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { useFocusEffect, useRouter } from 'expo-router';
 import { ActivityIndicator, Alert } from 'react-native';
 
-import { List, Badge, Button, Column, EmptyState, Input, ListItem, Screen, Snackbar, Tabs, Text, colors, type BadgeTone } from '@/ui';
+import {
+  List,
+  Badge,
+  Button,
+  Column,
+  EmptyState,
+  Input,
+  ListItem,
+  Screen,
+  ScreenColumn,
+  Snackbar,
+  Tabs,
+  Text,
+  colors,
+  useScreenColumn,
+  type BadgeTone,
+} from '@/ui';
 
 import { formatarPlaca } from './placa';
 import { inativarVeiculo, listarVeiculos, reativarVeiculo, type Resultado } from './repository';
@@ -48,6 +64,7 @@ export function VeiculosListView() {
   const operacaoPendente = useRef(false);
   // Descarta respostas fora de ordem: se o usuário troca o filtro rápido, só a última vale.
   const ultimaRequisicao = useRef(0);
+  const coluna = useScreenColumn();
 
   useEffect(() => {
     const timer = setTimeout(() => setBuscaAplicada(busca), ATRASO_BUSCA_MS);
@@ -144,45 +161,53 @@ export function VeiculosListView() {
 
   return (
     // Tela interna, aberta pelo hub de Frota (EIX-77): o título "Veículos" vem do header nativo.
-    <Screen underHeader overlay={feedback && <Snackbar message={feedback.mensagem} tone={feedback.tone} onDismiss={() => setFeedback(null)} />}>
-      <Input
-        label="Buscar"
-        placeholder="Buscar por placa ou modelo"
-        value={busca}
-        onChangeText={setBusca}
-        autoCapitalize="none"
-        autoCorrect={false}
-      />
-
-      <Tabs options={opcoesFiltro} value={filtroStatus} onChange={setFiltroStatus} accessibilityLabel="Filtrar por status" scrollable />
-
-      {/* Único elemento cyan preenchido da tela: a ação primária (DESIGN_CYAN §1). */}
-      <Button label="Novo veículo" onPress={() => router.push('/frota/novo')} />
-
-      {status === 'carregando' && (
-        <Column align="center">
-          <ActivityIndicator size="small" color={colors.accent} accessibilityLabel="Carregando veículos" />
-        </Column>
-      )}
-
-      {status === 'erro' && (
-        <EmptyState title="Não foi possível carregar" description={erro ?? undefined} actionLabel="Tentar novamente" onAction={carregar} />
-      )}
-
-      {status === 'pronto' && veiculos.length === 0 && (
-        <EmptyState
-          title={filtrando ? 'Nenhum veículo encontrado' : 'Nenhum veículo cadastrado'}
-          description={filtrando ? 'Tente outra placa, modelo ou status.' : 'Cadastre o primeiro veículo da frota.'}
-          actionLabel={filtrando ? undefined : 'Novo veículo'}
-          onAction={filtrando ? undefined : () => router.push('/frota/novo')}
+    <Screen
+      underHeader
+      list
+      overlay={feedback && <Snackbar message={feedback.mensagem} tone={feedback.tone} onDismiss={() => setFeedback(null)} />}
+    >
+      {/* Fora da lista, na coluna: no tablet fica alinhado com as linhas (EIX-94). */}
+      <ScreenColumn>
+        <Input
+          label="Buscar"
+          placeholder="Buscar por placa ou modelo"
+          value={busca}
+          onChangeText={setBusca}
+          autoCapitalize="none"
+          autoCorrect={false}
         />
-      )}
+
+        <Tabs options={opcoesFiltro} value={filtroStatus} onChange={setFiltroStatus} accessibilityLabel="Filtrar por status" scrollable />
+
+        {/* Único elemento cyan preenchido da tela: a ação primária (DESIGN_CYAN §1). */}
+        <Button label="Novo veículo" onPress={() => router.push('/frota/novo')} />
+
+        {status === 'carregando' && (
+          <Column align="center">
+            <ActivityIndicator size="small" color={colors.accent} accessibilityLabel="Carregando veículos" />
+          </Column>
+        )}
+
+        {status === 'erro' && (
+          <EmptyState title="Não foi possível carregar" description={erro ?? undefined} actionLabel="Tentar novamente" onAction={carregar} />
+        )}
+
+        {status === 'pronto' && veiculos.length === 0 && (
+          <EmptyState
+            title={filtrando ? 'Nenhum veículo encontrado' : 'Nenhum veículo cadastrado'}
+            description={filtrando ? 'Tente outra placa, modelo ou status.' : 'Cadastre o primeiro veículo da frota.'}
+            actionLabel={filtrando ? undefined : 'Novo veículo'}
+            onAction={filtrando ? undefined : () => router.push('/frota/novo')}
+          />
+        )}
+      </ScreenColumn>
 
       {status === 'pronto' && veiculos.length > 0 && (
         <List
           data={veiculos}
           keyExtractor={(item) => item.id}
           style={{ flex: 1 }}
+          contentContainerStyle={coluna}
           renderItem={({ item }) => (
             <ListItem>
               <Column gap="sm">

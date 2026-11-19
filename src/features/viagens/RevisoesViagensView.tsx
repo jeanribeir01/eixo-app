@@ -10,10 +10,12 @@ import {
   EmptyState,
   Input,
   Screen,
+  ScreenColumn,
   Snackbar,
   Text,
   colors,
   spacing,
+  useScreenColumn,
 } from '@/ui';
 
 import { listarRevisoesPendentes, resolverRevisao } from './revisoesRepository';
@@ -35,6 +37,7 @@ export function RevisoesViagensView() {
   const tela = useDadosDaTela(listarRevisoesPendentes);
   const [feedback, setFeedback] = useState<Feedback | null>(null);
   const [resolvendoId, setResolvendoId] = useState<string | null>(null);
+  const coluna = useScreenColumn();
 
   const executarDecisao = useCallback(
     async (revisao: RevisaoViagem, status: 'Resolvida' | 'Descartada', observacao: string) => {
@@ -84,6 +87,7 @@ export function RevisoesViagensView() {
 
   return (
     <Screen
+      list
       overlay={
         feedback ? (
           <Snackbar
@@ -100,6 +104,7 @@ export function RevisoesViagensView() {
         ) : undefined
       }
     >
+      {/* Fora da coluna: o indicador já fica centralizado e precisa do flex da tela para ficar no meio. */}
       {tela.status === 'carregando' && (
         <View style={styles.centro}>
           <ActivityIndicator
@@ -110,22 +115,25 @@ export function RevisoesViagensView() {
         </View>
       )}
 
-      {tela.status === 'erro' && (
-        <EmptyState
-          icon="viagens"
-          title="Não foi possível carregar as revisões"
-          description={tela.erro ?? 'Verifique sua conexão e tente novamente.'}
-          actionLabel="Tentar novamente"
-          onAction={tela.recarregar}
-        />
-      )}
+      {/* Na coluna: no tablet o texto do erro não se espalha pela largura toda (EIX-94). */}
+      <ScreenColumn>
+        {tela.status === 'erro' && (
+          <EmptyState
+            icon="viagens"
+            title="Não foi possível carregar as revisões"
+            description={tela.erro ?? 'Verifique sua conexão e tente novamente.'}
+            actionLabel="Tentar novamente"
+            onAction={tela.recarregar}
+          />
+        )}
+      </ScreenColumn>
 
       {tela.status === 'pronto' && (
         <FlatList
           data={tela.dados ?? []}
           keyExtractor={(item) => item.id}
           style={styles.lista}
-          contentContainerStyle={styles.conteudo}
+          contentContainerStyle={[coluna, styles.conteudo]}
           ListHeaderComponent={
             <Text variant="bodySm" tone="muted">
               Viagens que o servidor recusou e cujo dado local foi preservado. Resolver ou

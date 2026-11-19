@@ -1,7 +1,20 @@
 import { act, fireEvent, render, screen } from '@testing-library/react-native';
+import { FlatList, StyleSheet, useWindowDimensions } from 'react-native';
+
+import { spacing } from '@/ui';
 
 import { ViagensLancamentosListView } from '../ViagensLancamentosListView';
 import { listarViagensVinculaveis, type ViagemVinculavel } from '../ponteRepository';
+
+// Largura da janela controlada pelo teste: 412 é celular, 800 é tablet (EIX-94).
+jest.mock('react-native/Libraries/Utilities/useWindowDimensions', () => ({
+  __esModule: true,
+  default: jest.fn(() => ({ width: 412, height: 900, scale: 1, fontScale: 1 })),
+}));
+
+function mockLargura(width: number) {
+  jest.mocked(useWindowDimensions).mockReturnValue({ width, height: 900, scale: 1, fontScale: 1 });
+}
 
 // O runner do GitHub Actions é mais lento que a máquina local.
 jest.setTimeout(15000);
@@ -100,5 +113,35 @@ describe('ViagensLancamentosListView', () => {
     await act(async () => fireEvent.press(screen.getByRole('button', { name: 'Tentar novamente' })));
 
     expect(await screen.findByText('ABC1D23 · São Paulo/SP → Curitiba/PR')).toBeOnTheScreen();
+  });
+});
+
+describe('ViagensLancamentosListView — tablet (EIX-94)', () => {
+  afterEach(() => mockLargura(412));
+
+  function estiloDoConteudo() {
+    return StyleSheet.flatten(screen.getByTestId('screen-conteudo').props.style);
+  }
+
+  function estiloDaLista() {
+    return StyleSheet.flatten(screen.UNSAFE_getByType(FlatList).props.contentContainerStyle);
+  }
+
+  it('412: nada muda, o respiro lateral continua no Screen e a lista não ganha coluna', async () => {
+    render(<ViagensLancamentosListView />);
+    await screen.findByText('ABC1D23 · São Paulo/SP → Curitiba/PR');
+
+    expect(estiloDoConteudo()).toMatchObject({ paddingHorizontal: spacing.base });
+    expect(estiloDaLista()?.maxWidth).toBeUndefined();
+  });
+
+  it('800: a lista rola na largura toda e o conteúdo fica na coluna de 720', async () => {
+    mockLargura(800);
+    render(<ViagensLancamentosListView />);
+    await screen.findByText('ABC1D23 · São Paulo/SP → Curitiba/PR');
+
+    expect(estiloDoConteudo().maxWidth).toBeUndefined();
+    expect(estiloDoConteudo().paddingHorizontal).toBeUndefined();
+    expect(estiloDaLista()).toMatchObject({ maxWidth: 720, alignSelf: 'center' });
   });
 });
