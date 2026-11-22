@@ -63,10 +63,15 @@ function veiculo(id: string, placa: string, custoPorKm: number): EstatisticaVeic
   };
 }
 
-function montarRanking(rotas: EstatisticaRota[], veiculos: EstatisticaVeiculo[]): Ranking {
+function montarRanking(
+  rotas: EstatisticaRota[],
+  veiculos: EstatisticaVeiculo[],
+  motivos: Pick<Ranking, 'rotasSemLucro' | 'veiculosSemKm'> = { rotasSemLucro: false, veiculosSemKm: false },
+): Ranking {
   return {
     rotasMaisLucrativas: ranquear(rotas, (r) => r.lucro_centavos),
     veiculosMaiorCustoPorKm: ranquear(veiculos, (v) => v.custo_por_km_centavos ?? 0),
+    ...motivos,
   };
 }
 
@@ -193,6 +198,34 @@ describe('RankingView', () => {
 
     fireEvent.press(screen.getByRole('tab', { name: 'Veículos' }));
     expect(await screen.findByText('Ainda sem dados para ranquear')).toBeOnTheScreen();
+  });
+
+  it('vazio sem viagem: pede para finalizar uma viagem', async () => {
+    responder(montarRanking([], []));
+
+    render(<RankingView />);
+
+    expect(await screen.findByText(/finalize uma viagem/)).toBeOnTheScreen();
+  });
+
+  it('vazio porque nenhuma rota deu lucro: explica o motivo, sem pedir para finalizar viagem', async () => {
+    responder(montarRanking([], [], { rotasSemLucro: true, veiculosSemKm: false }));
+
+    render(<RankingView />);
+
+    expect(await screen.findByText(/Nenhuma rota deu lucro/)).toBeOnTheScreen();
+    expect(screen.queryByText(/finalize uma viagem/)).not.toBeOnTheScreen();
+  });
+
+  it('vazio porque nenhum veículo rodou KM: explica o motivo, sem pedir para finalizar viagem', async () => {
+    responder(montarRanking([rota('r1', 'Curitiba', 133457)], [], { rotasSemLucro: false, veiculosSemKm: true }));
+
+    render(<RankingView />);
+    await screen.findByText('Top 3 rotas mais lucrativas');
+
+    fireEvent.press(screen.getByRole('tab', { name: 'Veículos' }));
+    expect(await screen.findByText(/não rodaram KM/)).toBeOnTheScreen();
+    expect(screen.queryByText(/finalize uma viagem/)).not.toBeOnTheScreen();
   });
 
   it('vazio só numa visão: a outra continua com o ranking', async () => {

@@ -13,7 +13,7 @@ import { useReducedMotion } from '@/ui/useReducedMotion';
 import { FiltroPeriodo } from '../components/FiltroPeriodo';
 import { mesAtual, type Periodo } from '../periodo';
 import { LinhaRanking } from './components/LinhaRanking';
-import { buscarRanking, type ItemRanqueado } from './ranking';
+import { buscarRanking, type ItemRanqueado, type Ranking } from './ranking';
 
 type Visao = 'rotas' | 'veiculos';
 
@@ -31,9 +31,21 @@ function viagens(quantidade: number): string {
   return quantidade === 1 ? '1 viagem' : `${quantidade} viagens`;
 }
 
-// Mesmo formato de KM do cadastro de Rotas: vírgula decimal ("408,5 km").
+// Vírgula decimal e uma casa ("408,5 km"), como o KM das telas de Viagem (formatarKm). O cadastro de
+// Rotas mostra a distância estimada com até duas casas; aqui é KM rodado somado, uma casa basta.
 function km(valor: number): string {
   return `${valor.toLocaleString('pt-BR', { maximumFractionDigits: 1 })} km`;
+}
+
+// O vazio tem motivos diferentes, e "finalize uma viagem" só serve quando de fato não houve viagem.
+function descricaoDoVazio(ranking: Ranking, visao: Visao): string {
+  if (visao === 'rotas' && ranking.rotasSemLucro) {
+    return 'Nenhuma rota deu lucro nas viagens finalizadas no período. Escolha outro período.';
+  }
+  if (visao === 'veiculos' && ranking.veiculosSemKm) {
+    return 'Os veículos com viagem finalizada no período não rodaram KM, então não há custo por KM para comparar.';
+  }
+  return 'O ranking usa as viagens finalizadas no período. Escolha outro período ou finalize uma viagem.';
 }
 
 // Aba Dashboards — ranking de eficiência logística (US13, EIX-46). Top 3 rotas mais lucrativas e Top 3
@@ -124,7 +136,7 @@ export function RankingView() {
         <EmptyState
           icon={visao === 'rotas' ? 'rotas' : 'frota'}
           title="Ainda sem dados para ranquear"
-          description="O ranking usa as viagens finalizadas no período. Escolha outro período ou finalize uma viagem."
+          description={descricaoDoVazio(ranking, visao)}
         />
       );
     }

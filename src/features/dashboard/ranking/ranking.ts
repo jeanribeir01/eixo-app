@@ -19,30 +19,40 @@ export type ItemRanqueado<T> = {
   // Posição em "competição": dois itens com a mesma métrica dividem a posição e o próximo pula
   // (1º, 1º, 3º). É o jeito que um pódio é lido, e não esconde que houve empate.
   posicao: number;
-  // Outro item do Top 3 tem a mesma métrica. A tela avisa, porque a posição repetida sozinha confunde.
+  // Outro item tem a mesma métrica, inclusive um que ficou fora do corte do Top 3. A tela avisa,
+  // porque a posição repetida sozinha confunde e o item cortado não aparece para mostrar o empate.
   empatado: boolean;
 };
 
 export type Ranking = {
   rotasMaisLucrativas: ItemRanqueado<EstatisticaRota>[];
   veiculosMaiorCustoPorKm: ItemRanqueado<EstatisticaVeiculo>[];
+  // Houve viagem finalizada no período, mas nenhuma rota deu lucro: o ranking de rotas fica vazio por
+  // isso, e não por falta de viagem. A tela usa para explicar o vazio com o motivo certo.
+  rotasSemLucro: boolean;
+  // Houve veículo com viagem finalizada, mas nenhum rodou KM: sem KM não existe custo por KM.
+  veiculosSemKm: boolean;
 };
 
 /**
- * Corta os primeiros `TAMANHO_DO_RANKING` itens, na ordem em que chegaram, e numera a posição.
+ * Numera a posição de cada item e corta os primeiros `TAMANHO_DO_RANKING`, na ordem em que chegaram.
  * `itens` precisa vir ordenado pela métrica, do melhor colocado para o pior (a RPC já entrega assim).
  * Com menos de 3 itens, devolve só os que existem.
  */
 export function ranquear<T>(itens: readonly T[], metrica: (item: T) => number): ItemRanqueado<T>[] {
-  const topo = itens.slice(0, TAMANHO_DO_RANKING);
+  // Posição e empate são decididos na lista inteira, e só depois se corta o Top 3. Cortar antes
+  // esconderia o empate entre o 3º e o 4º: o 4º sumiria e o 3º apareceria sem o aviso de "Empate".
+  const valores = itens.map(metrica);
 
-  return topo.map((item, indice) => {
-    const valor = metrica(item);
+  const ranqueados = itens.map((item, indice) => {
+    const valor = valores[indice];
     // Como a lista está ordenada, o primeiro item com o mesmo valor é quem define a posição do grupo.
-    const primeiroComOMesmoValor = topo.findIndex((outro) => metrica(outro) === valor);
-    const empatado = topo.some((outro, outroIndice) => outroIndice !== indice && metrica(outro) === valor);
+    const primeiroComOMesmoValor = valores.indexOf(valor);
+    const empatado = valores.some((outro, outroIndice) => outroIndice !== indice && outro === valor);
     return { item, posicao: primeiroComOMesmoValor + 1, empatado };
   });
+
+  return ranqueados.slice(0, TAMANHO_DO_RANKING);
 }
 
 /**
@@ -55,6 +65,10 @@ export async function buscarRanking(periodo: Periodo): Promise<Resultado<Ranking
   if (!rotas.ok) return rotas;
   if (!veiculos.ok) return veiculos;
 
+  // Rota que deu prejuízo (ou empatou em zero) não entra em "rotas mais lucrativas": mostrar um lucro
+  // negativo sob esse título diria que a rota é lucrativa quando ela perdeu dinheiro.
+  const comLucro = rotas.data.filter((rota) => rota.lucro_centavos > 0);
+
   // Veículo sem KM rodado tem R$/KM nulo (o banco evita a divisão por zero) e vem por último. Sem
   // custo por KM não há o que ranquear: ele fica fora, em vez de ocupar uma posição com "—".
   const comCustoPorKm = veiculos.data.filter(
@@ -65,8 +79,10 @@ export async function buscarRanking(periodo: Periodo): Promise<Resultado<Ranking
   return {
     ok: true,
     data: {
-      rotasMaisLucrativas: ranquear(rotas.data, (rota) => rota.lucro_centavos),
+      rotasMaisLucrativas: ranquear(comLucro, (rota) => rota.lucro_centavos),
       veiculosMaiorCustoPorKm: ranquear(comCustoPorKm, (veiculo) => veiculo.custo_por_km_centavos),
+      rotasSemLucro: rotas.data.length > 0 && comLucro.length === 0,
+      veiculosSemKm: veiculos.data.length > 0 && comCustoPorKm.length === 0,
     },
   };
 }

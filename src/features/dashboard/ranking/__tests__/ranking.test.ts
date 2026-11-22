@@ -90,20 +90,22 @@ describe('ranquear', () => {
     ]);
   });
 
+  it('empate entre o 3º e o 4º: o 3º avisa o empate mesmo com o 4º fora do Top 3', () => {
+    const resultado = ranquear([rota('a', 900), rota('b', 500), rota('c', 300), rota('d', 300)], lucro);
+
+    expect(resultado.map((r) => [r.item.rota_id, r.posicao, r.empatado])).toEqual([
+      ['a', 1, false],
+      ['b', 2, false],
+      ['c', 3, true],
+    ]);
+  });
+
   it('empate de todos: todos em 1º', () => {
     const resultado = ranquear([rota('a', 0), rota('b', 0), rota('c', 0)], lucro);
 
     expect(resultado.map((r) => r.posicao)).toEqual([1, 1, 1]);
   });
 
-  it('lucro negativo também ranqueia, na ordem da RPC', () => {
-    const resultado = ranquear([rota('a', -100), rota('b', -500)], lucro);
-
-    expect(resultado.map((r) => [r.item.rota_id, r.posicao])).toEqual([
-      ['a', 1],
-      ['b', 2],
-    ]);
-  });
 });
 
 describe('buscarRanking', () => {
@@ -133,6 +135,51 @@ describe('buscarRanking', () => {
 
     if (!resultado.ok) throw new Error('esperava sucesso');
     expect(resultado.data.veiculosMaiorCustoPorKm.map((r) => r.item.veiculo_id)).toEqual(['1']);
+    expect(resultado.data.veiculosSemKm).toBe(false);
+  });
+
+  it('nenhum veículo rodou KM: ranking vazio e veiculosSemKm avisa o motivo', async () => {
+    mockRotas.mockResolvedValue({ ok: true, data: [] });
+    mockVeiculos.mockResolvedValue({ ok: true, data: [veiculo('1', null)] });
+
+    const resultado = await buscarRanking(PERIODO);
+
+    if (!resultado.ok) throw new Error('esperava sucesso');
+    expect(resultado.data.veiculosMaiorCustoPorKm).toEqual([]);
+    expect(resultado.data.veiculosSemKm).toBe(true);
+  });
+
+  it('rota com prejuízo ou lucro zero fica fora das mais lucrativas', async () => {
+    mockRotas.mockResolvedValue({ ok: true, data: [rota('a', 900), rota('b', 0), rota('c', -100)] });
+    mockVeiculos.mockResolvedValue({ ok: true, data: [] });
+
+    const resultado = await buscarRanking(PERIODO);
+
+    if (!resultado.ok) throw new Error('esperava sucesso');
+    expect(resultado.data.rotasMaisLucrativas.map((r) => r.item.rota_id)).toEqual(['a']);
+    expect(resultado.data.rotasSemLucro).toBe(false);
+  });
+
+  it('todas as rotas com prejuízo: ranking vazio e rotasSemLucro avisa o motivo', async () => {
+    mockRotas.mockResolvedValue({ ok: true, data: [rota('a', -100), rota('b', -500)] });
+    mockVeiculos.mockResolvedValue({ ok: true, data: [] });
+
+    const resultado = await buscarRanking(PERIODO);
+
+    if (!resultado.ok) throw new Error('esperava sucesso');
+    expect(resultado.data.rotasMaisLucrativas).toEqual([]);
+    expect(resultado.data.rotasSemLucro).toBe(true);
+  });
+
+  it('sem viagem nenhuma: os dois avisos ficam desligados', async () => {
+    mockRotas.mockResolvedValue({ ok: true, data: [] });
+    mockVeiculos.mockResolvedValue({ ok: true, data: [] });
+
+    const resultado = await buscarRanking(PERIODO);
+
+    if (!resultado.ok) throw new Error('esperava sucesso');
+    expect(resultado.data.rotasSemLucro).toBe(false);
+    expect(resultado.data.veiculosSemKm).toBe(false);
   });
 
   it('erro nas rotas: devolve a mensagem da US10', async () => {
