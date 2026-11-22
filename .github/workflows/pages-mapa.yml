@@ -1,0 +1,40 @@
+name: Pages (mapa de arquitetura)
+
+# Publica só docs/mapa/index.html no GitHub Pages (EIX-95). O resto de docs/ (ADRs) e o
+# eixo-mapa.json dos agentes nunca entram no site: o artefato é montado com um arquivo só.
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'docs/mapa/index.html'
+      - '.github/workflows/pages-mapa.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    name: deploy
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/configure-pages@v5
+      - name: Monta o site com o mapa
+        run: |
+          mkdir -p _site
+          cp docs/mapa/index.html _site/index.html
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: _site
+      - id: deployment
+        uses: actions/deploy-pages@v4
