@@ -106,7 +106,7 @@ T4 → T5 → T6 → T7 → T8
 
 ---
 
-### T3: Repositório dos gráficos
+### T3: ✅ Repositório dos gráficos
 
 **What**: `buscarFluxoMensal` e `buscarDespesasPorCategoria`, com Zod na resposta e tradução de erro.
 **Where**: `src/features/dashboard/graficos/queries.ts`
@@ -121,8 +121,8 @@ T4 → T5 → T6 → T7 → T8
 
 **Done when**:
 
-- [ ] Testes em `graficos/__tests__/queries.test.ts` passam
-- [ ] Gate quick passa
+- [x] Testes em `graficos/__tests__/queries.test.ts` passam (10)
+- [x] Gate quick passa
 
 **Tests**: unit
 **Gate**: quick
