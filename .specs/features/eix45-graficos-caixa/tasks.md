@@ -82,7 +82,7 @@ T4 → T5 → T6 → T7 → T8
 
 ---
 
-### T2: Aplicar a migration na nuvem e regerar os tipos
+### T2: ✅ Aplicar a migration na nuvem e regerar os tipos
 
 **What**: `db push --remote` (com dry-run aprovado pelo usuário) e `gen types` em `src/types/database.ts`.
 **Where**: `src/types/database.ts`
@@ -97,9 +97,9 @@ T4 → T5 → T6 → T7 → T8
 
 **Done when**:
 
-- [ ] Usuário aprovou o dry-run
-- [ ] `database.ts` tem `fluxo_caixa_mensal` e `despesas_por_categoria`
-- [ ] `npm run typecheck` passa
+- [x] Usuário aprovou o dry-run (22/11/2026)
+- [x] `database.ts` tem `fluxo_caixa_mensal` e `despesas_por_categoria`
+- [x] `npm run typecheck` passa
 
 **Tests**: none (matrix: Tipos gerados = none)
 **Gate**: build

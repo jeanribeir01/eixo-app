@@ -607,6 +607,15 @@ export type Database = {
         }
         Returns: string
       }
+      despesas_por_categoria: {
+        Args: { data_final: string; data_inicial: string }
+        Returns: {
+          categoria_id: string
+          percentual: number
+          titulo: string
+          total_centavos: number
+        }[]
+      }
       estatisticas_rotas: {
         Args: { data_final: string; data_inicial: string }
         Returns: {
@@ -662,6 +671,14 @@ export type Database = {
         }[]
       }
       excluir_divida: { Args: { id: string }; Returns: Json }
+      fluxo_caixa_mensal: {
+        Args: { mes_final: string; meses: number }
+        Returns: {
+          entradas_centavos: number
+          mes: string
+          saidas_centavos: number
+        }[]
+      }
       kpis_financeiros: {
         Args: { data_final: string; data_inicial: string }
         Returns: Json
