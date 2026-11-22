@@ -1,0 +1,635 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Eixo Certo · mapa de arquitetura</title>
+<meta name="robots" content="noindex">
+<style>
+  :root{
+    --canvas:#fafaf9; --surface:#ffffff; --border:#e8e6e5; --border-muted:#d6d3d1;
+    --muted:#a8a29e; --body:#78716c; --primary:#0c0a09; --inverted:#1c1917;
+    --wash:#c1e1f7; --accent:#3ba6f1; --edge:#3398e1;
+    --r-card:10px; --r-pill:9999px;
+    --font: Inter, "Inter Tight", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+    --mono: ui-monospace, "JetBrains Mono", "Cascadia Code", Menlo, Consolas, monospace;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;height:100%;background:var(--canvas);color:var(--primary);font-family:var(--font);font-size:14px;-webkit-font-smoothing:antialiased}
+  button{font:inherit;color:inherit}
+  .app{display:grid;grid-template-rows:auto 1fr;grid-template-columns:minmax(0,1fr);height:100vh;height:100dvh}
+  header{display:flex;flex-wrap:wrap;align-items:center;gap:10px 16px;padding:12px 16px;border-bottom:1px solid var(--border);background:var(--canvas)}
+  .brand{display:flex;flex-direction:column;min-width:220px;margin-right:auto}
+  .brand h1{margin:0;font-size:18px;font-weight:400;letter-spacing:-.01em}
+  .brand h1 b{font-weight:400;background:var(--wash);border-radius:4px;padding:0 4px}
+  .brand small{color:var(--body);font-size:12px}
+  .search{position:relative}
+  .search input{width:230px;height:36px;border:1px solid var(--border);border-radius:6px;background:var(--surface);padding:0 10px 0 30px;font:inherit;color:var(--primary);outline:none}
+  .search input:focus{border-color:var(--edge)}
+  .search svg{position:absolute;left:9px;top:10px;color:var(--muted)}
+  .chips{display:flex;gap:6px;flex-wrap:wrap}
+  .chip{display:inline-flex;align-items:center;gap:6px;height:30px;padding:0 12px;border:1px solid var(--border);border-radius:var(--r-pill);background:var(--surface);cursor:pointer;font-size:12.5px;color:var(--body);user-select:none}
+  .chip .dot{width:8px;height:8px;border-radius:50%}
+  .chip[aria-pressed="true"]{color:var(--primary);border-color:var(--primary)}
+  .tools{display:flex;gap:6px;align-items:center}
+  .iconbtn{width:34px;height:34px;border:1px solid var(--border);border-radius:var(--r-pill);background:var(--surface);cursor:pointer;display:grid;place-items:center;color:var(--body)}
+  .iconbtn:hover,.chip:hover{border-color:var(--border-muted);color:var(--primary)}
+  .toggle{display:inline-flex;align-items:center;gap:6px;font-size:12.5px;color:var(--body);cursor:pointer;user-select:none}
+  .toggle input{accent-color:var(--accent)}
+  main{display:grid;grid-template-columns:minmax(0,1fr) 400px;min-height:0;min-width:0}
+  .stage{position:relative;min-height:0;overflow:hidden;touch-action:none;cursor:grab}
+  .stage.dragging{cursor:grabbing}
+  svg#graph{width:100%;height:100%;display:block}
+  aside{border-left:1px solid var(--border);background:var(--canvas);display:flex;flex-direction:column;min-height:0}
+  .tabs{display:flex;gap:4px;padding:12px 12px 0}
+  .tab{flex:1;height:32px;border:1px solid var(--border);border-radius:var(--r-pill);background:var(--surface);cursor:pointer;font-size:12.5px;color:var(--body)}
+  .tab[aria-selected="true"]{background:var(--inverted);border-color:var(--inverted);color:#fff}
+  .panel{flex:1;overflow:auto;padding:12px;display:flex;flex-direction:column;gap:8px}
+  .card{background:var(--surface);border:1px solid var(--border);border-radius:var(--r-card);padding:12px 14px}
+  .flow{cursor:pointer}
+  .flow:hover{border-color:var(--border-muted)}
+  .flow.active{border-color:var(--edge)}
+  .flow h3{margin:0 0 4px;font-size:14px;font-weight:500;display:flex;gap:8px;align-items:baseline}
+  .flow h3 .fid{font-family:var(--mono);font-size:11px;color:var(--muted)}
+  .meta{display:flex;gap:4px;flex-wrap:wrap;margin-top:6px}
+  .tag{font-size:11px;padding:2px 8px;border-radius:var(--r-pill);border:1px solid var(--border);color:var(--body);background:var(--canvas)}
+  .tag.us{border-color:var(--wash);background:#eef7fd;color:#1f6ea8}
+  .tag.warn{border-color:#f3d9b5;background:#fdf6ec;color:#8a5a14}
+  .tag.pr{border-color:#d8cdef;background:#f6f2fd;color:#5b3f9a}
+  .muted{color:var(--body);font-size:12.5px;line-height:1.5}
+  ol.steps{list-style:none;margin:10px 0 0;padding:0;display:flex;flex-direction:column;gap:2px}
+  ol.steps li{display:grid;grid-template-columns:24px 1fr;gap:8px;padding:6px 6px;border-radius:6px;cursor:pointer;align-items:start}
+  ol.steps li:hover{background:var(--canvas)}
+  ol.steps li.cur{background:#eef7fd}
+  ol.steps .n{width:22px;height:22px;border-radius:50%;display:grid;place-items:center;font-size:11px;background:var(--canvas);border:1px solid var(--border);color:var(--body)}
+  ol.steps li.cur .n{background:var(--accent);border-color:var(--accent);color:#fff}
+  ol.steps .t{font-size:12.5px;line-height:1.45}
+  ol.steps .t b{font-weight:500;font-family:var(--mono);font-size:11.5px}
+  .player{display:flex;gap:6px;margin-top:10px;align-items:center}
+  .btn{height:32px;padding:0 14px;border-radius:var(--r-pill);border:1px solid var(--border);background:var(--surface);cursor:pointer;font-size:12.5px}
+  .btn.primary{background:var(--accent);border-color:var(--accent);color:#fff}
+  .inv{margin:10px 0 0;padding-left:16px;color:var(--body);font-size:12px;line-height:1.5}
+  h2{font-size:20px;font-weight:400;margin:0 0 2px;letter-spacing:-.01em;word-break:break-word}
+  .kv{display:grid;grid-template-columns:76px 1fr;gap:6px 10px;font-size:12.5px;margin-top:10px}
+  .kv dt{color:var(--muted)}
+  .kv dd{margin:0}
+  code,.mono{font-family:var(--mono);font-size:11.5px}
+  .path{font-family:var(--mono);font-size:11.5px;color:var(--body);word-break:break-all}
+  .links{display:flex;flex-direction:column;gap:2px;margin-top:4px}
+  .link{display:flex;justify-content:space-between;gap:8px;padding:6px 8px;border-radius:6px;cursor:pointer;font-size:12.5px;border:1px solid transparent}
+  .link:hover{background:var(--canvas);border-color:var(--border)}
+  .link small{color:var(--muted);font-family:var(--mono);font-size:10.5px;white-space:nowrap}
+  .section{font-size:11px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);margin:14px 0 4px}
+  .sev{display:inline-block;width:8px;height:8px;border-radius:50%;margin-right:6px}
+  .empty{color:var(--body);font-size:13px;line-height:1.6;padding:8px 4px}
+  .legend-row{display:flex;align-items:center;gap:10px;font-size:12.5px;padding:3px 0}
+  #tip{position:fixed;pointer-events:none;z-index:10;max-width:340px;background:var(--surface);border:1px solid var(--border);border-radius:var(--r-card);padding:10px 12px;box-shadow:0 6px 24px rgba(12,10,9,.08);font-size:12.5px;line-height:1.45;opacity:0;transform:translateY(4px);transition:opacity .12s,transform .12s}
+  #tip.show{opacity:1;transform:none}
+  #tip b{font-weight:500;font-size:13px}
+  #tip .path{margin:2px 0 6px}
+  /* svg */
+  .col-bg{fill:#f5f5f4}
+  .col-title{font-size:12px;fill:var(--body);letter-spacing:.06em;text-transform:uppercase}
+  .node{cursor:pointer}
+  .node .box{fill:var(--surface);stroke:var(--border);stroke-width:1}
+  .node:hover .box{stroke:var(--border-muted)}
+  .node .lbl{font-size:12.5px;fill:var(--primary);font-weight:500}
+  .node .sub{font-size:10.5px;fill:var(--muted)}
+  .node .badge rect{stroke-width:1}
+  .node .badge text{font-size:9.5px}
+  .node.dim{opacity:.16}
+  .node.on .box{stroke:var(--edge)}
+  .node.sel .box{stroke:var(--accent);stroke-width:2}
+  .node.cur .ring{opacity:1}
+  .node .ring{fill:none;stroke:var(--accent);stroke-width:6;opacity:0;stroke-opacity:.25}
+  .node.status-placeholder .box,.node.status-sem-ui .box{stroke-dasharray:4 3}
+  .fnum circle{fill:var(--accent)}
+  .fnum text{fill:#fff;font-size:10px;font-weight:600}
+  .edge{fill:none;stroke:#a8a29e;stroke-width:1.2;opacity:.42;transition:opacity .15s}
+  .edge.k-navega{stroke:#c9c5c2;stroke-dasharray:4 4}
+  .edge.k-le{stroke-dasharray:2 3}
+  .edge.k-local{stroke:#78716c;stroke-dasharray:7 3}
+  .edge.k-evento{stroke-dasharray:1 4;stroke-linecap:round;stroke-width:1.6}
+  .edge.k-trigger{stroke:#78716c;stroke-dasharray:8 3 2 3}
+  .edge.k-fk{stroke:#d6d3d1;stroke-dasharray:2 2}
+  .edge.k-rpc{stroke:#44403c;stroke-width:1.6}
+  .edge.k-rest{stroke:#78716c}
+  .edge.k-storage{stroke:#78716c;stroke-width:1.6}
+  .edge.k-chama{stroke:#8f8984}
+  .edge.dim{opacity:.05}
+  .edge.hot{stroke:var(--accent);opacity:1;stroke-width:2}
+  .edge.hidden{display:none}
+  .flowlink{fill:none;stroke:var(--accent);stroke-width:1.6;stroke-dasharray:3 4;opacity:.9}
+  .edge.hot.anim,.flowlink{animation:dash 1.2s linear infinite}
+  @keyframes dash{to{stroke-dashoffset:-14}}
+  .edge.hot.anim{stroke-dasharray:6 4}
+  @media (prefers-reduced-motion: reduce){.edge.hot.anim,.flowlink{animation:none}}
+  @media (max-width: 960px){
+    main{grid-template-columns:minmax(0,1fr);grid-template-rows:1fr 46vh}
+    aside{border-left:0;border-top:1px solid var(--border)}
+    .search input{width:170px}
+    .brand{min-width:0;flex-basis:100%}
+    header{gap:8px;padding:10px 12px}
+    .chips{flex-wrap:nowrap;overflow-x:auto;width:100%;min-width:0;max-width:100%;scrollbar-width:none}
+    .chips::-webkit-scrollbar{display:none}
+    .chip{flex:none}
+    .search{flex:1}.search input{width:100%}
+  }
+</style>
+</head>
+<body>
+<div class="app">
+  <header>
+    <div class="brand">
+      <h1>Eixo Certo · <b>mapa</b> de arquitetura</h1>
+      <small id="stats"></small>
+    </div>
+    <label class="search">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
+      <input id="q" type="search" placeholder="Buscar nó, arquivo, US, RPC…" aria-label="Buscar">
+    </label>
+    <div class="chips" id="modchips" role="group" aria-label="Filtrar por módulo"></div>
+    <label class="toggle"><input type="checkbox" id="tNav" checked> navegação</label>
+    <label class="toggle"><input type="checkbox" id="tFk" checked> FKs</label>
+    <div class="tools">
+      <button class="iconbtn" id="zIn" title="Aproximar" aria-label="Aproximar">+</button>
+      <button class="iconbtn" id="zOut" title="Afastar" aria-label="Afastar">−</button>
+      <button class="iconbtn" id="zFit" title="Ajustar à tela" aria-label="Ajustar à tela">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/></svg>
+      </button>
+    </div>
+  </header>
+  <main>
+    <div class="stage" id="stage">
+      <svg id="graph" aria-label="Diagrama de arquitetura">
+        <defs>
+          <marker id="ar" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M0 1 9 5 0 9z" fill="#a8a29e"/></marker>
+          <marker id="arHot" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M0 1 9 5 0 9z" fill="#3ba6f1"/></marker>
+        </defs>
+        <g id="vp"><g id="cols"></g><g id="edges"></g><g id="flowlinks"></g><g id="nodes"></g></g>
+      </svg>
+    </div>
+    <aside>
+      <div class="tabs" role="tablist">
+        <button class="tab" role="tab" data-tab="fluxos" aria-selected="true">Fluxos</button>
+        <button class="tab" role="tab" data-tab="no" aria-selected="false">Nó</button>
+        <button class="tab" role="tab" data-tab="legenda" aria-selected="false">Legenda</button>
+      </div>
+      <div class="panel" id="panel"></div>
+    </aside>
+  </main>
+</div>
+<div id="tip" role="tooltip"></div>
+<script type="application/json" id="data">{"meta":{"baseline":{"branch":"origin/main","commit":"fc2f3bd","generatedAt":"2026-11-22"}},"layers":[{"id":"rotas","label":"Rotas · app/"},{"id":"telas","label":"Telas · Views"},{"id":"dominio","label":"Estado & repositórios"},{"id":"offline","label":"Offline & libs"},{"id":"infra","label":"Infra no cliente"},{"id":"api","label":"Supabase · API"},{"id":"dados","label":"Supabase · tabelas"},{"id":"regras","label":"Supabase · triggers"}],"modules":{"auth":"Auth & RBAC","nav":"Navegação","fin":"Financeiro","frota":"Frota","viagem":"Viagens (offline)","ponte":"Ponte Caixa↔Frota","bi":"BI / Dashboards","shared":"Compartilhado"},"nodes":[{"id":"r_root","label":"app/_layout.tsx","layer":"rotas","module":"nav","kind":"layout","path":"app/_layout.tsx","summary":"Raiz. Bloqueia Expo Go, carrega fontes, roda as migrations do SQLite (useMigrations), acompanha sessão e perfil e liga o listener de sync. Decide qual grupo existe: (auth) sem sessão, (pendente) com sessão não aprovada, (app) aprovado e com cache local pronto.","us":["US15","US17"],"rnf":["RNF01"],"perfis":[],"api":["Stack.Protected","useMigrations","startNetworkSyncListener"],"status":"main"},{"id":"r_login","label":"(auth)/login","layer":"rotas","module":"auth","kind":"route","path":"app/(auth)/login.tsx","summary":"Única rota sem sessão.","us":[],"rnf":[],"perfis":[],"api":[],"status":"main"},{"id":"r_pendente","label":"(pendente)/aguardando","layer":"rotas","module":"auth","kind":"route","path":"app/(pendente)/aguardando.tsx","summary":"Sessão válida mas usuário não Ativo (aguardando aprovação, bloqueado ou erro ao ler o perfil).","us":[],"rnf":[],"perfis":[],"api":[],"status":"main"},{"id":"r_app","label":"(app)/_layout.tsx","layer":"rotas","module":"nav","kind":"layout","path":"app/(app)/_layout.tsx","summary":"Pilha das telas internas, com títulos e guards: podeVerCategorias (Admin, Financeiro), podeVerFrota (Admin, Gestor), podeVerViagens (Admin, Gestor, Motorista), podeVerUsuarios (Admin). Rota fora do perfil nem existe na árvore.","us":["US17"],"rnf":[],"perfis":[],"api":["Stack.Protected guard=podeVer*"],"status":"main"},{"id":"r_tabs","label":"(tabs)/_layout.tsx","layer":"rotas","module":"nav","kind":"layout","path":"app/(app)/(tabs)/_layout.tsx","summary":"Tab bar montada por useMenu(); aba fora do perfil não é registrada. index.tsx redireciona para a aba inicial do perfil.","us":["US17"],"rnf":[],"perfis":[],"api":[],"status":"main"},{"id":"r_tab_fin","label":"aba /financeiro","layer":"rotas","module":"fin","kind":"tab","path":"app/(app)/(tabs)/financeiro.tsx","summary":"Aba inicial de Admin e Financeiro.","us":[],"rnf":[],"perfis":["Admin","Financeiro"],"api":[],"status":"main"},{"id":"r_tab_frota","label":"aba /frota","layer":"rotas","module":"frota","kind":"tab","path":"app/(app)/(tabs)/frota.tsx","summary":"Aba inicial do Gestor de Frota.","us":[],"rnf":[],"perfis":["Admin","Gestor de Frota"],"api":[],"status":"main"},{"id":"r_tab_viagens","label":"aba /viagens","layer":"rotas","module":"viagem","kind":"tab","path":"app/(app)/(tabs)/viagens.tsx","summary":"Aba inicial do Motorista; lista de viagens.","us":[],"rnf":[],"perfis":["Admin","Gestor de Frota","Motorista"],"api":[],"status":"main"},{"id":"r_tab_dash","label":"aba /dashboards","layer":"rotas","module":"bi","kind":"tab","path":"app/(app)/(tabs)/dashboards.tsx","summary":"Na main mostra ModuloEmBreveView. O PR #56 troca por RankingView.","us":["US11","US12","US13"],"rnf":[],"perfis":["Admin","Gestor de Frota","Financeiro"],"api":[],"status":"placeholder"},{"id":"r_tab_config","label":"aba /configuracoes","layer":"rotas","module":"auth","kind":"tab","path":"app/(app)/(tabs)/configuracoes.tsx","summary":"Conta, perfil, Usuários (Admin) e Sair.","us":[],"rnf":[],"perfis":["Admin","Gestor de Frota","Financeiro","Motorista"],"api":[],"status":"main"},{"id":"r_categorias","label":"/categorias/*","layer":"rotas","module":"fin","kind":"route","path":"app/(app)/categorias/{index,nova,[id]/editar}.tsx","summary":"Lista, nova e edição.","us":["US01"],"rnf":[],"perfis":["Admin","Financeiro"],"api":[],"status":"main"},{"id":"r_formas","label":"/formas-pagamento/*","layer":"rotas","module":"fin","kind":"route","path":"app/(app)/formas-pagamento/{index,nova,[id]/editar}.tsx","summary":"Lista, nova e edição.","us":["US02"],"rnf":[],"perfis":["Admin","Financeiro"],"api":[],"status":"main"},{"id":"r_movs","label":"/movimentacoes/*","layer":"rotas","module":"fin","kind":"route","path":"app/(app)/movimentacoes/{index,nova,[id]/editar}.tsx","summary":"Lista do mês, nova e edição.","us":["US03"],"rnf":[],"perfis":["Admin","Financeiro"],"api":[],"status":"main"},{"id":"r_caixa","label":"/caixa","layer":"rotas","module":"fin","kind":"route","path":"app/(app)/caixa/index.tsx","summary":"Saldo e projeção.","us":["US05"],"rnf":[],"perfis":["Admin","Financeiro"],"api":[],"status":"main"},{"id":"r_dividas","label":"/dividas/*","layer":"rotas","module":"fin","kind":"route","path":"app/(app)/dividas/{index,nova,[id]}.tsx","summary":"Lista, nova e detalhe.","us":["US04"],"rnf":[],"perfis":["Admin","Financeiro"],"api":[],"status":"main"},{"id":"r_ponte","label":"/viagens/lancamentos · /viagens/[id]","layer":"rotas","module":"ponte","kind":"route","path":"app/(app)/viagens/{lancamentos,[id]/index}.tsx","summary":"Lançamentos por viagem (guard do Financeiro, não da Frota).","us":["US09"],"rnf":[],"perfis":["Admin","Financeiro"],"api":[],"status":"main"},{"id":"r_veiculos","label":"/frota/veiculos · novo · editar","layer":"rotas","module":"frota","kind":"route","path":"app/(app)/frota/{veiculos,novo,[id]/editar}.tsx","summary":"A lista mora em /frota/veiculos porque /frota é a URL da aba.","us":["US06"],"rnf":[],"perfis":["Admin","Gestor de Frota"],"api":[],"status":"main"},{"id":"r_veiculo_det","label":"/frota/[id]","layer":"rotas","module":"frota","kind":"route","path":"app/(app)/frota/[id]/index.tsx","summary":"Veículo com histórico de manutenções.","us":["US06-b"],"rnf":[],"perfis":["Admin","Gestor de Frota"],"api":[],"status":"main"},{"id":"r_rotas","label":"/rotas/*","layer":"rotas","module":"frota","kind":"route","path":"app/(app)/rotas/{index,nova,[id]/editar}.tsx","summary":"Trechos padrão.","us":["US07"],"rnf":[],"perfis":["Admin","Gestor de Frota"],"api":[],"status":"main"},{"id":"r_manut","label":"/manutencoes/*","layer":"rotas","module":"frota","kind":"route","path":"app/(app)/manutencoes/{index,nova}.tsx","summary":"Ordens de serviço.","us":["US06-b"],"rnf":[],"perfis":["Admin","Gestor de Frota"],"api":[],"status":"main"},{"id":"r_viagem_nova","label":"/viagens/nova","layer":"rotas","module":"viagem","kind":"route","path":"app/(app)/viagens/nova.tsx","summary":"Abrir viagem.","us":["US08"],"rnf":[],"perfis":["Admin","Gestor de Frota","Motorista"],"api":[],"status":"main"},{"id":"r_viagem_fechar","label":"/viagens/[id]/fechar","layer":"rotas","module":"viagem","kind":"route","path":"app/(app)/viagens/[id]/fechar.tsx","summary":"Fechar viagem.","us":["US08"],"rnf":[],"perfis":["Admin","Gestor de Frota","Motorista"],"api":[],"status":"main"},{"id":"r_revisoes","label":"/viagens/revisoes","layer":"rotas","module":"viagem","kind":"route","path":"app/(app)/viagens/revisoes.tsx","summary":"Fila de conflitos de hodômetro.","us":["US08"],"rnf":[],"perfis":["Admin","Gestor de Frota"],"api":[],"status":"main"},{"id":"r_usuarios","label":"/usuarios/*","layer":"rotas","module":"auth","kind":"route","path":"app/(app)/usuarios/{index,[id]}.tsx","summary":"Gestão de usuários.","us":["US16"],"rnf":[],"perfis":["Admin"],"api":[],"status":"main"},{"id":"v_login","label":"LoginView","layer":"telas","module":"auth","kind":"screen","path":"src/features/auth/LoginView.tsx","summary":"Botão Google; e-mail/senha só com EXPO_PUBLIC_LOGIN_EMAIL_HABILITADO=true (contas de teste).","us":["US15"],"rnf":[],"perfis":[],"api":[],"status":"main"},{"id":"v_aguardando","label":"AguardandoLiberacaoView","layer":"telas","module":"auth","kind":"screen","path":"src/features/auth/AguardandoLiberacaoView.tsx","summary":"Explica o status (aguardando, bloqueado, erro), permite recarregar o perfil ou sair.","us":["US16"],"rnf":[],"perfis":[],"api":[],"status":"main"},{"id":"v_conta","label":"ContaView","layer":"telas","module":"auth","kind":"screen","path":"src/features/auth/ContaView.tsx","summary":"Dados da conta Google, perfil, atalho Usuários (só Admin), versão e Sair.","us":[],"rnf":[],"perfis":[],"api":[],"status":"main"},{"id":"v_hub_fin","label":"FinanceiroHubView","layer":"telas","module":"fin","kind":"screen","path":"src/navigation/FinanceiroHubView.tsx","summary":"Saldo atual em destaque (recarrega no foco) + atalhos Caixa e Cadastros + FAB Nova movimentação. Tablet: duas colunas.","us":["US05"],"rnf":[],"perfis":[],"api":[],"status":"main"},{"id":"v_hub_frota","label":"FrotaHubView","layer":"telas","module":"frota","kind":"screen","path":"src/navigation/FrotaHubView.tsx","summary":"Atalhos Manutenções, Veículos, Rotas.","us":[],"rnf":[],"perfis":[],"api":[],"status":"main"},{"id":"v_embreve","label":"ModuloEmBreveView","layer":"telas","module":"bi","kind":"screen","path":"src/navigation/ModuloEmBreveView.tsx","summary":"Placeholder da aba Dashboards na main (removido no PR #56).","us":[],"rnf":[],"perfis":[],"api":[],"status":"placeholder"},{"id":"v_ranking","label":"RankingView","layer":"telas","module":"bi","kind":"screen","path":"src/features/dashboard/ranking/RankingView.tsx","summary":"Abas Rotas/Veículos, Top 3 com empate em competição, filtro de período. Só na branch feat/eix-46.","us":["US13"],"rnf":[],"perfis":[],"api":[],"status":"pr-56"},{"id":"v_filtro","label":"FiltroPeriodo","layer":"telas","module":"bi","kind":"component","path":"src/features/dashboard/components/FiltroPeriodo.tsx","summary":"Mês / Ano / Customizado (teto 366 dias). Na main não tem consumidor; o PR #56 usa.","us":["US11"],"rnf":[],"perfis":[],"api":["periodo.ts","schema.ts (periodoCustomizadoSchema)"],"status":"sem-ui"},{"id":"v_categorias","label":"Categorias List + Form","layer":"telas","module":"fin","kind":"screen","path":"src/features/categorias/{CategoriasListView,CategoriaFormView}.tsx","summary":"Abas Entrada/Saída, Switch de ativa (soft delete).","us":["US01"],"rnf":[],"perfis":[],"api":[],"status":"main"},{"id":"v_formas","label":"FormasPagamento List + Form","layer":"telas","module":"fin","kind":"screen","path":"src/features/formas-pagamento/*View.tsx","summary":"Habilitar/desabilitar.","us":["US02"],"rnf":[],"perfis":[],"api":[],"status":"main"},{"id":"v_movs_list","label":"MovimentacoesListView","layer":"telas","module":"fin","kind":"screen","path":"src/features/movimentacoes/MovimentacoesListView.tsx","summary":"Lançamentos do mês com navegação de mês; linhas memoizadas (#55).","us":["US03"],"rnf":[],"perfis":[],"api":[],"status":"main"},{"id":"v_mov_form","label":"MovimentacaoFormView","layer":"telas","module":"fin","kind":"screen","path":"src/features/movimentacoes/{MovimentacaoFormView,components/AnexoComprovante}.tsx","summary":"Categoria, forma, valor, vencimento/pagamento, comprovante (imagem), viagem vinculada e litros quando Combustível.","us":["US03","US09"],"rnf":[],"perfis":[],"api":[],"status":"main"},{"id":"v_caixa","label":"SaldoProjecaoView","layer":"telas","module":"fin","kind":"screen","path":"src/features/caixa/components/*.tsx","summary":"SaldoAtualCard, ProjecaoCaixa (12 meses + por ano), PendentesSemDataCard.","us":["US05"],"rnf":[],"perfis":[],"api":[],"status":"main"},{"id":"v_dividas","label":"Dividas List / Form / Detalhe","layer":"telas","module":"fin","kind":"screen","path":"src/features/dividas/components/*.tsx","summary":"Criar parcelamento, ver parcelas, excluir (soft).","us":["US04"],"rnf":[],"perfis":[],"api":[],"status":"main"},{"id":"v_ponte","label":"Lançamentos por viagem","layer":"telas","module":"ponte","kind":"screen","path":"src/features/ponte-viagem/{ViagensLancamentosListView,ViagemLancamentosView}.tsx","summary":"Viagens e seus fretes/despesas; desvincular lançamento.","us":["US09"],"rnf":[],"perfis":[],"api":[],"status":"main"},{"id":"v_veiculos","label":"Veiculos List + Form","layer":"telas","module":"frota","kind":"screen","path":"src/features/veiculos/*View.tsx","summary":"Filtro por status, placa Mercosul, inativar/reativar.","us":["US06"],"rnf":[],"perfis":[],"api":[],"status":"main"},{"id":"v_veiculo_det","label":"VeiculoDetalheView","layer":"telas","module":"frota","kind":"screen","path":"src/features/manutencao/VeiculoDetalheView.tsx","summary":"Histórico de manutenções do veículo.","us":["US06-b"],"rnf":[],"perfis":[],"api":[],"status":"main"},{"id":"v_rotas","label":"Rotas List + Form","layer":"telas","module":"frota","kind":"screen","path":"src/features/rotas/*View.tsx","summary":"UF + cidade normalizada, ativa/inativa.","us":["US07"],"rnf":[],"perfis":[],"api":[],"status":"main"},{"id":"v_manut","label":"Manutencoes List + Form","layer":"telas","module":"frota","kind":"screen","path":"src/features/manutencao/{ManutencoesListView,ManutencaoFormView}.tsx","summary":"Registrar (gera despesa) e concluir.","us":["US06-b"],"rnf":[],"perfis":[],"api":[],"status":"main"},{"id":"v_viagens_list","label":"ViagensListView","layer":"telas","module":"viagem","kind":"screen","path":"src/features/viagens/{ViagensListView,IndicadorSincronizacao}.tsx","summary":"Lê do SQLite. Indicador pendente/sincronizado/erro e contador de revisões pendentes.","us":["US08"],"rnf":["RNF01"],"perfis":[],"api":[],"status":"main"},{"id":"v_abrir","label":"AbrirViagemView","layer":"telas","module":"viagem","kind":"screen","path":"src/features/viagens/AbrirViagemView.tsx","summary":"Veículo, rota, motorista, hodômetro inicial; validação local imediata.","us":["US08"],"rnf":[],"perfis":[],"api":[],"status":"main"},{"id":"v_fechar","label":"FecharViagemView","layer":"telas","module":"viagem","kind":"screen","path":"src/features/viagens/FecharViagemView.tsx","summary":"Hodômetro final > inicial; KM calculado.","us":["US08"],"rnf":[],"perfis":[],"api":[],"status":"main"},{"id":"v_revisoes","label":"RevisoesViagensView","layer":"telas","module":"viagem","kind":"screen","path":"src/features/viagens/RevisoesViagensView.tsx","summary":"Gestor decide os conflitos que o servidor recusou.","us":["US08"],"rnf":["RNF07"],"perfis":[],"api":[],"status":"main"},{"id":"v_usuarios","label":"Usuarios List + Detalhe","layer":"telas","module":"auth","kind":"screen","path":"src/features/usuarios/*View.tsx","summary":"Alterar perfil e status (aprovar/bloquear).","us":["US16"],"rnf":[],"perfis":[],"api":[],"status":"main"},{"id":"s_session","label":"sessionStore","layer":"dominio","module":"auth","kind":"store","path":"src/features/auth/sessionStore.ts","summary":"Zustand que espelha supabase.auth (onAuthStateChange). No logout chama limparCacheLocalNoLogout.","us":["US15"],"rnf":[],"perfis":[],"api":["useSessionStore","startSessionSync"],"status":"main"},{"id":"s_profile","label":"profileStore · useProfile","layer":"dominio","module":"auth","kind":"store","path":"src/features/auth/profileStore.ts","summary":"Lê usuario + perfil da conta logada; sem rede usa usuario_cache do SQLite.","us":["US16"],"rnf":[],"perfis":[],"api":["carregarPerfil","recarregarPerfil","limparPerfil","useProfile"],"status":"main"},{"id":"s_perm","label":"permissions.ts","layer":"dominio","module":"auth","kind":"lib","path":"src/features/auth/permissions.ts","summary":"Regras do cliente, fecha por padrão: isAprovado, isAdmin, canSeeFinanceiro, canSeeFrota. Usabilidade, não segurança.","us":["US16","US18"],"rnf":[],"perfis":[],"api":[],"status":"main"},{"id":"s_menu","label":"navigation/menu.ts","layer":"dominio","module":"nav","kind":"lib","path":"src/navigation/menu.ts","summary":"Único lugar que define abas, aba inicial por perfil e flags podeVer*.","us":["US17"],"rnf":[],"perfis":[],"api":["useMenu","abaInicial","hrefDaAba"],"status":"main"},{"id":"s_google","label":"googleAuth · emailAuth","layer":"dominio","module":"auth","kind":"service","path":"src/features/auth/{googleAuth,emailAuth,errors}.ts","summary":"signInWithGoogle → idToken → supabase.auth.signInWithIdToken; signOut limpa Google e Supabase.","us":["US15"],"rnf":[],"perfis":[],"api":["configureGoogleSignIn","signInWithGoogle","signInWithEmail","signOut"],"status":"main"},{"id":"d_categorias","label":"categoriasRepository","layer":"dominio","module":"fin","kind":"repository","path":"src/features/categorias/categoriasRepository.ts","summary":"CRUD + definirAtiva.","us":["US01"],"rnf":[],"perfis":[],"api":["listarCategorias","buscarCategoriaPorId","criarCategoria","atualizarCategoria","definirAtivaCategoria"],"status":"main"},{"id":"d_formas","label":"formasPagamentoRepository","layer":"dominio","module":"fin","kind":"repository","path":"src/features/formas-pagamento/formasPagamentoRepository.ts","summary":"CRUD + definirAtiva.","us":["US02"],"rnf":[],"perfis":[],"api":["listarFormasPagamento","criarFormaPagamento","atualizarFormaPagamento","definirAtivaFormaPagamento"],"status":"main"},{"id":"d_movs","label":"movimentacoesRepository","layer":"dominio","module":"fin","kind":"repository","path":"src/features/movimentacoes/movimentacoesRepository.ts","summary":"Lançamentos do mês (vencimento ou inclusão no fuso SP), CRUD, opções do formulário.","us":["US03"],"rnf":[],"perfis":[],"api":["listarMovimentacoesDoMes","criarMovimentacao","atualizarMovimentacao","excluirMovimentacao","listarOpcoesMovimentacao"],"status":"main"},{"id":"d_caixa","label":"fonteResumoCaixa","layer":"dominio","module":"fin","kind":"repository","path":"src/features/caixa/{fonteResumoCaixa,resumoCaixa,projecao}.ts","summary":"Chama resumo_caixa e valida o JSON com Zod.","us":["US05"],"rnf":[],"perfis":[],"api":["buscarResumoCaixa","validarResumoCaixa"],"status":"main"},{"id":"d_dividas","label":"dividasRepository","layer":"dominio","module":"fin","kind":"repository","path":"src/features/dividas/dividasRepository.ts","summary":"Molde de RPC transacional tipada com tradução de erro.","us":["US04"],"rnf":[],"perfis":[],"api":["criarDivida","listarDividas","buscarDivida","excluirDivida"],"status":"main"},{"id":"d_ponte","label":"ponteRepository","layer":"dominio","module":"ponte","kind":"repository","path":"src/features/ponte-viagem/ponteRepository.ts","summary":"Único código que conhece Caixa e Frota (RNF08).","us":["US09"],"rnf":["RNF08"],"perfis":[],"api":["listarViagensVinculaveis","buscarViagemVinculavel","listarLancamentosDaViagem","desvincularLancamento"],"status":"main"},{"id":"d_veiculos","label":"veiculos/repository","layer":"dominio","module":"frota","kind":"repository","path":"src/features/veiculos/repository.ts","summary":"CRUD, inativar/reativar, selecionáveis por finalidade.","us":["US06"],"rnf":[],"perfis":[],"api":["listarVeiculos","criarVeiculo","atualizarVeiculo","inativarVeiculo","reativarVeiculo","listarVeiculosSelecionaveis"],"status":"main"},{"id":"d_rotas","label":"rotasRepository","layer":"dominio","module":"frota","kind":"repository","path":"src/features/rotas/rotasRepository.ts","summary":"CRUD + definirAtiva; cidade normalizada.","us":["US07"],"rnf":[],"perfis":[],"api":["listarRotas","criarRota","atualizarRota","definirAtivaRota"],"status":"main"},{"id":"d_manut","label":"manutencaoRepository","layer":"dominio","module":"frota","kind":"repository","path":"src/features/manutencao/manutencaoRepository.ts","summary":"RPCs de manutenção + leitura de histórico.","us":["US06-b"],"rnf":[],"perfis":[],"api":["registrarManutencao","concluirManutencao","listarManutencoes","buscarVeiculoComHistorico","listarFormasPagamentoAtivas"],"status":"main"},{"id":"d_viagens","label":"viagensRepository (SQLite)","layer":"dominio","module":"viagem","kind":"repository","path":"src/features/viagens/viagensRepository.ts","summary":"Escreve só local: cada operação é transação SQLite que grava a viagem e um item na outbox, depois notifica o sync. Também prepara/limpa o cache por conta.","us":["US08"],"rnf":["RNF01","RNF07"],"perfis":[],"api":["listarViagens","abrirViagem","fecharViagem","cancelarViagem","corrigirHodometroFinal","buscarUltimoHodometro","prepararSessaoLocal","limparCacheLocalNoLogout","lerPerfilDoCacheLocal"],"status":"main"},{"id":"d_revisoes","label":"revisoesRepository","layer":"dominio","module":"viagem","kind":"repository","path":"src/features/viagens/revisoesRepository.ts","summary":"Fila viagem_revisao (online).","us":["US08"],"rnf":[],"perfis":[],"api":["contarRevisoesPendentes","listarRevisoesPendentes","resolverRevisao"],"status":"main"},{"id":"d_usuarios","label":"usuariosRepository","layer":"dominio","module":"auth","kind":"repository","path":"src/features/usuarios/usuariosRepository.ts","summary":"Lista usuários e perfis; altera perfil e status.","us":["US16"],"rnf":[],"perfis":[],"api":["listarUsuarios","listarPerfis","alterarPerfilUsuario","alterarStatusUsuario"],"status":"main"},{"id":"d_bi","label":"bi/queries","layer":"dominio","module":"bi","kind":"repository","path":"src/features/bi/{queries,formatar}.ts","summary":"Estatísticas por viagem/rota/veículo com Zod. Na main nenhuma tela chama.","us":["US10"],"rnf":["RNF06"],"perfis":[],"api":["listarEstatisticasViagens","listarEstatisticasRotas","listarEstatisticasVeiculos","formatarIndicador"],"status":"sem-ui"},{"id":"d_ranking","label":"ranking.ts","layer":"dominio","module":"bi","kind":"lib","path":"src/features/dashboard/ranking/ranking.ts","summary":"Corta o Top 3 e numera posição com empate; não reordena (RNF06).","us":["US13"],"rnf":[],"perfis":[],"api":["buscarRanking","TAMANHO_DO_RANKING"],"status":"pr-56"},{"id":"sy_store","label":"syncStore","layer":"offline","module":"viagem","kind":"store","path":"src/features/viagens/syncStore.ts","summary":"startNetworkSyncListener(usuarioId): prepara a sessão local, escuta rede, AppState e escritas (debounce 800 ms). Retry 5 s·2ⁿ até 5 min.","us":[],"rnf":["RNF01"],"perfis":[],"api":["useSyncStore","startNetworkSyncListener","sincronizarTudo","sincronizarOutbox"],"status":"main"},{"id":"sy_bus","label":"syncBus","layer":"offline","module":"viagem","kind":"lib","path":"src/features/viagens/syncBus.ts","summary":"Evento 'gravei local' que quebra o ciclo repositório → store.","us":[],"rnf":[],"perfis":[],"api":["notificarEscritaLocal","aoEscreverLocal"],"status":"main"},{"id":"sy_sessao","label":"sessaoLocal","layer":"offline","module":"viagem","kind":"lib","path":"src/features/viagens/sessaoLocal.ts","summary":"Dono do cache + geração. Resposta atrasada de outra conta é descartada.","us":[],"rnf":[],"perfis":[],"api":["definirUsuarioLocal","obterGeracaoLocal","sessaoLocalAtual"],"status":"main"},{"id":"sy_sync","label":"sync.ts","layer":"offline","module":"viagem","kind":"service","path":"src/features/viagens/sync.ts","summary":"sincronizarViagens: revisões resolvidas → drena outbox (upsert idempotente, ordem por viagem) → catálogos → viagens. VG00x ou zero linhas vira viagem_revisao. 8 tentativas.","us":[],"rnf":["RNF01","RNF07"],"perfis":[],"api":["sincronizarViagens","drenarOutboxViagens","sincronizarSeConectado","obterStatusOutboxViagens"],"status":"main"},{"id":"sy_pull","label":"syncPull.ts","layer":"offline","module":"viagem","kind":"service","path":"src/features/viagens/syncPull.ts","summary":"Baixa usuários, veículos, rotas, viagens e revisões resolvidas; valida com Zod; não sobrescreve viagem com operação pendente.","us":[],"rnf":[],"perfis":[],"api":["sincronizarCatalogos","baixarViagens","baixarRevisoesResolvidas","aplicarViagemServidor"],"status":"main"},{"id":"sy_outbox","label":"outboxLocal","layer":"offline","module":"viagem","kind":"lib","path":"src/features/viagens/outboxLocal.ts","summary":"Quais viagens têm operação local não confirmada (por conta).","us":[],"rnf":[],"perfis":[],"api":["idsDeViagensNaOutbox","idsDeViagensDeOutrasContas"],"status":"main"},{"id":"l_storage","label":"lib/storage","layer":"offline","module":"fin","kind":"lib","path":"src/lib/storage.ts","summary":"Upload JPEG, signed URL curta e remoção no bucket comprovantes.","us":["US03"],"rnf":[],"perfis":[],"api":["uploadComprovante","urlDoComprovante","removerComprovante"],"status":"main"},{"id":"l_dados","label":"lib/useDadosDaTela","layer":"offline","module":"shared","kind":"hook","path":"src/lib/useDadosDaTela.ts","summary":"Estados carregando/vazio/erro/sucesso e recarga no foco. Faz o papel que o CLAUDE.md dá ao TanStack Query.","us":[],"rnf":[],"perfis":[],"api":[],"status":"main"},{"id":"l_util","label":"lib/money · datas · uuid · errors","layer":"offline","module":"shared","kind":"lib","path":"src/lib/{money,datas,uuid,errors,env}.ts","summary":"Centavos inteiros, fuso SP, UUID v7, 42501 → mensagem padrão, env EXPO_PUBLIC_*.","us":[],"rnf":[],"perfis":[],"api":[],"status":"main"},{"id":"i_supabase","label":"supabase/client.ts","layer":"infra","module":"shared","kind":"infra","path":"src/supabase/{client,secureStorage}.ts","summary":"Cliente único supabase-js com chave anon, autoRefreshToken e storage SecureStore em partes (AD-002). Todas as chamadas REST/RPC/Storage passam por ele.","us":[],"rnf":["RNF04"],"perfis":[],"api":[],"status":"main"},{"id":"i_secure","label":"expo-secure-store","layer":"infra","module":"auth","kind":"infra","path":"expo-secure-store","summary":"Keystore do Android; ~2 KB por valor, por isso o chunking.","us":[],"rnf":[],"perfis":[],"api":[],"status":"main"},{"id":"i_gsignin","label":"Google Sign-In nativo","layer":"infra","module":"auth","kind":"infra","path":"@react-native-google-signin/google-signin","summary":"Seletor de contas nativo. Exige development build (AD-001).","us":[],"rnf":[],"perfis":[],"api":[],"status":"main"},{"id":"i_sqlite","label":"SQLite · Drizzle","layer":"infra","module":"viagem","kind":"infra","path":"src/db/{client,schema}.ts + src/db/migrations","summary":"Tabelas locais: viagem, veiculo, rota, usuario_cache, outbox, sync_meta. Espelho do Postgres com os mesmos nomes de coluna (teste de paridade).","us":[],"rnf":["RNF01","RNF07"],"perfis":[],"api":[],"status":"main"},{"id":"i_network","label":"expo-network · AppState","layer":"infra","module":"viagem","kind":"infra","path":"expo-network, react-native AppState","summary":"Detecta reconexão e volta ao primeiro plano.","us":[],"rnf":[],"perfis":[],"api":[],"status":"main"},{"id":"i_picker","label":"image-picker · manipulator","layer":"infra","module":"fin","kind":"infra","path":"expo-image-picker, expo-image-manipulator","summary":"Foto/galeria do comprovante, comprimida em JPEG.","us":[],"rnf":[],"perfis":[],"api":[],"status":"main"},{"id":"i_ui","label":"src/ui (primitivos + tokens)","layer":"infra","module":"shared","kind":"infra","path":"src/ui/*","summary":"Screen, Text, Button, Card, Input, ListItem, Select, Tabs, FAB, Snackbar, Skeleton, EmptyState, CampoData, CampoMoeda… Usado por todas as telas; tokens do DESIGN_CYAN.","us":[],"rnf":[],"perfis":[],"api":[],"status":"main"},{"id":"a_auth","label":"Supabase Auth","layer":"api","module":"auth","kind":"external","path":"Supabase Auth (provider Google)","summary":"Valida o idToken do Google e emite a sessão JWT.","us":[],"rnf":[],"perfis":[],"api":[],"status":"main"},{"id":"a_storage","label":"Storage · comprovantes","layer":"api","module":"fin","kind":"external","path":"supabase/migrations/20260924000600_storage_comprovantes.sql","summary":"Bucket privado; policies só Admin e Financeiro.","us":["US03"],"rnf":[],"perfis":["Admin","Financeiro"],"api":[],"status":"main"},{"id":"f_auth_perfil","label":"auth_perfil() · auth_usuario_id()","layer":"api","module":"auth","kind":"sql-function","path":"supabase/migrations/20260930000100_status_usuario.sql","summary":"security definer. Perfil do usuário logado se status = Ativo, senão null. Base de todas as policies e RPCs (AD-005).","us":["US18"],"rnf":[],"perfis":[],"api":[],"status":"main"},{"id":"rpc_resumo","label":"rpc resumo_caixa","layer":"api","module":"fin","kind":"rpc","path":"supabase/migrations/20261007000200_resumo_caixa_projecao_anual.sql","summary":"Invoker. Saldo atual, projeção mensal e anual, pendentes sem data. Fuso America/Sao_Paulo.","us":["US05"],"rnf":["RNF06"],"perfis":["Admin","Financeiro"],"api":[],"status":"main"},{"id":"rpc_criar_divida","label":"rpc criar_divida","layer":"api","module":"fin","kind":"rpc","path":"supabase/migrations/20261005000200_divida.sql","summary":"Definer. Cria a dívida e as N parcelas (1–120) numa transação; erro em qualquer parcela desfaz tudo.","us":["US04"],"rnf":[],"perfis":["Admin","Financeiro"],"api":[],"status":"main"},{"id":"rpc_excluir_divida","label":"rpc excluir_divida","layer":"api","module":"fin","kind":"rpc","path":"supabase/migrations/20261005000200_divida.sql","summary":"Definer. Apaga só parcelas pendentes e desativa a dívida (soft delete).","us":["US04"],"rnf":[],"perfis":["Admin","Financeiro"],"api":[],"status":"main"},{"id":"rpc_reg_manut","label":"rpc registrar_manutencao","layer":"api","module":"frota","kind":"rpc","path":"supabase/migrations/20261014000300_manutencao_rpc.sql","summary":"Definer. Grava manutenção + despesa 'Manutenção' + veículo EmManutencao. Erros MN001–MN003, 22023, 23514.","us":["US06-b"],"rnf":[],"perfis":["Admin","Gestor de Frota"],"api":[],"status":"main"},{"id":"rpc_concl_manut","label":"rpc concluir_manutencao","layer":"api","module":"frota","kind":"rpc","path":"supabase/migrations/20261014000300_manutencao_rpc.sql","summary":"Definer. data_conclusao e devolve o status do veículo.","us":["US06-b"],"rnf":[],"perfis":["Admin","Gestor de Frota"],"api":[],"status":"main"},{"id":"rpc_formas_ativas","label":"rpc listar_formas_pagamento_ativas","layer":"api","module":"frota","kind":"rpc","path":"supabase/migrations/20261018000200_formas_pagamento_ativas.sql","summary":"Definer. Só id e nome das formas ativas, para o Gestor (AD-013).","us":[],"rnf":[],"perfis":["Admin","Financeiro","Gestor de Frota"],"api":[],"status":"main"},{"id":"rpc_vinc","label":"rpc listar/buscar_viagem_vinculavel","layer":"api","module":"ponte","kind":"rpc","path":"supabase/migrations/20261111000100_ponte_viagem.sql","summary":"Definer. Placa, rota, status e datas das viagens (em andamento + concluídas em 30 dias) para o Financeiro (AD-014).","us":["US09"],"rnf":[],"perfis":["Admin","Financeiro"],"api":[],"status":"main"},{"id":"rpc_kpis","label":"rpc kpis_financeiros · kpis_frota","layer":"api","module":"bi","kind":"rpc","path":"supabase/migrations/20261109000100_kpis_dashboard.sql","summary":"Invoker. Cards da Home por período (teto 366 dias). Já na nuvem, sem chamada no app.","us":["US11"],"rnf":["RNF06"],"perfis":["Admin","Financeiro","Gestor de Frota"],"api":[],"status":"sem-ui"},{"id":"rpc_est","label":"rpc estatisticas_viagens/rotas/veiculos","layer":"api","module":"bi","kind":"rpc","path":"supabase/migrations/20261113000100_bi.sql","summary":"Definer. Só agregados: receita, despesa, lucro, KM, litros, R$/KM, KM/L, flags de ranking (AD-015).","us":["US10","US13"],"rnf":["RNF06"],"perfis":["Admin","Gestor de Frota","Financeiro"],"api":[],"status":"main"},{"id":"t_perfil","label":"perfil","layer":"dados","module":"auth","kind":"table","path":"20260924000100_base_perfil_usuario.sql","summary":"Admin | Gestor de Frota | Financeiro | Motorista. Escrita só Admin.","us":[],"rnf":[],"perfis":[],"api":[],"status":"main"},{"id":"t_usuario","label":"usuario","layer":"dados","module":"auth","kind":"table","path":"20260924000100 + 20260930000100","summary":"Liga auth.users ao perfil; status AguardandoAprovacao | Ativo | Bloqueado. Lê o próprio ou Admin/Gestor; escreve Admin.","us":[],"rnf":[],"perfis":[],"api":[],"status":"main"},{"id":"t_categoria","label":"categoria","layer":"dados","module":"fin","kind":"table","path":"20260924000200_catalogos.sql","summary":"Entrada/Saida, ativa. RLS Admin/Financeiro; sem delete.","us":[],"rnf":[],"perfis":[],"api":[],"status":"main"},{"id":"t_forma","label":"forma_pagamento","layer":"dados","module":"fin","kind":"table","path":"20260924000200_catalogos.sql","summary":"ativa. RLS Admin/Financeiro (Gestor só via RPC).","us":[],"rnf":[],"perfis":[],"api":[],"status":"main"},{"id":"t_mov","label":"movimentacao ★","layer":"dados","module":"fin","kind":"table","path":"20260924000400 + regras/anexo/ponte","summary":"Núcleo. FKs anuláveis viagem_id (US09) e divida_id (US04), litros, caminho_comprovante, valor > 0. RLS Admin/Financeiro; parcela de dívida não se apaga direto.","us":[],"rnf":[],"perfis":[],"api":[],"status":"main"},{"id":"t_divida","label":"divida","layer":"dados","module":"fin","kind":"table","path":"20260924000400 + 20261005000200","summary":"Só escrita via RPC; ativa (soft delete); 1–120 parcelas.","us":[],"rnf":[],"perfis":[],"api":[],"status":"main"},{"id":"t_veiculo","label":"veiculo","layer":"dados","module":"frota","kind":"table","path":"20260924000300 + ano/inativo/reativação","summary":"Disponivel | EmViagem | EmManutencao | Inativo. Leitura para aprovados; escrita Admin/Gestor; sem delete.","us":[],"rnf":[],"perfis":[],"api":[],"status":"main"},{"id":"t_rota","label":"rota","layer":"dados","module":"frota","kind":"table","path":"20260924000300 + 20261014000200/400","summary":"UF + cidade normalizada, trecho único sem acento, ativa.","us":[],"rnf":[],"perfis":[],"api":[],"status":"main"},{"id":"t_viagem","label":"viagem","layer":"dados","module":"viagem","kind":"table","path":"20260924000300 + 20261015000100","summary":"Uma em andamento por veículo; km_rodado gerado. Motorista lê/escreve só as próprias; sem delete.","us":[],"rnf":[],"perfis":[],"api":[],"status":"main"},{"id":"t_manut","label":"manutencao","layer":"dados","module":"frota","kind":"table","path":"20260924000300 + 20261014000300","summary":"Escrita só pelas RPCs; data_conclusao nula = aberta.","us":[],"rnf":[],"perfis":[],"api":[],"status":"main"},{"id":"t_revisao","label":"viagem_revisao","layer":"dados","module":"viagem","kind":"table","path":"20261026000100_viagem_revisao.sql","summary":"Conflitos do sync: Pendente → resolvida pelo Admin/Gestor.","us":[],"rnf":[],"perfis":[],"api":[],"status":"main"},{"id":"vw_estat","label":"view estatistica_viagem","layer":"dados","module":"bi","kind":"view","path":"supabase/migrations/20261113000100_bi.sql","summary":"security_invoker, sem grant para anon/authenticated: só as RPCs de BI leem. Uma fórmula para os três rankings.","us":[],"rnf":[],"perfis":[],"api":[],"status":"main"},{"id":"tg_new_user","label":"handle_new_user","layer":"regras","module":"auth","kind":"trigger","path":"20260924000100_base_perfil_usuario.sql","summary":"after insert em auth.users: cria usuario Motorista em AguardandoAprovacao (menor privilégio).","us":[],"rnf":[],"perfis":[],"api":[],"status":"main"},{"id":"tg_autoalt","label":"impede_autoalteracao_usuario","layer":"regras","module":"auth","kind":"trigger","path":"20260930000200_protege_proprio_usuario.sql","summary":"Ninguém altera o próprio perfil ou status.","us":[],"rnf":[],"perfis":[],"api":[],"status":"main"},{"id":"tg_valida_viagem","label":"valida_viagem (VG001–VG007)","layer":"regras","module":"viagem","kind":"trigger","path":"20261015000100_viagem_regras.sql","summary":"Hodômetro nunca regride, veículo livre/ativo, viagem encerrada imutável, veículo não troca.","us":[],"rnf":["RNF07"],"perfis":[],"api":[],"status":"main"},{"id":"tg_status_veiculo","label":"sincroniza_status_veiculo · corrige_status_reativacao","layer":"regras","module":"frota","kind":"trigger","path":"20261015000100 + 20261111000200","summary":"Viagem abre → EmViagem; encerra → Disponivel. Reativar veículo grava o status real conforme viagem/manutenção aberta.","us":[],"rnf":[],"perfis":[],"api":[],"status":"main"},{"id":"tg_litros","label":"valida_litros_movimentacao","layer":"regras","module":"ponte","kind":"trigger","path":"20261111000100_ponte_viagem.sql","summary":"Combustível vinculado a viagem exige litros; litros fora de Combustível = 23514.","us":[],"rnf":[],"perfis":[],"api":[],"status":"main"},{"id":"tg_gerais","label":"validações gerais","layer":"regras","module":"shared","kind":"trigger","path":"várias migrations","summary":"set_data_atualizacao (todas), valida_ano_fabricacao_veiculo, valida_data_manutencao, viagem_revisao_marca_resolucao.","us":[],"rnf":[],"perfis":[],"api":[],"status":"main"}],"edges":[{"from":"r_root","to":"r_login","kind":"guarda","label":"sem sessão"},{"from":"r_root","to":"r_pendente","kind":"guarda","label":"sessão não aprovada"},{"from":"r_root","to":"r_app","kind":"guarda","label":"aprovado + cache local pronto"},{"from":"r_root","to":"s_session","kind":"le","label":"useSessionStore"},{"from":"r_root","to":"s_profile","kind":"le","label":"useProfile / carregarPerfil"},{"from":"r_root","to":"sy_store","kind":"chama","label":"startNetworkSyncListener"},{"from":"r_root","to":"i_sqlite","kind":"local","label":"useMigrations"},{"from":"r_root","to":"s_google","kind":"chama","label":"configureGoogleSignIn"},{"from":"r_login","to":"v_login","kind":"renderiza","label":""},{"from":"r_pendente","to":"v_aguardando","kind":"renderiza","label":""},{"from":"r_app","to":"s_menu","kind":"le","label":"guards podeVer*"},{"from":"r_app","to":"r_tabs","kind":"renderiza","label":""},{"from":"r_app","to":"r_categorias","kind":"guarda","label":""},{"from":"r_app","to":"r_formas","kind":"guarda","label":""},{"from":"r_app","to":"r_movs","kind":"guarda","label":""},{"from":"r_app","to":"r_caixa","kind":"guarda","label":""},{"from":"r_app","to":"r_dividas","kind":"guarda","label":""},{"from":"r_app","to":"r_ponte","kind":"guarda","label":""},{"from":"r_app","to":"r_veiculos","kind":"guarda","label":""},{"from":"r_app","to":"r_veiculo_det","kind":"guarda","label":""},{"from":"r_app","to":"r_rotas","kind":"guarda","label":""},{"from":"r_app","to":"r_manut","kind":"guarda","label":""},{"from":"r_app","to":"r_viagem_nova","kind":"guarda","label":""},{"from":"r_app","to":"r_viagem_fechar","kind":"guarda","label":""},{"from":"r_app","to":"r_revisoes","kind":"guarda","label":""},{"from":"r_app","to":"r_usuarios","kind":"guarda","label":""},{"from":"r_tabs","to":"s_menu","kind":"le","label":"abas / abaInicial"},{"from":"r_tabs","to":"r_tab_fin","kind":"guarda","label":""},{"from":"r_tabs","to":"r_tab_frota","kind":"guarda","label":""},{"from":"r_tabs","to":"r_tab_viagens","kind":"guarda","label":""},{"from":"r_tabs","to":"r_tab_dash","kind":"guarda","label":""},{"from":"r_tabs","to":"r_tab_config","kind":"guarda","label":""},{"from":"r_tab_fin","to":"v_hub_fin","kind":"renderiza","label":""},{"from":"r_tab_frota","to":"v_hub_frota","kind":"renderiza","label":""},{"from":"r_tab_viagens","to":"v_viagens_list","kind":"renderiza","label":""},{"from":"r_tab_dash","to":"v_embreve","kind":"renderiza","label":""},{"from":"r_tab_config","to":"v_conta","kind":"renderiza","label":""},{"from":"r_categorias","to":"v_categorias","kind":"renderiza","label":""},{"from":"r_formas","to":"v_formas","kind":"renderiza","label":""},{"from":"r_movs","to":"v_movs_list","kind":"renderiza","label":""},{"from":"r_movs","to":"v_mov_form","kind":"renderiza","label":""},{"from":"r_caixa","to":"v_caixa","kind":"renderiza","label":""},{"from":"r_dividas","to":"v_dividas","kind":"renderiza","label":""},{"from":"r_ponte","to":"v_ponte","kind":"renderiza","label":""},{"from":"r_veiculos","to":"v_veiculos","kind":"renderiza","label":""},{"from":"r_veiculo_det","to":"v_veiculo_det","kind":"renderiza","label":""},{"from":"r_rotas","to":"v_rotas","kind":"renderiza","label":""},{"from":"r_manut","to":"v_manut","kind":"renderiza","label":""},{"from":"r_viagem_nova","to":"v_abrir","kind":"renderiza","label":""},{"from":"r_viagem_fechar","to":"v_fechar","kind":"renderiza","label":""},{"from":"r_revisoes","to":"v_revisoes","kind":"renderiza","label":""},{"from":"r_usuarios","to":"v_usuarios","kind":"renderiza","label":""},{"from":"r_tab_dash","to":"v_ranking","kind":"renderiza","label":"PR #56"},{"from":"v_hub_fin","to":"r_movs","kind":"navega","label":"router.push"},{"from":"v_hub_fin","to":"r_caixa","kind":"navega","label":"router.push"},{"from":"v_hub_fin","to":"r_dividas","kind":"navega","label":"router.push"},{"from":"v_hub_fin","to":"r_ponte","kind":"navega","label":"router.push"},{"from":"v_hub_fin","to":"r_categorias","kind":"navega","label":"router.push"},{"from":"v_hub_fin","to":"r_formas","kind":"navega","label":"router.push"},{"from":"v_hub_frota","to":"r_manut","kind":"navega","label":"router.push"},{"from":"v_hub_frota","to":"r_veiculos","kind":"navega","label":"router.push"},{"from":"v_hub_frota","to":"r_rotas","kind":"navega","label":"router.push"},{"from":"v_conta","to":"r_usuarios","kind":"navega","label":"router.push"},{"from":"v_viagens_list","to":"r_viagem_nova","kind":"navega","label":"router.push"},{"from":"v_viagens_list","to":"r_viagem_fechar","kind":"navega","label":"router.push"},{"from":"v_viagens_list","to":"r_revisoes","kind":"navega","label":"router.push"},{"from":"v_manut","to":"r_veiculo_det","kind":"navega","label":"router.push"},{"from":"v_login","to":"s_google","kind":"chama","label":"signInWithGoogle / signInWithEmail"},{"from":"v_aguardando","to":"s_profile","kind":"chama","label":"recarregarPerfil"},{"from":"v_aguardando","to":"s_google","kind":"chama","label":"signOut"},{"from":"v_conta","to":"s_profile","kind":"le","label":""},{"from":"v_conta","to":"s_google","kind":"chama","label":"signOut"},{"from":"v_hub_fin","to":"d_caixa","kind":"chama","label":"buscarResumoCaixa (no foco)"},{"from":"v_ranking","to":"d_ranking","kind":"chama","label":"buscarRanking"},{"from":"v_ranking","to":"v_filtro","kind":"renderiza","label":""},{"from":"v_ranking","to":"s_menu","kind":"le","label":""},{"from":"v_categorias","to":"d_categorias","kind":"chama","label":""},{"from":"v_formas","to":"d_formas","kind":"chama","label":""},{"from":"v_movs_list","to":"d_movs","kind":"chama","label":"listarMovimentacoesDoMes"},{"from":"v_mov_form","to":"d_movs","kind":"chama","label":"criar / atualizar / opções"},{"from":"v_mov_form","to":"d_ponte","kind":"chama","label":"listarViagensVinculaveis"},{"from":"v_mov_form","to":"l_storage","kind":"chama","label":"uploadComprovante"},{"from":"v_mov_form","to":"i_picker","kind":"chama","label":""},{"from":"v_caixa","to":"d_caixa","kind":"chama","label":""},{"from":"v_dividas","to":"d_dividas","kind":"chama","label":""},{"from":"v_dividas","to":"d_movs","kind":"chama","label":"opções categoria/forma"},{"from":"v_ponte","to":"d_ponte","kind":"chama","label":""},{"from":"v_veiculos","to":"d_veiculos","kind":"chama","label":""},{"from":"v_veiculo_det","to":"d_manut","kind":"chama","label":"buscarVeiculoComHistorico"},{"from":"v_rotas","to":"d_rotas","kind":"chama","label":""},{"from":"v_manut","to":"d_manut","kind":"chama","label":""},{"from":"v_manut","to":"d_veiculos","kind":"chama","label":"listarVeiculosSelecionaveis"},{"from":"v_viagens_list","to":"d_viagens","kind":"chama","label":"listarViagens (SQLite)"},{"from":"v_viagens_list","to":"sy_store","kind":"le","label":"status de sync"},{"from":"v_viagens_list","to":"d_revisoes","kind":"chama","label":"contarRevisoesPendentes"},{"from":"v_abrir","to":"d_viagens","kind":"chama","label":"abrirViagem"},{"from":"v_abrir","to":"s_profile","kind":"le","label":"motorista logado"},{"from":"v_fechar","to":"d_viagens","kind":"chama","label":"fecharViagem"},{"from":"v_revisoes","to":"d_revisoes","kind":"chama","label":"resolverRevisao"},{"from":"v_usuarios","to":"d_usuarios","kind":"chama","label":""},{"from":"v_usuarios","to":"s_profile","kind":"chama","label":"recarregarPerfil"},{"from":"v_categorias","to":"l_dados","kind":"chama","label":"useDadosDaTela"},{"from":"v_formas","to":"l_dados","kind":"chama","label":"useDadosDaTela"},{"from":"v_movs_list","to":"l_dados","kind":"chama","label":"useDadosDaTela"},{"from":"v_ponte","to":"l_dados","kind":"chama","label":"useDadosDaTela"},{"from":"v_rotas","to":"l_dados","kind":"chama","label":"useDadosDaTela"},{"from":"v_manut","to":"l_dados","kind":"chama","label":"useDadosDaTela"},{"from":"v_veiculo_det","to":"l_dados","kind":"chama","label":"useDadosDaTela"},{"from":"v_viagens_list","to":"l_dados","kind":"chama","label":"useDadosDaTela"},{"from":"v_revisoes","to":"l_dados","kind":"chama","label":"useDadosDaTela"},{"from":"v_usuarios","to":"l_dados","kind":"chama","label":"useDadosDaTela"},{"from":"v_ranking","to":"l_dados","kind":"chama","label":"useDadosDaTela"},{"from":"s_menu","to":"s_profile","kind":"le","label":""},{"from":"s_menu","to":"s_perm","kind":"chama","label":""},{"from":"s_profile","to":"s_perm","kind":"chama","label":""},{"from":"s_profile","to":"t_usuario","kind":"rest","label":"select usuario + perfil"},{"from":"s_profile","to":"d_viagens","kind":"local","label":"lerPerfilDoCacheLocal (offline)"},{"from":"s_session","to":"i_supabase","kind":"evento","label":"onAuthStateChange"},{"from":"s_session","to":"d_viagens","kind":"local","label":"limparCacheLocalNoLogout"},{"from":"s_google","to":"i_gsignin","kind":"chama","label":"signIn → idToken"},{"from":"s_google","to":"i_supabase","kind":"chama","label":"auth.signInWithIdToken"},{"from":"d_categorias","to":"t_categoria","kind":"rest","label":""},{"from":"d_formas","to":"t_forma","kind":"rest","label":""},{"from":"d_movs","to":"t_mov","kind":"rest","label":"select/insert/update/delete"},{"from":"d_movs","to":"d_categorias","kind":"chama","label":"opções"},{"from":"d_movs","to":"d_formas","kind":"chama","label":"opções"},{"from":"d_caixa","to":"rpc_resumo","kind":"rpc","label":""},{"from":"d_dividas","to":"rpc_criar_divida","kind":"rpc","label":""},{"from":"d_dividas","to":"rpc_excluir_divida","kind":"rpc","label":""},{"from":"d_dividas","to":"t_divida","kind":"rest","label":"select"},{"from":"d_ponte","to":"rpc_vinc","kind":"rpc","label":""},{"from":"d_ponte","to":"t_mov","kind":"rest","label":"lançamentos da viagem / desvincular"},{"from":"d_veiculos","to":"t_veiculo","kind":"rest","label":""},{"from":"d_rotas","to":"t_rota","kind":"rest","label":""},{"from":"d_manut","to":"rpc_reg_manut","kind":"rpc","label":""},{"from":"d_manut","to":"rpc_concl_manut","kind":"rpc","label":""},{"from":"d_manut","to":"rpc_formas_ativas","kind":"rpc","label":""},{"from":"d_manut","to":"t_manut","kind":"rest","label":"select histórico"},{"from":"d_usuarios","to":"t_usuario","kind":"rest","label":"update perfil_id / status"},{"from":"d_usuarios","to":"t_perfil","kind":"rest","label":"select"},{"from":"d_revisoes","to":"t_revisao","kind":"rest","label":""},{"from":"d_bi","to":"rpc_est","kind":"rpc","label":""},{"from":"d_ranking","to":"d_bi","kind":"chama","label":""},{"from":"d_viagens","to":"i_sqlite","kind":"local","label":"transação: viagem + outbox"},{"from":"d_viagens","to":"sy_bus","kind":"evento","label":"notificarEscritaLocal"},{"from":"d_viagens","to":"sy_sessao","kind":"le","label":"usuário/geração"},{"from":"d_viagens","to":"sy_outbox","kind":"le","label":""},{"from":"sy_store","to":"d_viagens","kind":"chama","label":"prepararSessaoLocal"},{"from":"sy_store","to":"sy_sessao","kind":"chama","label":"definirUsuarioLocal"},{"from":"sy_store","to":"sy_bus","kind":"evento","label":"aoEscreverLocal"},{"from":"sy_store","to":"i_network","kind":"evento","label":"rede / AppState"},{"from":"sy_store","to":"sy_sync","kind":"chama","label":"sincronizarViagens"},{"from":"sy_sync","to":"sy_pull","kind":"chama","label":""},{"from":"sy_sync","to":"i_sqlite","kind":"local","label":"lê/atualiza outbox"},{"from":"sy_sync","to":"sy_outbox","kind":"le","label":""},{"from":"sy_sync","to":"sy_sessao","kind":"le","label":"geração"},{"from":"sy_sync","to":"t_viagem","kind":"rest","label":"upsert onConflict id"},{"from":"sy_sync","to":"t_revisao","kind":"rest","label":"upsert conflito"},{"from":"sy_pull","to":"i_sqlite","kind":"local","label":"grava catálogos/viagens"},{"from":"sy_pull","to":"t_viagem","kind":"rest","label":"select"},{"from":"sy_pull","to":"t_veiculo","kind":"rest","label":"select"},{"from":"sy_pull","to":"t_rota","kind":"rest","label":"select"},{"from":"sy_pull","to":"t_usuario","kind":"rest","label":"select"},{"from":"sy_pull","to":"t_revisao","kind":"rest","label":"select"},{"from":"l_storage","to":"a_storage","kind":"storage","label":"upload / signedUrl / remove"},{"from":"i_supabase","to":"i_secure","kind":"local","label":"sessão em partes"},{"from":"i_supabase","to":"a_auth","kind":"chama","label":""},{"from":"a_auth","to":"tg_new_user","kind":"trigger","label":"insert auth.users"},{"from":"f_auth_perfil","to":"t_usuario","kind":"le","label":""},{"from":"f_auth_perfil","to":"t_perfil","kind":"le","label":""},{"from":"a_storage","to":"f_auth_perfil","kind":"le","label":"policy"},{"from":"rpc_resumo","to":"t_mov","kind":"le","label":""},{"from":"rpc_resumo","to":"t_categoria","kind":"le","label":""},{"from":"rpc_criar_divida","to":"f_auth_perfil","kind":"le","label":"42501"},{"from":"rpc_criar_divida","to":"t_divida","kind":"rest","label":"insert"},{"from":"rpc_criar_divida","to":"t_mov","kind":"rest","label":"insert N parcelas"},{"from":"rpc_excluir_divida","to":"t_divida","kind":"rest","label":"ativa = false"},{"from":"rpc_excluir_divida","to":"t_mov","kind":"rest","label":"delete pendentes"},{"from":"rpc_reg_manut","to":"f_auth_perfil","kind":"le","label":"42501"},{"from":"rpc_reg_manut","to":"t_manut","kind":"rest","label":"insert"},{"from":"rpc_reg_manut","to":"t_mov","kind":"rest","label":"insert despesa"},{"from":"rpc_reg_manut","to":"t_veiculo","kind":"rest","label":"EmManutencao"},{"from":"rpc_reg_manut","to":"t_categoria","kind":"le","label":"'Manutenção'"},{"from":"rpc_concl_manut","to":"t_manut","kind":"rest","label":"data_conclusao"},{"from":"rpc_concl_manut","to":"t_veiculo","kind":"rest","label":"status"},{"from":"rpc_formas_ativas","to":"t_forma","kind":"le","label":""},{"from":"rpc_vinc","to":"t_viagem","kind":"le","label":""},{"from":"rpc_vinc","to":"t_veiculo","kind":"le","label":""},{"from":"rpc_vinc","to":"t_rota","kind":"le","label":""},{"from":"rpc_kpis","to":"t_mov","kind":"le","label":""},{"from":"rpc_kpis","to":"t_viagem","kind":"le","label":""},{"from":"rpc_est","to":"f_auth_perfil","kind":"le","label":"42501"},{"from":"rpc_est","to":"vw_estat","kind":"le","label":""},{"from":"vw_estat","to":"t_viagem","kind":"le","label":""},{"from":"vw_estat","to":"t_mov","kind":"le","label":"receita/despesa/litros"},{"from":"t_usuario","to":"t_perfil","kind":"fk","label":"perfil_id"},{"from":"t_mov","to":"t_categoria","kind":"fk","label":""},{"from":"t_mov","to":"t_forma","kind":"fk","label":""},{"from":"t_mov","to":"t_divida","kind":"fk","label":"divida_id"},{"from":"t_mov","to":"t_viagem","kind":"fk","label":"viagem_id (ponte)"},{"from":"t_viagem","to":"t_veiculo","kind":"fk","label":""},{"from":"t_viagem","to":"t_rota","kind":"fk","label":""},{"from":"t_viagem","to":"t_usuario","kind":"fk","label":"motorista_id"},{"from":"t_manut","to":"t_veiculo","kind":"fk","label":""},{"from":"t_revisao","to":"t_viagem","kind":"fk","label":""},{"from":"tg_new_user","to":"t_usuario","kind":"rest","label":"insert Motorista"},{"from":"t_usuario","to":"tg_autoalt","kind":"trigger","label":"before update"},{"from":"t_viagem","to":"tg_valida_viagem","kind":"trigger","label":"before insert/update"},{"from":"t_viagem","to":"tg_status_veiculo","kind":"trigger","label":"after insert/update status"},{"from":"tg_status_veiculo","to":"t_veiculo","kind":"rest","label":"EmViagem / Disponivel"},{"from":"t_veiculo","to":"tg_status_veiculo","kind":"trigger","label":"reativação"},{"from":"t_mov","to":"tg_litros","kind":"trigger","label":"before insert/update"},{"from":"tg_litros","to":"t_categoria","kind":"le","label":"'Combustível'"},{"from":"t_veiculo","to":"tg_gerais","kind":"trigger","label":"ano de fabricação"},{"from":"t_manut","to":"tg_gerais","kind":"trigger","label":"data não futura"},{"from":"t_revisao","to":"tg_gerais","kind":"trigger","label":"marca resolução"}],"flows":[{"id":"F01","name":"Login com Google e entrada por perfil","module":"auth","us":["US15","US16","US17"],"actor":"qualquer usuário","trigger":"Toque em 'Continuar com Google' na tela de login","steps":[{"node":"v_login","action":"Usuário toca em Continuar com Google"},{"node":"s_google","action":"signInWithGoogle(): hasPlayServices + signIn"},{"node":"i_gsignin","action":"Seletor nativo devolve o idToken (só em development build)"},{"node":"i_supabase","action":"supabase.auth.signInWithIdToken({ provider: 'google', token })"},{"node":"a_auth","action":"Supabase valida o token e emite a sessão"},{"node":"i_secure","action":"Sessão gravada em partes no SecureStore (AD-002)"},{"node":"s_session","action":"onAuthStateChange publica a sessão no store"},{"node":"r_root","action":"Sessão mudou: carregarPerfil(usuarioId)"},{"node":"s_profile","action":"Lê usuario + perfil (sem rede: usuario_cache)"},{"node":"t_usuario","action":"RLS usuario_select deixa ler a própria linha"},{"node":"sy_store","action":"Perfil Ativo: startNetworkSyncListener prepara o cache da conta"},{"node":"r_app","action":"Stack.Protected libera (app) só com cache local pronto"},{"node":"s_menu","action":"useMenu calcula abas e aba inicial"},{"node":"r_tabs","action":"Abre em Financeiro (Admin/Financeiro), Frota (Gestor) ou Viagens (Motorista)"}],"invariants":["O cliente esconde, o RLS decide (US18).","Expo Go é bloqueado na raiz."]},{"id":"F02","name":"Primeiro acesso e aprovação pelo Admin","module":"auth","us":["US15","US16"],"actor":"novo usuário + Admin","trigger":"Primeiro login de uma conta Google","steps":[{"node":"a_auth","action":"Supabase cria a linha em auth.users"},{"node":"tg_new_user","action":"handle_new_user cria usuario como Motorista, AguardandoAprovacao"},{"node":"t_usuario","action":"Status ≠ Ativo: auth_perfil() devolve null, nenhuma policy libera dado"},{"node":"r_root","action":"Sessão sem aprovação: só o grupo (pendente) existe"},{"node":"v_aguardando","action":"Tela explica o status; botão recarregar"},{"node":"v_conta","action":"Admin abre Configurações → Usuários"},{"node":"v_usuarios","action":"Admin escolhe perfil e muda status para Ativo"},{"node":"d_usuarios","action":"alterarPerfilUsuario / alterarStatusUsuario"},{"node":"tg_autoalt","action":"Trigger impede o Admin de alterar a si mesmo"},{"node":"s_profile","action":"No aparelho do usuário, recarregarPerfil → entra em (app)"}],"invariants":["Perfil padrão é o de menor privilégio (Motorista).","Só Admin escreve usuario e perfil."]},{"id":"F03","name":"Lançar movimentação com comprovante e viagem","module":"fin","us":["US03","US09"],"actor":"Admin / Financeiro","trigger":"FAB 'Nova movimentação' no hub Financeiro","steps":[{"node":"v_hub_fin","action":"FAB Nova movimentação"},{"node":"r_movs","action":"/movimentacoes/nova"},{"node":"v_mov_form","action":"Formulário; Zod (movimentacoes/schema.ts) valida em português"},{"node":"d_movs","action":"listarOpcoesMovimentacao: categorias e formas ativas"},{"node":"d_ponte","action":"listarViagensVinculaveis para o Select 'Viagem'"},{"node":"rpc_vinc","action":"RPC devolve placa, rota, status e datas (Financeiro não lê viagem)"},{"node":"i_picker","action":"Escolhe a foto e comprime em JPEG"},{"node":"l_storage","action":"uploadComprovante → caminho no bucket"},{"node":"a_storage","action":"Policy do bucket: só Admin e Financeiro"},{"node":"d_movs","action":"criarMovimentacao (centavos → numeric)"},{"node":"t_mov","action":"RLS movimentacao_insert + check valor > 0"},{"node":"tg_litros","action":"Combustível com viagem exige litros (23514)"},{"node":"v_movs_list","action":"Lista do mês recarrega no foco"}],"invariants":["Dinheiro nunca em float.","viagem_id e divida_id continuam anuláveis."]},{"id":"F04","name":"Criar e excluir dívida parcelada (transação)","module":"fin","us":["US04"],"actor":"Admin / Financeiro","trigger":"Dívidas → Nova dívida","steps":[{"node":"v_hub_fin","action":"Atalho Dívidas"},{"node":"r_dividas","action":"/dividas/nova"},{"node":"v_dividas","action":"Descrição, categoria, parcelas, valor, 1º vencimento"},{"node":"d_dividas","action":"criarDivida → supabase.rpc('criar_divida')"},{"node":"rpc_criar_divida","action":"security definer; checa perfil e faixa 1–120"},{"node":"f_auth_perfil","action":"Perfil fora de Admin/Financeiro → 42501"},{"node":"t_divida","action":"insert da dívida"},{"node":"t_mov","action":"insert das N parcelas Pendente com divida_id; qualquer erro desfaz tudo"},{"node":"v_dividas","action":"Detalhe mostra parcelas; Excluir"},{"node":"rpc_excluir_divida","action":"Apaga só pendentes e marca ativa = false"}],"invariants":["divida não tem policy de escrita direta: só as RPCs gravam.","Parcela paga nunca é apagada."]},{"id":"F05","name":"Saldo atual e projeção de caixa","module":"fin","us":["US05"],"actor":"Admin / Financeiro","trigger":"Abrir a aba Financeiro ou /caixa","steps":[{"node":"r_tab_fin","action":"Aba inicial de Admin e Financeiro"},{"node":"v_hub_fin","action":"useFocusEffect recarrega o saldo"},{"node":"d_caixa","action":"buscarResumoCaixa → rpc + validarResumoCaixa (Zod)"},{"node":"rpc_resumo","action":"Invoker; fuso America/Sao_Paulo; agrega no banco (RNF06)"},{"node":"t_mov","action":"RLS de movimentacao vale nas linhas lidas"},{"node":"r_caixa","action":"Toque no cartão de saldo"},{"node":"v_caixa","action":"Saldo, projeção 12 meses + por ano, pendentes sem data"}],"invariants":["Nenhuma soma no cliente."]},{"id":"F06","name":"Registrar e concluir manutenção","module":"frota","us":["US06-b"],"actor":"Admin / Gestor de Frota","trigger":"Frota → Manutenções → Nova","steps":[{"node":"v_hub_frota","action":"Atalho Manutenções"},{"node":"r_manut","action":"/manutencoes/nova"},{"node":"v_manut","action":"Veículo, descrição, valor, data, forma de pagamento"},{"node":"d_veiculos","action":"listarVeiculosSelecionaveis('manutencao')"},{"node":"d_manut","action":"listarFormasPagamentoAtivas"},{"node":"rpc_formas_ativas","action":"Gestor vê só id/nome das ativas (AD-013)"},{"node":"rpc_reg_manut","action":"registrar_manutencao: MN001–MN003, 22023, 23514"},{"node":"t_manut","action":"insert da manutenção"},{"node":"t_mov","action":"insert da despesa na categoria 'Manutenção'"},{"node":"t_veiculo","action":"status = EmManutencao"},{"node":"rpc_concl_manut","action":"Concluir: data_conclusao e veículo volta a Disponivel"},{"node":"v_veiculo_det","action":"Histórico no detalhe do veículo"}],"invariants":["Três escritas numa transação.","Gestor nunca lê movimentacao."]},{"id":"F07","name":"Abrir viagem offline","module":"viagem","us":["US08"],"rnf":["RNF01","RNF07"],"actor":"Motorista / Gestor / Admin","trigger":"Viagens → Abrir viagem, com ou sem internet","steps":[{"node":"v_viagens_list","action":"Lista lida do SQLite"},{"node":"r_viagem_nova","action":"/viagens/nova"},{"node":"v_abrir","action":"Valida no cliente (Zod + hodômetro ≥ último final)"},{"node":"d_viagens","action":"abrirViagem: UUID v7, transação viagem + outbox 'insert'"},{"node":"i_sqlite","action":"Grava local imediatamente"},{"node":"sy_bus","action":"notificarEscritaLocal"},{"node":"sy_store","action":"Debounce 800 ms → sincronizarOutbox (se online)"},{"node":"sy_sync","action":"drenarOutboxViagens: upsert onConflict id (idempotente, sem km_rodado)"},{"node":"t_viagem","action":"RLS: motorista só a própria viagem"},{"node":"tg_valida_viagem","action":"VG001–VG004 recusam regressão/veículo ocupado"},{"node":"tg_status_veiculo","action":"Veículo vira EmViagem"},{"node":"sy_pull","action":"Baixa veículos e viagens (status e km_rodado do servidor)"},{"node":"v_viagens_list","action":"Indicador muda de pendente para sincronizado"}],"invariants":["SQLite é a fonte da UI.","Reenviar não duplica (UUID do cliente).","Validação dupla: cliente para UX, Postgres para integridade."]},{"id":"F08","name":"Fechar viagem e conflito de hodômetro","module":"viagem","us":["US08"],"rnf":["RNF07"],"actor":"Motorista → Gestor","trigger":"Fechar viagem (talvez offline) e o servidor recusar","steps":[{"node":"v_viagens_list","action":"Toque em Fechar"},{"node":"r_viagem_fechar","action":"/viagens/[id]/fechar"},{"node":"v_fechar","action":"Hodômetro final > inicial"},{"node":"d_viagens","action":"fecharViagem: transação + outbox 'update'"},{"node":"sy_sync","action":"Dreno respeita a ordem por viagem (update espera o insert)"},{"node":"t_viagem","action":"update"},{"node":"tg_valida_viagem","action":"Pode recusar com VG005/VG007"},{"node":"t_revisao","action":"sync grava o conflito (ou VIAGEM_AUSENTE); outbox fica em 'revisao'"},{"node":"v_revisoes","action":"Gestor/Admin abre a fila"},{"node":"d_revisoes","action":"resolverRevisao"},{"node":"sy_pull","action":"baixarRevisoesResolvidas libera a viagem no aparelho"},{"node":"tg_status_veiculo","action":"Viagem encerrada → veículo Disponivel"}],"invariants":["Servidor vence, exceto hodômetro: vai para revisão manual (AD-010)."]},{"id":"F09","name":"Ciclo de sincronização e troca de conta","module":"viagem","us":["US08"],"rnf":["RNF01"],"actor":"sistema","trigger":"Login aprovado, reconexão, app volta ao primeiro plano ou escrita local","steps":[{"node":"r_root","action":"Banco migrado + perfil aprovado → startNetworkSyncListener(usuarioId)"},{"node":"sy_store","action":"Zera retry e estado da conta anterior"},{"node":"sy_sessao","action":"definirUsuarioLocal → nova geração"},{"node":"d_viagens","action":"prepararSessaoLocal: limpa cache se sync_meta.cache_owner é outra conta"},{"node":"i_network","action":"Escuta rede e AppState"},{"node":"sy_sync","action":"sincronizarViagens: revisões → outbox → catálogos → viagens"},{"node":"sy_pull","action":"Grava catálogos/viagens sem sobrescrever operação pendente"},{"node":"sy_store","action":"Falha: retry 5 s·2ⁿ até 5 min; erro de conexão não gasta tentativa"},{"node":"s_session","action":"Logout → limparCacheLocalNoLogout"}],"invariants":["Resposta de outra geração é descartada.","A outbox de cada conta é separada por usuario_id."]},{"id":"F10","name":"Lançamentos por viagem (ponte Caixa ↔ Frota)","module":"ponte","us":["US09"],"rnf":["RNF08"],"actor":"Admin / Financeiro","trigger":"Financeiro → Lançamentos por viagem","steps":[{"node":"v_hub_fin","action":"Atalho Lançamentos por viagem"},{"node":"r_ponte","action":"/viagens/lancamentos → /viagens/[id]"},{"node":"v_ponte","action":"Lista de viagens e detalhe com totais"},{"node":"d_ponte","action":"listarViagensVinculaveis / buscarViagemVinculavel"},{"node":"rpc_vinc","action":"Definer: só placa, rota, status e datas"},{"node":"t_viagem","action":"Lido pela RPC, nunca pelo Financeiro direto"},{"node":"d_ponte","action":"listarLancamentosDaViagem / desvincularLancamento"},{"node":"t_mov","action":"select por viagem_id; desvincular = viagem_id null"}],"invariants":["Só src/features/ponte-viagem conhece os dois módulos."]},{"id":"F11","name":"Estatísticas e ranking de eficiência (BI)","module":"bi","us":["US10","US13"],"rnf":["RNF06"],"actor":"Admin / Gestor / Financeiro","trigger":"Aba Dashboards (PR #56)","steps":[{"node":"r_tab_dash","action":"Na main: placeholder. No PR #56: RankingView"},{"node":"v_ranking","action":"Abas Rotas/Veículos + FiltroPeriodo"},{"node":"v_filtro","action":"Mês, ano ou intervalo (≤ 366 dias)"},{"node":"d_ranking","action":"buscarRanking: Top 3, posição com empate"},{"node":"d_bi","action":"listarEstatisticasRotas/Veiculos + Zod"},{"node":"rpc_est","action":"Definer; checa perfil e período; só agregados"},{"node":"vw_estat","action":"Uma fórmula por viagem: receita, despesa, KM, litros"},{"node":"t_viagem","action":"Só viagens Finalizada entram em rota/veículo"}],"invariants":["Agregação só no banco (RNF06).","Gestor vê totais, nunca lançamentos."]},{"id":"F12","name":"Cadastro simples com soft delete","module":"fin","us":["US01","US02","US06","US07"],"actor":"Admin / Financeiro / Gestor","trigger":"Categorias, Formas, Veículos ou Rotas","steps":[{"node":"v_hub_fin","action":"Atalho Categorias (mesmo padrão em Formas, Veículos, Rotas)"},{"node":"r_categorias","action":"/categorias"},{"node":"v_categorias","action":"Abas Entrada/Saída; Switch ativa; form com Zod"},{"node":"d_categorias","action":"criar / atualizar / definirAtivaCategoria"},{"node":"t_categoria","action":"RLS Admin/Financeiro; sem policy de delete"},{"node":"d_veiculos","action":"Veículos: inativar/reativar"},{"node":"t_veiculo","action":"update status"},{"node":"tg_status_veiculo","action":"Reativação grava o status real (viagem/manutenção aberta)"}],"invariants":["Nunca DELETE físico.","Inativo some do seletor, continua no histórico."]}]}</script>
+<script>
+(() => {
+  const D = JSON.parse(document.getElementById('data').textContent);
+  const NS = 'http://www.w3.org/2000/svg';
+  const MODCOLOR = {auth:'#7c6fb0',nav:'#a8a29e',fin:'#2f9e74',frota:'#c58a2b',viagem:'#d0643b',ponte:'#8a5cc2',bi:'#3b82c4',shared:'#57534e'};
+  const KIND = {layout:'layout',route:'rota',tab:'aba',screen:'tela',component:'componente',store:'store',lib:'lib',service:'serviço',
+    repository:'repositório',hook:'hook',infra:'infra',external:'serviço Supabase','sql-function':'função SQL',rpc:'RPC',table:'tabela',view:'view',trigger:'trigger'};
+  const STATUS = {'pr-56':['PR #56','pr'],'sem-ui':['sem UI','warn'],'placeholder':['placeholder','warn']};
+  const EDGEKIND = {guarda:'guard de rota',renderiza:'renderiza',navega:'navega (router.push)',chama:'chama função',le:'lê / consulta',
+    rest:'PostgREST + RLS',rpc:'supabase.rpc()',storage:'Supabase Storage',local:'SQLite / armazenamento local',evento:'evento / listener',trigger:'dispara trigger',fk:'chave estrangeira'};
+
+  const byId = Object.fromEntries(D.nodes.map(n => [n.id, n]));
+  const out = {}, inc = {};
+  D.nodes.forEach(n => { out[n.id] = []; inc[n.id] = []; });
+  D.edges.forEach((e, i) => { e.i = i; out[e.from].push(e); inc[e.to].push(e); });
+  const flowsOf = id => D.flows.filter(f => f.steps.some(s => s.node === id));
+
+  // ---------- layout
+  const G = {colW: 272, w: 226, h: 42, gap: 8, modGap: 18, top: 84, left: 36};
+  const pos = {};
+  let maxY = 0;
+  D.layers.forEach((L, li) => {
+    let y = G.top, prev = null;
+    D.nodes.filter(n => n.layer === L.id).forEach(n => {
+      if (prev && prev !== n.module) y += G.modGap - G.gap;
+      pos[n.id] = {x: G.left + li * G.colW, y, w: G.w, h: G.h, li};
+      y += G.h + G.gap; prev = n.module;
+    });
+    maxY = Math.max(maxY, y);
+  });
+  const WORLD = {w: G.left * 2 + D.layers.length * G.colW - (G.colW - G.w), h: maxY + 30};
+
+  const el = (tag, attrs = {}, parent) => {
+    const x = document.createElementNS(NS, tag);
+    for (const k in attrs) x.setAttribute(k, attrs[k]);
+    if (parent) parent.appendChild(x);
+    return x;
+  };
+
+  // columns
+  const cols = document.getElementById('cols');
+  D.layers.forEach((L, li) => {
+    const x = G.left + li * G.colW;
+    el('rect', {class: 'col-bg', x: x - 12, y: 52, width: G.w + 24, height: maxY - 40, rx: 14}, cols);
+    const t = el('text', {class: 'col-title', x: x, y: 40}, cols);
+    t.textContent = L.label;
+  });
+
+  // edges
+  const gE = document.getElementById('edges');
+  function edgePath(a, b) {
+    const A = pos[a], B = pos[b];
+    if (A.li < B.li) {
+      const x1 = A.x + A.w, y1 = A.y + A.h / 2, x2 = B.x, y2 = B.y + B.h / 2, dx = Math.max(40, (x2 - x1) / 2);
+      return `M${x1},${y1} C${x1 + dx},${y1} ${x2 - dx},${y2} ${x2},${y2}`;
+    }
+    if (A.li > B.li) {
+      const x1 = A.x, y1 = A.y + A.h / 2 + 6, x2 = B.x + B.w, y2 = B.y + B.h / 2 + 6, dx = Math.max(50, (x1 - x2) / 2);
+      return `M${x1},${y1} C${x1 - dx},${y1 + 18} ${x2 + dx},${y2 + 18} ${x2},${y2}`;
+    }
+    const x = A.x + A.w, y1 = A.y + A.h / 2, y2 = B.y + B.h / 2, bulge = 22 + Math.min(110, Math.abs(y2 - y1) * 0.22);
+    return `M${x},${y1} C${x + bulge},${y1} ${x + bulge},${y2} ${x},${y2}`;
+  }
+  const edgeEls = D.edges.map(e => {
+    const p = el('path', {class: `edge k-${e.kind}`, d: edgePath(e.from, e.to), 'marker-end': 'url(#ar)'}, gE);
+    return p;
+  });
+
+  // nodes
+  const gN = document.getElementById('nodes');
+  const nodeEls = {};
+  const trunc = (s, n) => s.length > n ? s.slice(0, n - 1) + '…' : s;
+  D.nodes.forEach(n => {
+    const P = pos[n.id];
+    const g = el('g', {class: `node status-${n.status}`, transform: `translate(${P.x},${P.y})`, 'data-id': n.id, tabindex: 0, role: 'button', 'aria-label': n.label}, gN);
+    el('rect', {class: 'ring', x: -3, y: -3, width: P.w + 6, height: P.h + 6, rx: 11}, g);
+    el('rect', {class: 'box', width: P.w, height: P.h, rx: 8}, g);
+    el('rect', {x: 6, y: 9, width: 3, height: P.h - 18, rx: 1.5, fill: MODCOLOR[n.module] || '#a8a29e'}, g);
+    const st = STATUS[n.status];
+    const maxChars = st ? 22 : 29;
+    const t = el('text', {class: 'lbl', x: 16, y: 18}, g); t.textContent = trunc(n.label, maxChars);
+    const s = el('text', {class: 'sub', x: 16, y: 32}, g);
+    s.textContent = trunc(`${KIND[n.kind] || n.kind} · ${D.modules[n.module]}`, 36);
+    if (st) {
+      const bw = st[0].length * 5.6 + 12;
+      const b = el('g', {class: 'badge', transform: `translate(${P.w - bw - 6},6)`}, g);
+      const c = st[1] === 'pr' ? ['#f6f2fd', '#d8cdef', '#5b3f9a'] : ['#fdf6ec', '#f3d9b5', '#8a5a14'];
+      el('rect', {width: bw, height: 15, rx: 7.5, fill: c[0], stroke: c[1]}, b);
+      const bt = el('text', {x: bw / 2, y: 11, 'text-anchor': 'middle', fill: c[2]}, b); bt.textContent = st[0];
+    }
+    el('g', {class: 'fnum'}, g);
+    nodeEls[n.id] = g;
+  });
+
+  // ---------- view transform
+  const svg = document.getElementById('graph'), vp = document.getElementById('vp'), stage = document.getElementById('stage');
+  let V = {x: 0, y: 0, k: 1};
+  const apply = () => vp.setAttribute('transform', `translate(${V.x},${V.y}) scale(${V.k})`);
+  let anim = null;
+  function animateTo(T, ms = 320) {
+    cancelAnimationFrame(anim);
+    if (matchMedia('(prefers-reduced-motion: reduce)').matches) { V = T; apply(); return; }
+    const S = {...V}, t0 = performance.now();
+    const step = now => {
+      const p = Math.min(1, (now - t0) / ms), e = 1 - Math.pow(1 - p, 3);
+      V = {x: S.x + (T.x - S.x) * e, y: S.y + (T.y - S.y) * e, k: S.k + (T.k - S.k) * e}; apply();
+      if (p < 1) anim = requestAnimationFrame(step);
+    };
+    anim = requestAnimationFrame(step);
+  }
+  function fitBox(b, pad = 40, maxK = 1.4) {
+    const r = stage.getBoundingClientRect();
+    const k = Math.min(maxK, (r.width - pad * 2) / b.w, (r.height - pad * 2) / b.h);
+    return {k, x: r.width / 2 - (b.x + b.w / 2) * k, y: r.height / 2 - (b.y + b.h / 2) * k};
+  }
+  const fitAll = () => animateTo(fitBox({x: 0, y: 20, w: WORLD.w, h: WORLD.h}, 20));
+  function fitNodes(ids) {
+    if (!ids.length) return;
+    let x1 = Infinity, y1 = Infinity, x2 = -Infinity, y2 = -Infinity;
+    ids.forEach(id => { const P = pos[id]; x1 = Math.min(x1, P.x); y1 = Math.min(y1, P.y); x2 = Math.max(x2, P.x + P.w); y2 = Math.max(y2, P.y + P.h); });
+    animateTo(fitBox({x: x1 - 30, y: y1 - 30, w: x2 - x1 + 60, h: y2 - y1 + 60}, 30, 1.2));
+  }
+  function centerOn(id) {
+    const r = stage.getBoundingClientRect(), P = pos[id], k = Math.max(V.k, 0.9);
+    animateTo({k, x: r.width / 2 - (P.x + P.w / 2) * k, y: r.height / 2 - (P.y + P.h / 2) * k});
+  }
+  function zoomAt(f, cx, cy) {
+    const k = Math.max(0.15, Math.min(3, V.k * f));
+    V = {k, x: cx - (cx - V.x) * (k / V.k), y: cy - (cy - V.y) * (k / V.k)}; apply();
+  }
+
+  // pan / pinch / click
+  const pts = new Map(); let drag = null, moved = 0, pinch = null;
+  stage.addEventListener('pointerdown', ev => {
+    stage.setPointerCapture(ev.pointerId);
+    pts.set(ev.pointerId, {x: ev.clientX, y: ev.clientY});
+    moved = 0;
+    if (pts.size === 1) drag = {x: ev.clientX, y: ev.clientY, vx: V.x, vy: V.y, target: ev.target};
+    if (pts.size === 2) {
+      const [a, b] = [...pts.values()];
+      pinch = {d: Math.hypot(a.x - b.x, a.y - b.y), k: V.k}; drag = null;
+    }
+  });
+  stage.addEventListener('pointermove', ev => {
+    if (!pts.has(ev.pointerId)) return;
+    pts.set(ev.pointerId, {x: ev.clientX, y: ev.clientY});
+    if (pinch && pts.size === 2) {
+      const [a, b] = [...pts.values()], r = stage.getBoundingClientRect();
+      const d = Math.hypot(a.x - b.x, a.y - b.y);
+      zoomAt((pinch.k * d / pinch.d) / V.k, (a.x + b.x) / 2 - r.left, (a.y + b.y) / 2 - r.top); moved = 99; return;
+    }
+    if (!drag) return;
+    const dx = ev.clientX - drag.x, dy = ev.clientY - drag.y;
+    moved = Math.max(moved, Math.abs(dx) + Math.abs(dy));
+    if (moved > 4) { stage.classList.add('dragging'); hideTip(); V.x = drag.vx + dx; V.y = drag.vy + dy; apply(); }
+  });
+  const end = ev => {
+    if (!pts.has(ev.pointerId)) return;
+    pts.delete(ev.pointerId);
+    if (pts.size < 2) pinch = null;
+    if (drag && moved <= 4) {
+      const nodeG = drag.target.closest && drag.target.closest('.node');
+      if (nodeG) selectNode(nodeG.dataset.id, true); else clearSelection();
+    }
+    drag = null; stage.classList.remove('dragging');
+  };
+  stage.addEventListener('pointerup', end);
+  stage.addEventListener('pointercancel', end);
+  stage.addEventListener('wheel', ev => {
+    ev.preventDefault();
+    const r = stage.getBoundingClientRect();
+    zoomAt(Math.exp(-ev.deltaY * 0.0015), ev.clientX - r.left, ev.clientY - r.top);
+  }, {passive: false});
+  document.getElementById('zIn').onclick = () => { const r = stage.getBoundingClientRect(); zoomAt(1.25, r.width / 2, r.height / 2); };
+  document.getElementById('zOut').onclick = () => { const r = stage.getBoundingClientRect(); zoomAt(0.8, r.width / 2, r.height / 2); };
+  document.getElementById('zFit').onclick = fitAll;
+
+  // ---------- tooltip
+  const tip = document.getElementById('tip');
+  function showTip(n, ev) {
+    tip.replaceChildren();
+    const b = document.createElement('b'); b.textContent = n.label; tip.appendChild(b);
+    const p = document.createElement('div'); p.className = 'path'; p.textContent = n.path; tip.appendChild(p);
+    const s = document.createElement('div'); s.textContent = n.summary; tip.appendChild(s);
+    const extra = [...n.us, ...n.rnf].join(' · ') + (n.perfis.length ? `  —  ${n.perfis.join(', ')}` : '');
+    if (extra.trim()) { const m = document.createElement('div'); m.className = 'muted'; m.style.marginTop = '6px'; m.textContent = extra; tip.appendChild(m); }
+    moveTip(ev); tip.classList.add('show');
+  }
+  function moveTip(ev) {
+    const w = tip.offsetWidth || 300, h = tip.offsetHeight || 120;
+    let x = ev.clientX + 14, y = ev.clientY + 14;
+    if (x + w > innerWidth - 8) x = ev.clientX - w - 14;
+    if (y + h > innerHeight - 8) y = ev.clientY - h - 14;
+    tip.style.left = Math.max(8, x) + 'px'; tip.style.top = Math.max(8, y) + 'px';
+  }
+  const hideTip = () => tip.classList.remove('show');
+  Object.entries(nodeEls).forEach(([id, g]) => {
+    g.addEventListener('pointerenter', ev => { if (ev.pointerType === 'mouse' && !drag) showTip(byId[id], ev); });
+    g.addEventListener('pointermove', ev => { if (ev.pointerType === 'mouse' && tip.classList.contains('show')) moveTip(ev); });
+    g.addEventListener('pointerleave', hideTip);
+    g.addEventListener('keydown', ev => { if (ev.key === 'Enter' || ev.key === ' ') { ev.preventDefault(); selectNode(id, true); } });
+  });
+
+  // ---------- state & highlight
+  const S = {sel: null, flow: null, step: -1, q: '', mods: new Set(), focus: null, nav: true, fk: true};
+  let playTimer = null;
+
+  function matches(n, q) {
+    const hay = [n.id, n.label, n.path, n.summary, ...n.us, ...n.rnf, ...n.api, n.kind].join(' ').toLowerCase();
+    return q.split(/\s+/).every(w => hay.includes(w));
+  }
+
+  function highlight() {
+    let nodesOn = null, edgesOn = new Set(), numbers = {};
+    const gL = document.getElementById('flowlinks'); gL.replaceChildren();
+    if (S.flow) {
+      const f = D.flows.find(x => x.id === S.flow);
+      nodesOn = new Set(f.steps.map(s => s.node));
+      f.steps.forEach((s, i) => (numbers[s.node] = numbers[s.node] || []).push(i + 1));
+      for (let i = 0; i < f.steps.length - 1; i++) {
+        const a = f.steps[i].node, b = f.steps[i + 1].node;
+        if (a === b) continue;
+        const hit = D.edges.filter(e => (e.from === a && e.to === b) || (e.from === b && e.to === a));
+        if (hit.length) hit.forEach(e => edgesOn.add(e.i));
+        else {
+          const A = pos[a], B = pos[b];
+          el('path', {class: 'flowlink', d: `M${A.x + A.w / 2},${A.y + A.h / 2} L${B.x + B.w / 2},${B.y + B.h / 2}`}, gL);
+        }
+      }
+    } else if (S.sel) {
+      nodesOn = new Set([S.sel]);
+      out[S.sel].forEach(e => { nodesOn.add(e.to); edgesOn.add(e.i); });
+      inc[S.sel].forEach(e => { nodesOn.add(e.from); edgesOn.add(e.i); });
+    } else if (S.focus) {
+      nodesOn = new Set(S.focus);
+    } else if (S.q) {
+      nodesOn = new Set(D.nodes.filter(n => matches(n, S.q)).map(n => n.id));
+    }
+    const modOk = n => !S.mods.size || S.mods.has(n.module);
+    const cur = S.flow && S.step >= 0 ? D.flows.find(x => x.id === S.flow).steps[S.step].node : null;
+    D.nodes.forEach(n => {
+      const g = nodeEls[n.id];
+      const on = nodesOn ? nodesOn.has(n.id) : true;
+      g.classList.toggle('dim', !on || !modOk(n));
+      g.classList.toggle('on', !!nodesOn && on && !!(S.flow || S.sel));
+      g.classList.toggle('sel', n.id === S.sel);
+      g.classList.toggle('cur', n.id === cur);
+      const fn = g.querySelector('.fnum'); fn.replaceChildren();
+      if (numbers[n.id]) {
+        const label = numbers[n.id].join('·'), w = Math.max(18, label.length * 6.4 + 8);
+        el('rect', {x: -9, y: -9, width: w, height: 18, rx: 9, fill: '#3ba6f1'}, fn);
+        const t = el('text', {x: -9 + w / 2, y: 4, 'text-anchor': 'middle'}, fn); t.textContent = label;
+      }
+    });
+    D.edges.forEach(e => {
+      const p = edgeEls[e.i];
+      const hidden = (e.kind === 'navega' && !S.nav) || (e.kind === 'fk' && !S.fk);
+      const hot = edgesOn.has(e.i);
+      p.classList.toggle('hidden', hidden && !hot);
+      p.classList.toggle('hot', hot);
+      p.classList.toggle('anim', hot && !!S.flow);
+      const dimmed = (nodesOn && !hot) || (S.mods.size && !(S.mods.has(byId[e.from].module) || S.mods.has(byId[e.to].module)));
+      p.classList.toggle('dim', !!dimmed);
+      p.setAttribute('marker-end', hot ? 'url(#arHot)' : 'url(#ar)');
+      if (hot) gE.appendChild(p);
+    });
+  }
+
+  function selectNode(id, fromCanvas) {
+    S.sel = id; S.focus = null;
+    if (!fromCanvas) centerOn(id);
+    highlight(); setTab('no'); panel.scrollTop = 0;
+  }
+  function clearSelection() { S.sel = null; S.focus = null; highlight(); if (curTab === 'no') render(); }
+  function setFlow(id) {
+    stop();
+    S.flow = S.flow === id ? null : id; S.step = -1; S.sel = null; S.focus = null;
+    highlight(); render();
+    if (S.flow) fitNodes(D.flows.find(f => f.id === id).steps.map(s => s.node));
+  }
+  function setStep(i) {
+    S.step = i; highlight(); render();
+    const f = D.flows.find(x => x.id === S.flow);
+    if (f && f.steps[i]) centerOn(f.steps[i].node);
+  }
+  function stop() { clearInterval(playTimer); playTimer = null; }
+  function play() {
+    const f = D.flows.find(x => x.id === S.flow); if (!f) return;
+    if (playTimer) { stop(); render(); return; }
+    let i = S.step >= f.steps.length - 1 ? 0 : S.step + 1;
+    setStep(i);
+    playTimer = setInterval(() => {
+      i++;
+      if (i >= f.steps.length) { stop(); render(); return; }
+      setStep(i);
+    }, 1400);
+    render();
+  }
+
+  // ---------- panel
+  const panel = document.getElementById('panel');
+  let curTab = 'fluxos';
+  document.querySelectorAll('.tab').forEach(b => b.onclick = () => setTab(b.dataset.tab));
+  function setTab(t) {
+    if (curTab !== t) panel.scrollTop = 0;
+    curTab = t;
+    document.querySelectorAll('.tab').forEach(b => b.setAttribute('aria-selected', b.dataset.tab === t));
+    render();
+  }
+  const h = (tag, cls, text) => { const x = document.createElement(tag); if (cls) x.className = cls; if (text != null) x.textContent = text; return x; };
+  const tags = (arr, cls) => { const m = h('div', 'meta'); arr.forEach(t => m.appendChild(h('span', 'tag ' + (cls || ''), t))); return m; };
+
+  function render() {
+    panel.replaceChildren();
+    if (curTab === 'fluxos') renderFlows();
+    if (curTab === 'no') renderNode();
+    if (curTab === 'legenda') renderLegend();
+  }
+
+  function renderFlows() {
+    panel.appendChild(h('div', 'muted', 'Toque num fluxo para destacar o caminho no diagrama. Os números nos nós são a ordem dos passos; tracejado azul = salto sem chamada direta.'));
+    D.flows.forEach(f => {
+      const c = h('div', 'card flow' + (S.flow === f.id ? ' active' : ''));
+      const t = h('h3'); t.appendChild(h('span', 'fid', f.id)); t.appendChild(h('span', '', f.name)); c.appendChild(t);
+      c.appendChild(h('div', 'muted', `${f.actor} · ${f.trigger}`));
+      c.appendChild(tags([...f.us, ...(f.rnf || [])], 'us'));
+      c.onclick = ev => { if (ev.target.closest('ol,.player')) return; setFlow(f.id); };
+      if (S.flow === f.id) {
+        const ol = h('ol', 'steps');
+        f.steps.forEach((s, i) => {
+          const li = h('li', i === S.step ? 'cur' : '');
+          li.appendChild(h('span', 'n', String(i + 1)));
+          const tx = h('span', 't'); tx.appendChild(h('b', '', byId[s.node].label)); tx.appendChild(document.createElement('br')); tx.appendChild(document.createTextNode(s.action));
+          li.appendChild(tx);
+          li.onclick = () => { stop(); setStep(i); };
+          ol.appendChild(li);
+        });
+        c.appendChild(ol);
+        const pl = h('div', 'player');
+        const prev = h('button', 'btn', '◀'); prev.setAttribute('aria-label', 'Passo anterior');
+        prev.onclick = () => { stop(); setStep(Math.max(0, S.step - 1)); };
+        const nx = h('button', 'btn', '▶'); nx.setAttribute('aria-label', 'Próximo passo');
+        nx.onclick = () => { stop(); setStep(Math.min(f.steps.length - 1, S.step + 1)); };
+        const pb = h('button', 'btn primary', playTimer ? 'Pausar' : 'Reproduzir'); pb.onclick = play;
+        const cl = h('button', 'btn', 'Limpar'); cl.onclick = () => setFlow(f.id);
+        [prev, nx, pb, cl].forEach(b => pl.appendChild(b));
+        c.appendChild(pl);
+        if (f.invariants && f.invariants.length) {
+          const ul = h('ul', 'inv'); f.invariants.forEach(x => ul.appendChild(h('li', '', x))); c.appendChild(ul);
+        }
+      }
+      panel.appendChild(c);
+    });
+  }
+
+  function linkRow(e, dir) {
+    const other = dir === 'out' ? e.to : e.from;
+    const r = h('div', 'link');
+    r.appendChild(h('span', '', (dir === 'out' ? '→ ' : '← ') + byId[other].label));
+    r.appendChild(h('small', '', e.label ? `${e.kind} · ${e.label}` : e.kind));
+    r.title = e.label || EDGEKIND[e.kind];
+    r.onclick = () => selectNode(other);
+    return r;
+  }
+
+  function renderNode() {
+    const n = byId[S.sel];
+    if (!n) { panel.appendChild(h('div', 'empty', 'Toque num nó do diagrama para ver o arquivo, o que ele faz, quem o chama e o que ele chama. As conexões diretas ficam em destaque.')); return; }
+    const c = h('div', 'card');
+    c.appendChild(h('h2', '', n.label));
+    const tg = [KIND[n.kind] || n.kind, D.modules[n.module]];
+    c.appendChild(tags(tg));
+    if (STATUS[n.status]) c.appendChild(tags([STATUS[n.status][0]], STATUS[n.status][1]));
+    c.appendChild(h('div', 'path', n.path)).style.marginTop = '8px';
+    c.appendChild(h('p', 'muted', n.summary));
+    const dl = h('dl', 'kv');
+    const add = (k, v) => { if (!v) return; dl.appendChild(h('dt', '', k)); dl.appendChild(h('dd', '', v)); };
+    add('US', n.us.join(', ')); add('RNF', n.rnf.join(', ')); add('Perfis', n.perfis.join(', '));
+    if (dl.children.length) c.appendChild(dl);
+    if (n.api.length) {
+      c.appendChild(h('div', 'section', 'API / exports'));
+      const m = h('div', 'meta'); n.api.forEach(a => m.appendChild(h('code', 'tag', a))); c.appendChild(m);
+    }
+    panel.appendChild(c);
+    const io = h('div', 'card');
+    io.appendChild(h('div', 'section', `Chama / aponta para (${out[n.id].length})`));
+    const lo = h('div', 'links'); out[n.id].forEach(e => lo.appendChild(linkRow(e, 'out'))); io.appendChild(lo);
+    io.appendChild(h('div', 'section', `Usado por (${inc[n.id].length})`));
+    const li = h('div', 'links'); inc[n.id].forEach(e => li.appendChild(linkRow(e, 'in'))); io.appendChild(li);
+    panel.appendChild(io);
+    const fl = flowsOf(n.id);
+    if (fl.length) {
+      const fc = h('div', 'card');
+      fc.appendChild(h('div', 'section', 'Aparece nos fluxos'));
+      const l = h('div', 'links');
+      fl.forEach(f => { const r = h('div', 'link'); r.appendChild(h('span', '', f.name)); r.appendChild(h('small', '', f.id)); r.onclick = () => { setTab('fluxos'); setFlow(f.id); }; l.appendChild(r); });
+      fc.appendChild(l); panel.appendChild(fc);
+    }
+  }
+
+  function renderLegend() {
+    const c = h('div', 'card');
+    c.appendChild(h('div', 'section', 'Módulos (barra à esquerda do nó)'));
+    Object.entries(D.modules).forEach(([k, v]) => {
+      const r = h('div', 'legend-row'); const d = h('span', 'sev'); d.style.background = MODCOLOR[k]; r.appendChild(d); r.appendChild(h('span', '', v)); c.appendChild(r);
+    });
+    c.appendChild(h('div', 'section', 'Conexões'));
+    Object.entries(EDGEKIND).forEach(([k, v]) => {
+      const r = h('div', 'legend-row');
+      const s = document.createElementNS(NS, 'svg'); s.setAttribute('width', 46); s.setAttribute('height', 10);
+      const p = el('path', {d: 'M2,5 L44,5', class: `edge k-${k}`}, s); p.style.opacity = 1;
+      r.appendChild(s); r.appendChild(h('span', '', `${k} — ${v}`)); c.appendChild(r);
+    });
+    c.appendChild(h('div', 'section', 'Selos'));
+    [['PR #56', 'pr', 'existe só na branch feat/eix-46-us13-ranking'], ['sem UI', 'warn', 'pronto no código/banco, nenhuma tela usa na main'], ['placeholder', 'warn', 'tela provisória']].forEach(([a, cls, d]) => {
+      const r = h('div', 'legend-row'); r.appendChild(h('span', 'tag ' + cls, a)); r.appendChild(h('span', 'muted', d)); c.appendChild(r);
+    });
+    c.appendChild(h('div', 'section', 'Atalhos'));
+    c.appendChild(h('div', 'muted', 'Arrastar move · roda ou pinça dá zoom · clique no fundo limpa a seleção · Esc limpa tudo · "/" busca.'));
+    panel.appendChild(c);
+  }
+
+  // ---------- header controls
+  const chips = document.getElementById('modchips');
+  Object.entries(D.modules).forEach(([k, v]) => {
+    const b = h('button', 'chip'); b.setAttribute('aria-pressed', 'false');
+    const d = h('span', 'dot'); d.style.background = MODCOLOR[k]; b.appendChild(d); b.appendChild(document.createTextNode(v));
+    b.onclick = () => { S.mods.has(k) ? S.mods.delete(k) : S.mods.add(k); b.setAttribute('aria-pressed', S.mods.has(k)); highlight(); };
+    chips.appendChild(b);
+  });
+  const q = document.getElementById('q');
+  q.addEventListener('input', () => { S.q = q.value.trim().toLowerCase(); S.sel = null; S.flow = null; S.focus = null; stop(); highlight(); if (curTab !== 'legenda') render(); });
+  q.addEventListener('keydown', ev => {
+    if (ev.key === 'Enter') { const m = D.nodes.find(n => matches(n, S.q)); if (m) selectNode(m.id); }
+  });
+  document.getElementById('tNav').onchange = ev => { S.nav = ev.target.checked; highlight(); };
+  document.getElementById('tFk').onchange = ev => { S.fk = ev.target.checked; highlight(); };
+  addEventListener('keydown', ev => {
+    if (ev.key === 'Escape') { stop(); S.sel = null; S.flow = null; S.focus = null; S.step = -1; S.q = ''; q.value = ''; highlight(); render(); }
+    if (ev.key === '/' && document.activeElement !== q) { ev.preventDefault(); q.focus(); }
+  });
+
+  document.getElementById('stats').textContent =
+    `${D.nodes.length} nós · ${D.edges.length} conexões · ${D.flows.length} fluxos · ${D.meta.baseline.branch} @ ${D.meta.baseline.commit} · ${D.meta.baseline.generatedAt}`;
+
+  addEventListener('resize', () => {});
+  highlight(); render();
+  requestAnimationFrame(() => { const b = fitBox({x: 0, y: 20, w: WORLD.w, h: WORLD.h}, 20); V = b; apply(); });
+})();
+</script>
+</body>
+</html>
