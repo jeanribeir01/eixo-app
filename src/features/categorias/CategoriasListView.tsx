@@ -1,6 +1,6 @@
-import { useState } from 'react';
+import { memo, useCallback, useMemo, useState } from 'react';
 import { useRouter } from 'expo-router';
-import { RefreshControl, StyleSheet } from 'react-native';
+import { RefreshControl, StyleSheet, type ListRenderItemInfo } from 'react-native';
 
 import { useDadosDaTela } from '@/lib/useDadosDaTela';
 import {
@@ -30,39 +30,96 @@ function subtitulo(categoria: Categoria): string {
   return categoria.ativa ? tipo : `${tipo} · Desativada`;
 }
 
+type LinhaProps = {
+  categoria: Categoria;
+  // Booleano, não o id em processamento: só a linha cujo switch mudou re-renderiza.
+  processando: boolean;
+  onAbrir: (id: string) => void;
+  onAlternarAtiva: (categoria: Categoria) => void;
+};
+
+// Linha memoizada (EIX-71): digitar na busca re-renderiza a tela a cada letra; com memo, só as linhas
+// que entram ou saem do filtro renderizam. Por isso os callbacks do pai são estáveis (useCallback).
+const CategoriaLinha = memo(function CategoriaLinha({ categoria, processando, onAbrir, onAlternarAtiva }: LinhaProps) {
+  return (
+    <ListItem
+      title={categoria.titulo}
+      subtitle={subtitulo(categoria)}
+      onPress={() => onAbrir(categoria.id)}
+      control={
+        <Switch
+          label="Ativa"
+          accessibilityLabel={`Ativa: ${categoria.titulo}`}
+          value={categoria.ativa}
+          disabled={processando}
+          onValueChange={() => onAlternarAtiva(categoria)}
+        />
+      }
+    />
+  );
+});
+
+// Fora do componente: a mesma função em todo render, sem precisar de useCallback.
+function chaveDaCategoria(categoria: Categoria): string {
+  return categoria.id;
+}
+
 export function CategoriasListView() {
   const router = useRouter();
   // Carrega ao abrir e ao voltar da criação/edição, sem a lista piscar (EIX-63).
   const tela = useDadosDaTela(listarCategorias);
+  const { atualizarDados } = tela;
   const [busca, setBusca] = useState('');
   const [mostrarDesativadas, setMostrarDesativadas] = useState(false);
   const [processandoId, setProcessandoId] = useState<string | null>(null);
   const [feedback, setFeedback] = useState<Feedback | null>(null);
   const coluna = useScreenColumn();
 
-  async function handleAlternarAtiva(categoria: Categoria) {
-    setProcessandoId(categoria.id);
-    const resultado = await definirAtivaCategoria(categoria.id, !categoria.ativa);
-    setProcessandoId(null);
+  const handleAlternarAtiva = useCallback(
+    async (categoria: Categoria) => {
+      setProcessandoId(categoria.id);
+      const resultado = await definirAtivaCategoria(categoria.id, !categoria.ativa);
+      setProcessandoId(null);
 
-    if (!resultado.ok) {
-      setFeedback({ mensagem: resultado.mensagem, tone: 'error' });
-      return;
-    }
+      if (!resultado.ok) {
+        setFeedback({ mensagem: resultado.mensagem, tone: 'error' });
+        return;
+      }
 
-    tela.atualizarDados((atuais) => atuais.map((item) => (item.id === categoria.id ? resultado.data : item)));
-    setFeedback({
-      mensagem: resultado.data.ativa ? 'Categoria reativada.' : 'Categoria desativada.',
-      tone: 'success',
-    });
-  }
+      atualizarDados((atuais) => atuais.map((item) => (item.id === categoria.id ? resultado.data : item)));
+      setFeedback({
+        mensagem: resultado.data.ativa ? 'Categoria reativada.' : 'Categoria desativada.',
+        tone: 'success',
+      });
+    },
+    [atualizarDados],
+  );
+
+  const abrir = useCallback((id: string) => router.push(`/categorias/${id}/editar`), [router]);
+
+  const renderLinha = useCallback(
+    ({ item }: ListRenderItemInfo<Categoria>) => (
+      <CategoriaLinha
+        categoria={item}
+        processando={processandoId === item.id}
+        onAbrir={abrir}
+        onAlternarAtiva={handleAlternarAtiva}
+      />
+    ),
+    [processandoId, abrir, handleAlternarAtiva],
+  );
 
   const termo = busca.trim().toLowerCase();
-  const categoriasFiltradas = (tela.dados ?? []).filter((categoria) => {
-    if (!mostrarDesativadas && !categoria.ativa) return false;
-    if (!termo) return true;
-    return categoria.titulo.toLowerCase().includes(termo);
-  });
+  // O useMemo mantém o mesmo array enquanto dados, busca e switch não mudam.
+  const categoriasFiltradas = useMemo(
+    () =>
+      (tela.dados ?? []).filter((categoria) => {
+        if (!mostrarDesativadas && !categoria.ativa) return false;
+        if (!termo) return true;
+        return categoria.titulo.toLowerCase().includes(termo);
+      }),
+    [tela.dados, mostrarDesativadas, termo],
+  );
 
   // Um Snackbar só: o retorno da ação vem antes do aviso de recarga que falhou.
   const snackbar = feedback ?? (tela.feedbackErro ? { mensagem: tela.feedbackErro, tone: 'error' as const } : null);
@@ -110,7 +167,7 @@ export function CategoriasListView() {
       {tela.status === 'pronto' && (
         <List
           data={categoriasFiltradas}
-          keyExtractor={(item) => item.id}
+          keyExtractor={chaveDaCategoria}
           style={styles.lista}
           contentContainerStyle={[coluna, styles.espacoDoFab]}
           refreshControl={
@@ -129,22 +186,7 @@ export function CategoriasListView() {
               description={termo ? 'Tente buscar por outro título.' : 'Crie a primeira categoria para começar.'}
             />
           }
-          renderItem={({ item }) => (
-            <ListItem
-              title={item.titulo}
-              subtitle={subtitulo(item)}
-              onPress={() => router.push(`/categorias/${item.id}/editar`)}
-              control={
-                <Switch
-                  label="Ativa"
-                  accessibilityLabel={`Ativa: ${item.titulo}`}
-                  value={item.ativa}
-                  disabled={processandoId === item.id}
-                  onValueChange={() => handleAlternarAtiva(item)}
-                />
-              }
-            />
-          )}
+          renderItem={renderLinha}
         />
       )}
     </Screen>

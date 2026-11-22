@@ -2,7 +2,7 @@ import { act, fireEvent, render, screen, within } from '@testing-library/react-n
 import { FlatList, RefreshControl, StyleSheet, useWindowDimensions } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-import { Badge, Skeleton, colors, spacing } from '@/ui';
+import { Badge, ListItem, Skeleton, colors, spacing } from '@/ui';
 
 import type { Usuario } from '../types';
 import { UsuariosListView } from '../UsuariosListView';
@@ -27,8 +27,11 @@ let mockAoFocar: (() => void) | null = null;
 jest.mock('expo-router', () => {
   // eslint-disable-next-line @typescript-eslint/no-require-imports
   const react = require('react');
+  // Mesmo objeto em todo render, como o useRouter real (devolve o router global do expo-router).
+  // Um objeto novo por render mudaria os callbacks das linhas e desfaria o memo (EIX-71).
+  const roteador = { push: (...args: unknown[]) => mockPush(...args) };
   return {
-    useRouter: () => ({ push: mockPush }),
+    useRouter: () => roteador,
     useFocusEffect: (callback: () => void) => {
       mockAoFocar = callback;
       react.useEffect(callback, [callback]);
@@ -37,6 +40,12 @@ jest.mock('expo-router', () => {
 });
 
 jest.mock('../usuariosRepository', () => ({ listarUsuarios: jest.fn() }));
+
+// O ListItem real, só embrulhado num jest.fn: o teste de memo (EIX-71) conta quantas vezes ele renderiza.
+jest.mock('@/ui', () => {
+  const real = jest.requireActual('@/ui');
+  return { ...real, ListItem: jest.fn(real.ListItem) };
+});
 
 const mockListar = listarUsuarios as jest.MockedFunction<typeof listarUsuarios>;
 
@@ -155,6 +164,20 @@ describe('UsuariosListView — carga (CTA-02)', () => {
 
     expect(screen.getByText('Sem conexão com o servidor.')).toBeOnTheScreen();
     expect(screen.getByText('Ana Souza')).toBeOnTheScreen();
+  });
+
+  it('a tela re-renderizar (Snackbar de erro) não re-renderiza as linhas: elas são memoizadas (EIX-71)', async () => {
+    await renderComLista();
+    mockListar.mockResolvedValue({ ok: false, mensagem: 'Sem conexão com o servidor.' });
+    const rendersAntes = jest.mocked(ListItem).mock.calls.length;
+
+    await act(async () => {
+      mockAoFocar?.();
+    });
+
+    // A tela mudou (o Snackbar apareceu), mas nenhum usuário mudou: nenhuma linha renderiza de novo.
+    expect(screen.getByText('Sem conexão com o servidor.')).toBeOnTheScreen();
+    expect(jest.mocked(ListItem).mock.calls.length).toBe(rendersAntes);
   });
 
   it('lista vazia: "Nenhum usuário encontrado", ainda com pull-to-refresh', async () => {
