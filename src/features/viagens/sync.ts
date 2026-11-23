@@ -574,7 +574,11 @@ async function enviarItem(ctx: ContextoDreno, item: schema.OutboxItem): Promise<
       item.operacao === 'insert'
         ? await ctx.cliente
             .from('viagem')
-            .upsert(payload as never, { onConflict: 'id' })
+            // `ignoreDuplicates` vira `on conflict do nothing`: o reenvio de uma abertura nunca
+            // sobrescreve a viagem que já está no servidor (ex.: o gestor fechou enquanto a
+            // abertura esperava na outbox). O trigger de insert retorna cedo quando o id já
+            // existe, então o VG005 do ramo de update não é disparado.
+            .upsert(payload as never, { onConflict: 'id', ignoreDuplicates: true })
             .select(COLUNAS_VIAGEM)
             .maybeSingle()
         : await ctx.cliente
@@ -598,19 +602,46 @@ async function enviarItem(ctx: ContextoDreno, item: schema.OutboxItem): Promise<
     }
 
     if (!data) {
-      // Zero linhas sem erro. No insert, o servidor não confirmou a gravação; no update, a viagem
-      // não existe (ou o RLS a escondeu). Nunca apagar a outbox em silêncio: o dado local é
-      // preservado e o conflito vai para revisão.
-      return item.operacao === 'insert'
-        ? revisar(ctx, item, payload, 'SEM_RESPOSTA', 'O servidor não confirmou a gravação da viagem.', true)
-        : revisar(
-            ctx,
+      if (item.operacao === 'insert') {
+        // `ignoreDuplicates` devolve zero linhas quando a viagem já existe no servidor. O
+        // servidor vence: aplica a versão dele no SQLite e tira a operação da outbox, sem abrir
+        // revisão. Isso cobre tanto a viagem que o gestor fechou quanto a que continua aberta.
+        const servidor = await buscarViagemNoServidor(ctx.cliente, idViagem);
+        if (!sessaoLocalAtual(ctx.geracaoLocal)) {
+          return { tipo: 'cancelada', mensagem: MENSAGEM_SESSAO_ALTERADA };
+        }
+        if (!servidor.ok && servidor.conexao) {
+          const proxima = proximaTentativa(ctx.agora, item.tentativas);
+          atualizarErroTemporario(
+            ctx.database,
             item,
-            payload,
-            'VIAGEM_AUSENTE',
-            'A viagem não foi encontrada no servidor. A alteração local foi mantida para revisão.',
-            true,
+            MENSAGEM_SEM_CONEXAO,
+            'CONEXAO',
+            item.tentativas,
+            proxima,
           );
+          return { tipo: 'conexao', mensagem: MENSAGEM_SEM_CONEXAO };
+        }
+        if (servidor.ok && servidor.data) {
+          aplicarSucessoLocal(ctx.database, item, servidor.data);
+          return { tipo: 'sucesso' };
+        }
+
+        // A viagem não voltou (não existe ou o RLS a esconde). Mantém o comportamento atual:
+        // preserva o dado local e abre revisão SEM_RESPOSTA.
+        return revisar(ctx, item, payload, 'SEM_RESPOSTA', 'O servidor não confirmou a gravação da viagem.');
+      }
+
+      // No update, a viagem não existe (ou o RLS a escondeu). Nunca apagar a outbox em silêncio:
+      // o dado local é preservado e o conflito vai para revisão.
+      return revisar(
+        ctx,
+        item,
+        payload,
+        'VIAGEM_AUSENTE',
+        'A viagem não foi encontrada no servidor. A alteração local foi mantida para revisão.',
+        true,
+      );
     }
 
     const parsed = viagemApiSchema.safeParse(data);
