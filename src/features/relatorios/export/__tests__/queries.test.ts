@@ -144,6 +144,17 @@ describe('buscarTransacoesDoPeriodo', () => {
     expect(resultado.ok && resultado.data).toHaveLength(1000);
   });
 
+  it('categoria inativa continua no relatório com o título dela (soft delete)', async () => {
+    const builder = responder(ok([linha({ categoria: { titulo: 'Pedágio antigo', tipo: 'Saida' } })]));
+
+    const resultado = await buscarTransacoesDoPeriodo(NOVEMBRO);
+
+    // Nada filtra por `ativa`: o lançamento histórico vale mesmo com a categoria desativada.
+    expect(builder.select).toHaveBeenCalledWith(expect.not.stringContaining('ativa'));
+    expect(builder.or).toHaveBeenCalledWith(expect.not.stringContaining('ativa'));
+    expect(resultado.ok && resultado.data[0].categoria).toBe('Pedágio antigo');
+  });
+
   it('42501 vira a mensagem de acesso negado (EXP-17)', async () => {
     responder(erro('42501'));
 

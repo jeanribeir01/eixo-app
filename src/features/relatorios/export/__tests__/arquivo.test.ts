@@ -28,4 +28,22 @@ describe('nomeDaEmpresa (EXP-10)', () => {
   it.each([undefined, '', '   '])('vazio ou ausente (%j) vira "Eixo Certo"', (valor) => {
     expect(nomeDaEmpresa(valor)).toBe('Eixo Certo');
   });
+
+  describe('sem parâmetro, lê EXPO_PUBLIC_NOME_EMPRESA', () => {
+    afterEach(() => {
+      delete process.env.EXPO_PUBLIC_NOME_EMPRESA;
+    });
+
+    it('usa o nome do .env', () => {
+      process.env.EXPO_PUBLIC_NOME_EMPRESA = 'Transportes Silva';
+
+      expect(nomeDaEmpresa()).toBe('Transportes Silva');
+    });
+
+    it('sem a variável, "Eixo Certo"', () => {
+      delete process.env.EXPO_PUBLIC_NOME_EMPRESA;
+
+      expect(nomeDaEmpresa()).toBe('Eixo Certo');
+    });
+  });
 });

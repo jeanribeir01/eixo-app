@@ -11,7 +11,7 @@ import { gerarCsv } from './csv';
 import { nomeDaEmpresa } from './empresa';
 import type { FormatoRelatorio, TransacaoRelatorio } from './linhas';
 import { gerarHtmlPdf } from './pdf';
-import { buscarTransacoesDoPeriodo } from './queries';
+import { buscarTransacoesDoPeriodo, MENSAGEM_ERRO_RELATORIO } from './queries';
 
 type ExportarRelatorioProps = {
   // O período em uso no FiltroPeriodo da aba Dashboards.
@@ -82,6 +82,9 @@ export function ExportarRelatorio({ periodo, onFeedback }: ExportarRelatorioProp
 
       // O Share Sheet não diz se a pessoa enviou ou cancelou: a mensagem fala da geração.
       onFeedback('Relatório gerado.', 'success');
+    } catch {
+      // Rede de segurança: qualquer exceção inesperada no meio do caminho ainda vira mensagem na tela.
+      onFeedback(MENSAGEM_ERRO_RELATORIO, 'error');
     } finally {
       // Todo caminho, inclusive o de erro, devolve o botão: ele nunca fica preso em loading.
       setExportando(false);

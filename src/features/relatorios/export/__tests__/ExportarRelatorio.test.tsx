@@ -3,6 +3,7 @@ import { Alert, type AlertButton } from 'react-native';
 
 import { periodoDoMes } from '@/features/dashboard/periodo';
 import { MENSAGEM_ACESSO_NEGADO } from '@/lib/errors';
+import { colors } from '@/ui/tokens';
 
 import { compartilharArquivo, gerarArquivoCsv, gerarArquivoPdf } from '../compartilhar';
 import { ExportarRelatorio } from '../ExportarRelatorio';
@@ -77,10 +78,40 @@ beforeEach(() => {
 afterEach(() => alerta.mockRestore());
 
 describe('ExportarRelatorio', () => {
-  it('mostra o botão Exportar com o período no nome acessível', () => {
+  it('mostra o botão Exportar primário (cyan preenchido) com o período no nome acessível (EXP-01)', () => {
     renderizar();
 
     expect(screen.getByText('Exportar')).toBeTruthy();
+    expect(botaoExportar()).toHaveStyle({ backgroundColor: colors.accent });
+    expect(botaoExportar().props.accessibilityState).toMatchObject({ disabled: false, busy: false });
+  });
+
+  it('PDF usa o nome da empresa do .env no cabeçalho (EXP-10)', async () => {
+    process.env.EXPO_PUBLIC_NOME_EMPRESA = 'Transportes Silva';
+    try {
+      renderizar();
+      fireEvent.press(botaoExportar());
+
+      await tocarNoAlerta('PDF');
+
+      const [, html] = mockPdf.mock.calls[0];
+      expect(html).toContain('<h1>Transportes Silva</h1>');
+    } finally {
+      delete process.env.EXPO_PUBLIC_NOME_EMPRESA;
+    }
+  });
+
+  it('erro inesperado ao montar o arquivo vira Snackbar de erro e devolve o botão (EXP-18)', async () => {
+    mockCsv.mockImplementation(() => {
+      throw new Error('inesperado');
+    });
+    renderizar();
+    fireEvent.press(botaoExportar());
+
+    await tocarNoAlerta('Planilha (CSV)');
+
+    expect(onFeedback).toHaveBeenCalledWith(ERRO, 'error');
+    expect(mockCompartilhar).not.toHaveBeenCalled();
     expect(botaoExportar().props.accessibilityState).toMatchObject({ disabled: false, busy: false });
   });
 

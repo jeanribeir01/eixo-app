@@ -397,6 +397,18 @@ describe('RankingView', () => {
       expect(screen.getByText(/^Exportar \d{4}-\d{2}-01 a /)).toBeOnTheScreen();
     });
 
+    it('o Exportar fica logo abaixo do FiltroPeriodo, antes dos gráficos (EXP-01)', async () => {
+      responder(RANKING_COMPLETO);
+
+      render(<RankingView />);
+      await screen.findByText('Top 3 rotas mais lucrativas');
+
+      const arvore = JSON.stringify(screen.toJSON());
+      expect(arvore.indexOf('Mês anterior')).toBeGreaterThan(-1);
+      expect(arvore.indexOf('Mês anterior')).toBeLessThan(arvore.indexOf('Exportar '));
+      expect(arvore.indexOf('Exportar ')).toBeLessThan(arvore.indexOf('Gráficos '));
+    });
+
     it('Gestor de Frota não vê o Exportar (EXP-02)', async () => {
       usarPerfil(true, false);
       responder(RANKING_COMPLETO);
