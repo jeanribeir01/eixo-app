@@ -127,7 +127,7 @@ T4 → T5 → T6
 
 ---
 
-### T4: Gravar o arquivo e abrir o Share Sheet
+### T4: ✅ Gravar o arquivo e abrir o Share Sheet
 
 **What**: `gerarArquivoCsv`, `gerarArquivoPdf` e `compartilharArquivo`, devolvendo `Resultado`.
 **Where**: `src/features/relatorios/export/compartilhar.ts`
@@ -142,8 +142,8 @@ T4 → T5 → T6
 
 **Done when**:
 
-- [ ] Testes cobrem nome e conteúdo gravados, PDF A4 movido para o nome do período, mime type, sharing indisponível e erro de escrita
-- [ ] Gate quick passa
+- [x] Testes cobrem nome e conteúdo gravados, PDF A4 movido para o nome do período, mime type, sharing indisponível e erro de escrita
+- [x] Gate quick passa
 
 **Tests**: unit
 **Gate**: quick
