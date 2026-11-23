@@ -301,6 +301,37 @@ describe('MovimentacoesListView — linhas e estados (LST-02)', () => {
     expect(screen.getByText('+ R$ 1.500,00 em entradas · − R$ 80,00 em saídas')).toBeOnTheScreen();
   });
 
+  it('resumo acompanha o Tipo: Entradas mostra o recebido; Saídas, o pago', async () => {
+    await renderLista();
+
+    await escolher('Tipo', 'Entradas');
+    expect(screen.getByText('Recebido em outubro')).toBeOnTheScreen();
+    // O mesmo valor aparece no cartão e na linha do frete, a única entrada do mês.
+    expect(screen.getAllByText('+ R$ 1.500,00')).toHaveLength(2);
+    expect(screen.queryByText(/em entradas ·/)).not.toBeOnTheScreen();
+
+    await escolher('Tipo', 'Saídas');
+    expect(screen.getByText('Pago em outubro')).toBeOnTheScreen();
+    // No cartão (só as saídas pagas do mês) e na linha do Diesel.
+    expect(screen.getAllByText('− R$ 80,00')).toHaveLength(2);
+  });
+
+  it('com Status "Pendentes" o cartão some: ele falaria de "pago" ao lado do que não foi pago', async () => {
+    await renderLista();
+
+    await escolher('Status', 'Pendentes');
+    expect(screen.queryByText('Pago em outubro')).not.toBeOnTheScreen();
+
+    await escolher('Status', 'Pagos');
+    expect(screen.getByText('Pago em outubro')).toBeOnTheScreen();
+  });
+
+  it('o cartão diz que conta pelo dia do pagamento (a lista agrupa pelo vencimento)', async () => {
+    await renderLista();
+
+    expect(screen.getByText('Pelo dia do pagamento.')).toBeOnTheScreen();
+  });
+
   it('se o resumo falhar, a lista continua na tela, só sem o cartão', async () => {
     mockFluxo.mockResolvedValue({ ok: false, mensagem: 'Sem conexão.' });
     await renderLista();

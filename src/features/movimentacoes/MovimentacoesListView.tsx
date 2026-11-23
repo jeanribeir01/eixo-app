@@ -138,20 +138,39 @@ function chaveDaLinha(linha: Linha): string {
   return linha.id;
 }
 
-// Resumo do mês no topo: o que já foi pago, entradas menos saídas. As duas somas vêm prontas do banco
-// (`fluxo_caixa_mensal`, RNF06); aqui só a diferença entre elas.
-function ResumoDoMes({ entradas, saidas, nomeMes }: { entradas: number; saidas: number; nomeMes: string }) {
+// Resumo do mês no topo: o que de fato passou pelo caixa. As somas vêm prontas do banco
+// (`fluxo_caixa_mensal`, RNF06), em regime de caixa: só o que está Pago, no mês da data de pagamento.
+// Acompanha o filtro de Tipo (o banco já devolve entradas e saídas separadas); com Status "Pendentes"
+// a tela nem mostra o cartão, que falaria de "pago" ao lado de uma lista do que não foi pago.
+type ResumoProps = { entradas: number; saidas: number; nomeMes: string; tipo: FiltroTipo };
+
+function ResumoDoMes({ entradas, saidas, nomeMes, tipo }: ResumoProps) {
+  const mes = nomeMes.toLowerCase();
   const saldo = entradas - saidas;
+  const { rotulo, valor } =
+    tipo === 'Entrada'
+      ? { rotulo: `Recebido em ${mes}`, valor: `+ ${formatarMoeda(entradas)}` }
+      : tipo === 'Saida'
+        ? { rotulo: `Pago em ${mes}`, valor: `− ${formatarMoeda(saidas)}` }
+        : { rotulo: `Pago em ${mes}`, valor: `${saldo < 0 ? '−' : '+'} ${formatarMoeda(Math.abs(saldo))}` };
+
   return (
     <Card>
       <Text variant="bodySm" tone="body">
-        {`Pago em ${nomeMes.toLowerCase()}`}
+        {rotulo}
       </Text>
       <Text variant="heading" weight="semibold">
-        {`${saldo < 0 ? '−' : '+'} ${formatarMoeda(Math.abs(saldo))}`}
+        {valor}
       </Text>
-      <Text variant="bodySm" tone="body">
-        {`+ ${formatarMoeda(entradas)} em entradas · − ${formatarMoeda(saidas)} em saídas`}
+      {tipo === 'todas' && (
+        <Text variant="bodySm" tone="body">
+          {`+ ${formatarMoeda(entradas)} em entradas · − ${formatarMoeda(saidas)} em saídas`}
+        </Text>
+      )}
+      {/* A lista agrupa pelo vencimento; o cartão conta pelo pagamento. A linha explica por que a soma
+          das linhas "Pago" de um dia nem sempre bate com o cartão. */}
+      <Text variant="caption" tone="body">
+        Pelo dia do pagamento.
       </Text>
     </Card>
   );
@@ -321,11 +340,12 @@ export function MovimentacoesListView() {
             />
           }
           ListHeaderComponent={
-            mesDoResumo ? (
+            mesDoResumo && filtroStatus !== 'Pendente' ? (
               <ResumoDoMes
                 entradas={mesDoResumo.entradas_centavos}
                 saidas={mesDoResumo.saidas_centavos}
                 nomeMes={nomeDoMes(periodo.ano, periodo.mes).split(' ')[0]}
+                tipo={filtroTipo}
               />
             ) : null
           }
