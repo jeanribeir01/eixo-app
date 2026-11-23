@@ -19,17 +19,17 @@ Implement these tasks with the `tlc-spec-driven` skill: **activate it by name an
 
 | Code Layer | Required Test Type | Coverage Expectation | Location Pattern | Run Command |
 | --- | --- | --- | --- | --- |
-| Funções puras (CSV, HTML, nome) | unit | Cada AC de formato: BOM, `;`, CRLF, aspas, apóstrofo, valor, escape HTML, totais, paginação, nome por modo | `src/features/relatorios/export/__tests__/*.test.ts` | `npx jest --selectProjects app src/features/relatorios` |
-| Consulta (supabase mockado) | unit | Filtro do período, paginação de 1000, ordem, erro genérico e 42501, Zod recusa formato errado | `src/features/relatorios/export/__tests__/*.test.ts` | `npx jest --selectProjects app src/features/relatorios` |
-| Arquivo e compartilhamento (módulos Expo mockados) | unit | Grava com nome e conteúdo certos, mime type, sharing indisponível, erro de escrita | `src/features/relatorios/export/__tests__/*.test.ts` | `npx jest --selectProjects app src/features/relatorios` |
-| Componente / tela | unit (Testing Library) | Render, alerta de formato, loading, sucesso, cada erro, período vazio, perfil | `src/features/**/__tests__/*.test.tsx` | `npx jest --selectProjects app src/features/relatorios src/features/dashboard` |
+| Funções puras (CSV, HTML, nome) | unit | Cada AC de formato: BOM, `;`, CRLF, aspas, apóstrofo, valor, escape HTML, totais, paginação, nome por modo | `src/features/relatorios/export/__tests__/*.test.ts` | `npx jest src/features/relatorios --selectProjects app` |
+| Consulta (supabase mockado) | unit | Filtro do período, paginação de 1000, ordem, erro genérico e 42501, Zod recusa formato errado | `src/features/relatorios/export/__tests__/*.test.ts` | `npx jest src/features/relatorios --selectProjects app` |
+| Arquivo e compartilhamento (módulos Expo mockados) | unit | Grava com nome e conteúdo certos, mime type, sharing indisponível, erro de escrita | `src/features/relatorios/export/__tests__/*.test.ts` | `npx jest src/features/relatorios --selectProjects app` |
+| Componente / tela | unit (Testing Library) | Render, alerta de formato, loading, sucesso, cada erro, período vazio, perfil | `src/features/**/__tests__/*.test.tsx` | `npx jest src/features/relatorios src/features/dashboard --selectProjects app` |
 | Dependências e ADR | none | build gate only | - | `npm run typecheck && npm run lint` |
 
 ## Gate Check Commands
 
 | Gate Level | When to Use | Command |
 | --- | --- | --- |
-| Quick | Tasks with unit tests only | `npx jest --selectProjects app src/features/relatorios` |
+| Quick | Tasks with unit tests only | `npx jest src/features/relatorios --selectProjects app` |
 | Build | End of phase / no-test tasks | `npm run typecheck && npm run lint && npm run test` |
 
 ---
@@ -81,7 +81,7 @@ T4 → T5 → T6
 
 ---
 
-### T2: Montar CSV, HTML do PDF e nome do arquivo
+### T2: ✅ Montar CSV, HTML do PDF e nome do arquivo
 
 **What**: Funções puras: linha do relatório a partir da movimentação, `gerarCsv`, `gerarHtmlPdf`, `nomeDoArquivo` e o nome da empresa.
 **Where**: `src/features/relatorios/export/{linhas,csv,pdf,arquivo,empresa}.ts`
@@ -96,8 +96,8 @@ T4 → T5 → T6
 
 **Done when**:
 
-- [ ] Testes cobrem CSV com acentos, aspas, `;`, quebra de linha, fórmula, valor 1,13 e milhar; PDF com 300 linhas, cabeçalho repetido, totais uma vez no fim, escape HTML, empresa vazia; nome nos três modos
-- [ ] Gate quick passa
+- [x] Testes cobrem CSV com acentos, aspas, `;`, quebra de linha, fórmula, valor 1,13 e milhar; PDF com 300 linhas, cabeçalho repetido, totais uma vez no fim, escape HTML, empresa vazia; nome nos três modos
+- [x] Gate quick passa
 
 **Tests**: unit
 **Gate**: quick
