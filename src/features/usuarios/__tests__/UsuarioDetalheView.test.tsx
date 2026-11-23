@@ -75,9 +75,12 @@ describe('UsuarioDetalheView', () => {
     expect(buscarUsuarioPorId).toHaveBeenCalledWith('u2');
     expect(screen.getByText('bruno@empresa.com')).toBeOnTheScreen();
     expect(screen.getByText('Aguardando aprovação')).toBeOnTheScreen();
+    // Perfis como opções de rádio, cada uma dizendo o que libera; o atual vem marcado.
     for (const rotulo of ['Administrador', 'Gestor de Frota', 'Financeiro', 'Operador/Motorista']) {
-      expect(screen.getByRole('button', { name: `Perfil ${rotulo}` })).toBeOnTheScreen();
+      expect(screen.getByRole('radio', { name: new RegExp(`^${rotulo}\\. `) })).toBeOnTheScreen();
     }
+    expect(screen.getByRole('radio', { name: /^Operador\/Motorista\. / })).toBeChecked();
+    expect(screen.getByRole('radio', { name: /^Financeiro\. Caixa, dívidas/ })).not.toBeChecked();
   });
 
   it('salvar perfil grava o perfil escolhido e mostra "Perfil atualizado." (AC5)', async () => {
@@ -91,7 +94,8 @@ describe('UsuarioDetalheView', () => {
     // Sem mudança de perfil, salvar fica desabilitado.
     expect(screen.getByRole('button', { name: 'Salvar perfil' })).toBeDisabled();
 
-    fireEvent.press(screen.getByRole('button', { name: 'Perfil Financeiro' }));
+    fireEvent.press(screen.getByRole('radio', { name: /^Financeiro\. / }));
+    expect(screen.getByRole('radio', { name: /^Financeiro\. / })).toBeChecked();
     fireEvent.press(screen.getByRole('button', { name: 'Salvar perfil' }));
 
     expect(await screen.findByText('Perfil atualizado.')).toBeOnTheScreen();
@@ -103,14 +107,14 @@ describe('UsuarioDetalheView', () => {
     render(<UsuarioDetalheView />);
     await screen.findByText('Bruno Lima');
 
-    fireEvent.press(screen.getByRole('button', { name: 'Aprovar' }));
+    fireEvent.press(screen.getByRole('button', { name: 'Aprovar acesso' }));
 
     expect(await screen.findByText('Usuário aprovado.')).toBeOnTheScreen();
     expect(alterarStatusUsuario).toHaveBeenCalledWith('u2', 'Ativo');
     // Já aprovado: a ação disponível passa a ser Bloquear.
     expect(screen.getByText('Ativo')).toBeOnTheScreen();
-    expect(screen.getByRole('button', { name: 'Bloquear' })).toBeOnTheScreen();
-    expect(screen.queryByRole('button', { name: 'Aprovar' })).not.toBeOnTheScreen();
+    expect(screen.getByRole('button', { name: 'Bloquear acesso' })).toBeOnTheScreen();
+    expect(screen.queryByRole('button', { name: 'Aprovar acesso' })).not.toBeOnTheScreen();
   });
 
   it('Bloquear grava status Bloqueado e mostra "Usuário bloqueado." (AC7)', async () => {
@@ -119,11 +123,28 @@ describe('UsuarioDetalheView', () => {
     render(<UsuarioDetalheView />);
     await screen.findByText('Bruno Lima');
 
-    fireEvent.press(screen.getByRole('button', { name: 'Bloquear' }));
+    // Ação de perigo, com a consequência dita embaixo.
+    expect(screen.getByText('Bloqueado, Bruno perde o acesso ao app. Dá para desbloquear depois.')).toBeOnTheScreen();
+    fireEvent.press(screen.getByRole('button', { name: 'Bloquear acesso' }));
 
     expect(await screen.findByText('Usuário bloqueado.')).toBeOnTheScreen();
     expect(alterarStatusUsuario).toHaveBeenCalledWith('u2', 'Bloqueado');
     expect(screen.getByText('Bloqueado')).toBeOnTheScreen();
+    // Bloqueado, a ação passa a ser Desbloquear.
+    expect(screen.getByRole('button', { name: 'Desbloquear acesso' })).toBeOnTheScreen();
+    expect(screen.queryByRole('button', { name: 'Bloquear acesso' })).not.toBeOnTheScreen();
+  });
+
+  it('Desbloquear grava status Ativo e mostra "Usuário desbloqueado."', async () => {
+    (buscarUsuarioPorId as jest.Mock).mockResolvedValue({ ok: true, data: { ...bruno, status: 'Bloqueado' } });
+    (alterarStatusUsuario as jest.Mock).mockResolvedValue({ ok: true, data: { ...bruno, status: 'Ativo' } });
+    render(<UsuarioDetalheView />);
+    await screen.findByText('Bruno Lima');
+
+    fireEvent.press(screen.getByRole('button', { name: 'Desbloquear acesso' }));
+
+    expect(await screen.findByText('Usuário desbloqueado.')).toBeOnTheScreen();
+    expect(alterarStatusUsuario).toHaveBeenCalledWith('u2', 'Ativo');
   });
 
   it('falha ao gravar: mostra o erro e mantém o status anterior (AC8)', async () => {
@@ -134,11 +155,11 @@ describe('UsuarioDetalheView', () => {
     render(<UsuarioDetalheView />);
     await screen.findByText('Bruno Lima');
 
-    fireEvent.press(screen.getByRole('button', { name: 'Aprovar' }));
+    fireEvent.press(screen.getByRole('button', { name: 'Aprovar acesso' }));
 
     expect(await screen.findByText('Não foi possível alterar o status. Tente novamente.')).toBeOnTheScreen();
     expect(screen.getByText('Aguardando aprovação')).toBeOnTheScreen();
-    expect(screen.getByRole('button', { name: 'Aprovar' })).toBeOnTheScreen();
+    expect(screen.getByRole('button', { name: 'Aprovar acesso' })).toBeOnTheScreen();
   });
 
   it('falha ao salvar perfil: mostra o erro e mantém o perfil anterior (AC8)', async () => {
@@ -149,7 +170,7 @@ describe('UsuarioDetalheView', () => {
     render(<UsuarioDetalheView />);
     await screen.findByText('Bruno Lima');
 
-    fireEvent.press(screen.getByRole('button', { name: 'Perfil Financeiro' }));
+    fireEvent.press(screen.getByRole('radio', { name: /^Financeiro\. / }));
     fireEvent.press(screen.getByRole('button', { name: 'Salvar perfil' }));
 
     expect(await screen.findByText('Não foi possível alterar o perfil. Tente novamente.')).toBeOnTheScreen();
@@ -169,8 +190,8 @@ describe('UsuarioDetalheView', () => {
 
     expect(screen.getByText('Você não pode alterar o próprio perfil nem bloquear a si mesmo.')).toBeOnTheScreen();
     expect(screen.queryByRole('button', { name: 'Salvar perfil' })).not.toBeOnTheScreen();
-    expect(screen.queryByRole('button', { name: 'Perfil Administrador' })).not.toBeOnTheScreen();
-    expect(screen.queryByRole('button', { name: 'Bloquear' })).not.toBeOnTheScreen();
+    expect(screen.queryAllByRole('radio')).toHaveLength(0);
+    expect(screen.queryByRole('button', { name: 'Bloquear acesso' })).not.toBeOnTheScreen();
   });
 
   it('erro ao carregar: mensagem e "Tentar novamente"', async () => {

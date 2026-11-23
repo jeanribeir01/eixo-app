@@ -45,14 +45,32 @@ describe('CategoriaFormView', () => {
     expect(screen.UNSAFE_getByType(SafeAreaView).props.edges).not.toContain('top');
     // Formulário rola e sobe com o teclado (NAV-04, AC 9 e 10).
     expect(screen.UNSAFE_getByType(KeyboardAvoidingView).findByType(ScrollView).props.keyboardShouldPersistTaps).toBe('handled');
-    expect(screen.getByRole('tab', { name: 'Entrada' })).toBeOnTheScreen();
-    expect(screen.getByRole('tab', { name: 'Saída' })).toBeOnTheScreen();
+    // Tipo como duas opções que dizem para que lado vai o dinheiro; sem tipo da aba, nenhuma vem marcada.
+    expect(screen.getByRole('radio', { name: 'Entrada. Dinheiro que entra no caixa' })).not.toBeChecked();
+    expect(screen.getByRole('radio', { name: 'Saída. Dinheiro que sai do caixa' })).not.toBeChecked();
+  });
+
+  it('aberta pela aba Saídas: o tipo já vem marcado', () => {
+    render(<CategoriaFormView tipoInicial="Saida" />);
+
+    expect(screen.getByRole('radio', { name: /^Saída\. / })).toBeChecked();
+    expect(screen.getByRole('radio', { name: /^Entrada\. / })).not.toBeChecked();
+  });
+
+  it('sem tipo escolhido, não salva e pede a escolha', () => {
+    render(<CategoriaFormView />);
+
+    fireEvent.changeText(screen.getByLabelText('Título'), 'Pneus');
+    fireEvent.press(screen.getByRole('button', { name: 'Criar categoria' }));
+
+    expect(screen.getByRole('alert')).toHaveTextContent('Escolha Entrada ou Saída.');
+    expect(criarCategoria).not.toHaveBeenCalled();
   });
 
   it('não permite salvar com título vazio e mostra a mensagem no campo', () => {
-    render(<CategoriaFormView />);
+    render(<CategoriaFormView tipoInicial="Saida" />);
 
-    fireEvent.press(screen.getByRole('button', { name: 'Salvar' }));
+    fireEvent.press(screen.getByRole('button', { name: 'Criar categoria' }));
 
     expect(screen.getByText('Informe o título da categoria.')).toBeOnTheScreen();
     expect(criarCategoria).not.toHaveBeenCalled();
@@ -67,10 +85,10 @@ describe('CategoriaFormView', () => {
     render(<CategoriaFormView />);
 
     fireEvent.changeText(screen.getByLabelText('Título'), 'Pneus');
-    fireEvent.press(screen.getByRole('tab', { name: 'Saída' }));
+    fireEvent.press(screen.getByRole('radio', { name: /^Saída\. / }));
 
     await act(async () => {
-      fireEvent.press(screen.getByRole('button', { name: 'Salvar' }));
+      fireEvent.press(screen.getByRole('button', { name: 'Criar categoria' }));
     });
 
     expect(criarCategoria).toHaveBeenCalledWith({ titulo: 'Pneus', tipo: 'Saida' });
@@ -89,12 +107,12 @@ describe('CategoriaFormView', () => {
       mensagem: 'Já existe uma categoria com esse título.',
     });
 
-    render(<CategoriaFormView />);
+    render(<CategoriaFormView tipoInicial="Saida" />);
 
     fireEvent.changeText(screen.getByLabelText('Título'), 'Combustível');
 
     await act(async () => {
-      fireEvent.press(screen.getByRole('button', { name: 'Salvar' }));
+      fireEvent.press(screen.getByRole('button', { name: 'Criar categoria' }));
     });
 
     expect(screen.getAllByText('Já existe uma categoria com esse título.').length).toBeGreaterThan(0);
@@ -112,8 +130,8 @@ describe('CategoriaFormView', () => {
     expect(await screen.findByLabelText('Título')).toBeOnTheScreen();
     expect(screen.queryByText('Editar categoria')).not.toBeOnTheScreen();
     expect(screen.getByLabelText('Título').props.value).toBe('Manutenção');
-    // Pelo estado de seleção, não pela cor: o visual da aba ativa é do primitivo Tabs.
-    expect(screen.getByRole('tab', { name: 'Saída', selected: true })).toBeOnTheScreen();
+    // Pelo estado de seleção, não pela cor: o visual da opção marcada é do primitivo OpcaoSelecionavel.
+    expect(screen.getByRole('radio', { name: /^Saída\. / })).toBeChecked();
   });
 
   it('modo editar: envia a atualização para o id certo', async () => {
@@ -132,7 +150,7 @@ describe('CategoriaFormView', () => {
     fireEvent.changeText(screen.getByLabelText('Título'), 'Manutenção preventiva');
 
     await act(async () => {
-      fireEvent.press(screen.getByRole('button', { name: 'Salvar' }));
+      fireEvent.press(screen.getByRole('button', { name: 'Salvar alterações' }));
     });
 
     expect(atualizarCategoria).toHaveBeenCalledWith('9', { titulo: 'Manutenção preventiva', tipo: 'Saida' });
@@ -151,13 +169,10 @@ describe('CategoriaFormView', () => {
     expect(mockBack).toHaveBeenCalledTimes(1);
   });
 
-  it('"Cancelar" volta sem salvar', () => {
+  it('um botão só, a ação da tela: sem "Cancelar", porque o voltar do header já desiste', () => {
     render(<CategoriaFormView />);
 
-    fireEvent.press(screen.getByRole('button', { name: 'Cancelar' }));
-
-    expect(mockBack).toHaveBeenCalledTimes(1);
-    expect(criarCategoria).not.toHaveBeenCalled();
+    expect(screen.getAllByRole('button').map((botao) => botao.props.accessibilityLabel)).toEqual(['Criar categoria']);
   });
 });
 
