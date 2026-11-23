@@ -6,17 +6,17 @@ import { colors, controlHeight, radius, spacing } from '../tokens';
 // Botão flutuante da ação principal da tela (UIP-03): pílula accentStrong com ícone e rótulo.
 // É o único elemento azul preenchido da tela (DESIGN_CYAN §1).
 describe('FAB (UIP-03)', () => {
-  it('é um botão acessível com o rótulo e dispara a ação (AC 6)', () => {
+  it('é um botão acessível com o rótulo e dispara a ação (AC 6)', async () => {
     const onPress = jest.fn();
-    render(<FAB label="Nova categoria" onPress={onPress} />);
+    await render(<FAB label="Nova categoria" onPress={onPress} />);
 
-    fireEvent.press(screen.getByRole('button', { name: 'Nova categoria' }));
+    await fireEvent.press(screen.getByRole('button', { name: 'Nova categoria' }));
 
     expect(onPress).toHaveBeenCalledTimes(1);
   });
 
-  it('pílula accentStrong com altura de 48pt, alinhada à direita (AC 5, DESIGN_CYAN 2.0)', () => {
-    render(<FAB label="Nova categoria" onPress={jest.fn()} />);
+  it('pílula accentStrong com altura de 48pt, alinhada à direita (AC 5, DESIGN_CYAN 2.0)', async () => {
+    await render(<FAB label="Nova categoria" onPress={jest.fn()} />);
 
     expect(screen.getByRole('button', { name: 'Nova categoria' })).toHaveStyle({
       backgroundColor: colors.accentStrong,
@@ -28,8 +28,8 @@ describe('FAB (UIP-03)', () => {
     });
   });
 
-  it('mostra o ícone de adicionar e o rótulo em onAccent, peso medium', () => {
-    render(<FAB label="Nova movimentação" onPress={jest.fn()} />);
+  it('mostra o ícone de adicionar e o rótulo em onAccent, peso medium', async () => {
+    await render(<FAB label="Nova movimentação" onPress={jest.fn()} />);
 
     expect(screen.getByTestId('icone-adicionar', { includeHiddenElements: true })).toHaveStyle({ color: colors.onAccent });
     expect(screen.getByText('Nova movimentação')).toHaveStyle({ color: colors.onAccent, fontFamily: 'Inter_500Medium' });

@@ -80,26 +80,26 @@ describe('FecharViagemView', () => {
   });
 
   it('exibe dados da viagem e entende o milhar pt-BR ao digitar o hodômetro final', async () => {
-    render(<FecharViagemView viagemId="viagem-1" />);
+    await render(<FecharViagemView viagemId="viagem-1" />);
 
     expect(await screen.findByText('BRA2E19 • Actros', { exact: false })).toBeTruthy();
     expect(screen.getByText('Hodômetro Inicial: 10.000 km', { exact: false })).toBeTruthy();
 
     const input = screen.getByLabelText('Hodômetro Final (km)');
     // 10.080 - 10.000 = 80 km (antes, o parser lia "10.080" como 10,08)
-    fireEvent.changeText(input, '10.080');
+    await fireEvent.changeText(input, '10.080');
 
     expect(await screen.findByText('Distância calculada: 80 km')).toBeTruthy();
   });
 
   it('exibe aviso visual quando a distância rodada ultrapassa muito a estimativa da rota (Passo 3.3)', async () => {
-    render(<FecharViagemView viagemId="viagem-1" />);
+    await render(<FecharViagemView viagemId="viagem-1" />);
 
     await screen.findByText('BRA2E19 • Actros', { exact: false });
 
     const input = screen.getByLabelText('Hodômetro Final (km)');
     // 10150 - 10000 = 150 km (> 100 km * 1.2 = 120 km)
-    fireEvent.changeText(input, '10150');
+    await fireEvent.changeText(input, '10150');
 
     expect(await screen.findByText(/excede a estimativa da rota/i)).toBeTruthy();
   });
@@ -116,14 +116,14 @@ describe('FecharViagemView', () => {
       },
     });
 
-    render(<FecharViagemView viagemId="viagem-1" />);
+    await render(<FecharViagemView viagemId="viagem-1" />);
 
     await screen.findByText('BRA2E19 • Actros', { exact: false });
 
     // 10095 - 10000 = 95 km, digitado no padrão pt-BR
-    fireEvent.changeText(screen.getByLabelText('Hodômetro Final (km)'), '10.095');
+    await fireEvent.changeText(screen.getByLabelText('Hodômetro Final (km)'), '10.095');
 
-    fireEvent.press(screen.getByRole('button', { name: 'Fechar viagem' }));
+    await fireEvent.press(screen.getByRole('button', { name: 'Fechar viagem' }));
 
     expect(Alert.alert).toHaveBeenCalledWith(
       'Confirmar encerramento',
@@ -148,13 +148,13 @@ describe('FecharViagemView', () => {
       },
     });
 
-    render(<FecharViagemView viagemId="viagem-1" />);
+    await render(<FecharViagemView viagemId="viagem-1" />);
 
     await screen.findByText('BRA2E19 • Actros', { exact: false });
 
     // 10100,3 - 10000,1 = 100.19999999999891 em ponto flutuante
-    fireEvent.changeText(screen.getByLabelText('Hodômetro Final (km)'), '10.100,3');
-    fireEvent.press(screen.getByRole('button', { name: 'Fechar viagem' }));
+    await fireEvent.changeText(screen.getByLabelText('Hodômetro Final (km)'), '10.100,3');
+    await fireEvent.press(screen.getByRole('button', { name: 'Fechar viagem' }));
 
     expect(Alert.alert).toHaveBeenCalledWith(
       'Confirmar encerramento',
@@ -164,23 +164,23 @@ describe('FecharViagemView', () => {
   });
 
   it('usa a mensagem do schema quando o hodômetro final está vazio', async () => {
-    render(<FecharViagemView viagemId="viagem-1" />);
+    await render(<FecharViagemView viagemId="viagem-1" />);
 
     await screen.findByText('BRA2E19 • Actros', { exact: false });
 
-    fireEvent.press(screen.getByRole('button', { name: 'Fechar viagem' }));
+    await fireEvent.press(screen.getByRole('button', { name: 'Fechar viagem' }));
 
     expect(await screen.findByText('Informe um número para o hodômetro final.')).toBeTruthy();
     expect(Alert.alert).not.toHaveBeenCalled();
   });
 
   it('usa a mensagem do schema quando o hodômetro final é zero', async () => {
-    render(<FecharViagemView viagemId="viagem-1" />);
+    await render(<FecharViagemView viagemId="viagem-1" />);
 
     await screen.findByText('BRA2E19 • Actros', { exact: false });
 
-    fireEvent.changeText(screen.getByLabelText('Hodômetro Final (km)'), '0');
-    fireEvent.press(screen.getByRole('button', { name: 'Fechar viagem' }));
+    await fireEvent.changeText(screen.getByLabelText('Hodômetro Final (km)'), '0');
+    await fireEvent.press(screen.getByRole('button', { name: 'Fechar viagem' }));
 
     expect(await screen.findByText('O hodômetro final deve ser maior que zero.')).toBeTruthy();
     expect(Alert.alert).not.toHaveBeenCalled();
@@ -189,14 +189,14 @@ describe('FecharViagemView', () => {
   it.each(['9.999', '10.000'])(
     'impede fechamento com hodômetro final menor ou igual ao inicial (%s)',
     async (valor) => {
-      render(<FecharViagemView viagemId="viagem-1" />);
+      await render(<FecharViagemView viagemId="viagem-1" />);
 
       await screen.findByText('BRA2E19 • Actros', { exact: false });
 
       const input = screen.getByLabelText('Hodômetro Final (km)');
-      fireEvent.changeText(input, valor);
+      await fireEvent.changeText(input, valor);
 
-      fireEvent.press(screen.getByRole('button', { name: 'Fechar viagem' }));
+      await fireEvent.press(screen.getByRole('button', { name: 'Fechar viagem' }));
 
       expect(
         await screen.findByText('O hodômetro final deve ser maior que o inicial (10.000 km).'),
@@ -206,11 +206,11 @@ describe('FecharViagemView', () => {
   );
 
   it('inclui o aviso de distância excessiva no texto do Alert', async () => {
-    render(<FecharViagemView viagemId="viagem-1" />);
+    await render(<FecharViagemView viagemId="viagem-1" />);
 
     await screen.findByText('BRA2E19 • Actros', { exact: false });
-    fireEvent.changeText(screen.getByLabelText('Hodômetro Final (km)'), '10.150');
-    fireEvent.press(screen.getByRole('button', { name: 'Fechar viagem' }));
+    await fireEvent.changeText(screen.getByLabelText('Hodômetro Final (km)'), '10.150');
+    await fireEvent.press(screen.getByRole('button', { name: 'Fechar viagem' }));
 
     expect(Alert.alert).toHaveBeenCalledWith(
       'Confirmar encerramento',
@@ -229,11 +229,11 @@ describe('FecharViagemView', () => {
       mensagem: 'Não foi possível fechar a viagem.',
     });
 
-    render(<FecharViagemView viagemId="viagem-1" />);
+    await render(<FecharViagemView viagemId="viagem-1" />);
 
     await screen.findByText('BRA2E19 • Actros', { exact: false });
-    fireEvent.changeText(screen.getByLabelText('Hodômetro Final (km)'), '10.095');
-    fireEvent.press(screen.getByRole('button', { name: 'Fechar viagem' }));
+    await fireEvent.changeText(screen.getByLabelText('Hodômetro Final (km)'), '10.095');
+    await fireEvent.press(screen.getByRole('button', { name: 'Fechar viagem' }));
 
     await confirmarNoAlerta();
 
@@ -242,7 +242,7 @@ describe('FecharViagemView', () => {
     expect(screen.getByRole('button', { name: 'Fechar viagem' })).not.toBeDisabled();
 
     await waitFor(() => expect(Animated.timing).toHaveBeenCalled());
-    act(() => {
+    await act(() => {
       jest.advanceTimersByTime(3000);
     });
 
@@ -252,11 +252,11 @@ describe('FecharViagemView', () => {
   it('em exceção do repositório, reabilita o botão e mostra erro sem travar', async () => {
     jest.spyOn(repo, 'fecharViagem').mockRejectedValue(new Error('falha de rede'));
 
-    render(<FecharViagemView viagemId="viagem-1" />);
+    await render(<FecharViagemView viagemId="viagem-1" />);
 
     await screen.findByText('BRA2E19 • Actros', { exact: false });
-    fireEvent.changeText(screen.getByLabelText('Hodômetro Final (km)'), '10.095');
-    fireEvent.press(screen.getByRole('button', { name: 'Fechar viagem' }));
+    await fireEvent.changeText(screen.getByLabelText('Hodômetro Final (km)'), '10.095');
+    await fireEvent.press(screen.getByRole('button', { name: 'Fechar viagem' }));
 
     await confirmarNoAlerta();
 
@@ -273,17 +273,17 @@ describe('FecharViagemView', () => {
     });
     const spyFechar = jest.spyOn(repo, 'fecharViagem').mockReturnValue(resposta);
 
-    render(<FecharViagemView viagemId="viagem-1" />);
+    await render(<FecharViagemView viagemId="viagem-1" />);
 
     await screen.findByText('BRA2E19 • Actros', { exact: false });
-    fireEvent.changeText(screen.getByLabelText('Hodômetro Final (km)'), '10.095');
-    fireEvent.press(screen.getByRole('button', { name: 'Fechar viagem' }));
+    await fireEvent.changeText(screen.getByLabelText('Hodômetro Final (km)'), '10.095');
+    await fireEvent.press(screen.getByRole('button', { name: 'Fechar viagem' }));
 
     const botoes = (Alert.alert as jest.Mock).mock.calls[0]?.[2] as BotaoAlerta[] | undefined;
     const confirmar = botoes?.find((botao) => botao.text === 'Confirmar');
     expect(confirmar).toBeDefined();
 
-    act(() => {
+    await act(() => {
       confirmar?.onPress?.();
       confirmar?.onPress?.();
     });
@@ -315,7 +315,7 @@ describe('FecharViagemView', () => {
       },
     });
 
-    render(<FecharViagemView viagemId="viagem-1" />);
+    await render(<FecharViagemView viagemId="viagem-1" />);
 
     expect(await screen.findByText(/status "Concluída"/)).toBeTruthy();
     expect(screen.queryByText(/Finalizada/)).not.toBeOnTheScreen();
@@ -335,11 +335,11 @@ describe('FecharViagemView', () => {
       },
     });
 
-    render(<FecharViagemView viagemId="viagem-1" />);
+    await render(<FecharViagemView viagemId="viagem-1" />);
 
     await screen.findByText('BRA2E19 • Actros', { exact: false });
-    fireEvent.changeText(screen.getByLabelText('Hodômetro Final (km)'), '10.095');
-    fireEvent.press(screen.getByRole('button', { name: 'Fechar viagem' }));
+    await fireEvent.changeText(screen.getByLabelText('Hodômetro Final (km)'), '10.095');
+    await fireEvent.press(screen.getByRole('button', { name: 'Fechar viagem' }));
 
     await confirmarNoAlerta();
 
@@ -350,7 +350,7 @@ describe('FecharViagemView', () => {
     expect(mockBack).not.toHaveBeenCalled();
     expect(screen.getByRole('button', { name: 'Fechar viagem' })).toBeDisabled();
 
-    act(() => {
+    await act(() => {
       jest.advanceTimersByTime(3000);
     });
 

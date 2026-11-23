@@ -2,6 +2,7 @@ import { act, fireEvent, render, screen } from '@testing-library/react-native';
 import { FlatList, StyleSheet, useWindowDimensions } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
+import { porTipo } from '@/testing/componentes';
 import { spacing } from '@/ui';
 
 import { DividaDetalheView } from '../components/DividaDetalheView';
@@ -50,23 +51,23 @@ beforeEach(() => {
 describe('DividaDetalheView (EIX-50)', () => {
   it('busca a dívida pelo id da rota', async () => {
     mockBuscar.mockResolvedValue({ ok: true, data: detalhe });
-    render(<DividaDetalheView id="div-1" />);
+    await render(<DividaDetalheView id="div-1" />);
 
     await screen.findByText('Financiamento do caminhão');
     expect(mockBuscar).toHaveBeenCalledWith('div-1');
   });
 
-  it('carregando: indicador sob o header', () => {
+  it('carregando: indicador sob o header', async () => {
     mockBuscar.mockReturnValue(new Promise(() => {}));
-    render(<DividaDetalheView id="div-1" />);
+    await render(<DividaDetalheView id="div-1" />);
 
     expect(screen.getByLabelText('Carregando dívida')).toBeOnTheScreen();
-    expect(screen.UNSAFE_getByType(SafeAreaView).props.edges).not.toContain('top');
+    expect(porTipo(SafeAreaView).props.edges).not.toContain('top');
   });
 
   it('resumo: categoria, descrição, soma total, parcelas pagas e valor da parcela', async () => {
     mockBuscar.mockResolvedValue({ ok: true, data: detalhe });
-    render(<DividaDetalheView id="div-1" />);
+    await render(<DividaDetalheView id="div-1" />);
 
     expect(await screen.findByText('Financiamento do caminhão')).toBeOnTheScreen();
     expect(screen.getByText('Financiamento')).toBeOnTheScreen();
@@ -78,7 +79,7 @@ describe('DividaDetalheView (EIX-50)', () => {
 
   it('com quitação antecipada, mostra o valor dela', async () => {
     mockBuscar.mockResolvedValue({ ok: true, data: { ...detalhe, valorQuitacaoCentavos: 400000 } });
-    render(<DividaDetalheView id="div-1" />);
+    await render(<DividaDetalheView id="div-1" />);
 
     expect(await screen.findByText('Quitação antecipada')).toBeOnTheScreen();
     expect(screen.getByText('R$ 4.000,00')).toBeOnTheScreen();
@@ -86,7 +87,7 @@ describe('DividaDetalheView (EIX-50)', () => {
 
   it('lista as parcelas geradas com número, vencimento, status e valor (prova do vídeo)', async () => {
     mockBuscar.mockResolvedValue({ ok: true, data: detalhe });
-    render(<DividaDetalheView id="div-1" />);
+    await render(<DividaDetalheView id="div-1" />);
 
     expect(await screen.findByText('Parcela 1')).toBeOnTheScreen();
     expect(screen.getByText('Vencimento 15/01/2026 · Pago')).toBeOnTheScreen();
@@ -96,21 +97,21 @@ describe('DividaDetalheView (EIX-50)', () => {
 
   it('o título "Dívida" fica no header; a tela não o repete', async () => {
     mockBuscar.mockResolvedValue({ ok: true, data: detalhe });
-    render(<DividaDetalheView id="div-1" />);
+    await render(<DividaDetalheView id="div-1" />);
     await screen.findByText('Financiamento do caminhão');
 
     expect(screen.queryByText('Dívida')).not.toBeOnTheScreen();
-    expect(screen.UNSAFE_getByType(SafeAreaView).props.edges).not.toContain('top');
+    expect(porTipo(SafeAreaView).props.edges).not.toContain('top');
   });
 
   it('erro: mostra a mensagem e "Tentar novamente" busca de novo', async () => {
     mockBuscar
       .mockResolvedValueOnce({ ok: false, mensagem: 'Dívida não encontrada ou já excluída.' })
       .mockResolvedValueOnce({ ok: true, data: detalhe });
-    render(<DividaDetalheView id="div-1" />);
+    await render(<DividaDetalheView id="div-1" />);
 
     expect(await screen.findByText('Dívida não encontrada ou já excluída.')).toBeOnTheScreen();
-    await act(async () => fireEvent.press(screen.getByRole('button', { name: 'Tentar novamente' })));
+    await act(async () => await fireEvent.press(screen.getByRole('button', { name: 'Tentar novamente' })));
 
     expect(mockBuscar).toHaveBeenCalledTimes(2);
     expect(screen.getByText('Financiamento do caminhão')).toBeOnTheScreen();
@@ -125,12 +126,12 @@ describe('DividaDetalheView — tablet (EIX-94)', () => {
   }
 
   function estiloDaLista() {
-    return StyleSheet.flatten(screen.UNSAFE_getByType(FlatList).props.contentContainerStyle);
+    return StyleSheet.flatten(porTipo(FlatList).props.contentContainerStyle);
   }
 
   it('412: nada muda, o respiro lateral continua no Screen e a lista não ganha coluna', async () => {
     mockBuscar.mockResolvedValue({ ok: true, data: detalhe });
-    render(<DividaDetalheView id="div-1" />);
+    await render(<DividaDetalheView id="div-1" />);
     await screen.findByText('Financiamento do caminhão');
 
     expect(estiloDoConteudo()).toMatchObject({ paddingHorizontal: spacing.base });
@@ -140,7 +141,7 @@ describe('DividaDetalheView — tablet (EIX-94)', () => {
   it('800: a lista rola na largura toda e o conteúdo fica na coluna de 720', async () => {
     mockLargura(800);
     mockBuscar.mockResolvedValue({ ok: true, data: detalhe });
-    render(<DividaDetalheView id="div-1" />);
+    await render(<DividaDetalheView id="div-1" />);
     await screen.findByText('Financiamento do caminhão');
 
     expect(estiloDoConteudo().maxWidth).toBeUndefined();

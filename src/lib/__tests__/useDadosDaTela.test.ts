@@ -1,6 +1,7 @@
 import { act, renderHook, waitFor } from '@testing-library/react-native';
 
 import { useDadosDaTela, type Resultado } from '../useDadosDaTela';
+import { segurarPrimeiraCarga } from '@/testing/eventos';
 
 // Guarda o callback do foco para o teste simular "voltei para esta tela".
 let mockAoFocar: (() => void) | null = null;
@@ -37,16 +38,18 @@ const falha = (mensagem: string): Resultado<never> => ({ ok: false, mensagem });
 describe('useDadosDaTela (LST-03)', () => {
   it('primeira carga: carregando e depois pronto com os dados', async () => {
     const buscar: Buscar = jest.fn().mockResolvedValue(ok(['a', 'b']));
-    const { result } = renderHook(() => useDadosDaTela(buscar));
+    const liberarCarga = segurarPrimeiraCarga(jest.mocked(buscar));
+    const { result } = await renderHook(() => useDadosDaTela(buscar));
 
     expect(result.current.status).toBe('carregando');
+    await liberarCarga();
     await waitFor(() => expect(result.current.status).toBe('pronto'));
     expect(result.current.dados).toEqual(['a', 'b']);
   });
 
   it('primeira carga com erro: status erro com a mensagem; "Tentar novamente" carrega de novo', async () => {
     const buscar: Buscar = jest.fn().mockResolvedValueOnce(falha('Sem conexão.')).mockResolvedValueOnce(ok(['a']));
-    const { result } = renderHook(() => useDadosDaTela(buscar));
+    const { result } = await renderHook(() => useDadosDaTela(buscar));
 
     await waitFor(() => expect(result.current.status).toBe('erro'));
     expect(result.current.erro).toBe('Sem conexão.');
@@ -61,7 +64,7 @@ describe('useDadosDaTela (LST-03)', () => {
   it('recarga ao voltar o foco: os dados antigos ficam na tela, sem skeleton, até o novo chegar', async () => {
     const segunda = pendente<string[]>();
     const buscar: Buscar = jest.fn().mockResolvedValueOnce(ok(['antigo'])).mockReturnValueOnce(segunda.promessa);
-    const { result } = renderHook(() => useDadosDaTela(buscar));
+    const { result } = await renderHook(() => useDadosDaTela(buscar));
     await waitFor(() => expect(result.current.status).toBe('pronto'));
 
     await focarDeNovo();
@@ -74,7 +77,7 @@ describe('useDadosDaTela (LST-03)', () => {
 
   it('falha numa recarga com dados na tela vira feedbackErro e mantém a lista', async () => {
     const buscar: Buscar = jest.fn().mockResolvedValueOnce(ok(['a'])).mockResolvedValueOnce(falha('Não foi possível carregar.'));
-    const { result } = renderHook(() => useDadosDaTela(buscar));
+    const { result } = await renderHook(() => useDadosDaTela(buscar));
     await waitFor(() => expect(result.current.status).toBe('pronto'));
 
     await focarDeNovo();
@@ -83,7 +86,7 @@ describe('useDadosDaTela (LST-03)', () => {
     expect(result.current.dados).toEqual(['a']);
     expect(result.current.feedbackErro).toBe('Não foi possível carregar.');
 
-    act(() => result.current.limparFeedbackErro());
+    await act(() => result.current.limparFeedbackErro());
     expect(result.current.feedbackErro).toBeNull();
   });
 
@@ -91,7 +94,7 @@ describe('useDadosDaTela (LST-03)', () => {
     const primeira = pendente<string[]>();
     const segunda = pendente<string[]>();
     const buscar: Buscar = jest.fn().mockReturnValueOnce(primeira.promessa).mockReturnValueOnce(segunda.promessa);
-    const { result } = renderHook(() => useDadosDaTela(buscar));
+    const { result } = await renderHook(() => useDadosDaTela(buscar));
 
     await focarDeNovo();
     await act(async () => segunda.resolver(ok(['recente'])));
@@ -104,12 +107,12 @@ describe('useDadosDaTela (LST-03)', () => {
     const outubro: Buscar = jest.fn().mockResolvedValue(ok(['outubro']));
     const novembro = pendente<string[]>();
     const buscarNovembro: Buscar = jest.fn().mockReturnValue(novembro.promessa);
-    const { result, rerender } = renderHook((props: { buscar: Buscar }) => useDadosDaTela(props.buscar), {
+    const { result, rerender } = await renderHook((props: { buscar: Buscar }) => useDadosDaTela(props.buscar), {
       initialProps: { buscar: outubro },
     });
     await waitFor(() => expect(result.current.dados).toEqual(['outubro']));
 
-    await act(async () => rerender({ buscar: buscarNovembro }));
+    await act(async () => await rerender({ buscar: buscarNovembro }));
 
     expect(result.current.status).toBe('carregando');
     expect(result.current.dados).toBeNull();
@@ -120,11 +123,11 @@ describe('useDadosDaTela (LST-03)', () => {
   it('pull-to-refresh: atualizando enquanto busca, e os dados novos no fim', async () => {
     const segunda = pendente<string[]>();
     const buscar: Buscar = jest.fn().mockResolvedValueOnce(ok(['a'])).mockReturnValueOnce(segunda.promessa);
-    const { result } = renderHook(() => useDadosDaTela(buscar));
+    const { result } = await renderHook(() => useDadosDaTela(buscar));
     await waitFor(() => expect(result.current.status).toBe('pronto'));
 
     let puxando: Promise<void> = Promise.resolve();
-    act(() => {
+    await act(() => {
       puxando = result.current.puxarParaAtualizar();
     });
     expect(result.current.atualizando).toBe(true);
@@ -140,10 +143,10 @@ describe('useDadosDaTela (LST-03)', () => {
 
   it('atualizarDados ajusta a lista na tela depois de uma ação que deu certo', async () => {
     const buscar: Buscar = jest.fn().mockResolvedValue(ok(['a', 'b']));
-    const { result } = renderHook(() => useDadosDaTela(buscar));
+    const { result } = await renderHook(() => useDadosDaTela(buscar));
     await waitFor(() => expect(result.current.status).toBe('pronto'));
 
-    act(() => result.current.atualizarDados((atuais) => atuais.filter((item) => item !== 'a')));
+    await act(() => result.current.atualizarDados((atuais) => atuais.filter((item) => item !== 'a')));
 
     expect(result.current.dados).toEqual(['b']);
   });

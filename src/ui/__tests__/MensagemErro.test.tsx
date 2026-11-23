@@ -8,8 +8,8 @@ import { colors } from '../tokens';
 // Erro de campo igual em todo formulário (auditoria de UI, item 14): ícone de alerta + texto em danger,
 // anunciado como alerta. Antes era texto preto, igual ao texto comum.
 describe('MensagemErro', () => {
-  it('mostra o texto em danger com role de alerta e o ícone de alerta decorativo', () => {
-    render(<MensagemErro>Informe a placa.</MensagemErro>);
+  it('mostra o texto em danger com role de alerta e o ícone de alerta decorativo', async () => {
+    await render(<MensagemErro>Informe a placa.</MensagemErro>);
 
     expect(screen.getByRole('alert')).toHaveTextContent('Informe a placa.');
     expect(screen.getByRole('alert')).toHaveStyle({ color: colors.danger });
@@ -17,8 +17,8 @@ describe('MensagemErro', () => {
     expect(screen.getByTestId('icone-alerta', { includeHiddenElements: true })).toHaveStyle({ color: colors.danger });
   });
 
-  it('Select e CampoData usam a mesma mensagem que o Input', () => {
-    render(
+  it('Select e CampoData usam a mesma mensagem que o Input', async () => {
+    await render(
       <>
         <Select label="Veículo" value={null} options={[]} onChange={jest.fn()} error="Escolha o veículo." />
         <CampoData label="Vencimento" value="" onChange={jest.fn()} error="Informe a data." />

@@ -13,8 +13,8 @@ function MockRankingView() {
 jest.mock('@/features/dashboard/ranking/RankingView', () => ({ RankingView: MockRankingView }));
 
 describe('aba Dashboards (EIX-46)', () => {
-  it('renderiza o ranking de eficiência', () => {
-    render(<DashboardsRoute />);
+  it('renderiza o ranking de eficiência', async () => {
+    await render(<DashboardsRoute />);
 
     expect(screen.getByText('RankingView')).toBeOnTheScreen();
   });

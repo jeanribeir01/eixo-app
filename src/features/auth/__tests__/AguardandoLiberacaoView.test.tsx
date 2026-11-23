@@ -32,67 +32,67 @@ beforeEach(() => {
 });
 
 describe('AguardandoLiberacaoView', () => {
-  it('conta pendente: mostra "Aguardando liberação" (Novo usuário AC6)', () => {
+  it('conta pendente: mostra "Aguardando liberação" (Novo usuário AC6)', async () => {
     useProfileStore.setState({ usuarioId: 'u1', estado: 'pronto', usuario: usuario('AguardandoAprovacao') });
 
-    render(<AguardandoLiberacaoView />);
+    await render(<AguardandoLiberacaoView />);
 
     expect(screen.getByText('Aguardando liberação')).toBeOnTheScreen();
     expect(screen.getByText('ana@empresa.com')).toBeOnTheScreen();
   });
 
-  it('sem linha em usuario: também mostra "Aguardando liberação" (deny-by-default)', () => {
+  it('sem linha em usuario: também mostra "Aguardando liberação" (deny-by-default)', async () => {
     useProfileStore.setState({ usuarioId: 'u1', estado: 'pronto', usuario: null });
 
-    render(<AguardandoLiberacaoView />);
+    await render(<AguardandoLiberacaoView />);
 
     expect(screen.getByText('Aguardando liberação')).toBeOnTheScreen();
   });
 
-  it('conta bloqueada: mostra o texto de bloqueio (AC7)', () => {
+  it('conta bloqueada: mostra o texto de bloqueio (AC7)', async () => {
     useProfileStore.setState({ usuarioId: 'u1', estado: 'pronto', usuario: usuario('Bloqueado') });
 
-    render(<AguardandoLiberacaoView />);
+    await render(<AguardandoLiberacaoView />);
 
     expect(screen.getByText('Seu acesso foi bloqueado. Fale com o administrador.')).toBeOnTheScreen();
     expect(screen.queryByRole('button', { name: 'Verificar novamente' })).not.toBeOnTheScreen();
   });
 
-  it('Sair encerra a sessão (AC8)', () => {
+  it('Sair encerra a sessão (AC8)', async () => {
     useProfileStore.setState({ usuarioId: 'u1', estado: 'pronto', usuario: usuario('AguardandoAprovacao') });
-    render(<AguardandoLiberacaoView />);
+    await render(<AguardandoLiberacaoView />);
 
-    fireEvent.press(screen.getByRole('button', { name: 'Sair' }));
+    await fireEvent.press(screen.getByRole('button', { name: 'Sair' }));
 
     expect(signOut).toHaveBeenCalledTimes(1);
   });
 
   it('Verificar novamente recarrega o perfil', async () => {
     useProfileStore.setState({ usuarioId: 'u1', estado: 'pronto', usuario: usuario('AguardandoAprovacao') });
-    render(<AguardandoLiberacaoView />);
+    await render(<AguardandoLiberacaoView />);
 
-    fireEvent.press(screen.getByRole('button', { name: 'Verificar novamente' }));
+    await fireEvent.press(screen.getByRole('button', { name: 'Verificar novamente' }));
 
     await waitFor(() => expect(mockConsulta).toHaveBeenCalledWith('usuario', 'u1'));
   });
 
   it('erro ao carregar: mensagem, "Tentar novamente" e "Sair" (AC9)', async () => {
     useProfileStore.setState({ usuarioId: 'u1', estado: 'erro', usuario: null });
-    render(<AguardandoLiberacaoView />);
+    await render(<AguardandoLiberacaoView />);
 
     expect(screen.getByText('Não foi possível carregar seu perfil.')).toBeOnTheScreen();
 
-    fireEvent.press(screen.getByRole('button', { name: 'Tentar novamente' }));
+    await fireEvent.press(screen.getByRole('button', { name: 'Tentar novamente' }));
     await waitFor(() => expect(mockConsulta).toHaveBeenCalledWith('usuario', 'u1'));
 
-    fireEvent.press(screen.getByRole('button', { name: 'Sair' }));
+    await fireEvent.press(screen.getByRole('button', { name: 'Sair' }));
     expect(signOut).toHaveBeenCalledTimes(1);
   });
 
-  it('carregando: mostra o indicador e nenhuma mensagem de status', () => {
+  it('carregando: mostra o indicador e nenhuma mensagem de status', async () => {
     useProfileStore.setState({ usuarioId: 'u1', estado: 'carregando', usuario: null });
 
-    render(<AguardandoLiberacaoView />);
+    await render(<AguardandoLiberacaoView />);
 
     expect(screen.getByLabelText('Carregando seu perfil')).toBeOnTheScreen();
     expect(screen.queryByText('Aguardando liberação')).not.toBeOnTheScreen();

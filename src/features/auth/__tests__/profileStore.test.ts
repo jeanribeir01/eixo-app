@@ -206,7 +206,7 @@ describe('useProfile', () => {
       data: { ...linhaAdmin, perfil: { nome: 'Financeiro' } },
       error: null,
     });
-    const { result } = renderHook(() => useProfile());
+    const { result } = await renderHook(() => useProfile());
 
     await act(() => carregarPerfil('u1'));
 
@@ -223,7 +223,7 @@ describe('useProfile', () => {
 
   it('usuário pendente: todos os helpers false', async () => {
     mockMaybeSingle.mockResolvedValue({ data: { ...linhaAdmin, status: 'AguardandoAprovacao' }, error: null });
-    const { result } = renderHook(() => useProfile());
+    const { result } = await renderHook(() => useProfile());
 
     await act(() => carregarPerfil('u1'));
 

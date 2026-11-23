@@ -2,6 +2,8 @@ import { act, fireEvent, render, screen, within } from '@testing-library/react-n
 import { Alert, FlatList, RefreshControl, StyleSheet, useWindowDimensions } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
+import { segurarPrimeiraCarga } from '@/testing/eventos';
+import { porTipo, todosPorTipo } from '@/testing/componentes';
 import { FAB_ALTURA_RESERVADA, ListItem, Skeleton, colors, spacing } from '@/ui';
 
 import { MovimentacoesListView } from '../MovimentacoesListView';
@@ -92,14 +94,14 @@ const diesel = mov({ id: 'diesel', descricao: 'Diesel', valorCentavos: 8000, dat
 const parcela = mov({ id: 'parcela', descricao: 'Financiamento (1/12)', divida_id: 'div-1', data_vencimento: '2026-10-20' });
 
 async function renderLista() {
-  render(<MovimentacoesListView />);
+  await render(<MovimentacoesListView />);
   await screen.findByText('Frete Curitiba');
 }
 
 // Abre o diálogo de exclusão da linha e devolve os botões dele (o Alert nativo não aparece na árvore).
-function abrirMaisOpcoes(descricao: string) {
+async function abrirMaisOpcoes(descricao: string) {
   const alerta = jest.spyOn(Alert, 'alert');
-  fireEvent.press(screen.getByRole('button', { name: `Mais opções: ${descricao}` }));
+  await fireEvent.press(screen.getByRole('button', { name: `Mais opções: ${descricao}` }));
   return { alerta, botoes: alerta.mock.calls.at(-1)?.[2] ?? [] };
 }
 
@@ -123,10 +125,13 @@ afterEach(() => {
 
 describe('MovimentacoesListView — mês (MOV-08, LST-02)', () => {
   it('primeira carga: três skeletons, depois as movimentações do mês atual', async () => {
-    render(<MovimentacoesListView />);
+    // Segura a primeira carga: o render async esperaria a resposta e pularia o "carregando".
+    const liberarCarga = segurarPrimeiraCarga(mockListar);
+    await render(<MovimentacoesListView />);
 
     expect(screen.getByLabelText('Carregando movimentações')).toBeOnTheScreen();
-    expect(screen.UNSAFE_getAllByType(Skeleton)).toHaveLength(3);
+    expect(todosPorTipo(Skeleton)).toHaveLength(3);
+    await liberarCarga();
     expect(await screen.findByText('Frete Curitiba')).toBeOnTheScreen();
     expect(screen.getByText('Outubro 2026')).toBeOnTheScreen();
     expect(mockListar).toHaveBeenCalledWith(2026, 10);
@@ -137,7 +142,7 @@ describe('MovimentacoesListView — mês (MOV-08, LST-02)', () => {
 
     expect(screen.queryByText('Eixo Certo')).not.toBeOnTheScreen();
     expect(screen.queryByText('Movimentações')).not.toBeOnTheScreen();
-    expect(screen.UNSAFE_getByType(SafeAreaView).props.edges).not.toContain('top');
+    expect(porTipo(SafeAreaView).props.edges).not.toContain('top');
   });
 
   it('"Mês anterior" e "Próximo mês" são ícones e trocam o mês (LST-02, AC 12)', async () => {
@@ -146,22 +151,22 @@ describe('MovimentacoesListView — mês (MOV-08, LST-02)', () => {
     expect(screen.queryByRole('button', { name: '‹' })).not.toBeOnTheScreen();
     expect(screen.getByTestId('icone-voltarMes', { includeHiddenElements: true })).toBeOnTheScreen();
 
-    await act(async () => fireEvent.press(screen.getByRole('button', { name: 'Mês anterior' })));
+    await act(async () => await fireEvent.press(screen.getByRole('button', { name: 'Mês anterior' })));
     expect(screen.getByText('Setembro 2026')).toBeOnTheScreen();
     expect(mockListar).toHaveBeenLastCalledWith(2026, 9);
 
-    await act(async () => fireEvent.press(screen.getByRole('button', { name: 'Próximo mês' })));
-    await act(async () => fireEvent.press(screen.getByRole('button', { name: 'Próximo mês' })));
+    await act(async () => await fireEvent.press(screen.getByRole('button', { name: 'Próximo mês' })));
+    await act(async () => await fireEvent.press(screen.getByRole('button', { name: 'Próximo mês' })));
     expect(screen.getByText('Novembro 2026')).toBeOnTheScreen();
     expect(mockListar).toHaveBeenLastCalledWith(2026, 11);
   });
 
   it('dezembro → "Próximo mês" vira janeiro do ano seguinte', async () => {
     jest.setSystemTime(new Date(2026, 11, 20));
-    render(<MovimentacoesListView />);
+    await render(<MovimentacoesListView />);
     await screen.findByText('Dezembro 2026');
 
-    await act(async () => fireEvent.press(screen.getByRole('button', { name: 'Próximo mês' })));
+    await act(async () => await fireEvent.press(screen.getByRole('button', { name: 'Próximo mês' })));
 
     expect(screen.getByText('Janeiro 2027')).toBeOnTheScreen();
     expect(mockListar).toHaveBeenLastCalledWith(2027, 1);
@@ -171,7 +176,7 @@ describe('MovimentacoesListView — mês (MOV-08, LST-02)', () => {
     await renderLista();
     mockListar.mockReturnValueOnce(new Promise(() => {}));
 
-    await act(async () => fireEvent.press(screen.getByRole('button', { name: 'Próximo mês' })));
+    await act(async () => await fireEvent.press(screen.getByRole('button', { name: 'Próximo mês' })));
 
     expect(screen.getByLabelText('Carregando movimentações')).toBeOnTheScreen();
     expect(screen.queryByText('Frete Curitiba')).not.toBeOnTheScreen();
@@ -181,9 +186,9 @@ describe('MovimentacoesListView — mês (MOV-08, LST-02)', () => {
     let responderOutubro: (valor: Awaited<ReturnType<typeof listarMovimentacoesDoMes>>) => void = () => undefined;
     mockListar.mockReturnValueOnce(new Promise((resolve) => (responderOutubro = resolve)));
     mockListar.mockResolvedValueOnce({ ok: true, data: [diesel] });
-    render(<MovimentacoesListView />);
+    await render(<MovimentacoesListView />);
 
-    await act(async () => fireEvent.press(screen.getByRole('button', { name: 'Próximo mês' })));
+    await act(async () => await fireEvent.press(screen.getByRole('button', { name: 'Próximo mês' })));
     expect(await screen.findByText('Diesel')).toBeOnTheScreen();
 
     await act(async () => responderOutubro({ ok: true, data: [frete] }));
@@ -208,12 +213,12 @@ describe('MovimentacoesListView — mês (MOV-08, LST-02)', () => {
   it('pull-to-refresh em accent e espaço para o FAB no fim da lista', async () => {
     await renderLista();
 
-    const refresh = screen.UNSAFE_getByType(RefreshControl);
+    const refresh = porTipo(RefreshControl);
     expect(refresh.props.colors).toEqual([colors.accent]);
-    await act(async () => refresh.props.onRefresh());
+    await act(async () => refresh.props.onRefresh!());
     expect(mockListar).toHaveBeenCalledTimes(2);
 
-    expect(StyleSheet.flatten(screen.UNSAFE_getByType(FlatList).props.contentContainerStyle)).toMatchObject({
+    expect(StyleSheet.flatten(porTipo(FlatList).props.contentContainerStyle)).toMatchObject({
       paddingBottom: FAB_ALTURA_RESERVADA,
     });
   });
@@ -223,11 +228,11 @@ describe('MovimentacoesListView — filtros (MOV-08)', () => {
   it('aba Entradas mostra só categoria de entrada; Saídas só de saída', async () => {
     await renderLista();
 
-    fireEvent.press(screen.getByRole('tab', { name: 'Entradas' }));
+    await fireEvent.press(screen.getByRole('tab', { name: 'Entradas' }));
     expect(screen.getByText('Frete Curitiba')).toBeOnTheScreen();
     expect(screen.queryByText('Diesel')).not.toBeOnTheScreen();
 
-    fireEvent.press(screen.getByRole('tab', { name: 'Saídas' }));
+    await fireEvent.press(screen.getByRole('tab', { name: 'Saídas' }));
     expect(screen.queryByText('Frete Curitiba')).not.toBeOnTheScreen();
     expect(screen.getByText('Diesel')).toBeOnTheScreen();
   });
@@ -235,11 +240,11 @@ describe('MovimentacoesListView — filtros (MOV-08)', () => {
   it('aba Pendentes e Pagos filtram pelo status', async () => {
     await renderLista();
 
-    fireEvent.press(screen.getByRole('tab', { name: 'Pagos' }));
+    await fireEvent.press(screen.getByRole('tab', { name: 'Pagos' }));
     expect(screen.getByText('Frete Curitiba')).toBeOnTheScreen();
     expect(screen.queryByText('Diesel')).not.toBeOnTheScreen();
 
-    fireEvent.press(screen.getByRole('tab', { name: 'Pendentes' }));
+    await fireEvent.press(screen.getByRole('tab', { name: 'Pendentes' }));
     expect(screen.queryByText('Frete Curitiba')).not.toBeOnTheScreen();
     expect(screen.getByText('Diesel')).toBeOnTheScreen();
   });
@@ -263,19 +268,19 @@ describe('MovimentacoesListView — linhas e estados (LST-02)', () => {
 
   it('mês vazio mostra o estado vazio, e o FAB continua na tela', async () => {
     mockListar.mockResolvedValue({ ok: true, data: [] });
-    render(<MovimentacoesListView />);
+    await render(<MovimentacoesListView />);
 
     expect(await screen.findByText('Nenhuma movimentação neste mês')).toBeOnTheScreen();
-    fireEvent.press(screen.getByRole('button', { name: 'Nova movimentação' }));
+    await fireEvent.press(screen.getByRole('button', { name: 'Nova movimentação' }));
     expect(mockPush).toHaveBeenCalledWith('/movimentacoes/nova');
   });
 
   it('erro mostra "Tentar novamente", que recarrega', async () => {
     mockListar.mockResolvedValueOnce({ ok: false, mensagem: 'Não foi possível carregar as movimentações. Tente novamente.' });
-    render(<MovimentacoesListView />);
+    await render(<MovimentacoesListView />);
 
     expect(await screen.findByText('Não foi possível carregar as movimentações. Tente novamente.')).toBeOnTheScreen();
-    await act(async () => fireEvent.press(screen.getByRole('button', { name: 'Tentar novamente' })));
+    await act(async () => await fireEvent.press(screen.getByRole('button', { name: 'Tentar novamente' })));
     expect(await screen.findByText('Frete Curitiba')).toBeOnTheScreen();
   });
 
@@ -291,10 +296,10 @@ describe('MovimentacoesListView — editar e excluir (LST-02)', () => {
   it('tocar na linha abre o formulário da movimentação (inclusive parcela)', async () => {
     await renderLista();
 
-    fireEvent.press(screen.getByRole('button', { name: 'Diesel' }));
+    await fireEvent.press(screen.getByRole('button', { name: 'Diesel' }));
     expect(mockPush).toHaveBeenCalledWith('/movimentacoes/diesel/editar');
 
-    fireEvent.press(screen.getByRole('button', { name: 'Financiamento (1/12)' }));
+    await fireEvent.press(screen.getByRole('button', { name: 'Financiamento (1/12)' }));
     expect(mockPush).toHaveBeenCalledWith('/movimentacoes/parcela/editar');
   });
 
@@ -304,7 +309,7 @@ describe('MovimentacoesListView — editar e excluir (LST-02)', () => {
     const linha = screen.getByRole('button', { name: 'Diesel' });
     expect(within(linha).queryByRole('button', { name: 'Mais opções: Diesel' })).not.toBeOnTheScreen();
 
-    const { alerta, botoes } = abrirMaisOpcoes('Diesel');
+    const { alerta, botoes } = await abrirMaisOpcoes('Diesel');
 
     expect(alerta).toHaveBeenCalledWith('Excluir movimentação?', 'Diesel', expect.any(Array));
     expect(botoes.map((botao) => botao.text)).toEqual(['Cancelar', 'Excluir']);
@@ -320,7 +325,7 @@ describe('MovimentacoesListView — editar e excluir (LST-02)', () => {
   it('Cancelar no diálogo mantém a linha', async () => {
     await renderLista();
 
-    const { botoes } = abrirMaisOpcoes('Diesel');
+    const { botoes } = await abrirMaisOpcoes('Diesel');
     const cancelar = botoes.find((botao) => botao.text === 'Cancelar');
     expect(cancelar?.style).toBe('cancel');
     cancelar?.onPress?.();
@@ -333,7 +338,7 @@ describe('MovimentacoesListView — editar e excluir (LST-02)', () => {
     mockExcluir.mockResolvedValue({ ok: false, mensagem: 'Movimentação não encontrada ou não pode ser excluída.' });
     await renderLista();
 
-    const { botoes } = abrirMaisOpcoes('Diesel');
+    const { botoes } = await abrirMaisOpcoes('Diesel');
     await act(async () => botoes.find((botao) => botao.text === 'Excluir')?.onPress?.());
 
     expect(screen.getByRole('alert')).toHaveTextContent('Movimentação não encontrada ou não pode ser excluída.');
@@ -343,7 +348,7 @@ describe('MovimentacoesListView — editar e excluir (LST-02)', () => {
   it('a tela re-renderizar (Snackbar de erro) não re-renderiza as linhas: elas são memoizadas (EIX-71)', async () => {
     mockExcluir.mockResolvedValue({ ok: false, mensagem: 'Sem conexão.' });
     await renderLista();
-    const { botoes } = abrirMaisOpcoes('Diesel');
+    const { botoes } = await abrirMaisOpcoes('Diesel');
     const rendersAntes = jest.mocked(ListItem).mock.calls.length;
 
     await act(async () => botoes.find((botao) => botao.text === 'Excluir')?.onPress?.());
@@ -369,14 +374,14 @@ describe('MovimentacoesListView — tablet (EIX-94)', () => {
   }
 
   function estiloDaLista() {
-    return StyleSheet.flatten(screen.UNSAFE_getByType(FlatList).props.contentContainerStyle);
+    return StyleSheet.flatten(porTipo(FlatList).props.contentContainerStyle);
   }
 
   it('412: nada muda, o respiro lateral continua no Screen e a lista não ganha coluna', async () => {
     await renderLista();
 
     expect(estiloDoConteudo()).toMatchObject({ paddingHorizontal: spacing.base });
-    expect(estiloDaLista().maxWidth).toBeUndefined();
+    expect(estiloDaLista()?.maxWidth).toBeUndefined();
   });
 
   it('800: a lista rola na largura toda; mês, abas e linhas ficam na mesma coluna de 720', async () => {
@@ -394,12 +399,12 @@ describe('MovimentacoesListView — tablet (EIX-94)', () => {
   });
 
   it('celular → tablet com a tela aberta: o filtro escolhido continua valendo e a lista ganha a coluna', async () => {
-    const { rerender } = render(<MovimentacoesListView />);
+    const { rerender } = await render(<MovimentacoesListView />);
     await screen.findByText('Frete Curitiba');
-    fireEvent.press(screen.getByRole('tab', { name: 'Saídas' }));
+    await fireEvent.press(screen.getByRole('tab', { name: 'Saídas' }));
 
     mockLargura(800);
-    rerender(<MovimentacoesListView />);
+    await rerender(<MovimentacoesListView />);
 
     expect(estiloDaLista()).toMatchObject({ maxWidth: 720, alignSelf: 'center' });
     expect(screen.queryByText('Frete Curitiba')).not.toBeOnTheScreen();

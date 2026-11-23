@@ -68,16 +68,19 @@ Motorista em **Viagens**.
 
 | Ferramenta | Versão | Como conferir |
 |---|---|---|
-| Node.js | 20 LTS ou mais novo (o CI usa o 20) | `node --version` |
+| Node.js | 22.13 ou mais novo (o CI usa o 22; o Expo SDK 58 não roda no 20) | `node --version` |
 | JDK | 17 ou mais novo (recomendado: Temurin 21) | `java -version` |
 | Android Studio | Atual (instala o Android SDK e o emulador) | — |
-| Expo CLI | Vem no projeto (`expo` ~57): use `npx expo`, sem instalar nada global | `npx expo --version` |
+| Expo CLI | Vem no projeto (`expo` ~58): use `npx expo`, sem instalar nada global | `npx expo --version` |
 | Git | Qualquer recente | `git --version` |
 
-> **Expo Go não funciona neste projeto.** O login com Google usa código nativo, então o app roda
-> como *development build*: no emulador, gerado pelo `npx expo run:android`; no celular, pelo APK do
-> EAS ([Rodar no celular](#rodar-no-celular)). Aberto no Expo Go, o app só mostra o aviso "Este app
-> não abre no Expo Go". macOS não é necessário.
+> **No dia a dia, use o *development build*.** O login com Google usa código nativo, então o app
+> completo roda como *development build*: no emulador, gerado pelo `npx expo run:android`; no
+> celular, pelo APK do EAS ([Rodar no celular](#rodar-no-celular)). macOS não é necessário.
+>
+> **O Expo Go também abre o app, mas sem o Google:** lá a tela de Login mostra só o login por
+> e-mail e senha. É o caminho para quem tem **iPhone** e não tem conta de desenvolvedor da Apple
+> ([No iPhone, pelo Expo Go](#no-iphone-pelo-expo-go)).
 
 ---
 
@@ -318,9 +321,9 @@ certificado de debug continua o mesmo, então o login com Google não quebra.
 
 ### Rodar no celular
 
-O app **não abre no Expo Go** (seção 1). No celular, use o **app de desenvolvimento** do Eixo
-Certo: ele tem o código nativo do projeto e busca o JavaScript no Metro do seu computador, então
-toda mudança de código aparece sem reinstalar.
+No Android, use o **app de desenvolvimento** do Eixo Certo: ele tem o código nativo do projeto
+(inclusive o login com Google) e busca o JavaScript no Metro do seu computador, então toda mudança
+de código aparece sem reinstalar. No iPhone, veja [No iPhone, pelo Expo Go](#no-iphone-pelo-expo-go).
 
 **Opção A: APK do EAS (sem cabo, sem Android Studio)**
 
@@ -343,6 +346,22 @@ Com o cabo, `adb reverse tcp:8081 tcp:8081` faz o celular achar o Metro mesmo fo
 **Login com Google:** o APK do EAS é assinado com o certificado do EAS. Se o login der "Não foi
 possível entrar", falta o client Android com o SHA-1 dele (seção 4.3). Na opção B, o app é
 assinado com o certificado de debug e usa o client que já existe.
+
+### No iPhone, pelo Expo Go
+
+Instalar o app de verdade num iPhone exige conta paga de desenvolvedor da Apple. Sem ela, o
+caminho é o **Expo Go** (grátis na App Store), que roda o JavaScript do seu computador:
+
+1. Instale o **Expo Go** no iPhone. Ele precisa ser da mesma versão do SDK do projeto (58); a App
+   Store sempre traz a mais recente.
+2. No computador, rode `npx expo start --go`. O `--go` gera o QR code para o Expo Go, e não para o
+   app de desenvolvimento. iPhone e computador precisam estar **na mesma rede Wi-Fi**.
+3. Leia o QR code com a **câmera** do iPhone e abra no Expo Go.
+4. Entre com **e-mail e senha**, numa das contas criadas no painel do Supabase. No Expo Go o botão
+   do Google não aparece, porque o login com Google precisa de código nativo que o Expo Go não tem.
+
+O Expo Go só funciona enquanto o `npx expo start` estiver rodando no seu computador: serve para
+demonstrar e testar, não para deixar o app instalado no iPhone.
 
 **Quando gerar um APK novo:** o APK traz o código nativo. Mudança só em TypeScript não exige APK
 novo, mas **toda dependência nativa nova** (biblioteca com código Android, plugin no
@@ -472,7 +491,8 @@ que existe.
 | Erro de acesso bloqueado na tela do Google | E-mail não está em *Test users* | Seção 4.1 |
 | Mudou `.env` e nada aconteceu | Metro guardou o valor antigo em cache | `npm start -- --clear` |
 | Tela **Aguardando liberação** depois do login | Conta nova, ainda não aprovada | Seção 7 |
-| "Este app não abre no Expo Go" | O projeto foi aberto no Expo Go, que não tem o login com Google | Instale o app de desenvolvimento ([Rodar no celular](#rodar-no-celular)) e abra por ele |
+| No Expo Go, a tela de Login não tem o botão do Google | Esperado: o Expo Go não tem o código nativo do login com Google | Entre com e-mail e senha, ou use o app de desenvolvimento ([Rodar no celular](#rodar-no-celular)) |
+| O Expo Go diz que o projeto usa um SDK incompatível | O Expo Go do celular é de outra versão do SDK | Atualize o Expo Go pela loja; o projeto está no SDK 58 |
 | O APK de release fecha logo ao abrir | Falta variável no ambiente `preview` do EAS: o app valida `EXPO_PUBLIC_*` na abertura e para se alguma estiver ausente | `npx eas-cli@latest env:list --environment preview`, cadastre a que faltar ([APK de release](#apk-de-release)) e gere o APK de novo |
 | O app no celular não acha o Metro | Celular em outra rede, ou firewall do Windows bloqueando a porta 8081 | Mesma rede Wi-Fi; libere o Node.js no firewall (rede privada). Com cabo: `adb reverse tcp:8081 tcp:8081` |
 | App fecha ao abrir uma tela depois de um `git pull` | Entrou uma biblioteca nativa nova e o app instalado é o antigo | `npm install` e `npx expo run:android` de novo |

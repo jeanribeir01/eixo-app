@@ -44,10 +44,10 @@ beforeEach(() => {
 });
 
 describe('ContaView — cartão do usuário (CTA-01)', () => {
-  it('título da aba no conteúdo; nome completo, e-mail e o perfil num Badge', () => {
+  it('título da aba no conteúdo; nome completo, e-mail e o perfil num Badge', async () => {
     logarComo('Financeiro');
 
-    render(<ContaView />);
+    await render(<ContaView />);
 
     expect(screen.getByText('Conta')).toBeOnTheScreen();
     expect(screen.getByText('Maria Silva')).toBeOnTheScreen();
@@ -55,18 +55,18 @@ describe('ContaView — cartão do usuário (CTA-01)', () => {
     expect(screen.getByText('Financeiro')).toBeOnTheScreen();
   });
 
-  it('a Home de teste sumiu: sem "Login confirmado" nem o aviso de tela de teste', () => {
-    render(<ContaView />);
+  it('a Home de teste sumiu: sem "Login confirmado" nem o aviso de tela de teste', async () => {
+    await render(<ContaView />);
 
     expect(screen.queryByText('Login confirmado')).not.toBeOnTheScreen();
     expect(screen.queryByText(/tela de teste/i)).not.toBeOnTheScreen();
     expect(screen.queryByText('Eixo Certo')).not.toBeOnTheScreen();
   });
 
-  it('com o perfil ainda carregando, o Badge não aparece', () => {
+  it('com o perfil ainda carregando, o Badge não aparece', async () => {
     useProfileStore.setState({ estado: 'carregando', usuario: null });
 
-    render(<ContaView />);
+    await render(<ContaView />);
 
     expect(screen.getByText('Maria Silva')).toBeOnTheScreen();
     for (const nome of ['Admin', 'Gestor de Frota', 'Financeiro', 'Motorista']) {
@@ -74,10 +74,10 @@ describe('ContaView — cartão do usuário (CTA-01)', () => {
     }
   });
 
-  it('com foto do Google, exibe a foto (AUTH-14)', () => {
+  it('com foto do Google, exibe a foto (AUTH-14)', async () => {
     logarComo('Motorista', { full_name: 'Maria Silva', avatar_url: 'https://lh3.googleusercontent.com/foto-maria' });
 
-    render(<ContaView />);
+    await render(<ContaView />);
 
     expect(screen.getByLabelText('Foto de Maria Silva')).toHaveProp('source', {
       uri: 'https://lh3.googleusercontent.com/foto-maria',
@@ -85,18 +85,18 @@ describe('ContaView — cartão do usuário (CTA-01)', () => {
     expect(screen.queryByLabelText('Iniciais de Maria Silva')).not.toBeOnTheScreen();
   });
 
-  it('sem foto, exibe a inicial maiúscula do nome (AUTH-14)', () => {
+  it('sem foto, exibe a inicial maiúscula do nome (AUTH-14)', async () => {
     logarComo('Motorista', { full_name: 'maria Silva' });
 
-    render(<ContaView />);
+    await render(<ContaView />);
 
     expect(screen.getByLabelText('Iniciais de maria Silva')).toHaveTextContent('MS');
   });
 
-  it('nome vazio no Google: usa o e-mail no lugar do nome (edge case)', () => {
+  it('nome vazio no Google: usa o e-mail no lugar do nome (edge case)', async () => {
     useSessionStore.setState({ session: sessionWith('joao@example.com', { full_name: '' }), isRestoring: false });
 
-    render(<ContaView />);
+    await render(<ContaView />);
 
     // Duas vezes: no lugar do nome e na linha do e-mail.
     expect(screen.getAllByText('joao@example.com')).toHaveLength(2);
@@ -105,22 +105,22 @@ describe('ContaView — cartão do usuário (CTA-01)', () => {
 });
 
 describe('ContaView — linhas e Sair (CTA-01)', () => {
-  it('Admin vê a linha "Usuários", que abre a tela de usuários (RBAC-03)', () => {
+  it('Admin vê a linha "Usuários", que abre a tela de usuários (RBAC-03)', async () => {
     logarComo('Admin');
-    render(<ContaView />);
+    await render(<ContaView />);
 
     expect(screen.getByText('Administração')).toBeOnTheScreen();
-    fireEvent.press(screen.getByRole('button', { name: 'Usuários' }));
+    await fireEvent.press(screen.getByRole('button', { name: 'Usuários' }));
 
     expect(mockPush).toHaveBeenCalledWith('/usuarios');
   });
 
   it.each(['Gestor de Frota', 'Financeiro', 'Motorista'] as const)(
     'perfil %s não vê a linha "Usuários" (RBAC-03 AC1) nem consulta a tabela',
-    (perfilNome) => {
+    async (perfilNome) => {
       logarComo(perfilNome);
 
-      render(<ContaView />);
+      await render(<ContaView />);
 
       expect(screen.queryByRole('button', { name: 'Usuários' })).not.toBeOnTheScreen();
       expect(screen.queryByText('Administração')).not.toBeOnTheScreen();
@@ -140,7 +140,7 @@ describe('ContaView — linhas e Sair (CTA-01)', () => {
     });
     logarComo('Admin');
 
-    render(<ContaView />);
+    await render(<ContaView />);
 
     expect(await screen.findByText('3 pessoas · 1 aguardando aprovação')).toBeOnTheScreen();
   });
@@ -149,41 +149,41 @@ describe('ContaView — linhas e Sair (CTA-01)', () => {
     jest.mocked(listarUsuarios).mockResolvedValue({ ok: false, mensagem: 'Sem conexão.' });
     logarComo('Admin');
 
-    render(<ContaView />);
+    await render(<ContaView />);
 
     expect(await screen.findByText('Aprovar, mudar perfil e bloquear')).toBeOnTheScreen();
   });
 
-  it('Financeiro vê Categorias e Formas de pagamento em "Cadastros"', () => {
+  it('Financeiro vê Categorias e Formas de pagamento em "Cadastros"', async () => {
     logarComo('Financeiro');
-    render(<ContaView />);
+    await render(<ContaView />);
 
     expect(screen.getByText('Cadastros')).toBeOnTheScreen();
-    fireEvent.press(screen.getByRole('button', { name: 'Categorias' }));
-    fireEvent.press(screen.getByRole('button', { name: 'Formas de pagamento' }));
+    await fireEvent.press(screen.getByRole('button', { name: 'Categorias' }));
+    await fireEvent.press(screen.getByRole('button', { name: 'Formas de pagamento' }));
 
     expect(mockPush).toHaveBeenCalledWith('/categorias');
     expect(mockPush).toHaveBeenCalledWith('/formas-pagamento');
   });
 
-  it.each(['Gestor de Frota', 'Motorista'] as const)('%s não vê os cadastros do Caixa', (perfilNome) => {
+  it.each(['Gestor de Frota', 'Motorista'] as const)('%s não vê os cadastros do Caixa', async (perfilNome) => {
     logarComo(perfilNome);
-    render(<ContaView />);
+    await render(<ContaView />);
 
     expect(screen.queryByRole('button', { name: 'Categorias' })).not.toBeOnTheScreen();
   });
 
-  it('linha "Versão" mostra a versão do app.config.ts', () => {
-    render(<ContaView />);
+  it('linha "Versão" mostra a versão do app.config.ts', async () => {
+    await render(<ContaView />);
 
     expect(screen.getByText('Versão')).toBeOnTheScreen();
     expect(screen.getByText('1.4.2')).toBeOnTheScreen();
   });
 
-  it('"Sair" encerra a sessão direto, sem diálogo de confirmação (AUTH-15)', () => {
-    render(<ContaView />);
+  it('"Sair" encerra a sessão direto, sem diálogo de confirmação (AUTH-15)', async () => {
+    await render(<ContaView />);
 
-    fireEvent.press(screen.getByRole('button', { name: 'Sair da conta' }));
+    await fireEvent.press(screen.getByRole('button', { name: 'Sair da conta' }));
 
     expect(signOut).toHaveBeenCalledTimes(1);
   });

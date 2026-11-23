@@ -2,6 +2,8 @@ import { act, fireEvent, render, screen, within } from '@testing-library/react-n
 import { FlatList, RefreshControl, StyleSheet, useWindowDimensions } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
+import { dispararSemEsperar, segurarPrimeiraCarga } from '@/testing/eventos';
+import { porTipo, todosPorTipo } from '@/testing/componentes';
 import { FAB_ALTURA_RESERVADA, ListItem, Skeleton, colors, spacing } from '@/ui';
 
 import { FormasPagamentoListView } from '../FormasPagamentoListView';
@@ -73,17 +75,20 @@ beforeEach(() => {
 
 async function renderComLista() {
   mockListar.mockResolvedValue({ ok: true, data: formas });
-  render(<FormasPagamentoListView />);
+  await render(<FormasPagamentoListView />);
   await screen.findByText('Dinheiro');
 }
 
 describe('FormasPagamentoListView — carga (LST-03)', () => {
   it('primeira carga: três skeletons, depois a lista', async () => {
     mockListar.mockResolvedValue({ ok: true, data: formas });
-    render(<FormasPagamentoListView />);
+    // Segura a primeira carga: o render async esperaria a resposta e pularia o "carregando".
+    const liberarCarga = segurarPrimeiraCarga(mockListar);
+    await render(<FormasPagamentoListView />);
 
     expect(screen.getByLabelText('Carregando formas de pagamento')).toBeOnTheScreen();
-    expect(screen.UNSAFE_getAllByType(Skeleton)).toHaveLength(3);
+    expect(todosPorTipo(Skeleton)).toHaveLength(3);
+    await liberarCarga();
     expect(await screen.findByText('Pix')).toBeOnTheScreen();
   });
 
@@ -91,7 +96,7 @@ describe('FormasPagamentoListView — carga (LST-03)', () => {
     await renderComLista();
 
     expect(screen.queryByText('Formas de pagamento')).not.toBeOnTheScreen();
-    expect(screen.UNSAFE_getByType(SafeAreaView).props.edges).not.toContain('top');
+    expect(porTipo(SafeAreaView).props.edges).not.toContain('top');
   });
 
   it('voltar o foco recarrega sem skeleton', async () => {
@@ -109,12 +114,12 @@ describe('FormasPagamentoListView — carga (LST-03)', () => {
   it('pull-to-refresh em accent e espaço para o FAB no fim da lista', async () => {
     await renderComLista();
 
-    const refresh = screen.UNSAFE_getByType(RefreshControl);
+    const refresh = porTipo(RefreshControl);
     expect(refresh.props.colors).toEqual([colors.accent]);
-    await act(async () => refresh.props.onRefresh());
+    await act(async () => refresh.props.onRefresh!());
     expect(mockListar).toHaveBeenCalledTimes(2);
 
-    expect(StyleSheet.flatten(screen.UNSAFE_getByType(FlatList).props.contentContainerStyle)).toMatchObject({
+    expect(StyleSheet.flatten(porTipo(FlatList).props.contentContainerStyle)).toMatchObject({
       paddingBottom: FAB_ALTURA_RESERVADA,
     });
   });
@@ -123,10 +128,10 @@ describe('FormasPagamentoListView — carga (LST-03)', () => {
     mockListar
       .mockResolvedValueOnce({ ok: false, mensagem: 'Não foi possível carregar as formas de pagamento.' })
       .mockResolvedValueOnce({ ok: true, data: formas });
-    render(<FormasPagamentoListView />);
+    await render(<FormasPagamentoListView />);
 
     expect(await screen.findByText('Não foi possível carregar')).toBeOnTheScreen();
-    fireEvent.press(screen.getByRole('button', { name: 'Tentar novamente' }));
+    await fireEvent.press(screen.getByRole('button', { name: 'Tentar novamente' }));
 
     expect(await screen.findByText('Dinheiro')).toBeOnTheScreen();
   });
@@ -144,7 +149,7 @@ describe('FormasPagamentoListView — linha (LST-01)', () => {
   it('forma editável abre a edição ao tocar na linha', async () => {
     await renderComLista();
 
-    fireEvent.press(screen.getByRole('button', { name: 'Dinheiro' }));
+    await fireEvent.press(screen.getByRole('button', { name: 'Dinheiro' }));
 
     expect(mockPush).toHaveBeenCalledWith('/formas-pagamento/2/editar');
   });
@@ -154,12 +159,15 @@ describe('FormasPagamentoListView — linha (LST-01)', () => {
     mockDefinirAtiva.mockReturnValue(new Promise((resolve) => (concluir = resolve)));
     await renderComLista();
 
-    fireEvent(screen.getByRole('switch', { name: 'Ativa: Dinheiro' }), 'valueChange', false);
+    const toque1 = await dispararSemEsperar(() => fireEvent(screen.getByRole('switch', { name: 'Ativa: Dinheiro' }), 'valueChange', false));
 
     expect(mockDefinirAtiva).toHaveBeenCalledWith('2', false);
     expect(screen.getByRole('switch', { name: 'Ativa: Dinheiro' })).toBeDisabled();
 
-    await act(async () => concluir({ ok: true, data: { id: '2', nome: 'Dinheiro', ativa: false } }));
+    await act(async () => {
+      concluir({ ok: true, data: { id: '2', nome: 'Dinheiro', ativa: false } });
+      await toque1.terminou;
+    });
     expect(screen.getByRole('alert')).toHaveTextContent('Forma de pagamento desativada.');
   });
 
@@ -170,13 +178,16 @@ describe('FormasPagamentoListView — linha (LST-01)', () => {
     const pixAntes = rendersDaLinha('Pix');
     const dinheiroAntes = rendersDaLinha('Dinheiro');
 
-    fireEvent(screen.getByRole('switch', { name: 'Ativa: Dinheiro' }), 'valueChange', false);
+    const toque1 = await dispararSemEsperar(() => fireEvent(screen.getByRole('switch', { name: 'Ativa: Dinheiro' }), 'valueChange', false));
 
     // A linha do switch renderiza para ficar desabilitada enquanto salva.
     expect(screen.getByRole('switch', { name: 'Ativa: Dinheiro' })).toBeDisabled();
     expect(rendersDaLinha('Dinheiro')).toBeGreaterThan(dinheiroAntes);
 
-    await act(async () => concluir({ ok: true, data: { id: '2', nome: 'Dinheiro', ativa: false } }));
+    await act(async () => {
+      concluir({ ok: true, data: { id: '2', nome: 'Dinheiro', ativa: false } });
+      await toque1.terminou;
+    });
 
     // Salvou, a tela mostrou o Snackbar e a lista mudou; a vizinha, que não mudou, não renderizou nenhuma vez.
     expect(screen.getByRole('alert')).toHaveTextContent('Forma de pagamento desativada.');
@@ -196,7 +207,7 @@ describe('FormasPagamentoListView — filtros e FAB (LST-01)', () => {
     await renderComLista();
     expect(screen.queryByText('Antiga')).not.toBeOnTheScreen();
 
-    fireEvent(screen.getByRole('switch', { name: 'Mostrar desativadas' }), 'valueChange', true);
+    await fireEvent(screen.getByRole('switch', { name: 'Mostrar desativadas' }), 'valueChange', true);
 
     expect(screen.getByText('Antiga')).toBeOnTheScreen();
     expect(screen.getByText('Desativada')).toBeOnTheScreen();
@@ -205,18 +216,18 @@ describe('FormasPagamentoListView — filtros e FAB (LST-01)', () => {
   it('filtra pela busca e mostra o vazio quando nada bate', async () => {
     await renderComLista();
 
-    fireEvent.changeText(screen.getByLabelText('Buscar'), 'dinh');
+    await fireEvent.changeText(screen.getByLabelText('Buscar'), 'dinh');
     expect(screen.getByText('Dinheiro')).toBeOnTheScreen();
     expect(screen.queryByText('Pix')).not.toBeOnTheScreen();
 
-    fireEvent.changeText(screen.getByLabelText('Buscar'), 'zzz');
+    await fireEvent.changeText(screen.getByLabelText('Buscar'), 'zzz');
     expect(screen.getByText('Nenhuma forma de pagamento encontrada')).toBeOnTheScreen();
   });
 
   it('o FAB "Nova forma de pagamento" abre a criação', async () => {
     await renderComLista();
 
-    fireEvent.press(screen.getByRole('button', { name: 'Nova forma de pagamento' }));
+    await fireEvent.press(screen.getByRole('button', { name: 'Nova forma de pagamento' }));
 
     expect(mockPush).toHaveBeenCalledWith('/formas-pagamento/nova');
   });
@@ -230,7 +241,7 @@ describe('FormasPagamentoListView — tablet (EIX-94)', () => {
   }
 
   function estiloDaLista() {
-    return StyleSheet.flatten(screen.UNSAFE_getByType(FlatList).props.contentContainerStyle);
+    return StyleSheet.flatten(porTipo(FlatList).props.contentContainerStyle);
   }
 
   it('412: nada muda, o respiro lateral continua no Screen e a lista não ganha coluna', async () => {

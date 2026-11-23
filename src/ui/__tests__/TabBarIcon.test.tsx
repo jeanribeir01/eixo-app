@@ -6,8 +6,8 @@ import { colors, indicatorSize } from '../tokens';
 // Aba ativa da tab bar (DESIGN_CYAN 2.0 §7): três sinais juntos — forma, fundo e cor — porque só a cor
 // sumia ao sol (auditoria de UI, "Menu").
 describe('TabBarIcon', () => {
-  it('ativa: ícone cheio em accentText sobre a pílula accentSoft', () => {
-    render(<TabBarIcon name="frota" focused />);
+  it('ativa: ícone cheio em accentText sobre a pílula accentSoft', async () => {
+    await render(<TabBarIcon name="frota" focused />);
 
     const icone = screen.getByTestId('icone-frota', { includeHiddenElements: true });
     expect(icone.props.weight).toBe('fill');
@@ -19,8 +19,8 @@ describe('TabBarIcon', () => {
     });
   });
 
-  it('inativa: contorno em textBody, sem pílula', () => {
-    render(<TabBarIcon name="frota" focused={false} />);
+  it('inativa: contorno em textBody, sem pílula', async () => {
+    await render(<TabBarIcon name="frota" focused={false} />);
 
     const icone = screen.getByTestId('icone-frota', { includeHiddenElements: true });
     expect(icone.props.weight).toBe('regular');

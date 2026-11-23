@@ -1,7 +1,7 @@
 import { useMigrations } from 'drizzle-orm/expo-sqlite/migrator';
 import { isRunningInExpoGo } from 'expo';
 import { useFonts } from 'expo-font';
-import { Stack } from 'expo-router';
+import { Stack, type Href } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
 import { StatusBar } from 'expo-status-bar';
 import { useEffect, useState } from 'react';
@@ -19,42 +19,13 @@ import { EmptyState, fontAssets, Screen, colors } from '@/ui';
 SplashScreen.preventAutoHideAsync();
 
 export default function RootLayout() {
-  // O Expo Go não traz módulos nativos do projeto (Google Sign-In): o app só roda no app de
-  // desenvolvimento ou no APK. A decisão não muda durante a execução, então fica fora dos hooks.
   return (
     <>
       {/* Ícones escuros na barra de status: o app é claro e o canvas é quase branco. Sem isso o Android
           desenhava relógio e bateria em branco sobre o canvas (auditoria de UI, item 15). */}
       <StatusBar style="dark" />
-      {isRunningInExpoGo() ? <AvisoExpoGo /> : <AppLayout />}
+      <AppLayout />
     </>
-  );
-}
-
-// Aviso para quem abriu o projeto no Expo Go, em vez da tela vermelha (EIX-73). Sem ação: tentar
-// de novo não resolve, a saída é instalar o app de desenvolvimento.
-function AvisoExpoGo() {
-  const [fontesCarregadas, erroDasFontes] = useFonts(fontAssets);
-  // Com erro nas fontes, mostra o aviso com a fonte do sistema em vez de ficar preso na splash.
-  const pronto = fontesCarregadas || erroDasFontes !== null;
-
-  useEffect(() => {
-    if (pronto) SplashScreen.hideAsync();
-  }, [pronto]);
-
-  if (!pronto) return null;
-
-  return (
-    <Screen align="center">
-      <EmptyState
-        icon="alerta"
-        title="Este app não abre no Expo Go"
-        description={
-          'O Eixo Certo usa o login com Google, que o Expo Go não tem. Instale o app de desenvolvimento ' +
-          'do Eixo Certo e abra por ele. O passo a passo está no README, na seção "Rodar no celular".'
-        }
-      />
-    </Screen>
   );
 }
 
@@ -69,7 +40,9 @@ function AppLayout() {
   const [tentativaPreparo, setTentativaPreparo] = useState(0);
 
   useEffect(() => {
-    configureGoogleSignIn();
+    // O Expo Go não tem o módulo nativo do Google Sign-In: lá o login é só por e-mail (ver LoginView),
+    // e configurar o Google derrubaria o app.
+    if (!isRunningInExpoGo()) configureGoogleSignIn();
     const unsubscribeSession = startSessionSync();
 
     return unsubscribeSession;
@@ -164,15 +137,20 @@ function AppLayout() {
   // O layout nunca navega "na mão": ele só diz quais grupos existem para a sessão atual.
   // Quando a sessão muda (login/logout), o expo-router redireciona sozinho para a rota permitida.
   // Lembrete (CLAUDE.md): esconder rota é usabilidade, não segurança — quem protege dado é o RLS.
+  //
+  // `redirectTo` diz para onde vai quem está numa rota bloqueada. Desde o SDK 58 ele é obrigatório
+  // aqui: sem ele o expo-router tenta a "âncora" do navegador, que este layout não tem, e mostra a
+  // tela de rota não encontrada (ex.: abrir o app em `/` sem sessão).
+  const rotaPermitida: Href = session === null ? '/login' : temAcesso ? '/' : '/aguardando';
   return (
     <Stack screenOptions={{ headerShown: false }}>
-      <Stack.Protected guard={temAcesso}>
+      <Stack.Protected guard={temAcesso} redirectTo={rotaPermitida}>
         <Stack.Screen name="(app)" />
       </Stack.Protected>
-      <Stack.Protected guard={session !== null && !temAcesso}>
+      <Stack.Protected guard={session !== null && !temAcesso} redirectTo={rotaPermitida}>
         <Stack.Screen name="(pendente)" />
       </Stack.Protected>
-      <Stack.Protected guard={session === null}>
+      <Stack.Protected guard={session === null} redirectTo={rotaPermitida}>
         <Stack.Screen name="(auth)" />
       </Stack.Protected>
     </Stack>

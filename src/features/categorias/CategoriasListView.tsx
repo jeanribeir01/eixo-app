@@ -246,7 +246,7 @@ export function CategoriasListView() {
                     />
                   ))}
               </Column>
-            ) : null
+            ) : undefined
           }
         />
       )}

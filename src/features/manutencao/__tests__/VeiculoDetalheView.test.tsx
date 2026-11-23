@@ -2,6 +2,8 @@ import { act, fireEvent, render, screen } from '@testing-library/react-native';
 import { FlatList, RefreshControl, StyleSheet, useWindowDimensions } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
+import { segurarPrimeiraCarga } from '@/testing/eventos';
+import { porTipo, todosPorTipo } from '@/testing/componentes';
 import { ListItem, spacing } from '@/ui';
 
 import { VeiculoDetalheView } from '../VeiculoDetalheView';
@@ -75,25 +77,28 @@ describe('VeiculoDetalheView', () => {
   // MAN-34, MAN-37
   it('carrega o veículo do id e mostra placa, "Marca Modelo", status e a seção do histórico', async () => {
     mockBuscar.mockResolvedValue({ ok: true, data: volvo });
-    render(<VeiculoDetalheView veiculoId="v1" />);
+    // Segura a primeira carga: o render async esperaria a resposta e pularia o "carregando".
+    const liberarCarga = segurarPrimeiraCarga(mockBuscar);
+    await render(<VeiculoDetalheView veiculoId="v1" />);
 
     expect(screen.getByLabelText('Carregando veículo')).toBeOnTheScreen();
+    await liberarCarga();
     expect(await screen.findByText('ABC-1234')).toBeOnTheScreen();
     expect(mockBuscar).toHaveBeenCalledWith('v1');
     expect(screen.getByText('Volvo FH 540')).toBeOnTheScreen();
     expect(screen.getByText('Em Manutenção')).toBeOnTheScreen();
     expect(screen.getByText('Histórico de manutenções')).toBeOnTheScreen();
     // Tela interna: o header nativo protege o topo.
-    expect(screen.UNSAFE_getByType(SafeAreaView).props.edges).not.toContain('top');
+    expect(porTipo(SafeAreaView).props.edges).not.toContain('top');
   });
 
   // MAN-35
   it('lista o histórico na ordem recebida, com data, descrição, valor e situação', async () => {
     mockBuscar.mockResolvedValue({ ok: true, data: volvo });
-    render(<VeiculoDetalheView veiculoId="v1" />);
+    await render(<VeiculoDetalheView veiculoId="v1" />);
     await screen.findByText('ABC-1234');
 
-    const linhas = screen.UNSAFE_getAllByType(ListItem);
+    const linhas = todosPorTipo(ListItem);
     expect(linhas.map((linha) => linha.props.title)).toEqual(['Troca de pneus', 'Revisão dos freios']);
     expect(linhas.map((linha) => linha.props.subtitle)).toEqual(['16/10/2026 · Em aberto', '01/09/2026 · Concluída']);
     expect(screen.getByText('R$ 1,13')).toBeOnTheScreen();
@@ -103,7 +108,7 @@ describe('VeiculoDetalheView', () => {
   // MAN-36
   it('veículo sem manutenção mostra o aviso de histórico vazio', async () => {
     mockBuscar.mockResolvedValue({ ok: true, data: { ...volvo, status: 'Disponivel', manutencoes: [] } });
-    render(<VeiculoDetalheView veiculoId="v1" />);
+    await render(<VeiculoDetalheView veiculoId="v1" />);
 
     expect(await screen.findByText('Nenhuma manutenção registrada para este veículo.')).toBeOnTheScreen();
     expect(screen.getByText('Disponível')).toBeOnTheScreen();
@@ -112,11 +117,11 @@ describe('VeiculoDetalheView', () => {
   // MAN-38
   it('veículo inexistente mostra "Veículo não encontrado." e "Voltar" navega para trás', async () => {
     mockBuscar.mockResolvedValue({ ok: false, mensagem: 'Veículo não encontrado.' });
-    render(<VeiculoDetalheView veiculoId="x" />);
+    await render(<VeiculoDetalheView veiculoId="x" />);
 
     expect(await screen.findByText('Veículo não encontrado.')).toBeOnTheScreen();
-    expect(screen.UNSAFE_getByType(SafeAreaView).props.edges).not.toContain('top');
-    fireEvent.press(screen.getByRole('button', { name: 'Voltar' }));
+    expect(porTipo(SafeAreaView).props.edges).not.toContain('top');
+    await fireEvent.press(screen.getByRole('button', { name: 'Voltar' }));
     expect(mockBack).toHaveBeenCalledTimes(1);
   });
 
@@ -125,11 +130,11 @@ describe('VeiculoDetalheView', () => {
     mockBuscar
       .mockResolvedValueOnce({ ok: false, mensagem: 'Não foi possível carregar o veículo. Tente novamente.' })
       .mockResolvedValueOnce({ ok: true, data: volvo });
-    render(<VeiculoDetalheView veiculoId="v1" />);
+    await render(<VeiculoDetalheView veiculoId="v1" />);
 
     expect(await screen.findByText('Não foi possível carregar o veículo. Tente novamente.')).toBeOnTheScreen();
     expect(screen.getByRole('button', { name: 'Voltar' })).toBeOnTheScreen();
-    fireEvent.press(screen.getByRole('button', { name: 'Tentar novamente' }));
+    await fireEvent.press(screen.getByRole('button', { name: 'Tentar novamente' }));
 
     expect(await screen.findByText('ABC-1234')).toBeOnTheScreen();
     expect(mockBuscar).toHaveBeenCalledTimes(2);
@@ -139,10 +144,10 @@ describe('VeiculoDetalheView', () => {
     mockBuscar
       .mockResolvedValueOnce({ ok: true, data: { ...volvo, manutencoes: [] } })
       .mockResolvedValueOnce({ ok: true, data: volvo });
-    render(<VeiculoDetalheView veiculoId="v1" />);
+    await render(<VeiculoDetalheView veiculoId="v1" />);
     expect(await screen.findByText('Nenhuma manutenção registrada para este veículo.')).toBeOnTheScreen();
 
-    await act(async () => screen.UNSAFE_getByType(RefreshControl).props.onRefresh());
+    await act(async () => porTipo(RefreshControl).props.onRefresh!());
 
     expect(screen.getByText('Troca de pneus')).toBeOnTheScreen();
     expect(mockBuscar).toHaveBeenCalledTimes(2);
@@ -152,10 +157,10 @@ describe('VeiculoDetalheView', () => {
     mockBuscar
       .mockResolvedValueOnce({ ok: true, data: volvo })
       .mockResolvedValueOnce({ ok: false, mensagem: 'Não foi possível carregar o veículo. Tente novamente.' });
-    render(<VeiculoDetalheView veiculoId="v1" />);
+    await render(<VeiculoDetalheView veiculoId="v1" />);
     await screen.findByText('ABC-1234');
 
-    await act(async () => screen.UNSAFE_getByType(RefreshControl).props.onRefresh());
+    await act(async () => porTipo(RefreshControl).props.onRefresh!());
 
     expect(screen.getByRole('alert')).toHaveTextContent('Não foi possível carregar o veículo. Tente novamente.');
     expect(screen.getByText('Troca de pneus')).toBeOnTheScreen();
@@ -170,12 +175,12 @@ describe('VeiculoDetalheView — tablet (EIX-94)', () => {
   }
 
   function estiloDaLista() {
-    return StyleSheet.flatten(screen.UNSAFE_getByType(FlatList).props.contentContainerStyle);
+    return StyleSheet.flatten(porTipo(FlatList).props.contentContainerStyle);
   }
 
   it('412: nada muda, o respiro lateral continua no Screen e a lista não ganha coluna', async () => {
     mockBuscar.mockResolvedValue({ ok: true, data: volvo });
-    render(<VeiculoDetalheView veiculoId="v1" />);
+    await render(<VeiculoDetalheView veiculoId="v1" />);
     await screen.findByText('ABC-1234');
 
     expect(estiloDoConteudo()).toMatchObject({ paddingHorizontal: spacing.base });
@@ -185,7 +190,7 @@ describe('VeiculoDetalheView — tablet (EIX-94)', () => {
   it('800: a lista rola na largura toda e o conteúdo fica na coluna de 720', async () => {
     mockLargura(800);
     mockBuscar.mockResolvedValue({ ok: true, data: volvo });
-    render(<VeiculoDetalheView veiculoId="v1" />);
+    await render(<VeiculoDetalheView veiculoId="v1" />);
     await screen.findByText('ABC-1234');
 
     expect(estiloDoConteudo().maxWidth).toBeUndefined();

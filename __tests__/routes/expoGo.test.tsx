@@ -1,5 +1,4 @@
 import { isRunningInExpoGo } from 'expo';
-import * as SplashScreen from 'expo-splash-screen';
 import { renderRouter, screen } from 'expo-router/testing-library';
 import { Text } from 'react-native';
 
@@ -7,7 +6,8 @@ import { configureGoogleSignIn } from '@/features/auth/googleAuth';
 
 import RootLayout from '../../app/_layout';
 
-// EIX-73: aberto no Expo Go, o app mostra um aviso em português em vez da tela vermelha.
+// No Expo Go o app abre normalmente, só sem o Google Sign-In (o módulo nativo não existe lá): é o
+// jeito de rodar num iPhone sem conta de desenvolvedor da Apple. O login vira só por e-mail (LoginView).
 // O jest.setup.ts mocka isRunningInExpoGo com false para todos os testes; aqui cada caso escolhe o valor.
 jest.mock('@/supabase/client', () => ({
   supabase: { auth: { onAuthStateChange: jest.fn(() => ({ data: { subscription: { unsubscribe: jest.fn() } } })) } },
@@ -21,41 +21,40 @@ jest.mock('expo-splash-screen', () => ({
 
 const mockIsRunningInExpoGo = isRunningInExpoGo as jest.Mock;
 
-function renderizar() {
-  renderRouter({ _layout: RootLayout, index: () => <Text>Tela Inicial</Text> }, { initialUrl: '/' });
+async function renderizar() {
+  await renderRouter({ _layout: RootLayout, index: () => <Text>Tela Inicial</Text> }, { initialUrl: '/' });
 }
 
 beforeEach(() => {
   jest.clearAllMocks();
 });
 
+afterEach(() => {
+  mockIsRunningInExpoGo.mockReturnValue(false);
+});
+
 describe('layout raiz no Expo Go', () => {
-  it('DEV-01: mostra o aviso em português com o caminho do README', () => {
+  it('não mostra mais o aviso de bloqueio da EIX-73', async () => {
     mockIsRunningInExpoGo.mockReturnValue(true);
 
-    renderizar();
+    await renderizar();
 
-    expect(screen.getByText('Este app não abre no Expo Go')).toBeOnTheScreen();
-    expect(screen.getByText(/instale o app de desenvolvimento/i)).toBeOnTheScreen();
-    expect(screen.getByText(/"Rodar no celular"/)).toBeOnTheScreen();
-    expect(screen.queryByText('Tela Inicial')).not.toBeOnTheScreen();
+    expect(screen.queryByText('Este app não abre no Expo Go')).not.toBeOnTheScreen();
   });
 
-  it('DEV-02: esconde a splash e não configura o Google', () => {
+  it('não configura o Google Sign-In, que não existe no Expo Go', async () => {
     mockIsRunningInExpoGo.mockReturnValue(true);
 
-    renderizar();
+    await renderizar();
 
-    expect(SplashScreen.hideAsync).toHaveBeenCalled();
     expect(configureGoogleSignIn).not.toHaveBeenCalled();
   });
 
-  it('DEV-04: fora do Expo Go segue o fluxo normal, sem o aviso', () => {
+  it('fora do Expo Go configura o Google Sign-In uma vez', async () => {
     mockIsRunningInExpoGo.mockReturnValue(false);
 
-    renderizar();
+    await renderizar();
 
     expect(configureGoogleSignIn).toHaveBeenCalledTimes(1);
-    expect(screen.queryByText('Este app não abre no Expo Go')).not.toBeOnTheScreen();
   });
 });
