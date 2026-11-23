@@ -305,6 +305,9 @@ export function MovimentacoesListView() {
 
       {tela.status === 'pronto' && (
         <List
+          // Filtro novo é uma lista nova: remontar evita que a transição das linhas deixe vãos onde
+          // estavam as que saíram (visto no emulador ao trocar para "Saídas").
+          key={`${filtroTipo}-${filtroStatus}`}
           data={linhas}
           keyExtractor={chaveDaLinha}
           style={styles.lista}
