@@ -124,6 +124,19 @@ describe('GraficosCaixa', () => {
     expect(await screen.findByText('+ R$ 1.001,63')).toBeOnTheScreen();
   });
 
+  it('a rosca com erro mostra a mensagem e "Tentar novamente", e as barras continuam (GRAF-16)', async () => {
+    mockDespesas.mockResolvedValueOnce({ ok: false, mensagem: 'Não foi possível carregar o gráfico. Tente novamente.' });
+
+    renderizar();
+
+    expect(await screen.findByText('Não foi possível carregar o gráfico. Tente novamente.')).toBeOnTheScreen();
+    expect(screen.getByText('+ R$ 1.001,63')).toBeOnTheScreen();
+
+    fireEvent.press(screen.getByRole('button', { name: 'Tentar novamente' }));
+
+    expect(await screen.findByRole('button', { name: /^Combustível/ })).toBeOnTheScreen();
+  });
+
   it('período sem nada pago mostra o vazio dos dois gráficos (GRAF-17)', async () => {
     mockFluxo.mockResolvedValue({ ok: true, data: [{ mes: '2025-10', entradas_centavos: 0, saidas_centavos: 0 }] });
     mockDespesas.mockResolvedValue({ ok: true, data: [] });

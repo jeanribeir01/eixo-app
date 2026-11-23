@@ -114,7 +114,7 @@ A aba Dashboards só mostra o ranking da US13. O gestor financeiro vê o saldo d
 1. WHEN the `FiltroPeriodo` period changes THEN the app SHALL query the donut with the new period and the bars ending at the new final month (capped at the current month). (GRAF-14)
 2. WHILE a chart's query is pending without data on screen THE app SHALL show a skeleton in that chart's place. (GRAF-15)
 3. IF a chart's query fails THEN the app SHALL show that chart's error state with the message in Portuguese and the action "Tentar novamente", keeping the other chart on screen. (GRAF-16)
-4. IF the bars return no month with value above zero, or the donut returns no rows, THEN the app SHALL show that chart's empty state with a message in Portuguese. (GRAF-17)
+4. IF the bars return no month with value above zero, or the donut returns no rows, THEN the app SHALL show that chart's empty state titled "Nada pago nesses meses" (bars) or "Nenhuma despesa paga no período" (donut). (GRAF-17)
 5. WHERE the user is a Gestor de Frota THE app SHALL not render the charts section nor call the chart RPCs. (GRAF-18)
 6. The charts SHALL take their colors only from `src/ui/tokens.ts` and SHALL keep each month column at least 44pt wide, scrolling horizontally when the columns do not fit the width. (GRAF-19)
 

@@ -1,5 +1,5 @@
 import { fireEvent, render, screen } from '@testing-library/react-native';
-import { StyleSheet } from 'react-native';
+import { ScrollView, StyleSheet } from 'react-native';
 
 import { colors } from '@/ui/tokens';
 
@@ -66,6 +66,23 @@ describe('GraficoBarras', () => {
     expect(cores).toContain(colors.accent);
     expect(cores).toContain(colors.inverted);
     expect(cores.every((cor) => (Object.values(colors) as string[]).includes(cor))).toBe(true);
+  });
+
+  it('com 24 meses numa tela estreita, as colunas mantêm 44pt e o gráfico rola na horizontal (GRAF-19)', () => {
+    const vinteQuatroMeses: MesDoFluxo[] = Array.from({ length: 24 }, (_, indice) => ({
+      mes: `${2025 + Math.floor(indice / 12)}-${String((indice % 12) + 1).padStart(2, '0')}`,
+      entradas_centavos: 1000,
+      saidas_centavos: 500,
+    }));
+    render(<GraficoBarras meses={vinteQuatroMeses} />);
+
+    // Largura de um celular pequeno: 24 × 44pt não cabe em 320pt.
+    fireEvent(screen.UNSAFE_getByType(ScrollView).parent!, 'layout', { nativeEvent: { layout: { width: 320 } } });
+
+    expect(screen.UNSAFE_getByType(ScrollView).props.horizontal).toBe(true);
+    const larguras = screen.getAllByRole('button').map((botao) => StyleSheet.flatten(botao.props.style).width);
+    expect(larguras).toHaveLength(24);
+    expect(larguras.every((largura) => largura >= 44)).toBe(true);
   });
 
   it('a legenda dá nome às duas cores', () => {
