@@ -49,6 +49,8 @@ describe('Avatar — iniciais', () => {
     ['Ana', 'A'],
     ['frotas@eixocerto.com.br', 'F'],
     ['   ', '?'],
+    ['Diogo _Fune', 'DF'],
+    ['_ 123', '?'],
   ])('%s → %s', (nome, esperado) => {
     expect(iniciais(nome)).toBe(esperado);
   });

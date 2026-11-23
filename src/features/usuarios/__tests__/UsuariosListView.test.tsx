@@ -101,13 +101,13 @@ describe('UsuariosListView — linha (CTA-02)', () => {
   it('usuário ativo: o Badge mostra o perfil', async () => {
     await renderComLista();
 
-    expect(rotulosDosBadges()[0]).toBe('Administrador');
+    expect(rotulosDosBadges()[0]).toBe('Admin');
   });
 
   it('bloqueado: o Badge mostra o status, em danger, que é o que o Admin precisa ver', async () => {
     await renderComLista();
 
-    expect(rotulosDosBadges()).toEqual(['Administrador', 'Bloqueado']);
+    expect(rotulosDosBadges()).toEqual(['Admin', 'Bloqueado']);
     const bloqueado = screen.UNSAFE_getAllByType(Badge).find((badge) => badge.props.label === 'Bloqueado');
     expect(bloqueado?.props.tone).toBe('danger');
   });
@@ -153,7 +153,7 @@ describe('UsuariosListView — carga (CTA-02)', () => {
     });
 
     expect(screen.queryByLabelText('Carregando usuários')).not.toBeOnTheScreen();
-    expect(rotulosDosBadges()).toEqual(['Operador/Motorista']);
+    expect(rotulosDosBadges()).toEqual(['Motorista']);
   });
 
   it('recarga que falha mantém a lista e avisa no Snackbar', async () => {

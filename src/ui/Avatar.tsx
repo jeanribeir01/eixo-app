@@ -14,11 +14,16 @@ const TAMANHOS = { sm: touchTarget - spacing.xs, md: touchTarget + spacing.md } 
 
 // Iniciais: primeira letra do primeiro e do último nome ("Jean Ribeiro" → "JR"), como no protótipo.
 // Um nome só, ou o e-mail no lugar do nome (contas de teste), fica com uma letra.
+// Sinais e números ("Diogo _Fune") não entram: a inicial é sempre a primeira letra de cada parte.
+function primeiraLetra(parte: string): string {
+  return parte.match(/\p{L}/u)?.[0] ?? '';
+}
+
 export function iniciais(nome: string): string {
-  const partes = nome.trim().split(/\s+/).filter(Boolean);
+  const partes = nome.trim().split(/\s+/).map(primeiraLetra).filter(Boolean);
   if (partes.length === 0) return '?';
-  if (partes.length === 1 || nome.includes('@')) return partes[0].charAt(0).toUpperCase();
-  return (partes[0].charAt(0) + partes[partes.length - 1].charAt(0)).toUpperCase();
+  if (partes.length === 1 || nome.includes('@')) return partes[0].toUpperCase();
+  return (partes[0] + partes[partes.length - 1]).toUpperCase();
 }
 
 // Foto do usuário quando existe; senão, as iniciais sobre accentSoft (mesmo par do Badge neutral).

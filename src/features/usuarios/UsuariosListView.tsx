@@ -2,7 +2,7 @@ import { memo, useCallback, useMemo, useState } from 'react';
 import { useRouter } from 'expo-router';
 import { RefreshControl, StyleSheet, View, type ListRenderItemInfo } from 'react-native';
 
-import { rotuloPerfil, rotuloStatus, type StatusUsuario } from '@/features/auth/permissions';
+import { rotuloCurtoPerfil, rotuloPerfil, rotuloStatus, type StatusUsuario } from '@/features/auth/permissions';
 import { useProfile } from '@/features/auth/profileStore';
 import { useDadosDaTela } from '@/lib/useDadosDaTela';
 import {
@@ -31,11 +31,11 @@ import { alterarStatusUsuario, listarUsuarios } from './usuariosRepository';
 
 type Feedback = { mensagem: string; tone: 'success' | 'error' };
 
-// Um Badge só por linha, para caber no celular pequeno. Bloqueado tem prioridade: é o que o Admin
+// Um Badge só por linha, com o nome curto do perfil, para caber no celular pequeno. Bloqueado tem prioridade: é o que o Admin
 // precisa ver. Admin em destaque (neutral); os outros perfis, sem ênfase.
 function badgeDaEquipe(usuario: Usuario): { label: string; tone: BadgeTone } {
   if (usuario.status === 'Bloqueado') return { label: rotuloStatus.Bloqueado, tone: 'danger' };
-  return { label: rotuloPerfil[usuario.perfil.nome], tone: usuario.perfil.nome === 'Admin' ? 'neutral' : 'muted' };
+  return { label: rotuloCurtoPerfil[usuario.perfil.nome], tone: usuario.perfil.nome === 'Admin' ? 'neutral' : 'muted' };
 }
 
 type LinhaProps = {
