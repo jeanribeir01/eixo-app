@@ -1,7 +1,7 @@
 import { fireEvent, render, screen } from '@testing-library/react-native';
 
 import { Input } from '../Input';
-import { colors } from '../tokens';
+import { colors, controlHeight } from '../tokens';
 
 describe('Input', () => {
   it('renderiza o label e aceita digitação', () => {
@@ -14,10 +14,10 @@ describe('Input', () => {
     expect(onChangeText).toHaveBeenCalledWith('Combustível');
   });
 
-  it('respeita o alvo de toque mínimo de 44pt', () => {
+  it('tem altura confortável de 48pt, acima do mínimo de 44', () => {
     render(<Input label="Título" value="" onChangeText={jest.fn()} />);
 
-    expect(screen.getByLabelText('Título')).toHaveStyle({ minHeight: 44 });
+    expect(screen.getByLabelText('Título')).toHaveStyle({ minHeight: controlHeight });
   });
 
   it('sem erro, não mostra alerta', () => {
@@ -32,9 +32,11 @@ describe('Input', () => {
     expect(screen.getByRole('alert')).toHaveTextContent('Informe o título da categoria.');
   });
 
-  it('com erro, reforça a borda além da mensagem (cor nunca é o único indicador)', () => {
+  it('com erro, borda e mensagem em danger, com ícone de alerta (cor nunca é o único indicador)', () => {
     render(<Input label="Título" value="" onChangeText={jest.fn()} error="Informe o título da categoria." />);
 
-    expect(screen.getByLabelText('Título')).toHaveStyle({ borderColor: colors.textPrimary });
+    expect(screen.getByLabelText('Título')).toHaveStyle({ borderColor: colors.danger });
+    expect(screen.getByRole('alert')).toHaveStyle({ color: colors.danger });
+    expect(screen.getByTestId('icone-alerta', { includeHiddenElements: true })).toBeTruthy();
   });
 });

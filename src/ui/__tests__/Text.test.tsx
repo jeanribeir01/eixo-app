@@ -12,7 +12,8 @@ describe('Text — tons', () => {
     ['primary', colors.textPrimary],
     ['body', colors.textBody],
     ['muted', colors.textMuted],
-    ['accent', colors.accentEdge],
+    ['accent', colors.accentText],
+    ['warning', colors.warning],
     ['onAccent', colors.onAccent],
   ] as const)('tom %s usa a cor %s', (tone, cor) => {
     render(<Text tone={tone}>+ R$ 10,00</Text>);

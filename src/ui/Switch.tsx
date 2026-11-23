@@ -23,7 +23,8 @@ export function Switch({ label, value, onValueChange, disabled = false, accessib
         value={value}
         onValueChange={onValueChange}
         disabled={disabled}
-        trackColor={{ true: colors.accent, false: colors.borderMuted }}
+        // accentStrong: o trilho ligado precisa de 3:1 contra o branco para ser visto (accent dá 2,6:1).
+        trackColor={{ true: colors.accentStrong, false: colors.borderMuted }}
         thumbColor={colors.surface}
         accessibilityRole="switch"
         accessibilityLabel={accessibilityLabel ?? label}

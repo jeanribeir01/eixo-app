@@ -385,19 +385,19 @@ describe('telas internas seguem o módulo (EIX-31)', () => {
   });
 });
 
-// Ícone Material Symbols de cada aba, direto do critério de aceite NAV-01.
+// Ícone de cada aba, pelo nome semântico do mapa de ícones (src/ui/icons.ts), conforme NAV-01.
 const simboloDaAba: Record<string, string> = {
-  Dashboards: 'dashboard',
-  Financeiro: 'account_balance_wallet',
-  Frota: 'local_shipping',
-  Viagens: 'route',
-  Configurações: 'settings',
+  Dashboards: 'dashboards',
+  Financeiro: 'financeiro',
+  Frota: 'frota',
+  Viagens: 'viagens',
+  Configurações: 'configuracoes',
 };
 
 // O ícone é decorativo (o rótulo da aba já diz o que é), por isso as buscas incluem elementos escondidos
 // do leitor de tela.
 function simbolos(nome: string) {
-  return screen.getAllByTestId(`simbolo-${nome}`, { includeHiddenElements: true });
+  return screen.getAllByTestId(`icone-${nome}`, { includeHiddenElements: true });
 }
 
 // A tab bar desenha duas cópias de cada ícone (ativa e inativa) e alterna pela opacidade. Só vale a
@@ -424,12 +424,12 @@ describe('tab bar com ícones (NAV-01)', () => {
   it('Motorista só vê os ícones das abas dele', async () => {
     await entrarComo('Motorista');
 
-    expect(simbolos('route').length).toBeGreaterThan(0);
-    expect(simbolos('settings').length).toBeGreaterThan(0);
-    expect(screen.queryAllByTestId('simbolo-account_balance_wallet', { includeHiddenElements: true })).toHaveLength(0);
+    expect(simbolos('viagens').length).toBeGreaterThan(0);
+    expect(simbolos('configuracoes').length).toBeGreaterThan(0);
+    expect(screen.queryAllByTestId('icone-financeiro', { includeHiddenElements: true })).toHaveLength(0);
   });
 
-  it('aba ativa em textPrimary; as outras em textBody', async () => {
+  it('aba ativa: ícone cheio em accentText; as outras em contorno textBody (DESIGN_CYAN 2.0)', async () => {
     await entrarComo('Admin');
     act(() => navegador.push('/financeiro'));
     await screen.findByText('Tela Financeiro');
@@ -437,7 +437,9 @@ describe('tab bar com ícones (NAV-01)', () => {
     for (const [aba, simbolo] of Object.entries(simboloDaAba)) {
       const visiveis = simbolos(simbolo).filter((icone) => opacidadeEfetiva(icone) > 0);
       expect(visiveis).toHaveLength(1);
-      expect(visiveis[0]).toHaveStyle({ color: aba === 'Financeiro' ? colors.textPrimary : colors.textBody });
+      const ativa = aba === 'Financeiro';
+      expect(visiveis[0]).toHaveStyle({ color: ativa ? colors.accentText : colors.textBody });
+      expect(visiveis[0].props.weight).toBe(ativa ? 'fill' : 'regular');
     }
   });
 

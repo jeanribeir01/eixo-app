@@ -39,8 +39,8 @@ describe('FrotaHubView (EIX-77)', () => {
 
     expect(screen.getByText('Operação')).toBeOnTheScreen();
     expect(screen.getByText('Cadastros')).toBeOnTheScreen();
-    expect(screen.getByTestId('simbolo-local_shipping', { includeHiddenElements: true })).toBeOnTheScreen();
-    expect(screen.getByTestId('simbolo-alt_route', { includeHiddenElements: true })).toBeOnTheScreen();
-    expect(screen.getByTestId('simbolo-build', { includeHiddenElements: true })).toBeOnTheScreen();
+    expect(screen.getByTestId('icone-frota', { includeHiddenElements: true })).toBeOnTheScreen();
+    expect(screen.getByTestId('icone-rotas', { includeHiddenElements: true })).toBeOnTheScreen();
+    expect(screen.getByTestId('icone-manutencoes', { includeHiddenElements: true })).toBeOnTheScreen();
   });
 });

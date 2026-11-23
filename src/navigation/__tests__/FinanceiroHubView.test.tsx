@@ -132,9 +132,9 @@ describe('FinanceiroHubView — menu do módulo (FIN-03)', () => {
 
     expect(screen.getByText('Caixa')).toBeOnTheScreen();
     expect(screen.getByText('Cadastros')).toBeOnTheScreen();
-    expect(screen.getByTestId('simbolo-swap_vert', { includeHiddenElements: true })).toBeOnTheScreen();
-    expect(screen.getByTestId('simbolo-receipt_long', { includeHiddenElements: true })).toBeOnTheScreen();
-    expect(screen.getAllByTestId('simbolo-chevron_right', { includeHiddenElements: true })).toHaveLength(6);
+    expect(screen.getByTestId('icone-movimentacoes', { includeHiddenElements: true })).toBeOnTheScreen();
+    expect(screen.getByTestId('icone-dividas', { includeHiddenElements: true })).toBeOnTheScreen();
+    expect(screen.getAllByTestId('icone-avancar', { includeHiddenElements: true })).toHaveLength(6);
   });
 
   it('o FAB "Nova movimentação" abre o formulário', async () => {

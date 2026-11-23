@@ -26,8 +26,9 @@ describe('Tabs', () => {
   it('marca a aba ativa como selecionada', () => {
     render(<Tabs options={options} value="Entrada" onChange={jest.fn()} />);
 
-    expect(screen.getByRole('tab', { name: 'Entrada' })).toHaveStyle({ backgroundColor: colors.inverted });
-    expect(screen.getByRole('tab', { name: 'Saída' })).toHaveStyle({ backgroundColor: 'transparent' });
+    expect(screen.getByRole('tab', { name: 'Entrada' })).toHaveStyle({ backgroundColor: colors.accentSoft });
+    expect(screen.getByText('Entrada')).toHaveStyle({ color: colors.accentText });
+    expect(screen.getByRole('tab', { name: 'Saída' })).toHaveStyle({ backgroundColor: colors.surface });
   });
 
   it('chama onChange com o valor tocado', () => {

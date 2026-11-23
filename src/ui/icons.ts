@@ -1,36 +1,64 @@
-import type { AndroidSymbol, SFSymbol } from 'expo-symbols';
+import type { Icon as PhosphorIcon } from 'phosphor-react-native';
+// Um import por ícone, pelo caminho que o próprio Phosphor recomenda: importar do índice do pacote
+// levaria os ~1.500 ícones para o bundle, porque o Metro não descarta código que não é usado.
+import { ArrowsDownUpIcon } from 'phosphor-react-native/src/icons/ArrowsDownUp';
+import { CalendarBlankIcon } from 'phosphor-react-native/src/icons/CalendarBlank';
+import { CaretLeftIcon } from 'phosphor-react-native/src/icons/CaretLeft';
+import { CaretRightIcon } from 'phosphor-react-native/src/icons/CaretRight';
+import { ChartBarIcon } from 'phosphor-react-native/src/icons/ChartBar';
+import { ChartLineUpIcon } from 'phosphor-react-native/src/icons/ChartLineUp';
+import { CreditCardIcon } from 'phosphor-react-native/src/icons/CreditCard';
+import { DotsThreeVerticalIcon } from 'phosphor-react-native/src/icons/DotsThreeVertical';
+import { GearSixIcon } from 'phosphor-react-native/src/icons/GearSix';
+import { HouseIcon } from 'phosphor-react-native/src/icons/House';
+import { InfoIcon } from 'phosphor-react-native/src/icons/Info';
+import { MapTrifoldIcon } from 'phosphor-react-native/src/icons/MapTrifold';
+import { PathIcon } from 'phosphor-react-native/src/icons/Path';
+import { PlusIcon } from 'phosphor-react-native/src/icons/Plus';
+import { ReceiptIcon } from 'phosphor-react-native/src/icons/Receipt';
+import { SignOutIcon } from 'phosphor-react-native/src/icons/SignOut';
+import { TagIcon } from 'phosphor-react-native/src/icons/Tag';
+import { TruckIcon } from 'phosphor-react-native/src/icons/Truck';
+import { UserCircleIcon } from 'phosphor-react-native/src/icons/UserCircle';
+import { UsersIcon } from 'phosphor-react-native/src/icons/Users';
+import { WalletIcon } from 'phosphor-react-native/src/icons/Wallet';
+import { WarningIcon } from 'phosphor-react-native/src/icons/Warning';
+import { WrenchIcon } from 'phosphor-react-native/src/icons/Wrench';
+import { XIcon } from 'phosphor-react-native/src/icons/X';
 
 // Mapa único de ícones do app (DESIGN_CYAN §7). A tela pede pelo nome semântico ("financeiro") e nunca
-// escreve nome de símbolo: trocar um ícone é mudar uma linha aqui. Android usa Material Symbols e iOS
-// usa SF Symbols, uma família por plataforma.
+// importa o ícone: trocar um ícone é mudar uma linha aqui. Phosphor (MIT) nas duas plataformas, para o
+// app ter a mesma cara no Android e no iOS (ADR 0006).
 export const icons = {
   // Abas do menu (US17)
-  dashboards: { android: 'dashboard', ios: 'square.grid.2x2' },
-  financeiro: { android: 'account_balance_wallet', ios: 'banknote' },
-  frota: { android: 'local_shipping', ios: 'truck.box' },
-  viagens: { android: 'route', ios: 'map' },
-  configuracoes: { android: 'settings', ios: 'gearshape' },
+  inicio: HouseIcon,
+  dashboards: ChartBarIcon,
+  financeiro: WalletIcon,
+  frota: TruckIcon,
+  viagens: PathIcon,
+  configuracoes: GearSixIcon,
+  conta: UserCircleIcon,
   // Telas do Financeiro
-  movimentacoes: { android: 'swap_vert', ios: 'arrow.up.arrow.down' },
-  saldo: { android: 'monitoring', ios: 'chart.line.uptrend.xyaxis' },
-  dividas: { android: 'receipt_long', ios: 'doc.text' },
-  categorias: { android: 'category', ios: 'tag' },
-  formasPagamento: { android: 'credit_card', ios: 'creditcard' },
-  usuarios: { android: 'group', ios: 'person.2' },
+  movimentacoes: ArrowsDownUpIcon,
+  saldo: ChartLineUpIcon,
+  dividas: ReceiptIcon,
+  categorias: TagIcon,
+  formasPagamento: CreditCardIcon,
+  usuarios: UsersIcon,
   // Telas da Frota (Veículos usa o ícone da aba)
-  rotas: { android: 'alt_route', ios: 'arrow.triangle.branch' },
-  manutencoes: { android: 'build', ios: 'wrench.and.screwdriver' },
+  rotas: MapTrifoldIcon,
+  manutencoes: WrenchIcon,
   // Ações
-  adicionar: { android: 'add', ios: 'plus' },
-  avancar: { android: 'chevron_right', ios: 'chevron.right' },
-  voltarMes: { android: 'chevron_left', ios: 'chevron.left' },
-  avancarMes: { android: 'chevron_right', ios: 'chevron.right' },
-  maisOpcoes: { android: 'more_vert', ios: 'ellipsis' },
-  calendario: { android: 'calendar_today', ios: 'calendar' },
-  limpar: { android: 'close', ios: 'xmark' },
-  alerta: { android: 'warning', ios: 'exclamationmark.triangle' },
-  sair: { android: 'logout', ios: 'rectangle.portrait.and.arrow.right' },
-  versao: { android: 'info', ios: 'info.circle' },
-} as const satisfies Record<string, { android: AndroidSymbol; ios: SFSymbol }>;
+  adicionar: PlusIcon,
+  avancar: CaretRightIcon,
+  voltarMes: CaretLeftIcon,
+  avancarMes: CaretRightIcon,
+  maisOpcoes: DotsThreeVerticalIcon,
+  calendario: CalendarBlankIcon,
+  limpar: XIcon,
+  alerta: WarningIcon,
+  sair: SignOutIcon,
+  versao: InfoIcon,
+} as const satisfies Record<string, PhosphorIcon>;
 
 export type IconName = keyof typeof icons;

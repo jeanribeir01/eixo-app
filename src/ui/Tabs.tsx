@@ -49,7 +49,9 @@ export function Tabs({ options, value, onChange, accessibilityLabel, scrollable 
           pressed && styles.pressed,
         ]}
       >
-        <Text weight={active ? 'medium' : 'regular'} tone={active ? 'onAccent' : 'primary'}>
+        {/* Uma linha só: a pílula nunca quebra a palavra no meio ("Em and / amento"). Se o rótulo não
+            couber, use scrollable. */}
+        <Text numberOfLines={1} weight={active ? 'medium' : 'regular'} tone={active ? 'accent' : 'primary'}>
           {option.label}
         </Text>
       </Pressable>
@@ -112,13 +114,14 @@ const styles = StyleSheet.create({
     flexGrow: 1,
     flexShrink: 0,
   },
-  // Aba ativa usa a superfície invertida (uso raro do guia, reservado a este caso).
+  // Aba ativa em accentSoft com texto accentText (DESIGN_CYAN 2.0): marca a seleção sem competir com a
+  // ação primária da tela, que é o único azul cheio.
   active: {
-    backgroundColor: colors.inverted,
-    borderColor: colors.inverted,
+    backgroundColor: colors.accentSoft,
+    borderColor: colors.accentSoft,
   },
   inactive: {
-    backgroundColor: 'transparent',
+    backgroundColor: colors.surface,
     borderColor: colors.border,
   },
   pressed: {

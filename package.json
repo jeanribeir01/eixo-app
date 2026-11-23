@@ -36,6 +36,7 @@
     "expo-status-bar": "~57.0.1",
     "expo-symbols": "~57.0.3",
     "expo-system-ui": "~57.0.4",
+    "phosphor-react-native": "^3.0.6",
     "react": "19.2.3",
     "react-dom": "19.2.3",
     "react-native": "0.86.3",
@@ -76,7 +77,8 @@
           "<rootDir>/node_modules/@react-native-google-signin/google-signin/jest/build/jest/setup.js"
         ],
         "moduleNameMapper": {
-          "^@/(.*)$": "<rootDir>/src/$1"
+          "^@/(.*)$": "<rootDir>/src/$1",
+          "^phosphor-react-native/src/icons/.*$": "<rootDir>/jest.phosphor-stub.js"
         },
         "testPathIgnorePatterns": ["<rootDir>/supabase/"],
         "transformIgnorePatterns": [
