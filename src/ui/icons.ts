@@ -3,6 +3,7 @@ import type { Icon as PhosphorIcon } from 'phosphor-react-native';
 // levaria os ~1.500 ícones para o bundle, porque o Metro não descarta código que não é usado.
 import { ArrowsDownUpIcon } from 'phosphor-react-native/src/icons/ArrowsDownUp';
 import { CalendarBlankIcon } from 'phosphor-react-native/src/icons/CalendarBlank';
+import { CaretDownIcon } from 'phosphor-react-native/src/icons/CaretDown';
 import { CaretLeftIcon } from 'phosphor-react-native/src/icons/CaretLeft';
 import { CaretRightIcon } from 'phosphor-react-native/src/icons/CaretRight';
 import { ChartBarIcon } from 'phosphor-react-native/src/icons/ChartBar';
@@ -52,6 +53,8 @@ export const icons = {
   // Ações
   adicionar: PlusIcon,
   avancar: CaretRightIcon,
+  // Seção aberta (ex.: "Desativadas" em Categorias); fechada, a seção usa `avancar`.
+  recolher: CaretDownIcon,
   voltarMes: CaretLeftIcon,
   avancarMes: CaretRightIcon,
   maisOpcoes: DotsThreeVerticalIcon,
