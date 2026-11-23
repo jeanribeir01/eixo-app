@@ -2,7 +2,10 @@
   "extends": "expo/tsconfig.base",
   "compilerOptions": {
     "strict": true,
-    "types": ["jest", "node"],
+    // "expo/types" é o que o expo-env.d.ts (gerado pelo expo start, fora do Git) carrega. Declarado aqui,
+    // o CI checa com os mesmos tipos da máquina de quem desenvolve: sem ele, o código-fonte dos ícones
+    // Phosphor (importados um a um de src/icons, ADR 0007) não passa no tsc do CI.
+    "types": ["jest", "node", "expo/types"],
     "paths": {
       "@/*": ["./src/*"]
     }
