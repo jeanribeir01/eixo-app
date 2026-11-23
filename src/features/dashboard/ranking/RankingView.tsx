@@ -180,7 +180,7 @@ export function RankingView() {
   return (
     <Screen scroll overlay={snackbar()}>
       {/* Aba não tem header nativo: o título fica no conteúdo. */}
-      <Text variant="heading">Dashboards</Text>
+      <Text variant="heading">Relatórios</Text>
 
       <FiltroPeriodo value={periodo} onChange={setPeriodo} />
 

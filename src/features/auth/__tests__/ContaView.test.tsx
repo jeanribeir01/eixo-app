@@ -38,7 +38,7 @@ describe('ContaView — cartão do usuário (CTA-01)', () => {
 
     render(<ContaView />);
 
-    expect(screen.getByText('Configurações')).toBeOnTheScreen();
+    expect(screen.getByText('Conta')).toBeOnTheScreen();
     expect(screen.getByText('Maria Silva')).toBeOnTheScreen();
     expect(screen.getByText('maria@example.com')).toBeOnTheScreen();
     expect(screen.getByText('Financeiro')).toBeOnTheScreen();

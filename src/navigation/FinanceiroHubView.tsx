@@ -30,7 +30,7 @@ const CADASTROS: Atalho[] = [
   { titulo: 'Formas de pagamento', descricao: 'Pix, boleto, cartão e TED', icone: 'formasPagamento', href: '/formas-pagamento' },
 ];
 
-// Aba inicial de Admin e Financeiro (EIX-62): o saldo em destaque e o menu do módulo. O menu nunca
+// Aba Caixa (EIX-62): o saldo em destaque e o menu do módulo. O menu nunca
 // depende do saldo: se o saldo falhar, o erro fica dentro do cartão e as linhas continuam tocáveis.
 export function FinanceiroHubView() {
   const router = useRouter();
@@ -78,7 +78,7 @@ export function FinanceiroHubView() {
   return (
     <Screen scroll fab={<FAB label="Nova movimentação" onPress={() => router.push('/movimentacoes/nova')} />}>
       {/* Aba não tem header nativo: o título fica no conteúdo. */}
-      <Text variant="heading">Financeiro</Text>
+      <Text variant="heading">Caixa</Text>
 
       {saldo.status === 'carregando' && <Skeleton height="xxl" accessibilityLabel="Carregando saldo" />}
       {saldo.status === 'pronto' && (
@@ -93,7 +93,7 @@ export function FinanceiroHubView() {
 
       <View testID="atalhos-financeiro" style={[styles.atalhos, tablet && styles.duasColunas]}>
         <View style={tablet && styles.coluna}>
-          <ListSection label="Caixa">{CAIXA.map(linha)}</ListSection>
+          <ListSection label="Dia a dia">{CAIXA.map(linha)}</ListSection>
         </View>
         <View style={tablet && styles.coluna}>
           <ListSection label="Cadastros">{CADASTROS.map(linha)}</ListSection>

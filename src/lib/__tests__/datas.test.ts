@@ -7,6 +7,7 @@ import {
   mascararData,
   mesDeHoje,
   nomeDoMes,
+  somarDias,
   somarMeses,
 } from '../datas';
 
@@ -125,5 +126,17 @@ describe('diasEntre', () => {
     ['2026-03-01', '2026-04-01', 31],
   ])('%s a %s → %i', (inicio, fim, esperado) => {
     expect(diasEntre(inicio, fim)).toBe(esperado);
+  });
+});
+
+describe('somarDias', () => {
+  it('soma dias corridos e vira o mês e o ano', () => {
+    expect(somarDias('2026-11-23', 6)).toBe('2026-11-29');
+    expect(somarDias('2026-11-28', 3)).toBe('2026-12-01');
+    expect(somarDias('2026-12-30', 2)).toBe('2027-01-01');
+  });
+
+  it('passa pelo início do horário de verão sem pular data', () => {
+    expect(somarDias('2018-11-03', 1)).toBe('2018-11-04');
   });
 });

@@ -14,16 +14,26 @@ function abasVisiveis(u: PerfilDoUsuario | null): AbaId[] {
 }
 
 describe('menu por perfil (US17)', () => {
-  it('Admin vê o menu completo', () => {
-    expect(abasVisiveis(usuario('Admin'))).toEqual(['dashboards', 'financeiro', 'frota', 'viagens', 'configuracoes']);
+  it('Admin vê Início, Caixa, Frota, Relatórios e Conta; Viagens fica dentro da Frota', () => {
+    expect(abasVisiveis(usuario('Admin'))).toEqual(['inicio', 'financeiro', 'frota', 'dashboards', 'configuracoes']);
   });
 
-  it('Gestor de Frota vê Frota, Viagens e Dashboards, sem Financeiro', () => {
-    expect(abasVisiveis(usuario('Gestor de Frota'))).toEqual(['dashboards', 'frota', 'viagens', 'configuracoes']);
+  it('Gestor de Frota vê Início, Frota, Viagens e Relatórios, sem Caixa', () => {
+    expect(abasVisiveis(usuario('Gestor de Frota'))).toEqual(['inicio', 'frota', 'viagens', 'dashboards', 'configuracoes']);
   });
 
-  it('Financeiro vê Financeiro e Dashboards, sem Frota', () => {
-    expect(abasVisiveis(usuario('Financeiro'))).toEqual(['dashboards', 'financeiro', 'configuracoes']);
+  it('Financeiro vê Início, Caixa e Relatórios, sem Frota', () => {
+    expect(abasVisiveis(usuario('Financeiro'))).toEqual(['inicio', 'financeiro', 'dashboards', 'configuracoes']);
+  });
+
+  it('nenhum perfil passa de 5 abas (protótipo DESIGN-CYAN 2.0)', () => {
+    for (const perfil of ['Admin', 'Gestor de Frota', 'Financeiro', 'Motorista'] as const) {
+      expect(abasVisiveis(usuario(perfil)).length).toBeLessThanOrEqual(5);
+    }
+  });
+
+  it('as abas têm os rótulos curtos do protótipo', () => {
+    expect(abas.map((aba) => aba.rotulo)).toEqual(['Início', 'Caixa', 'Frota', 'Viagens', 'Relatórios', 'Conta']);
   });
 
   it('Motorista não tem Financeiro nem Dashboards', () => {
@@ -36,20 +46,21 @@ describe('menu por perfil (US17)', () => {
   });
 
   it.each([
-    ['Admin', 'financeiro'],
-    ['Gestor de Frota', 'frota'],
-    ['Financeiro', 'financeiro'],
+    ['Admin', 'inicio'],
+    ['Gestor de Frota', 'inicio'],
+    ['Financeiro', 'inicio'],
     ['Motorista', 'viagens'],
   ] as const)('%s abre o app em %s (FIN-01)', (perfil, esperada) => {
     expect(abaInicial(usuario(perfil))).toBe(esperada);
   });
 
   it.each([
+    ['inicio', 'inicio'],
     ['dashboards', 'dashboards'],
     ['financeiro', 'financeiro'],
     ['frota', 'frota'],
     ['viagens', 'viagens'],
-    ['configuracoes', 'configuracoes'],
+    ['configuracoes', 'conta'],
   ] as const)('aba %s usa o ícone %s do mapa (NAV-01)', (id, icone) => {
     expect(abas.find((aba) => aba.id === id)?.icone).toBe(icone);
   });
