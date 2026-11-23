@@ -160,7 +160,8 @@ export function LoginView({ mostrarLoginEmail = loginEmailHabilitado }: LoginVie
   );
 }
 
-// Foto do topo: um caminhão na estrada, recortado do protótipo do Figma (direção A).
+// Foto do topo: um caminhão na estrada, escolhida pela equipe e recortada na faixa do caminhão
+// (1200 px de largura, ~120 KB). Trocar a foto é trocar este arquivo.
 const FOTO = require('../../../assets/images/login-caminhao.jpg');
 
 // A foto ocupa ~40% da altura, como no protótipo (360 de 844); a folha cobre o resto.
