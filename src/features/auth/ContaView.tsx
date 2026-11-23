@@ -1,35 +1,12 @@
-import type { Session } from '@supabase/supabase-js';
 import Constants from 'expo-constants';
 import { useRouter } from 'expo-router';
-import { z } from 'zod';
 
 import { Avatar, Badge, Button, Card, Column, ListItem, ListSection, Screen, Text } from '@/ui';
 
 import { signOut } from './googleAuth';
+import { profileFromSession } from './perfilGoogle';
 import { useProfile } from './profileStore';
 import { useSessionStore } from './sessionStore';
-
-// user_metadata vem do provedor (Google) sem tipo garantido: validamos na borda com Zod (CLAUDE.md §12).
-// O Supabase preenche full_name/name e avatar_url/picture a partir do perfil Google.
-const googleMetadataSchema = z.object({
-  full_name: z.string().optional().catch(undefined),
-  name: z.string().optional().catch(undefined),
-  avatar_url: z.string().optional().catch(undefined),
-  picture: z.string().optional().catch(undefined),
-});
-
-function profileFromSession(session: Session) {
-  const metadata = googleMetadataSchema.parse(session.user.user_metadata ?? {});
-  const email = session.user.email ?? '';
-  const fullName = (metadata.full_name || metadata.name || '').trim();
-
-  return {
-    email,
-    // Sem nome no Google, mostramos o e-mail para o cartão nunca ficar com um título vazio.
-    displayName: fullName || email,
-    photoUrl: metadata.avatar_url || metadata.picture || null,
-  };
-}
 
 // Aba Conta (EIX-64; antes "Configurações"): quem está logado, os atalhos de administração e o Sair. Substitui a
 // Home de teste da US15.

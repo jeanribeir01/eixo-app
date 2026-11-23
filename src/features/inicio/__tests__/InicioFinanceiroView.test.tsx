@@ -1,6 +1,7 @@
 import { fireEvent, render, screen } from '@testing-library/react-native';
 
 import { useProfileStore, type UsuarioLogado } from '@/features/auth/profileStore';
+import { useSessionStore } from '@/features/auth/sessionStore';
 import { colors, radius } from '@/ui';
 
 import { resumoFinanceiro, usuario } from '../__mocks__/fixtures';
@@ -54,6 +55,16 @@ describe('InicioFinanceiroView', () => {
     await renderPronto();
 
     expect(screen.getByRole('header')).toHaveTextContent(/, Jean$/);
+  });
+
+  it('mostra a foto do Google, a mesma da aba Conta', async () => {
+    useSessionStore.setState({
+      session: { user: { email: 'jean@empresa.com', user_metadata: { picture: 'https://foto.exemplo/jean.png' } } } as never,
+    });
+    await renderPronto();
+
+    expect(screen.getByLabelText('Foto de Jean Ribeiro')).toHaveProp('source', { uri: 'https://foto.exemplo/jean.png' });
+    useSessionStore.setState({ session: null });
   });
 
   it('carregando: skeleton com rótulo, sem cartão de saldo', () => {
