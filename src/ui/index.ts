@@ -33,6 +33,7 @@ export {
   fontFamily,
   iconSize,
   indicatorSize,
+  layout,
   radius,
   shadow,
   spacing,

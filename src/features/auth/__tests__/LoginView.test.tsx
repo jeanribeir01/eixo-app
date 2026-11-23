@@ -2,6 +2,8 @@ import { act, fireEvent, render, screen } from '@testing-library/react-native';
 
 import { signInWithEmail } from '../emailAuth';
 import { signInWithGoogle, type SignInResult } from '../googleAuth';
+import { colors } from '@/ui';
+
 import { LoginView } from '../LoginView';
 
 jest.mock('../googleAuth', () => ({ signInWithGoogle: jest.fn() }));
@@ -32,6 +34,14 @@ describe('LoginView', () => {
 
     expect(screen.getByRole('image', { name: 'Eixo Certo' })).toBeOnTheScreen();
     expect(screen.getByText('Eixo Certo')).toBeOnTheScreen();
+  });
+
+  it('a foto do caminhão no topo é decorativa: o leitor de tela não para nela', () => {
+    render(<LoginView />);
+
+    const foto = screen.getByTestId('login-foto', { includeHiddenElements: true });
+    expect(foto.props.accessible).toBe(false);
+    expect(screen.getByText('Bem-vindo de volta')).toBeOnTheScreen();
   });
 
   it('exibe o botão "Continuar com Google" habilitado (AUTH-01)', () => {
@@ -90,6 +100,9 @@ describe('LoginView', () => {
     await finish({ ok: false, code });
 
     expect(screen.getByRole('alert')).toHaveTextContent(message);
+    // Em danger e com o ícone de alerta: o erro não se confunde com o texto da tela.
+    expect(screen.getByRole('alert')).toHaveStyle({ color: colors.danger });
+    expect(screen.getByTestId('icone-alerta', { includeHiddenElements: true })).toBeTruthy();
     expect(screen.getByRole('button', { name: 'Continuar com Google' })).toBeEnabled();
   });
 });
@@ -117,6 +130,21 @@ describe('LoginView — login de teste por e-mail e senha', () => {
     expect(screen.getByLabelText('E-mail')).toBeOnTheScreen();
     expect(screen.getByLabelText('Senha')).toBeOnTheScreen();
     expect(screen.getByRole('button', { name: 'Entrar com e-mail' })).toBeEnabled();
+  });
+
+  it('separa o login de teste do Google, com ícone em cada campo e o botão "Entrar"', () => {
+    render(<LoginView mostrarLoginEmail />);
+
+    expect(screen.getByText('ou com e-mail de teste')).toBeOnTheScreen();
+    expect(screen.getByTestId('icone-email', { includeHiddenElements: true })).toBeTruthy();
+    expect(screen.getByTestId('icone-senha', { includeHiddenElements: true })).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'Entrar com e-mail' })).toHaveTextContent('Entrar');
+  });
+
+  it('sem o login de teste, nem o divisor aparece', () => {
+    render(<LoginView />);
+
+    expect(screen.queryByText('ou com e-mail de teste')).not.toBeOnTheScreen();
   });
 
   it('bloqueia campos vazios com mensagem em português e não chama o Supabase', () => {
