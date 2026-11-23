@@ -2,6 +2,7 @@ import {
   dataBRParaISO,
   diasEntre,
   hojeISO,
+  horaLocal,
   intervaloDoMes,
   isoParaDataBR,
   mascararData,
@@ -138,5 +139,12 @@ describe('somarDias', () => {
 
   it('passa pelo início do horário de verão sem pular data', () => {
     expect(somarDias('2018-11-03', 1)).toBe('2018-11-04');
+  });
+});
+
+describe('horaLocal', () => {
+  it('mostra a hora do aparelho com dois dígitos', () => {
+    const data = new Date(2026, 10, 23, 8, 5);
+    expect(horaLocal(data.toISOString())).toBe('08:05');
   });
 });
