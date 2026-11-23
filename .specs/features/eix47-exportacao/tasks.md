@@ -173,7 +173,7 @@ T4 → T5 → T6
 
 ---
 
-### T6: Exportar na aba Dashboards
+### T6: ✅ Exportar na aba Dashboards
 
 **What**: `RankingView` mostra o `ExportarRelatorio` abaixo do filtro para Admin e Financeiro e o feedback dele no Snackbar da tela.
 **Where**: `src/features/dashboard/ranking/RankingView.tsx`
@@ -188,8 +188,8 @@ T4 → T5 → T6
 
 **Done when**:
 
-- [ ] Teste da `RankingView` cobre botão para Financeiro, ausência para Gestor e Snackbar de sucesso com o período em uso
-- [ ] Gate build passa
+- [x] Teste da `RankingView` cobre botão para Financeiro, ausência para Gestor e Snackbar de sucesso com o período em uso
+- [x] Gate build passa
 
 **Tests**: unit
 **Gate**: build

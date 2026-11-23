@@ -4,9 +4,10 @@ import Animated, { FadeIn } from 'react-native-reanimated';
 
 import { formatarIndicador } from '@/features/bi/formatar';
 import type { EstatisticaRota, EstatisticaVeiculo } from '@/features/bi/queries';
+import { ExportarRelatorio } from '@/features/relatorios/export/ExportarRelatorio';
 import { useDadosDaTela } from '@/lib/useDadosDaTela';
 import { useMenu } from '@/navigation/menu';
-import { Column, EmptyState, ListSection, Screen, Skeleton, Snackbar, Tabs, Text } from '@/ui';
+import { Column, EmptyState, ListSection, Screen, Skeleton, Snackbar, Tabs, Text, type SnackbarTone } from '@/ui';
 import { motion } from '@/ui/tokens';
 import { useReducedMotion } from '@/ui/useReducedMotion';
 
@@ -63,6 +64,8 @@ export function RankingView() {
   const [periodo, setPeriodo] = useState<Periodo>(mesAtual);
   const [visao, setVisao] = useState<Visao>('rotas');
   const [erroGraficos, setErroGraficos] = useState<string | null>(null);
+  // Resultado da exportação (US14): sucesso ou erro, no mesmo Snackbar da tela.
+  const [feedbackExportacao, setFeedbackExportacao] = useState<{ mensagem: string; tom: SnackbarTone } | null>(null);
 
   // Uma consulta por período: trocar de mês volta ao skeleton, trocar de aba não consulta de novo.
   const buscar = useCallback(
@@ -154,21 +157,37 @@ export function RankingView() {
     );
   }
 
+  // Um Snackbar por vez no overlay: erro do ranking, depois erro dos gráficos, depois a exportação.
+  function snackbar() {
+    if (tela.feedbackErro) {
+      return <Snackbar message={tela.feedbackErro} tone="error" onDismiss={tela.limparFeedbackErro} />;
+    }
+    if (erroGraficos) {
+      return <Snackbar message={erroGraficos} tone="error" onDismiss={() => setErroGraficos(null)} />;
+    }
+    if (feedbackExportacao) {
+      return (
+        <Snackbar
+          message={feedbackExportacao.mensagem}
+          tone={feedbackExportacao.tom}
+          onDismiss={() => setFeedbackExportacao(null)}
+        />
+      );
+    }
+    return null;
+  }
+
   return (
-    <Screen
-      scroll
-      overlay={
-        tela.feedbackErro ? (
-          <Snackbar message={tela.feedbackErro} tone="error" onDismiss={tela.limparFeedbackErro} />
-        ) : (
-          erroGraficos && <Snackbar message={erroGraficos} tone="error" onDismiss={() => setErroGraficos(null)} />
-        )
-      }
-    >
+    <Screen scroll overlay={snackbar()}>
       {/* Aba não tem header nativo: o título fica no conteúdo. */}
       <Text variant="heading">Dashboards</Text>
 
       <FiltroPeriodo value={periodo} onChange={setPeriodo} />
+
+      {/* Exportação da US14 (EIX-47): mesmo período do filtro e mesma regra de perfil dos gráficos. */}
+      {podeVerCaixa && (
+        <ExportarRelatorio periodo={periodo} onFeedback={(mensagem, tom) => setFeedbackExportacao({ mensagem, tom })} />
+      )}
 
       {podeVerCaixa && <GraficosCaixa periodo={periodo} onErroAoAtualizar={setErroGraficos} />}
 

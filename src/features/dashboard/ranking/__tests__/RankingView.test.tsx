@@ -44,6 +44,26 @@ jest.mock('../../graficos/GraficosCaixa', () => {
   };
 });
 
+// A exportação da US14 tem testes próprios (relatorios/export/__tests__). O stub mostra o período
+// recebido e devolve um feedback de sucesso, para provar a ligação com o filtro e com o Snackbar.
+jest.mock('@/features/relatorios/export/ExportarRelatorio', () => {
+  // eslint-disable-next-line @typescript-eslint/no-require-imports
+  const { Pressable, Text } = require('react-native');
+  return {
+    ExportarRelatorio: ({
+      periodo,
+      onFeedback,
+    }: {
+      periodo: { dataInicial: string; dataFinal: string };
+      onFeedback: (mensagem: string, tom: 'success' | 'error') => void;
+    }) => (
+      <Pressable accessibilityRole="button" onPress={() => onFeedback('Relatório gerado.', 'success')}>
+        <Text>{`Exportar ${periodo.dataInicial} a ${periodo.dataFinal}`}</Text>
+      </Pressable>
+    ),
+  };
+});
+
 // `ranquear` real: os testes de empate e de menos de 3 itens passam pela regra de verdade.
 jest.mock('../ranking', () => ({
   ...jest.requireActual('../ranking'),
@@ -358,6 +378,44 @@ describe('RankingView', () => {
       fireEvent.press(screen.getByText(/^Gráficos /));
 
       expect(await screen.findByText('Sem conexão.')).toBeOnTheScreen();
+    });
+  });
+
+  describe('exportação (US14, EIX-47)', () => {
+    it('Admin e Financeiro veem o Exportar com o período do filtro, e ele acompanha a troca (EXP-01)', async () => {
+      responder(RANKING_COMPLETO);
+
+      render(<RankingView />);
+      await screen.findByText('Top 3 rotas mais lucrativas');
+
+      const { dataInicial, dataFinal } = mesAtual();
+      expect(screen.getByText(`Exportar ${dataInicial} a ${dataFinal}`)).toBeOnTheScreen();
+
+      fireEvent.press(screen.getByRole('button', { name: 'Mês anterior' }));
+
+      expect(screen.queryByText(`Exportar ${dataInicial} a ${dataFinal}`)).not.toBeOnTheScreen();
+      expect(screen.getByText(/^Exportar \d{4}-\d{2}-01 a /)).toBeOnTheScreen();
+    });
+
+    it('Gestor de Frota não vê o Exportar (EXP-02)', async () => {
+      usarPerfil(true, false);
+      responder(RANKING_COMPLETO);
+
+      render(<RankingView />);
+      await screen.findByText('Top 3 rotas mais lucrativas');
+
+      expect(screen.queryByText(/^Exportar /)).not.toBeOnTheScreen();
+    });
+
+    it('o resultado da exportação aparece no Snackbar da tela (EXP-15)', async () => {
+      responder(RANKING_COMPLETO);
+
+      render(<RankingView />);
+      await screen.findByText('Top 3 rotas mais lucrativas');
+
+      fireEvent.press(screen.getByText(/^Exportar /));
+
+      expect(await screen.findByText('Relatório gerado.')).toBeOnTheScreen();
     });
   });
 });

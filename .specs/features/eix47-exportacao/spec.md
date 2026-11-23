@@ -128,28 +128,28 @@ O gestor financeiro vê o caixa do período na aba Dashboards, mas não tem como
 
 | Requirement ID | Story | Phase | Status |
 | --- | --- | --- | --- |
-| EXP-01 | P1: Exportar | T6 | Pending |
-| EXP-02 | P1: Exportar | T6 | Pending |
-| EXP-03 | P1: Exportar | T5 | Pending |
-| EXP-04 | P1: Exportar | T3 | Pending |
-| EXP-05 | P1: Exportar | T2, T3 | Pending |
-| EXP-06 | P1: Exportar | T2 | Pending |
-| EXP-07 | P1: Exportar | T2 | Pending |
-| EXP-08 | P1: Exportar | T2 | Pending |
-| EXP-09 | P1: Exportar | T2 | Pending |
-| EXP-10 | P1: Exportar | T2 | Pending |
-| EXP-11 | P1: Exportar | T2 | Pending |
-| EXP-12 | P1: Exportar | T2 | Pending |
-| EXP-13 | P1: Exportar | T2 | Pending |
-| EXP-14 | P1: Exportar | T2 | Pending |
-| EXP-15 | P1: Exportar | T4, T5 | Pending |
-| EXP-16 | P1: Exportar | T5 | Pending |
-| EXP-17 | P1: Exportar | T3, T5 | Pending |
-| EXP-18 | P1: Exportar | T4, T5 | Pending |
-| EXP-19 | P1: Exportar | T4, T5 | Pending |
-| EXP-20 | P1: Período vazio | T5 | Pending |
-| EXP-21 | P1: Período vazio | T5 | Pending |
-| EXP-22 | P1: Período vazio | T5 | Pending |
+| EXP-01 | P1: Exportar | T6 | Implementing |
+| EXP-02 | P1: Exportar | T6 | Implementing |
+| EXP-03 | P1: Exportar | T5 | Implementing |
+| EXP-04 | P1: Exportar | T3 | Implementing |
+| EXP-05 | P1: Exportar | T2, T3 | Implementing |
+| EXP-06 | P1: Exportar | T2 | Implementing |
+| EXP-07 | P1: Exportar | T2 | Implementing |
+| EXP-08 | P1: Exportar | T2 | Implementing |
+| EXP-09 | P1: Exportar | T2 | Implementing |
+| EXP-10 | P1: Exportar | T2 | Implementing |
+| EXP-11 | P1: Exportar | T2 | Implementing |
+| EXP-12 | P1: Exportar | T2 | Implementing |
+| EXP-13 | P1: Exportar | T2 | Implementing |
+| EXP-14 | P1: Exportar | T2 | Implementing |
+| EXP-15 | P1: Exportar | T4, T5 | Implementing |
+| EXP-16 | P1: Exportar | T5 | Implementing |
+| EXP-17 | P1: Exportar | T3, T5 | Implementing |
+| EXP-18 | P1: Exportar | T4, T5 | Implementing |
+| EXP-19 | P1: Exportar | T4, T5 | Implementing |
+| EXP-20 | P1: Período vazio | T5 | Implementing |
+| EXP-21 | P1: Período vazio | T5 | Implementing |
+| EXP-22 | P1: Período vazio | T5 | Implementing |
 
 **Coverage:** 22 total, 22 mapped to tasks, 0 unmapped
 
