@@ -152,7 +152,7 @@ T4 → T5 → T6 → T7 → T8
 
 ---
 
-### T5: Gráfico de barras Entradas vs Saídas
+### T5: ✅ Gráfico de barras Entradas vs Saídas
 
 **What**: Componente `GraficoBarras` (colunas de mês ≥ 44pt, rolagem horizontal, toque mostra o mês com "+ R$" e "− R$", legenda).
 **Where**: `src/features/dashboard/graficos/GraficoBarras.tsx`
@@ -167,8 +167,8 @@ T4 → T5 → T6 → T7 → T8
 
 **Done when**:
 
-- [ ] Testes em `graficos/__tests__/GraficoBarras.test.tsx` passam
-- [ ] Gate quick passa
+- [x] Testes em `graficos/__tests__/GraficoBarras.test.tsx` passam (6)
+- [x] Gate quick passa
 
 **Tests**: unit
 **Gate**: quick
