@@ -131,6 +131,7 @@ function usarPerfil(podeVerFrota: boolean, podeVerCaixa = true) {
     podeVerCategorias: podeVerCaixa,
     podeVerFrota,
     podeVerViagens: podeVerFrota,
+    viagensForaDaAba: false,
     podeVerUsuarios: false,
   });
 }

@@ -8,7 +8,7 @@ import { stackOptions } from '@/navigation/stackOptions';
 // abrem por cima delas, nesta pilha, com header nativo (título + voltar). O título de cada tela mora
 // aqui, junto do guard: a tela nunca configura o próprio header.
 export default function AppLayout() {
-  const { podeVerCategorias, podeVerFrota, podeVerViagens, podeVerUsuarios } = useMenu();
+  const { podeVerCategorias, podeVerFrota, podeVerViagens, viagensForaDaAba, podeVerUsuarios } = useMenu();
 
   // Rota fora do perfil nem existe na árvore: digitar a URL cai de volta nas abas, que abrem
   // na tela inicial do perfil. O RLS é quem garante de fato — esconder rota é usabilidade.
@@ -58,6 +58,10 @@ export default function AppLayout() {
       <Stack.Protected guard={podeVerViagens}>
         <Stack.Screen name="viagens/nova" options={{ title: 'Abrir viagem' }} />
         <Stack.Screen name="viagens/[id]/fechar" options={{ title: 'Fechar viagem' }} />
+      </Stack.Protected>
+      {/* A lista de viagens fora da aba: só para quem vê viagens e não tem a aba (Admin). */}
+      <Stack.Protected guard={viagensForaDaAba}>
+        <Stack.Screen name="frota/viagens" options={{ title: 'Viagens' }} />
       </Stack.Protected>
       <Stack.Protected guard={podeVerUsuarios}>
         <Stack.Screen name="usuarios/index" options={{ title: 'Usuários' }} />

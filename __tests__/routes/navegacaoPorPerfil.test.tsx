@@ -60,11 +60,13 @@ const routes = {
   '(app)/_layout': AppLayout,
   '(app)/(tabs)/_layout': TabsLayout,
   '(app)/(tabs)/index': InicioRoute,
-  '(app)/(tabs)/dashboards': () => <Text>Tela Dashboards</Text>,
-  '(app)/(tabs)/financeiro': () => <Text>Tela Financeiro</Text>,
+  // Cada aba mostra "Tela <rótulo da aba>": o teste de URL proibida procura por esse texto.
+  '(app)/(tabs)/inicio': () => <Text>Tela Início</Text>,
+  '(app)/(tabs)/financeiro': () => <Text>Tela Caixa</Text>,
   '(app)/(tabs)/frota': () => <Text>Tela Frota</Text>,
   '(app)/(tabs)/viagens': () => <Text>Tela Viagens</Text>,
-  '(app)/(tabs)/configuracoes': () => <Text>Tela Configuracoes</Text>,
+  '(app)/(tabs)/dashboards': () => <Text>Tela Relatórios</Text>,
+  '(app)/(tabs)/configuracoes': () => <Text>Tela Conta</Text>,
   '(app)/categorias/index': () => <Text>Tela Categorias</Text>,
   '(app)/categorias/nova': () => <Text>Tela Nova Categoria</Text>,
   '(app)/categorias/[id]/editar': () => <Text>Tela Editar Categoria</Text>,
@@ -72,6 +74,7 @@ const routes = {
   '(app)/frota/[id]/editar': () => <Text>Tela Editar Veiculo</Text>,
   '(app)/frota/[id]/index': () => <Text>Tela Detalhe Veiculo</Text>,
   '(app)/frota/veiculos': () => <Text>Tela Veiculos</Text>,
+  '(app)/frota/viagens': () => <Text>Tela Viagens da Frota</Text>,
   '(app)/rotas/index': () => <Text>Tela Rotas</Text>,
   '(app)/rotas/nova': () => <Text>Tela Nova Rota</Text>,
   '(app)/rotas/[id]/editar': () => <Text>Tela Editar Rota</Text>,
@@ -81,7 +84,7 @@ const routes = {
   '(app)/viagens/[id]/fechar': () => <Text>Tela Fechar Viagem</Text>,
   '(app)/viagens/[id]/index': () => <Text>Tela Viagem Lancamentos</Text>,
   '(app)/viagens/lancamentos': () => <Text>Tela Lancamentos por Viagem</Text>,
-  '(app)/caixa/index': () => <Text>Tela Caixa</Text>,
+  '(app)/caixa/index': () => <Text>Tela Saldo e Projecao</Text>,
   '(app)/formas-pagamento/index': () => <Text>Tela Formas</Text>,
   '(app)/formas-pagamento/nova': () => <Text>Tela Nova Forma</Text>,
   '(app)/formas-pagamento/[id]/editar': () => <Text>Tela Editar Forma</Text>,
@@ -101,25 +104,30 @@ const routes = {
 
 const session = { access_token: 'token', user: { id: 'user-1' } } as unknown as Session;
 
-const todasAsAbas = ['Dashboards', 'Financeiro', 'Frota', 'Viagens', 'Configurações'];
+const todasAsAbas = ['Início', 'Caixa', 'Frota', 'Viagens', 'Relatórios', 'Conta'];
 
-// O que cada perfil deve enxergar e onde abre, direto dos critérios de aceite da EIX-31.
+// O que cada perfil deve enxergar e onde abre (EIX-31, com a tab bar do DESIGN-CYAN 2.0: no máximo 5
+// abas por perfil, e Admin, Gestor e Financeiro abrem no Início).
 const cenarios: { perfil: PerfilNome; abas: string[]; telaInicial: string; rotaInicial: string }[] = [
-  // Admin e Financeiro abrem no hub Financeiro (EIX-62).
-  { perfil: 'Admin', abas: todasAsAbas, telaInicial: 'Tela Financeiro', rotaInicial: '/financeiro' },
+  {
+    perfil: 'Admin',
+    abas: ['Início', 'Caixa', 'Frota', 'Relatórios', 'Conta'],
+    telaInicial: 'Tela Início',
+    rotaInicial: '/inicio',
+  },
   {
     perfil: 'Gestor de Frota',
-    abas: ['Dashboards', 'Frota', 'Viagens', 'Configurações'],
-    telaInicial: 'Tela Frota',
-    rotaInicial: '/frota',
+    abas: ['Início', 'Frota', 'Viagens', 'Relatórios', 'Conta'],
+    telaInicial: 'Tela Início',
+    rotaInicial: '/inicio',
   },
   {
     perfil: 'Financeiro',
-    abas: ['Dashboards', 'Financeiro', 'Configurações'],
-    telaInicial: 'Tela Financeiro',
-    rotaInicial: '/financeiro',
+    abas: ['Início', 'Caixa', 'Relatórios', 'Conta'],
+    telaInicial: 'Tela Início',
+    rotaInicial: '/inicio',
   },
-  { perfil: 'Motorista', abas: ['Viagens', 'Configurações'], telaInicial: 'Tela Viagens', rotaInicial: '/viagens' },
+  { perfil: 'Motorista', abas: ['Viagens', 'Conta'], telaInicial: 'Tela Viagens', rotaInicial: '/viagens' },
 ];
 
 // Login aprovado com o perfil pedido; o layout raiz busca o perfil e libera a área do app.
@@ -130,7 +138,7 @@ async function entrarComo(perfil: PerfilNome, initialUrl = '/') {
   });
   const router = renderRouter(routes, { initialUrl });
   act(() => emit('INITIAL_SESSION', session));
-  await screen.findByText('Configurações');
+  await screen.findByText('Conta');
   return router;
 }
 
@@ -167,17 +175,18 @@ describe.each(cenarios)('menu do perfil $perfil (EIX-31)', ({ perfil, abas, tela
   });
 });
 
-// Uma linha por (perfil, aba proibida). O Admin não aparece aqui: ele vê todas as abas.
+// Uma linha por (perfil, aba proibida). O Admin entra com Viagens: a lista dele fica no hub Frota.
 const abasProibidas = cenarios.flatMap((cenario) =>
   todasAsAbas.filter((aba) => !cenario.abas.includes(aba)).map((aba) => ({ ...cenario, aba })),
 );
 
 const rotaDaAba: Record<string, Href> = {
-  Dashboards: '/dashboards',
-  Financeiro: '/financeiro',
+  Início: '/inicio',
+  Caixa: '/financeiro',
   Frota: '/frota',
   Viagens: '/viagens',
-  Configurações: '/configuracoes',
+  Relatórios: '/dashboards',
+  Conta: '/configuracoes',
 };
 
 describe('URL proibida digitada (EIX-31)', () => {
@@ -243,7 +252,7 @@ describe('telas internas seguem o módulo (EIX-31)', () => {
     act(() => navegador.push('/caixa'));
 
     expect(await screen.findByText(telaInicial)).toBeOnTheScreen();
-    expect(screen.queryByText('Tela Caixa')).not.toBeOnTheScreen();
+    expect(screen.queryByText('Tela Saldo e Projecao')).not.toBeOnTheScreen();
     expect(router.getPathname()).toBe(rotaInicial);
   });
 
@@ -252,8 +261,33 @@ describe('telas internas seguem o módulo (EIX-31)', () => {
 
     act(() => navegador.push('/caixa'));
 
-    expect(await screen.findByText('Tela Caixa')).toBeOnTheScreen();
+    expect(await screen.findByText('Tela Saldo e Projecao')).toBeOnTheScreen();
   });
+
+  // O Admin não tem a aba Viagens (passaria de 5 abas): a lista dele abre pelo hub Frota.
+  it('Admin abre a lista de viagens em /frota/viagens', async () => {
+    const router = await entrarComo('Admin');
+
+    act(() => navegador.push('/frota/viagens'));
+
+    expect(await screen.findByText('Tela Viagens da Frota')).toBeOnTheScreen();
+    expect(router.getPathname()).toBe('/frota/viagens');
+  });
+
+  it.each(['Gestor de Frota', 'Motorista', 'Financeiro'] as const)(
+    '%s digitando /frota/viagens volta para a home do perfil',
+    async (perfil) => {
+      const { telaInicial, rotaInicial } = cenarios.find((c) => c.perfil === perfil)!;
+      const router = await entrarComo(perfil);
+      await screen.findByText(telaInicial);
+
+      act(() => navegador.push('/frota/viagens'));
+
+      expect(await screen.findByText(telaInicial)).toBeOnTheScreen();
+      expect(screen.queryByText('Tela Viagens da Frota')).not.toBeOnTheScreen();
+      expect(router.getPathname()).toBe(rotaInicial);
+    },
+  );
 
   // Ponte Caixa ↔ Viagens (EIX-42): as duas telas leem movimentação, então só Admin e Financeiro.
   it.each(
@@ -367,31 +401,32 @@ describe('telas internas seguem o módulo (EIX-31)', () => {
     ['/viagens/v1/fechar', 'Tela Fechar Viagem'],
   ] as const)('Financeiro digitando %s volta para a home do perfil (NAV5-10)', async (rota, tela) => {
     const router = await entrarComo('Financeiro');
-    await screen.findByText('Tela Financeiro');
+    await screen.findByText('Tela Início');
 
     act(() => navegador.push(rota));
 
-    expect(await screen.findByText('Tela Financeiro')).toBeOnTheScreen();
+    expect(await screen.findByText('Tela Início')).toBeOnTheScreen();
     expect(screen.queryByText(tela)).not.toBeOnTheScreen();
-    expect(router.getPathname()).toBe('/financeiro');
+    expect(router.getPathname()).toBe('/inicio');
   });
 
   it('Motorista que abre o app já numa URL financeira cai em Viagens', async () => {
     const router = await entrarComo('Motorista', '/financeiro');
 
     expect(await screen.findByText('Tela Viagens')).toBeOnTheScreen();
-    expect(screen.queryByText('Tela Financeiro')).not.toBeOnTheScreen();
+    expect(screen.queryByText('Tela Caixa')).not.toBeOnTheScreen();
     expect(router.getPathname()).toBe('/viagens');
   });
 });
 
 // Ícone de cada aba, pelo nome semântico do mapa de ícones (src/ui/icons.ts), conforme NAV-01.
+// Abas do Admin (5): Viagens não está entre elas.
 const simboloDaAba: Record<string, string> = {
-  Dashboards: 'dashboards',
-  Financeiro: 'financeiro',
+  Início: 'inicio',
+  Caixa: 'financeiro',
   Frota: 'frota',
-  Viagens: 'viagens',
-  Configurações: 'configuracoes',
+  Relatórios: 'dashboards',
+  Conta: 'conta',
 };
 
 // O ícone é decorativo (o rótulo da aba já diz o que é), por isso as buscas incluem elementos escondidos
@@ -425,19 +460,19 @@ describe('tab bar com ícones (NAV-01)', () => {
     await entrarComo('Motorista');
 
     expect(simbolos('viagens').length).toBeGreaterThan(0);
-    expect(simbolos('configuracoes').length).toBeGreaterThan(0);
+    expect(simbolos('conta').length).toBeGreaterThan(0);
     expect(screen.queryAllByTestId('icone-financeiro', { includeHiddenElements: true })).toHaveLength(0);
   });
 
   it('aba ativa: ícone cheio em accentText; as outras em contorno textBody (DESIGN_CYAN 2.0)', async () => {
     await entrarComo('Admin');
     act(() => navegador.push('/financeiro'));
-    await screen.findByText('Tela Financeiro');
+    await screen.findByText('Tela Caixa');
 
     for (const [aba, simbolo] of Object.entries(simboloDaAba)) {
       const visiveis = simbolos(simbolo).filter((icone) => opacidadeEfetiva(icone) > 0);
       expect(visiveis).toHaveLength(1);
-      const ativa = aba === 'Financeiro';
+      const ativa = aba === 'Caixa';
       expect(visiveis[0]).toHaveStyle({ color: ativa ? colors.accentText : colors.textBody });
       expect(visiveis[0].props.weight).toBe(ativa ? 'fill' : 'regular');
     }
@@ -446,17 +481,17 @@ describe('tab bar com ícones (NAV-01)', () => {
   it('rótulo da aba ativa em textPrimary; os outros em textBody (AC 2)', async () => {
     await entrarComo('Admin');
     act(() => navegador.push('/financeiro'));
-    await screen.findByText('Tela Financeiro');
+    await screen.findByText('Tela Caixa');
 
-    for (const aba of todasAsAbas) {
-      expect(screen.getByText(aba)).toHaveStyle({ color: aba === 'Financeiro' ? colors.textPrimary : colors.textBody });
+    for (const aba of Object.keys(simboloDaAba)) {
+      expect(screen.getByText(aba)).toHaveStyle({ color: aba === 'Caixa' ? colors.textPrimary : colors.textBody });
     }
   });
 
   it('rótulo da aba fica numa linha só: com fonte grande, corta com reticências em vez de quebrar', async () => {
     await entrarComo('Admin');
 
-    for (const aba of todasAsAbas) {
+    for (const aba of Object.keys(simboloDaAba)) {
       expect(screen.getByText(aba).props.numberOfLines).toBe(1);
     }
   });
@@ -472,7 +507,8 @@ function headersVisiveis() {
 
 describe('header nativo nas telas internas (NAV-02)', () => {
   it.each([
-    ['/caixa', 'Tela Caixa', 'Saldo e projeção'],
+    ['/caixa', 'Tela Saldo e Projecao', 'Saldo e projeção'],
+    ['/frota/viagens', 'Tela Viagens da Frota', 'Viagens'],
     ['/categorias', 'Tela Categorias', 'Categorias'],
     ['/categorias/nova', 'Tela Nova Categoria', 'Nova categoria'],
     ['/categorias/c1/editar', 'Tela Editar Categoria', 'Editar categoria'],
@@ -523,7 +559,7 @@ describe('header nativo nas telas internas (NAV-02)', () => {
   it('as abas não têm header nativo: o título delas fica no conteúdo', async () => {
     await entrarComo('Admin');
     act(() => navegador.push('/financeiro'));
-    await screen.findByText('Tela Financeiro');
+    await screen.findByText('Tela Caixa');
 
     expect(headersVisiveis()).toHaveLength(0);
   });
@@ -531,19 +567,20 @@ describe('header nativo nas telas internas (NAV-02)', () => {
   it('voltar de uma tela interna retorna para a aba de onde ela foi aberta', async () => {
     const router = await entrarComo('Admin');
     act(() => navegador.push('/financeiro'));
-    await screen.findByText('Tela Financeiro');
+    await screen.findByText('Tela Caixa');
     act(() => navegador.push('/categorias'));
     await screen.findByText('Tela Categorias');
 
     act(() => navegador.back());
 
-    expect(await screen.findByText('Tela Financeiro')).toBeOnTheScreen();
+    expect(await screen.findByText('Tela Caixa')).toBeOnTheScreen();
     expect(router.getPathname()).toBe('/financeiro');
   });
 
   // NAV5-15: a lista de veículos abre por cima do hub de Frota e o voltar retorna a ele.
   it('voltar de /frota/veiculos retorna ao hub de Frota', async () => {
     const router = await entrarComo('Gestor de Frota');
+    act(() => navegador.push('/frota'));
     await screen.findByText('Tela Frota');
     act(() => navegador.push('/frota/veiculos'));
     await screen.findByText('Tela Veiculos');
