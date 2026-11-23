@@ -198,7 +198,7 @@ T4 → T5 → T6 → T7 → T8
 
 ---
 
-### T7: Seção de gráficos com consultas e estados
+### T7: ✅ Seção de gráficos com consultas e estados
 
 **What**: `GraficosCaixa`: abas de horizonte, duas consultas independentes, carregando, vazio e erro por gráfico.
 **Where**: `src/features/dashboard/graficos/GraficosCaixa.tsx`
@@ -213,8 +213,8 @@ T4 → T5 → T6 → T7 → T8
 
 **Done when**:
 
-- [ ] Testes em `graficos/__tests__/GraficosCaixa.test.tsx` passam
-- [ ] Gate quick passa
+- [x] Testes em `graficos/__tests__/GraficosCaixa.test.tsx` passam (12)
+- [x] Gate quick passa
 
 **Tests**: unit
 **Gate**: quick
