@@ -6,7 +6,7 @@ import { iconSize, indicatorSize } from '../tokens';
 const nomes = Object.keys(icons) as IconName[];
 const nomeDoComponente = (nome: IconName) => (icons[nome] as { displayName?: string }).displayName;
 
-describe('mapa de ícones (NAV-03, ADR 0006)', () => {
+describe('mapa de ícones (NAV-03, ADR 0007)', () => {
   it.each(nomes)('%s aponta para um ícone do Phosphor', (nome) => {
     expect(nomeDoComponente(nome)).toMatch(/^[A-Z][A-Za-z]*Icon$/);
   });

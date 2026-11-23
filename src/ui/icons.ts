@@ -28,7 +28,7 @@ import { XIcon } from 'phosphor-react-native/src/icons/X';
 
 // Mapa único de ícones do app (DESIGN_CYAN §7). A tela pede pelo nome semântico ("financeiro") e nunca
 // importa o ícone: trocar um ícone é mudar uma linha aqui. Phosphor (MIT) nas duas plataformas, para o
-// app ter a mesma cara no Android e no iOS (ADR 0006).
+// app ter a mesma cara no Android e no iOS (ADR 0007).
 export const icons = {
   // Abas do menu (US17)
   inicio: HouseIcon,

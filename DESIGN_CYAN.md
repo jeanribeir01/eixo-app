@@ -13,7 +13,7 @@ Fonte única de verdade visual do app. Todo agente de IA e todo dev lê este arq
 > sobre o ciano do botão principal tinha 2,6:1). A 2.0 mantém stone + azul e acrescenta: um azul mais
 > fundo para a ação primária, tons claros para seleção, peso 600 para números, cantos maiores, uma
 > sombra para o cartão de destaque e ícones Phosphor. Protótipo de referência no Figma, arquivo
-> "Eixo Certo — Redesign (DESIGN-CYAN 2.0)"; decisão em `.specs/STATE.md` AD-016 e ADR 0006.
+> "Eixo Certo — Redesign (DESIGN-CYAN 2.0)"; decisão em `.specs/STATE.md` AD-016 e ADR 0007.
 
 ---
 
@@ -196,7 +196,7 @@ Todo botão tem `accessibilityRole="button"` e `accessibilityLabel`. Toda ação
 - **Tocável** (`onPress`): o cartão inteiro vira um botão (`accessibilityRole="button"`), com `accessibilityLabel` dizendo o destino ("Ver saldo e projeção"). Ao tocar: ripple `border` no Android, cortado nos cantos, e fundo `border` no iOS. Prefira o cartão tocável a um link pequeno escondido dentro dele.
 
 ### Ícone (`Icon`)
-- **Phosphor** (`phosphor-react-native`, MIT) nas duas plataformas — o app tem a mesma cara no Android e no iOS (ADR 0006). A tela pede pelo **nome semântico** do mapa `src/ui/icons.ts` (`"financeiro"`, `"adicionar"`), nunca importa o ícone. Ícone novo entra no mapa primeiro, com import por ícone (`phosphor-react-native/src/icons/<Nome>`), nunca pelo índice do pacote.
+- **Phosphor** (`phosphor-react-native`, MIT) nas duas plataformas — o app tem a mesma cara no Android e no iOS (ADR 0007). A tela pede pelo **nome semântico** do mapa `src/ui/icons.ts` (`"financeiro"`, `"adicionar"`), nunca importa o ícone. Ícone novo entra no mapa primeiro, com import por ícone (`phosphor-react-native/src/icons/<Nome>`), nunca pelo índice do pacote.
 - Peso pela prop `weight`: `regular` (contorno, o padrão), `fill` (cheio, estado ativo — aba selecionada), `duotone` (só em ilustração de estado vazio).
 - Tamanhos `iconSize`: `sm` 16 (junto de texto pequeno), `md` 20 (linha de lista, aba), `lg` 24 (estado vazio).
 - Cor pela prop `tone`, com os mesmos tons do `Text` (`primary`, `body`, `muted`, `accent`, `onAccent`, `success`, `danger`, `warning`). Nunca cor solta. O tom `accent` é `accentText`.

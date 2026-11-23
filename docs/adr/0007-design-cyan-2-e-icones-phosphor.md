@@ -1,4 +1,4 @@
-# ADR 0006 — DESIGN-CYAN 2.0 e ícones Phosphor
+# ADR 0007 — DESIGN-CYAN 2.0 e ícones Phosphor
 
 - **Status:** Aceito
 - **Data:** 2026-11-23
