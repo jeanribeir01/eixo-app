@@ -1,25 +1,29 @@
 import { memo, useCallback, useMemo, useState } from 'react';
 import { useRouter } from 'expo-router';
-import { Alert, RefreshControl, StyleSheet, type ListRenderItemInfo } from 'react-native';
+import { Alert, RefreshControl, StyleSheet, View, type ListRenderItemInfo } from 'react-native';
 
-import { isoParaDataBR, mesDeHoje, nomeDoMes, somarMeses } from '@/lib/datas';
+import { buscarFluxoMensal } from '@/features/dashboard/graficos/queries';
+import { hojeISO, mesDeHoje, nomeDoMes, rotuloDoDia, somarMeses, type AnoMes } from '@/lib/datas';
 import { formatarMoeda } from '@/lib/money';
 import { useDadosDaTela } from '@/lib/useDadosDaTela';
 import {
-  List,
   Button,
+  Card,
+  ChipFiltro,
   Column,
   EmptyState,
   FAB,
   FAB_ALTURA_RESERVADA,
+  LinhaDeFiltros,
+  List,
   ListItem,
   Screen,
   ScreenColumn,
   Skeleton,
   Snackbar,
-  Tabs,
   Text,
   colors,
+  spacing,
   useScreenColumn,
 } from '@/ui';
 
@@ -42,6 +46,23 @@ const OPCOES_STATUS = [
   { value: 'Pago', label: 'Pagos' },
 ];
 
+// O seletor de mês vai de um ano atrás até três meses à frente: parcela e conta a pagar vencem no futuro.
+const MESES_ATRAS = 12;
+const MESES_A_FRENTE = 3;
+
+function chaveDoMes({ ano, mes }: AnoMes): string {
+  return `${ano}-${String(mes).padStart(2, '0')}`;
+}
+
+function opcoesDeMes(hoje: AnoMes) {
+  const opcoes = [];
+  for (let delta = MESES_A_FRENTE; delta >= -MESES_ATRAS; delta -= 1) {
+    const mes = somarMeses(hoje, delta);
+    opcoes.push({ value: chaveDoMes(mes), label: nomeDoMes(mes.ano, mes.mes) });
+  }
+  return opcoes;
+}
+
 // Cor nunca sozinha: o sinal + / − acompanha sempre (DESIGN_CYAN, cores semânticas).
 function ValorComSinal({ movimentacao }: { movimentacao: Movimentacao }) {
   const entrada = movimentacao.categoria.tipo === 'Entrada';
@@ -52,14 +73,33 @@ function ValorComSinal({ movimentacao }: { movimentacao: Movimentacao }) {
   );
 }
 
-// "Combustível · 12/10 · Pendente". A parcela de dívida avisa que é parcela: é por isso que ela não
-// tem a opção de excluir (some só quando a dívida é excluída).
+// "Combustível · Pendente". A data já está no cabeçalho do dia. A parcela de dívida avisa que é
+// parcela: é por isso que ela não tem a opção de excluir (some só quando a dívida é excluída).
 function subtitulo(movimentacao: Movimentacao): string {
-  const data = isoParaDataBR(dataDeReferencia(movimentacao)).slice(0, 5);
   const status = rotuloStatus(movimentacao.status_pagamento, movimentacao.categoria.tipo);
-  const partes = [movimentacao.categoria.titulo, data, status];
+  const partes = [movimentacao.categoria.titulo, status];
   if (movimentacao.divida_id !== null) partes.push('Parcela');
   return partes.join(' · ');
+}
+
+// A lista é uma só, com o cabeçalho de cada dia entre as linhas: a FlatList continua virtualizando
+// e cada linha continua memoizada (EIX-71).
+type Linha = { tipo: 'dia'; id: string; rotulo: string } | { tipo: 'movimentacao'; id: string; movimentacao: Movimentacao };
+
+function agruparPorDia(movimentacoes: Movimentacao[], hoje: string): Linha[] {
+  // Do dia mais recente para o mais antigo; dentro do dia, a ordem que veio do banco.
+  const ordenadas = [...movimentacoes].sort((a, b) => dataDeReferencia(b).localeCompare(dataDeReferencia(a)));
+  const linhas: Linha[] = [];
+  let diaAtual = '';
+  for (const movimentacao of ordenadas) {
+    const dia = dataDeReferencia(movimentacao);
+    if (dia !== diaAtual) {
+      diaAtual = dia;
+      linhas.push({ tipo: 'dia', id: `dia-${dia}`, rotulo: rotuloDoDia(dia, hoje) });
+    }
+    linhas.push({ tipo: 'movimentacao', id: movimentacao.id, movimentacao });
+  }
+  return linhas;
 }
 
 type LinhaProps = {
@@ -94,26 +134,51 @@ const MovimentacaoLinha = memo(function MovimentacaoLinha({ movimentacao, onAbri
 });
 
 // Fora do componente: a mesma função em todo render, sem precisar de useCallback.
-function chaveDaMovimentacao(movimentacao: Movimentacao): string {
-  return movimentacao.id;
+function chaveDaLinha(linha: Linha): string {
+  return linha.id;
+}
+
+// Resumo do mês no topo: o que já foi pago, entradas menos saídas. As duas somas vêm prontas do banco
+// (`fluxo_caixa_mensal`, RNF06); aqui só a diferença entre elas.
+function ResumoDoMes({ entradas, saidas, nomeMes }: { entradas: number; saidas: number; nomeMes: string }) {
+  const saldo = entradas - saidas;
+  return (
+    <Card>
+      <Text variant="bodySm" tone="body">
+        {`Pago em ${nomeMes.toLowerCase()}`}
+      </Text>
+      <Text variant="heading" weight="semibold">
+        {`${saldo < 0 ? '−' : '+'} ${formatarMoeda(Math.abs(saldo))}`}
+      </Text>
+      <Text variant="bodySm" tone="body">
+        {`+ ${formatarMoeda(entradas)} em entradas · − ${formatarMoeda(saidas)} em saídas`}
+      </Text>
+    </Card>
+  );
 }
 
 export function MovimentacoesListView() {
   const router = useRouter();
-  const [periodo, setPeriodo] = useState(mesDeHoje);
+  const [hoje] = useState(mesDeHoje);
+  const [periodo, setPeriodo] = useState(hoje);
   const [filtroTipo, setFiltroTipo] = useState<FiltroTipo>('todas');
   const [filtroStatus, setFiltroStatus] = useState<FiltroStatus>('todos');
   const [feedback, setFeedback] = useState<Feedback | null>(null);
   const coluna = useScreenColumn();
+  const opcoesMes = useMemo(() => opcoesDeMes(hoje), [hoje]);
 
   // Cada mês é uma consulta: trocar de mês volta ao skeleton em vez de mostrar o mês anterior.
   const buscar = useCallback(() => listarMovimentacoesDoMes(periodo.ano, periodo.mes), [periodo]);
   const tela = useDadosDaTela(buscar);
   const { atualizarDados } = tela;
 
-  function mudarMes(delta: number) {
-    setPeriodo((atual) => somarMeses(atual, delta));
-  }
+  // O resumo é uma consulta à parte: se falhar, a lista continua na tela, só sem o cartão.
+  const buscarResumo = useCallback(
+    () => buscarFluxoMensal(`${chaveDoMes(periodo)}-01`, 3),
+    [periodo],
+  );
+  const resumo = useDadosDaTela(buscarResumo);
+  const mesDoResumo = resumo.dados?.find((item) => item.mes === chaveDoMes(periodo));
 
   const excluir = useCallback(
     async (movimentacao: Movimentacao) => {
@@ -142,24 +207,34 @@ export function MovimentacoesListView() {
   const abrir = useCallback((id: string) => router.push(`/movimentacoes/${id}/editar`), [router]);
 
   const renderLinha = useCallback(
-    ({ item }: ListRenderItemInfo<Movimentacao>) => (
-      <MovimentacaoLinha movimentacao={item} onAbrir={abrir} onMaisOpcoes={confirmarExclusao} />
-    ),
+    ({ item }: ListRenderItemInfo<Linha>) =>
+      item.tipo === 'dia' ? (
+        <View style={styles.dia}>
+          <Text weight="semibold" accessibilityRole="header">
+            {item.rotulo}
+          </Text>
+        </View>
+      ) : (
+        <MovimentacaoLinha movimentacao={item.movimentacao} onAbrir={abrir} onMaisOpcoes={confirmarExclusao} />
+      ),
     [abrir, confirmarExclusao],
   );
 
   // Um mês cabe na memória: tipo e status filtram aqui, sem nova chamada ao banco. O useMemo mantém o
   // mesmo array enquanto dados e filtros não mudam (um Snackbar aparecendo não recria a lista).
-  const filtradas = useMemo(
-    () =>
-      (tela.dados ?? []).filter(
-        (movimentacao) =>
-          (filtroTipo === 'todas' || movimentacao.categoria.tipo === filtroTipo) &&
-          (filtroStatus === 'todos' || movimentacao.status_pagamento === filtroStatus),
-      ),
-    [tela.dados, filtroTipo, filtroStatus],
-  );
+  const linhas = useMemo(() => {
+    const filtradas = (tela.dados ?? []).filter(
+      (movimentacao) =>
+        (filtroTipo === 'todas' || movimentacao.categoria.tipo === filtroTipo) &&
+        (filtroStatus === 'todos' || movimentacao.status_pagamento === filtroStatus),
+    );
+    return agruparPorDia(filtradas, hojeISO());
+  }, [tela.dados, filtroTipo, filtroStatus]);
   const comFiltro = filtroTipo !== 'todas' || filtroStatus !== 'todos';
+
+  const puxarParaAtualizar = useCallback(async () => {
+    await Promise.all([tela.puxarParaAtualizar(), resumo.puxarParaAtualizar()]);
+  }, [tela, resumo]);
 
   // Um Snackbar só: o retorno da ação vem antes do aviso de recarga que falhou.
   const snackbar = feedback ?? (tela.feedbackErro ? { mensagem: tela.feedbackErro, tone: 'error' as const } : null);
@@ -182,24 +257,33 @@ export function MovimentacoesListView() {
     >
       {/* Fora da lista, na coluna: no tablet fica alinhado com as linhas (EIX-94). */}
       <ScreenColumn>
-        <Column direction="row" align="center" gap="sm">
-          <Button variant="icon" icon="voltarMes" label="Mês anterior" onPress={() => mudarMes(-1)} />
-          <Text variant="subheading">{nomeDoMes(periodo.ano, periodo.mes)}</Text>
-          <Button variant="icon" icon="avancarMes" label="Próximo mês" onPress={() => mudarMes(1)} />
-        </Column>
-
-        <Tabs
-          accessibilityLabel="Filtrar por tipo"
-          options={OPCOES_TIPO}
-          value={filtroTipo}
-          onChange={(valor) => setFiltroTipo(valor as FiltroTipo)}
-        />
-        <Tabs
-          accessibilityLabel="Filtrar por status"
-          options={OPCOES_STATUS}
-          value={filtroStatus}
-          onChange={(valor) => setFiltroStatus(valor as FiltroStatus)}
-        />
+        {/* Uma linha de chips no lugar das setas de mês e das duas fileiras de abas (referência
+            Nubank do redesign). */}
+        <LinhaDeFiltros accessibilityLabel="Filtros">
+          <ChipFiltro
+            label="Mês"
+            value={chaveDoMes(periodo)}
+            options={opcoesMes}
+            onChange={(valor) => {
+              const [ano, mes] = valor.split('-').map(Number);
+              setPeriodo({ ano, mes });
+            }}
+          />
+          <ChipFiltro
+            label="Tipo"
+            value={filtroTipo}
+            valorPadrao="todas"
+            options={OPCOES_TIPO}
+            onChange={(valor) => setFiltroTipo(valor as FiltroTipo)}
+          />
+          <ChipFiltro
+            label="Status"
+            value={filtroStatus}
+            valorPadrao="todos"
+            options={OPCOES_STATUS}
+            onChange={(valor) => setFiltroStatus(valor as FiltroStatus)}
+          />
+        </LinhaDeFiltros>
 
         {tela.status === 'carregando' && (
           <Column gap="sm">
@@ -221,17 +305,26 @@ export function MovimentacoesListView() {
 
       {tela.status === 'pronto' && (
         <List
-          data={filtradas}
-          keyExtractor={chaveDaMovimentacao}
+          data={linhas}
+          keyExtractor={chaveDaLinha}
           style={styles.lista}
           contentContainerStyle={[coluna, styles.espacoDoFab]}
           refreshControl={
             <RefreshControl
               refreshing={tela.atualizando}
-              onRefresh={tela.puxarParaAtualizar}
-              colors={[colors.accent]}
-              tintColor={colors.accent}
+              onRefresh={puxarParaAtualizar}
+              colors={[colors.accentStrong]}
+              tintColor={colors.accentStrong}
             />
+          }
+          ListHeaderComponent={
+            mesDoResumo ? (
+              <ResumoDoMes
+                entradas={mesDoResumo.entradas_centavos}
+                saidas={mesDoResumo.saidas_centavos}
+                nomeMes={nomeDoMes(periodo.ano, periodo.mes).split(' ')[0]}
+              />
+            ) : null
           }
           // Vazio dentro da lista: o pull-to-refresh funciona até num mês sem lançamento. Sem ação
           // aqui, porque o FAB "Nova movimentação" já está na tela.
@@ -255,5 +348,10 @@ const styles = StyleSheet.create({
   // O Screen só reserva o espaço do FAB quando ele mesmo rola; aqui quem rola é a FlatList.
   espacoDoFab: {
     paddingBottom: FAB_ALTURA_RESERVADA,
+  },
+  // Respiro acima do dia separa os grupos; o de baixo é menor, o dia "pertence" às linhas dele.
+  dia: {
+    paddingTop: spacing.lg,
+    paddingBottom: spacing.xs,
   },
 });

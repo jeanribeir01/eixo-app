@@ -7,6 +7,7 @@ import {
   mascararData,
   mesDeHoje,
   nomeDoMes,
+  rotuloDoDia,
   somarDias,
   somarMeses,
 } from '../datas';
@@ -138,5 +139,17 @@ describe('somarDias', () => {
 
   it('passa pelo início do horário de verão sem pular data', () => {
     expect(somarDias('2018-11-03', 1)).toBe('2018-11-04');
+  });
+});
+
+describe('rotuloDoDia', () => {
+  it.each([
+    ['2026-11-23', 'Hoje, 23 de novembro'],
+    ['2026-11-22', 'Ontem, 22 de novembro'],
+    ['2026-11-24', 'Amanhã, 24 de novembro'],
+    ['2026-11-20', 'Sexta, 20 de novembro'],
+    ['2025-12-31', 'Quarta, 31 de dezembro de 2025'],
+  ])('%s → %s', (iso, esperado) => {
+    expect(rotuloDoDia(iso, '2026-11-23')).toBe(esperado);
   });
 });
