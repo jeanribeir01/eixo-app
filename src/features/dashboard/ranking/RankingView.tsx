@@ -11,6 +11,7 @@ import { motion } from '@/ui/tokens';
 import { useReducedMotion } from '@/ui/useReducedMotion';
 
 import { FiltroPeriodo } from '../components/FiltroPeriodo';
+import { GraficosCaixa } from '../graficos/GraficosCaixa';
 import { mesAtual, type Periodo } from '../periodo';
 import { LinhaRanking } from './components/LinhaRanking';
 import { buscarRanking, type ItemRanqueado, type Ranking } from './ranking';
@@ -50,15 +51,18 @@ function descricaoDoVazio(ranking: Ranking, visao: Visao): string {
 
 // Aba Dashboards — ranking de eficiência logística (US13, EIX-46). Top 3 rotas mais lucrativas e Top 3
 // veículos com maior custo por KM no período do filtro. Tudo vem calculado das RPCs da US10; a tela
-// só exibe. Quando a US12 trouxer os gráficos, eles entram nesta mesma aba, sob o mesmo filtro.
+// só exibe. Os gráficos de caixa da US12 (EIX-45) entram nesta mesma aba, sob o mesmo filtro.
 export function RankingView() {
   const router = useRouter();
   // O detalhe de rota e de veículo é da Frota (Admin e Gestor). O Financeiro vê o ranking, sem toque.
-  const { podeVerFrota } = useMenu();
+  // Os gráficos de caixa são do Financeiro (Admin e Financeiro, a mesma regra das Categorias): o Gestor
+  // de Frota não lê movimentação, e as RPCs devolveriam 42501 para ele.
+  const { podeVerFrota, podeVerCategorias: podeVerCaixa } = useMenu();
   const reduzirMovimento = useReducedMotion();
 
   const [periodo, setPeriodo] = useState<Periodo>(mesAtual);
   const [visao, setVisao] = useState<Visao>('rotas');
+  const [erroGraficos, setErroGraficos] = useState<string | null>(null);
 
   // Uma consulta por período: trocar de mês volta ao skeleton, trocar de aba não consulta de novo.
   const buscar = useCallback(
@@ -154,13 +158,19 @@ export function RankingView() {
     <Screen
       scroll
       overlay={
-        tela.feedbackErro && <Snackbar message={tela.feedbackErro} tone="error" onDismiss={tela.limparFeedbackErro} />
+        tela.feedbackErro ? (
+          <Snackbar message={tela.feedbackErro} tone="error" onDismiss={tela.limparFeedbackErro} />
+        ) : (
+          erroGraficos && <Snackbar message={erroGraficos} tone="error" onDismiss={() => setErroGraficos(null)} />
+        )
       }
     >
       {/* Aba não tem header nativo: o título fica no conteúdo. */}
       <Text variant="heading">Dashboards</Text>
 
       <FiltroPeriodo value={periodo} onChange={setPeriodo} />
+
+      {podeVerCaixa && <GraficosCaixa periodo={periodo} onErroAoAtualizar={setErroGraficos} />}
 
       <Column gap="md">
         <Text variant="subheading">Ranking de eficiência</Text>
