@@ -9,7 +9,7 @@ Implement these tasks with the `tlc-spec-driven` skill: **activate it by name an
 ---
 
 **Design**: inline (sem `design.md`): segue o molde do `kpis_financeiros` (banco) e da `RankingView` (tela). Decisões no `spec.md`.
-**Status**: In Progress
+**Status**: Done (aguardando Verifier)
 
 ---
 
@@ -221,7 +221,7 @@ T4 → T5 → T6 → T7 → T8
 
 ---
 
-### T8: Gráficos na aba Dashboards
+### T8: ✅ Gráficos na aba Dashboards
 
 **What**: `RankingView` renderiza `GraficosCaixa` entre o filtro e o ranking só para Admin e Financeiro.
 **Where**: `src/features/dashboard/ranking/RankingView.tsx`
@@ -236,8 +236,8 @@ T4 → T5 → T6 → T7 → T8
 
 **Done when**:
 
-- [ ] `RankingView.test.tsx` cobre Admin/Financeiro com gráficos e Gestor sem gráficos
-- [ ] Gate build passa
+- [x] `RankingView.test.tsx` cobre Admin/Financeiro com gráficos e Gestor sem gráficos (3 testes novos)
+- [x] Gate build passa (app 1581, supabase 459)
 
 **Tests**: unit
 **Gate**: build

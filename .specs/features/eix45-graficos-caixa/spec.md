@@ -140,22 +140,22 @@ A aba Dashboards só mostra o ranking da US13. O gestor financeiro vê o saldo d
 | GRAF-03 | P1: Entradas vs Saídas | Execute | Implementing |
 | GRAF-04 | P1: Entradas vs Saídas | Execute | Implementing |
 | GRAF-05 | P1: Entradas vs Saídas | Execute | Implementing |
-| GRAF-06 | P1: Entradas vs Saídas | Tasks | Pending |
-| GRAF-07 | P1: Entradas vs Saídas | Tasks | Pending |
+| GRAF-06 | P1: Entradas vs Saídas | Execute | Implementing |
+| GRAF-07 | P1: Entradas vs Saídas | Execute | Implementing |
 | GRAF-08 | P1: Despesas por categoria | Execute | Implementing |
 | GRAF-09 | P1: Despesas por categoria | Execute | Implementing |
 | GRAF-10 | P1: Despesas por categoria | Execute | Implementing |
 | GRAF-11 | P1: Despesas por categoria | Execute | Implementing |
 | GRAF-12 | P1: Despesas por categoria | Execute | Implementing |
-| GRAF-13 | P1: Despesas por categoria | Tasks | Pending |
-| GRAF-14 | P1: Filtro, estados e acesso | Tasks | Pending |
-| GRAF-15 | P1: Filtro, estados e acesso | Tasks | Pending |
-| GRAF-16 | P1: Filtro, estados e acesso | Tasks | Pending |
-| GRAF-17 | P1: Filtro, estados e acesso | Tasks | Pending |
-| GRAF-18 | P1: Filtro, estados e acesso | Tasks | Pending |
-| GRAF-19 | P1: Filtro, estados e acesso | Tasks | Pending |
+| GRAF-13 | P1: Despesas por categoria | Execute | Implementing |
+| GRAF-14 | P1: Filtro, estados e acesso | Execute | Implementing |
+| GRAF-15 | P1: Filtro, estados e acesso | Execute | Implementing |
+| GRAF-16 | P1: Filtro, estados e acesso | Execute | Implementing |
+| GRAF-17 | P1: Filtro, estados e acesso | Execute | Implementing |
+| GRAF-18 | P1: Filtro, estados e acesso | Execute | Implementing |
+| GRAF-19 | P1: Filtro, estados e acesso | Execute | Implementing |
 
-**Coverage:** 19 total, 0 mapped to tasks, 19 unmapped ⚠️
+**Coverage:** 19 total, 19 mapped to tasks, 0 unmapped
 
 ---
 

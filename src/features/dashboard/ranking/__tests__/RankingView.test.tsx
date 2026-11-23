@@ -24,6 +24,26 @@ jest.mock('expo-router', () => {
 
 jest.mock('@/navigation/menu', () => ({ useMenu: jest.fn() }));
 
+// Os gráficos da US12 têm testes próprios (graficos/__tests__). Aqui o stub só mostra o período recebido
+// e expõe o aviso de erro, para provar a ligação com o filtro e com o Snackbar da tela.
+jest.mock('../../graficos/GraficosCaixa', () => {
+  // eslint-disable-next-line @typescript-eslint/no-require-imports
+  const { Pressable, Text } = require('react-native');
+  return {
+    GraficosCaixa: ({
+      periodo,
+      onErroAoAtualizar,
+    }: {
+      periodo: { dataInicial: string; dataFinal: string };
+      onErroAoAtualizar: (mensagem: string) => void;
+    }) => (
+      <Pressable accessibilityRole="button" onPress={() => onErroAoAtualizar('Sem conexão.')}>
+        <Text>{`Gráficos ${periodo.dataInicial} a ${periodo.dataFinal}`}</Text>
+      </Pressable>
+    ),
+  };
+});
+
 // `ranquear` real: os testes de empate e de menos de 3 itens passam pela regra de verdade.
 jest.mock('../ranking', () => ({
   ...jest.requireActual('../ranking'),
@@ -84,11 +104,11 @@ const RANKING_COMPLETO = montarRanking(
   [veiculo('v1', 'ABC1D23', 250), veiculo('v2', 'XYZ9K87', 133), veiculo('v3', 'QWE4R56', 98)],
 );
 
-function usarPerfil(podeVerFrota: boolean) {
+function usarPerfil(podeVerFrota: boolean, podeVerCaixa = true) {
   jest.mocked(useMenu).mockReturnValue({
     abas: [],
     abaInicial: 'dashboards',
-    podeVerCategorias: true,
+    podeVerCategorias: podeVerCaixa,
     podeVerFrota,
     podeVerViagens: podeVerFrota,
     podeVerUsuarios: false,
@@ -301,5 +321,43 @@ describe('RankingView', () => {
       name: '1º lugar, Curitiba/PR → São Paulo/SP, Lucro R$ 1.334,57, Toque para abrir o detalhe',
     });
     expect(within(linha).getByText('1º')).toBeOnTheScreen();
+  });
+
+  describe('gráficos de caixa (US12, EIX-45)', () => {
+    it('Admin e Financeiro veem os gráficos com o período do filtro, e eles acompanham a troca (GRAF-14)', async () => {
+      responder(RANKING_COMPLETO);
+
+      render(<RankingView />);
+      await screen.findByText('Top 3 rotas mais lucrativas');
+
+      const { dataInicial, dataFinal } = mesAtual();
+      expect(screen.getByText(`Gráficos ${dataInicial} a ${dataFinal}`)).toBeOnTheScreen();
+
+      fireEvent.press(screen.getByRole('button', { name: 'Mês anterior' }));
+
+      expect(screen.queryByText(`Gráficos ${dataInicial} a ${dataFinal}`)).not.toBeOnTheScreen();
+      expect(screen.getByText(/^Gráficos \d{4}-\d{2}-01 a /)).toBeOnTheScreen();
+    });
+
+    it('Gestor de Frota não vê os gráficos, só o ranking (GRAF-18)', async () => {
+      usarPerfil(true, false);
+      responder(RANKING_COMPLETO);
+
+      render(<RankingView />);
+      await screen.findByText('Top 3 rotas mais lucrativas');
+
+      expect(screen.queryByText(/^Gráficos /)).not.toBeOnTheScreen();
+    });
+
+    it('erro ao atualizar os gráficos aparece no Snackbar da tela', async () => {
+      responder(RANKING_COMPLETO);
+
+      render(<RankingView />);
+      await screen.findByText('Top 3 rotas mais lucrativas');
+
+      fireEvent.press(screen.getByText(/^Gráficos /));
+
+      expect(await screen.findByText('Sem conexão.')).toBeOnTheScreen();
+    });
   });
 });
