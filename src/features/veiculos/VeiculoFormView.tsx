@@ -191,6 +191,8 @@ export function VeiculoFormView({ veiculoId }: VeiculoFormViewProps) {
               value={statusVeiculo}
               onChange={(valor) => setStatusVeiculo(valor as StatusVeiculo)}
               accessibilityLabel="Status do veículo"
+              // "Em Manutenção" não cabe num terço da largura; rolar evita cortar o rótulo.
+              scrollable
             />
           )}
           {!!erros.status && (
