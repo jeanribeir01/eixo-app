@@ -4,8 +4,9 @@ import { FlatList, Modal, Pressable, StyleSheet, View } from 'react-native';
 import { Button } from './Button';
 import { Input } from './Input';
 import { ListItem } from './ListItem';
+import { MensagemErro } from './MensagemErro';
 import { Text } from './Text';
-import { colors, radius, spacing, touchTarget } from './tokens';
+import { colors, controlHeight, radius, spacing } from './tokens';
 
 export type SelectOption = { value: string; label: string; description?: string };
 
@@ -88,7 +89,7 @@ export function Select({
 
   return (
     <View style={styles.wrapper}>
-      <Text variant="bodySm" tone="body" weight="medium">
+      <Text variant="bodySm" weight="medium">
         {label}
       </Text>
       <Pressable
@@ -101,11 +102,7 @@ export function Select({
       >
         <Text tone={textoAtual ? 'primary' : 'body'}>{textoAtual ?? placeholder}</Text>
       </Pressable>
-      {!!error && (
-        <Text accessibilityRole="alert" variant="bodySm">
-          {error}
-        </Text>
-      )}
+      {!!error && <MensagemErro>{error}</MensagemErro>}
 
       <Modal visible={aberto} transparent animationType="fade" onRequestClose={fechar}>
         <View style={styles.fundo}>
@@ -152,18 +149,18 @@ const styles = StyleSheet.create({
     gap: spacing.xs,
   },
   campo: {
-    minHeight: touchTarget,
+    minHeight: controlHeight,
     justifyContent: 'center',
     borderWidth: 1,
     borderColor: colors.borderMuted,
     borderRadius: radius.input,
     backgroundColor: colors.surface,
-    paddingVertical: spacing.xs,
+    paddingVertical: spacing.sm,
     paddingHorizontal: spacing.md,
   },
-  // Igual ao Input: reforço discreto na borda; a mensagem abaixo é o indicador real.
+  // Igual ao Input: borda em danger reforça; a mensagem abaixo, com ícone, é o indicador real.
   erro: {
-    borderColor: colors.textPrimary,
+    borderColor: colors.danger,
   },
   dimmed: {
     opacity: 0.6,
@@ -174,12 +171,13 @@ const styles = StyleSheet.create({
     justifyContent: 'flex-end',
     backgroundColor: `${colors.inverted}80`,
   },
+  // Folha inferior com o canto grande do guia 2.0 (radius.sheet), em surface como a do login.
   folha: {
     maxHeight: '80%',
     gap: spacing.md,
-    padding: spacing.base,
-    backgroundColor: colors.canvas,
-    borderTopLeftRadius: radius.feature,
-    borderTopRightRadius: radius.feature,
+    padding: spacing.lg,
+    backgroundColor: colors.surface,
+    borderTopLeftRadius: radius.sheet,
+    borderTopRightRadius: radius.sheet,
   },
 });

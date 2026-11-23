@@ -1,8 +1,9 @@
 import { useState } from 'react';
 import { StyleSheet, TextInput, View, type TextInputProps } from 'react-native';
 
+import { MensagemErro } from './MensagemErro';
 import { Text } from './Text';
-import { colors, fontFamily, radius, spacing, touchTarget, typography } from './tokens';
+import { colors, controlHeight, fontFamily, radius, spacing, typography } from './tokens';
 
 export type InputProps = Omit<TextInputProps, 'style'> & {
   label: string;
@@ -16,7 +17,7 @@ export function Input({ label, error, onFocus, onBlur, ...rest }: InputProps) {
 
   return (
     <View style={styles.wrapper}>
-      <Text variant="bodySm" tone="body" weight="medium">
+      <Text variant="bodySm" weight="medium">
         {label}
       </Text>
       <TextInput
@@ -33,11 +34,7 @@ export function Input({ label, error, onFocus, onBlur, ...rest }: InputProps) {
         }}
         {...rest}
       />
-      {!!error && (
-        <Text accessibilityRole="alert" variant="bodySm">
-          {error}
-        </Text>
-      )}
+      {!!error && <MensagemErro>{error}</MensagemErro>}
     </View>
   );
 }
@@ -50,12 +47,12 @@ const styles = StyleSheet.create({
     ...typography.body,
     fontFamily: fontFamily.regular,
     color: colors.textPrimary,
-    minHeight: touchTarget,
+    minHeight: controlHeight,
     borderWidth: 1,
     borderColor: colors.borderMuted,
     borderRadius: radius.input,
     backgroundColor: colors.surface,
-    paddingVertical: spacing.xs,
+    paddingVertical: spacing.sm,
     paddingHorizontal: spacing.md,
   },
   // Anel de foco de 2px em accent (DESIGN_CYAN §7 — Campo de texto).
@@ -63,8 +60,8 @@ const styles = StyleSheet.create({
     borderWidth: 2,
     borderColor: colors.accent,
   },
-  // Sem cor nova: reforça com a cor de texto mais forte da paleta, a mensagem abaixo é o indicador real.
+  // Borda em danger reforça; a mensagem abaixo, com ícone, é o indicador real.
   error: {
-    borderColor: colors.textPrimary,
+    borderColor: colors.danger,
   },
 });

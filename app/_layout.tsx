@@ -3,6 +3,7 @@ import { isRunningInExpoGo } from 'expo';
 import { useFonts } from 'expo-font';
 import { Stack } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
+import { StatusBar } from 'expo-status-bar';
 import { useEffect, useState } from 'react';
 import { ActivityIndicator } from 'react-native';
 
@@ -20,8 +21,14 @@ SplashScreen.preventAutoHideAsync();
 export default function RootLayout() {
   // O Expo Go não traz módulos nativos do projeto (Google Sign-In): o app só roda no app de
   // desenvolvimento ou no APK. A decisão não muda durante a execução, então fica fora dos hooks.
-  if (isRunningInExpoGo()) return <AvisoExpoGo />;
-  return <AppLayout />;
+  return (
+    <>
+      {/* Ícones escuros na barra de status: o app é claro e o canvas é quase branco. Sem isso o Android
+          desenhava relógio e bateria em branco sobre o canvas (auditoria de UI, item 15). */}
+      <StatusBar style="dark" />
+      {isRunningInExpoGo() ? <AvisoExpoGo /> : <AppLayout />}
+    </>
+  );
 }
 
 // Aviso para quem abriu o projeto no Expo Go, em vez da tela vermelha (EIX-73). Sem ação: tentar

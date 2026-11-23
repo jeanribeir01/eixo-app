@@ -16,12 +16,25 @@ export { ListItem, type ListItemProps } from './ListItem';
 export { List } from './List';
 export { ListSection } from './ListSection';
 export { Logo, type LogoProps } from './Logo';
+export { MensagemErro } from './MensagemErro';
 export { Screen, ScreenColumn, useScreenColumn } from './Screen';
 export { Select, type SelectOption, type SelectProps } from './Select';
 export { Skeleton, type SkeletonProps } from './Skeleton';
 export { Snackbar, type SnackbarProps, type SnackbarTone } from './Snackbar';
 export { Switch, type SwitchProps } from './Switch';
+export { TabBarIcon } from './TabBarIcon';
 export { Tabs, type TabOption, type TabsProps } from './Tabs';
 export { Text, toneColors, type TextProps, type TextTone } from './Text';
-export { colors, fontFamily, iconSize, radius, shadow, spacing, touchTarget, typography } from './tokens';
+export {
+  colors,
+  controlHeight,
+  fontFamily,
+  iconSize,
+  indicatorSize,
+  radius,
+  shadow,
+  spacing,
+  touchTarget,
+  typography,
+} from './tokens';
 export { useTablet } from './useTablet';

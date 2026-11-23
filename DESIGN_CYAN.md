@@ -6,7 +6,14 @@ Fonte única de verdade visual do app. Todo agente de IA e todo dev lê este arq
 - Se este guia e `src/ui/tokens.ts` divergirem, o código está errado ou o guia está desatualizado: avise o usuário, não escolha um lado sozinho.
 - Base do guia: referência web "Seline" (`.claude/docs/DESIGN-CYAN.md`), adaptada para mobile. Componentes de marketing (depoimento, estrelas, mascote) não existem no app.
 
-**Identidade em uma frase:** canvas stone quente, cartões brancos com borda hairline de 1px, **um único acento cyan**, Inter, contenção deliberada.
+**Identidade em uma frase:** canvas stone quente, cartões brancos com borda hairline de 1px, **uma única família de azul da marca**, Inter, contenção deliberada.
+
+> **Versão 2.0 — direção A · Contido (23/11/2026).** Evolução, não troca de identidade: a auditoria de UI
+> mostrou que o app parecia MVP porque o guia 1.0 era contido demais e falhava em contraste (texto branco
+> sobre o ciano do botão principal tinha 2,6:1). A 2.0 mantém stone + azul e acrescenta: um azul mais
+> fundo para a ação primária, tons claros para seleção, peso 600 para números, cantos maiores, uma
+> sombra para o cartão de destaque e ícones Phosphor. Protótipo de referência no Figma, arquivo
+> "Eixo Certo — Redesign (DESIGN-CYAN 2.0)"; decisão em `.specs/STATE.md` AD-016 e ADR 0007.
 
 ---
 
@@ -15,24 +22,44 @@ Fonte única de verdade visual do app. Todo agente de IA e todo dev lê este arq
 | Token | Hex | Uso |
 |---|---|---|
 | `colors.canvas` | `#fafaf9` | Fundo de **toda** tela. Nunca `#ffffff` como fundo |
-| `colors.surface` | `#ffffff` | Cartões, inputs, superfícies elevadas |
+| `colors.surface` | `#ffffff` | Cartões, inputs, folha inferior, botão secundário |
+| `colors.surfaceSunken` | `#f5f5f4` | Fundo de ícone em círculo, trilho de abas, superfície rebaixada |
 | `colors.border` | `#e8e6e5` | Hairline de 1px — principal recurso estrutural |
-| `colors.borderMuted` | `#d6d3d1` | Borda de input, separadores secundários |
-| `colors.textMuted` | `#a8a29e` | Helper text, ícones e estados desabilitados |
-| `colors.textBody` | `#78716c` | Corpo de texto, labels secundários |
+| `colors.borderMuted` | `#d6d3d1` | Borda de campo e de botão secundário |
+| `colors.textMuted` | `#a8a29e` | **Só** desabilitado e decoração (2,4:1 — não serve para texto que se lê) |
+| `colors.textBody` | `#6b6560` | Corpo, labels secundários, ajuda de campo (5,5:1) |
 | `colors.textPrimary` | `#0c0a09` | Títulos e ênfase |
-| `colors.inverted` | `#1c1917` | Superfície invertida (uso raro; aba ativa) |
+| `colors.inverted` | `#1c1917` | Superfície invertida (uso raro: snackbar) |
 | `colors.accentWash` | `#c1e1f7` | Fundo do highlight de título |
-| `colors.accent` | `#3ba6f1` | **CTA primária** e ícones — único acento cromático |
-| `colors.accentEdge` | `#3398e1` | Borda do botão primário, links, texto do highlight. Nunca vira preenchimento de CTA |
-| `colors.onAccent` | `#ffffff` | Texto sobre o botão cyan |
+| `colors.accentSoft` | `#e6f3fd` | Fundo de chip/aba ativa, badge informativo, indicador da tab bar, avatar |
+| `colors.accentText` | `#0b5a94` | Texto e ícone sobre `accentSoft`/`accentWash`; links (6,4:1) |
+| `colors.accent` | `#3ba6f1` | A cor da marca: gráfico, rota no mapa, foco, spinner. **Nunca fundo de texto branco** |
+| `colors.accentStrong` | `#1677c2` | Preenchimento da **ação primária** (botão e FAB): branco sobre ele dá 4,7:1 |
+| `colors.accentEdge` | `#3398e1` | Traço da marca (logo) |
+| `colors.onAccent` | `#ffffff` | Texto sobre `accentStrong` |
+| `colors.success` / `successWash` | `#1a7f4f` / `#dcf5e6` | Entrada, estado bom |
+| `colors.danger` / `dangerWash` | `#b42318` / `#fde8e6` | Saída, erro, ação grave |
+| `colors.warning` / `warningWash` | `#b54708` / `#fef0c7` | "Pede atenção": vence em breve, aguardando aprovação, manutenção aberta |
 
 ### Regras de cor
 
-- Neutros stone + **um** cyan. Não introduza outra cor de acento.
-- **Um único elemento preenchido de cyan por tela** — a ação primária. Numa lista, essa ação é o FAB: com FAB na tela, nenhum `Button` primário aparece junto.
+- Neutros stone + **um** azul da marca, em quatro intensidades (`accentSoft` → `accent` → `accentStrong` → `accentText`). Não introduza outra cor de acento.
+- **Um único elemento preenchido de azul (`accentStrong`) por tela** — a ação primária. Numa lista, essa ação é o FAB: com FAB na tela, nenhum `Button` primário aparece junto. Seleção (aba, chip, aba da tab bar) usa `accentSoft`, que não compete com ela.
 - Sem gradiente, glassmorphism ou decoração com cor.
-- **Exceção semântica (financeiro):** verde/vermelho discretos aparecem só no **valor** e no ícone de entrada/saída. Nunca no cartão, borda ou fundo inteiro. Nunca cor como único indicador: acompanhe sempre de sinal (`+` / `−`) ou rótulo — cor sozinha falha para daltônicos e sob sol forte na cabine.
+- **Exceção semântica (financeiro e estado):** verde, vermelho e laranja aparecem só no **valor**, no ícone e no badge. Nunca no cartão, borda ou fundo inteiro. Nunca cor como único indicador: acompanhe sempre de sinal (`+` / `−`) ou rótulo — cor sozinha falha para daltônicos e sob sol forte na cabine.
+
+### Contraste (WCAG 2.1 AA)
+
+Texto precisa de 4,5:1; borda de controle e ícone que carrega sentido, de 3:1. Os pares abaixo foram medidos.
+
+| Par | Contraste |
+|---|---|
+| `onAccent` sobre `accentStrong` (botão primário, FAB) | 4,7:1 |
+| `accentText` sobre `accentSoft` (badge, aba ativa) | 6,4:1 |
+| `textBody` sobre `canvas` | 5,5:1 |
+| `warning` sobre `warningWash` | 4,8:1 |
+| `success` sobre `surface` / `danger` sobre `surface` | 5,0:1 / 6,6:1 |
+| `onAccent` sobre `accent` — **proibido** | 2,6:1 |
 
 ---
 
@@ -42,15 +69,19 @@ Fonte: **Inter** para o app todo (carregada com `expo-font`, ver `src/ui/fonts.t
 
 | Variante | Tamanho | Line height | Tracking | Peso |
 |---|---|---|---|---|
+| `numeric` | 40 | 1.1 | −1.2 | 600 |
 | `display` | 32 | 1.15 | −0.8 | 400 |
 | `heading` | 24 | 1.25 | −0.5 | 400 |
 | `subheading` | 20 | 1.2 | −0.1 | 400/500 |
+| `title` | 17 | 1.3 | −0.2 | 600 |
 | `body` | 15 | 1.55 | 0 | 400 |
 | `bodySm` | 13 | 1.5 | 0 | 400 |
-| `caption` | 11 | 1.4 | 0 | 400 |
+| `caption` | 12 | 1.35 | 0 | 400/500 |
 
-- **Títulos em peso 400.** Ênfase vem de tamanho e do highlight, não de negrito.
-- Peso 500 (`weight="medium"`) só para rótulo de botão e ênfase curta. Nunca 700.
+- **Títulos de tela em peso 400.** Ênfase vem de tamanho e do highlight, não de negrito.
+- Peso 500 (`weight="medium"`) para rótulo de botão, título de cartão e ênfase curta.
+- Peso 600 (`weight="semibold"`) **só** para número em destaque (`numeric`: saldo, KPI) e título de seção (`title`: "Pede atenção"). Nunca 700.
+- `caption` subiu de 11 para 12 na 2.0: 11 era pequeno demais na cabine.
 - Sempre use o primitivo `Text` (`variant`, `tone`, `weight`). Nunca `fontSize`/`fontFamily` soltos.
 
 ### Highlight de título
@@ -88,11 +119,14 @@ Adaptações do guia web para mobile:
 
 | Token | Valor | Elemento |
 |---|---|---|
-| `radius.pill` | **9999** | Botões, tags, abas |
-| `radius.card` | 10 | Cartões de conteúdo |
-| `radius.feature` | 16 | Cartão de destaque (uma vez por tela) |
-| `radius.input` | 6 | Campos de texto |
-| `radius.icon` | 4 | Ícones, chip do highlight |
+| `radius.pill` | **9999** | Botões, badges, abas, chips |
+| `radius.sheet` | 24 | Canto de cima da folha inferior (seletor, criação rápida, login) |
+| `radius.feature` | 20 | Cartão de destaque (uma vez por tela) |
+| `radius.card` | 14 | Cartões de conteúdo, grupos de linhas |
+| `radius.input` | 10 | Campos de texto e seletor |
+| `radius.icon` | 4 | Chip do highlight |
+
+Na 2.0 os cantos cresceram (10→14, 16→20, 6→10): é o que mais aproxima o app de um produto atual sem mudar a identidade.
 
 ---
 
@@ -102,13 +136,13 @@ Adaptações do guia web para mobile:
 - Separador interno de cartão: hairline 1px `colors.border`, não divisor grosso.
 - Sombra é exceção, não regra:
 
-| Nome | Valor (referência web) | Onde |
+| Token | Valor | Onde |
 |---|---|---|
-| subtle | `rgba(0,0,0,0.05) 0 1px 2px` | Hairline de botão/nav (opcional) |
-| md | `rgba(0,0,0,0.05) 0 4px 16px` | Só se um cartão precisar de leve elevação |
-| xl | `rgba(17,12,46,0.12) 0 12px 45px` | **Um** cartão de destaque por tela (o "Floating Dashboard Preview") |
+| `shadow.subtle` | opacidade 5%, raio 2 | Botão do Google |
+| `shadow.card` | opacidade 6%, deslocamento 4, raio 12 | **Um** cartão de destaque por tela (`Card variant="feature"`) |
+| `shadow.float` | opacidade 14%, deslocamento 8, raio 20 | O que flutua sobre o conteúdo que rola: FAB e snackbar |
 
-- Sombra pesada em cartão de conteúdo é proibida. Em React Native, sombra exige `shadow*` (iOS) **e** `elevation` (Android) — se precisar, crie o token em `src/ui/tokens.ts` (peça autorização, é área compartilhada).
+- Sombra em cartão de conteúdo comum é proibida: só o destaque e o que flutua. Em React Native, sombra exige `shadow*` (iOS) **e** `elevation` (Android) — os tokens já trazem os dois.
 - Nada de `filter: grayscale()`: é CSS de web e não existe em React Native.
 
 ---
@@ -119,18 +153,24 @@ Adaptações do guia web para mobile:
 
 Vale para botão, linha de lista, `Switch` de soft delete, ícone de ação e aba. Se o visual for menor, aumente a área tocável (`minHeight`/`hitSlop`), não o visual.
 
+Botão, FAB, campo e seletor usam `controlHeight` (**48pt**): acima do mínimo, para o dedo do motorista na cabine.
+
 ---
 
 ## 7. Componentes
 
 ### Botão primário (`Button variant="primary"`)
-- Pílula (`radius.pill`), fundo `accent`, borda 1px `accentEdge`, texto `onAccent` peso 500.
-- Padding `spacing.sm` × `spacing.base`, `minHeight` 44.
+- Pílula (`radius.pill`), fundo e borda `accentStrong`, texto `onAccent` peso 500 (4,7:1).
+- Padding `spacing.sm` × `spacing.lg`, `minHeight` `controlHeight` (48).
 - **Uma vez por tela.** É a ação principal.
 
-### Botão ghost (`Button variant="ghost"`)
-- Pílula, fundo transparente, borda 1px `border`, texto `textPrimary` peso 400.
-- Ações secundárias e "Cancelar".
+### Botão secundário (`Button variant="ghost"`)
+- Pílula, fundo `surface`, borda 1px `borderMuted`, texto `textPrimary` peso 500.
+- Ações secundárias e "Cancelar". Na 2.0 deixou de ser transparente, para não sumir sobre o canvas.
+
+### Botão de perigo (`Button variant="danger"`)
+- Pílula, fundo `dangerWash`, texto `danger` peso 500. Nunca vermelho cheio.
+- Ação grave e reversível com cuidado: "Bloquear acesso", "Excluir". Vai no fim da tela, longe da ação primária, com uma linha explicando a consequência.
 
 ### Botão de ícone (`Button variant="icon" icon="..."`)
 - Só o ícone (`md`, `textBody`), sem borda nem fundo, com alvo de 44×44.
@@ -152,13 +192,14 @@ Todo botão tem `accessibilityRole="button"` e `accessibilityLabel`. Toda ação
 ### Cartão (`Card`) — o componente mais usado
 - Fundo `surface`, borda 1px `border`, `radius.card`, padding `spacing.lg`, gap interno `spacing.md`.
 - Use para saldo, veículo, viagem, lançamento.
-- **Destaque** (`variant="feature"`): `radius.feature`, mesma borda e mesmo fundo. É o cartão do topo (ex.: saldo no hub Financeiro), **uma vez por tela**.
+- **Destaque** (`variant="feature"`): `radius.feature`, mesma borda e fundo, mais a sombra `shadow.card`. É o cartão do topo (ex.: saldo no Início), **uma vez por tela**.
 - **Tocável** (`onPress`): o cartão inteiro vira um botão (`accessibilityRole="button"`), com `accessibilityLabel` dizendo o destino ("Ver saldo e projeção"). Ao tocar: ripple `border` no Android, cortado nos cantos, e fundo `border` no iOS. Prefira o cartão tocável a um link pequeno escondido dentro dele.
 
 ### Ícone (`Icon`)
-- Material Symbols no Android e SF Symbols no iOS (`expo-symbols`). A tela pede pelo **nome semântico** do mapa `src/ui/icons.ts` (`"financeiro"`, `"adicionar"`), nunca pelo nome do símbolo. Ícone novo entra no mapa primeiro.
+- **Phosphor** (`phosphor-react-native`, MIT) nas duas plataformas — o app tem a mesma cara no Android e no iOS (ADR 0007). A tela pede pelo **nome semântico** do mapa `src/ui/icons.ts` (`"financeiro"`, `"adicionar"`), nunca importa o ícone. Ícone novo entra no mapa primeiro, com import por ícone (`phosphor-react-native/src/icons/<Nome>`), nunca pelo índice do pacote.
+- Peso pela prop `weight`: `regular` (contorno, o padrão), `fill` (cheio, estado ativo — aba selecionada), `duotone` (só em ilustração de estado vazio).
 - Tamanhos `iconSize`: `sm` 16 (junto de texto pequeno), `md` 20 (linha de lista, aba), `lg` 24 (estado vazio).
-- Cor pela prop `tone`, com os mesmos tons do `Text` (`primary`, `body`, `muted`, `onAccent`…). Nunca cor solta.
+- Cor pela prop `tone`, com os mesmos tons do `Text` (`primary`, `body`, `muted`, `accent`, `onAccent`, `success`, `danger`, `warning`). Nunca cor solta. O tom `accent` é `accentText`.
 - **Sem `accessibilityLabel` o ícone é decorativo** e o leitor de tela o ignora, porque o texto ao lado já diz o que é. Com rótulo, vira imagem anunciada: use quando o ícone aparece sozinho.
 
 ### Tela (`Screen`) e header nativo
@@ -182,10 +223,10 @@ Todo botão tem `accessibilityRole="button"` e `accessibilityLabel`. Toda ação
 - Use para menus e ajustes (hub Financeiro, Conta). Agrupa por borda e fundo: **não** faça um cartão por linha.
 
 ### Botão flutuante (`FAB`)
-- Pílula `accent` com borda 1px `accentEdge`, ícone (padrão `adicionar`) e rótulo em `onAccent` peso 500. `minHeight` 44, padding `spacing.sm` × `spacing.base`, sombra `subtle`, a única do app fora do botão do Google.
+- Pílula `accentStrong`, ícone (padrão `adicionar`) e rótulo em `onAccent` peso 500. `minHeight` `controlHeight` (48), sombra `shadow.float`.
 - **Sempre com rótulo** ("Nova categoria"): o rótulo é o nome anunciado pelo leitor de tela.
 - Vai na prop `fab` do `Screen`, nunca solto no conteúdo. Com `scroll`, o `Screen` reserva `FAB_ALTURA_RESERVADA` no fim da rolagem, para a última linha não ficar atrás do botão.
-- **O FAB conta como o único cyan preenchido da tela**: tela com FAB não tem `Button` primário.
+- **O FAB conta como o único azul preenchido da tela**: tela com FAB não tem `Button` primário.
 - Use na ação de criar de uma lista. Formulário não tem FAB: lá a ação é o `Button` primário "Salvar".
 
 ### Snackbar
@@ -199,17 +240,20 @@ Todo botão tem `accessibilityRole="button"` e `accessibilityLabel`. Toda ação
 - Use o ícone do assunto da tela (`"categorias"` em Categorias). Também serve para erro de carga, com a ação "Tentar novamente".
 
 ### Campo de texto (Input)
-- Fundo `surface`, `radius.input`, borda 1px `borderMuted`, padding vertical 4 / horizontal `spacing.md`, `minHeight` 44.
-- Placeholder `textBody`. Foco: anel 2px `accent`. Erro: mensagem abaixo do campo em `bodySm`, em português, com `accessibilityRole="alert"` — nunca só borda vermelha.
-- Label sempre visível acima do campo.
+- Fundo `surface`, `radius.input`, borda 1px `borderMuted`, padding `spacing.sm` × `spacing.md`, `minHeight` `controlHeight` (48).
+- Placeholder `textBody`. Foco: anel 2px `accent`.
+- **Erro:** borda `danger` + `MensagemErro` abaixo do campo — ícone `alerta` e texto `bodySm` em `danger`, em português, com `accessibilityRole="alert"`. Nunca só a borda. `Select` e `CampoData` usam a mesma `MensagemErro`.
+- Label sempre visível acima do campo, em `bodySm` peso 500 `textPrimary`.
 
 ### Abas em pílula (Tab Pill Group)
-- Ativa: fundo `inverted`, texto branco, `radius.pill`. Inativa: transparente, texto `textPrimary`, borda 1px `border`.
+- Ativa: fundo `accentSoft`, texto `accentText` peso 500, `radius.pill`. Inativa: fundo `surface`, texto `textPrimary`, borda 1px `border`.
+- Rótulo numa linha só: a pílula nunca quebra a palavra no meio. Se os rótulos não cabem, use `scrollable`.
 - Usada nas abas Entrada/Saída de Categorias e em filtros de período.
 
 ### Navegação
 - Bottom tab bar. Não existe top nav em mobile.
-- Tab bar: fundo `surface` com hairline `border` no topo, ícone `md` em cima e rótulo em `caption` peso 500 embaixo, inclusive no tablet. Aba ativa em `textPrimary`, inativas em `textBody`. **Sem cyan no menu**: o cyan da tela é a ação primária dela.
+- Tab bar: fundo `surface` com hairline `border` no topo, ícone `md` em cima e rótulo em `caption` peso 500 embaixo, inclusive no tablet.
+- **Aba ativa** (`TabBarIcon`): ícone **cheio** em `accentText` sobre uma pílula `accentSoft` de `indicatorSize.tabWidth` × `tabHeight`, rótulo em `textPrimary`. Inativas: ícone em contorno e rótulo em `textBody`. Três sinais juntos (forma, fundo e cor), porque só a cor sumia ao sol. Nada de azul cheio no menu: o azul cheio da tela é a ação primária dela.
 - Telas internas abrem por cima das abas, com o header nativo descrito em "Tela (`Screen`) e header nativo".
 - A árvore de rotas depende do perfil (RBAC), não só a visibilidade dos botões.
 
@@ -237,14 +281,16 @@ Todo botão tem `accessibilityRole="button"` e `accessibilityLabel`. Toda ação
 **Faça**
 - Fundo `canvas`, cartões `surface`. Nunca o inverso.
 - Borda hairline como separador estrutural.
-- Botões em pílula, padding 8/16.
-- Um cyan preenchido por tela: o `Button` primário ou, numa lista, o FAB.
+- Botões em pílula, com 48pt de altura.
+- Um azul preenchido (`accentStrong`) por tela: o `Button` primário ou, numa lista, o FAB.
+- Seleção (aba, chip, aba da tab bar) em `accentSoft` + `accentText`.
 - Montar telas **só** com primitivos de `src/ui/`. Se o primitivo não existe, crie-o antes da tela (com autorização, ver `AGENTS.md` §4).
 
 **Não faça**
 - Não invente cor, spacing, radius, peso ou tamanho de fonte fora dos tokens.
 - Não use gradiente, glassmorphism ou sombra pesada em cartão de conteúdo.
-- Não preencha botão primário com cor neutra/escura.
+- Não preencha botão primário com cor neutra/escura, nem com o `accent` claro (texto branco sobre ele dá 2,6:1).
+- Não use `textMuted` em texto que precisa ser lido.
 - Não empilhe vários highlights cyan no mesmo título.
 - Não use largura fixa em pixels.
 - Não crie um botão novo: estenda `Button` com variante e avise o usuário.
@@ -255,7 +301,8 @@ Todo botão tem `accessibilityRole="button"` e `accessibilityLabel`. Toda ação
 
 - [ ] Nenhum hex, número de spacing/radius/fontSize hardcoded
 - [ ] Fundo `canvas`; cartões `surface` com borda `border`
-- [ ] No máximo um elemento cyan preenchido
+- [ ] No máximo um elemento azul preenchido (`accentStrong`)
+- [ ] Texto com contraste ≥ 4,5:1 (ver a tabela de contraste em §1)
 - [ ] Alvos de toque ≥ 44pt
 - [ ] Carregando, vazio, erro e sucesso tratados
 - [ ] Funciona em celular pequeno, grande e tablet

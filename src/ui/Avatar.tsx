@@ -10,7 +10,7 @@ type AvatarProps = {
 
 const SIZE = touchTarget + 12;
 
-// Foto do usuário quando existe; senão, a inicial do nome num círculo neutro (sem cor nova na paleta).
+// Foto do usuário quando existe; senão, a inicial do nome sobre accentSoft (mesmo par do Badge neutral).
 export function Avatar({ name, photoUrl }: AvatarProps) {
   if (photoUrl) {
     return <Image source={{ uri: photoUrl }} accessibilityLabel={`Foto de ${name}`} style={styles.circle} />;
@@ -18,7 +18,9 @@ export function Avatar({ name, photoUrl }: AvatarProps) {
 
   return (
     <View style={[styles.circle, styles.fallback]} accessibilityLabel={`Inicial de ${name}`}>
-      <Text variant="subheading">{name.trim().charAt(0).toUpperCase()}</Text>
+      <Text variant="subheading" weight="medium" tone="accent">
+        {name.trim().charAt(0).toUpperCase()}
+      </Text>
     </View>
   );
 }
@@ -30,9 +32,7 @@ const styles = StyleSheet.create({
     borderRadius: radius.pill,
   },
   fallback: {
-    backgroundColor: colors.canvas,
-    borderColor: colors.border,
-    borderWidth: 1,
+    backgroundColor: colors.accentSoft,
     alignItems: 'center',
     justifyContent: 'center',
   },

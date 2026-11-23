@@ -1,7 +1,7 @@
 import type { ReactNode } from 'react';
 import { Platform, Pressable, StyleSheet, View } from 'react-native';
 
-import { colors, radius, spacing } from './tokens';
+import { colors, radius, shadow, spacing } from './tokens';
 
 type CardProps = {
   children: ReactNode;
@@ -43,8 +43,11 @@ const styles = StyleSheet.create({
     padding: spacing.lg,
     gap: spacing.md,
   },
+  // O destaque da tela (uma vez só) ganha a sombra "card": é o que separa o saldo do resto, sem
+  // precisar de cor. Os cartões comuns continuam só com a hairline.
   feature: {
     borderRadius: radius.feature,
+    ...shadow.card,
   },
   // Corta o ripple do Android nos cantos arredondados, para ele não vazar para fora do cartão.
   tocavel: {

@@ -2,15 +2,15 @@ import { fireEvent, render, screen } from '@testing-library/react-native';
 import { Path } from 'react-native-svg';
 
 import { Button } from '../Button';
-import { colors, shadow } from '../tokens';
+import { colors, controlHeight, shadow } from '../tokens';
 
 describe('Button', () => {
-  it('primary: fundo accent, borda accentEdge e texto branco', () => {
+  it('primary: fundo accentStrong e texto branco (4,7:1, DESIGN_CYAN 2.0)', () => {
     render(<Button label="Continuar" onPress={jest.fn()} />);
 
     expect(screen.getByRole('button', { name: 'Continuar' })).toHaveStyle({
-      backgroundColor: colors.accent,
-      borderColor: colors.accentEdge,
+      backgroundColor: colors.accentStrong,
+      borderColor: colors.accentStrong,
     });
     expect(screen.getByText('Continuar')).toHaveStyle({ color: '#ffffff' });
   });
@@ -22,21 +22,28 @@ describe('Button', () => {
     expect(screen.getByText('Reativar')).toBeOnTheScreen();
   });
 
-  it('ghost: fundo transparente, borda hairline e texto primário', () => {
+  it('ghost: fundo surface, borda borderMuted e texto primário', () => {
     render(<Button label="Sair" variant="ghost" onPress={jest.fn()} />);
 
     expect(screen.getByRole('button', { name: 'Sair' })).toHaveStyle({
-      backgroundColor: 'transparent',
-      borderColor: colors.border,
+      backgroundColor: colors.surface,
+      borderColor: colors.borderMuted,
     });
     expect(screen.getByText('Sair')).toHaveStyle({ color: colors.textPrimary });
+  });
+
+  it('danger: fundo dangerWash e texto danger, para ação grave como bloquear', () => {
+    render(<Button label="Bloquear acesso" variant="danger" onPress={jest.fn()} />);
+
+    expect(screen.getByRole('button', { name: 'Bloquear acesso' })).toHaveStyle({ backgroundColor: colors.dangerWash });
+    expect(screen.getByText('Bloquear acesso')).toHaveStyle({ color: colors.danger });
   });
 
   it('google: fundo branco, borda hairline e sombra sutil, sem reaproveitar o ghost (EIX-12)', () => {
     render(<Button label="Continuar com Google" variant="google" onPress={jest.fn()} />);
 
     const button = screen.getByRole('button', { name: 'Continuar com Google' });
-    expect(button).toHaveStyle({ backgroundColor: colors.surface, borderColor: colors.border });
+    expect(button).toHaveStyle({ backgroundColor: colors.surface, borderColor: colors.borderMuted });
     expect(button).not.toHaveStyle({ backgroundColor: 'transparent' });
     expect(button).toHaveStyle({
       shadowColor: shadow.subtle.shadowColor,
@@ -60,10 +67,10 @@ describe('Button', () => {
     expect(screen.UNSAFE_queryAllByType(Path)).toHaveLength(0);
   });
 
-  it('google: respeita o alvo de toque mínimo de 44pt', () => {
+  it('google: altura confortável de 48pt, acima do mínimo de 44', () => {
     render(<Button label="Continuar com Google" variant="google" onPress={jest.fn()} />);
 
-    expect(screen.getByRole('button', { name: 'Continuar com Google' })).toHaveStyle({ minHeight: 44 });
+    expect(screen.getByRole('button', { name: 'Continuar com Google' })).toHaveStyle({ minHeight: controlHeight });
   });
 
   it('dispara onPress quando habilitado', () => {
@@ -94,10 +101,10 @@ describe('Button', () => {
     expect(screen.queryByTestId('button-loading')).not.toBeOnTheScreen();
   });
 
-  it('respeita o alvo de toque mínimo de 44pt', () => {
+  it('tem altura confortável de 48pt, acima do mínimo de 44', () => {
     render(<Button label="Continuar" onPress={jest.fn()} />);
 
-    expect(screen.getByRole('button', { name: 'Continuar' })).toHaveStyle({ minHeight: 44 });
+    expect(screen.getByRole('button', { name: 'Continuar' })).toHaveStyle({ minHeight: controlHeight });
   });
 
   it('icon: só o ícone, com o rótulo como nome acessível e alvo de 44×44 sem borda (LST-02)', () => {
@@ -106,7 +113,7 @@ describe('Button', () => {
 
     const botao = screen.getByRole('button', { name: 'Mês anterior' });
     expect(screen.queryByText('Mês anterior')).not.toBeOnTheScreen();
-    expect(screen.getByTestId('simbolo-chevron_left', { includeHiddenElements: true })).toBeOnTheScreen();
+    expect(screen.getByTestId('icone-voltarMes', { includeHiddenElements: true })).toBeOnTheScreen();
     expect(botao).toHaveStyle({ minHeight: 44, minWidth: 44, backgroundColor: 'transparent', borderColor: 'transparent' });
 
     fireEvent.press(botao);

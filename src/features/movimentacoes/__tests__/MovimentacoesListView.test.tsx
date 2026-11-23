@@ -144,7 +144,7 @@ describe('MovimentacoesListView — mês (MOV-08, LST-02)', () => {
     await renderLista();
 
     expect(screen.queryByRole('button', { name: '‹' })).not.toBeOnTheScreen();
-    expect(screen.getByTestId('simbolo-chevron_left', { includeHiddenElements: true })).toBeOnTheScreen();
+    expect(screen.getByTestId('icone-voltarMes', { includeHiddenElements: true })).toBeOnTheScreen();
 
     await act(async () => fireEvent.press(screen.getByRole('button', { name: 'Mês anterior' })));
     expect(screen.getByText('Setembro 2026')).toBeOnTheScreen();

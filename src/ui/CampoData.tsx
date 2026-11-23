@@ -6,7 +6,7 @@ import { dataBRParaISO, dataLocalISO, hojeISO, isoParaDataBR, mascararData } fro
 import { Button } from './Button';
 import { Column } from './Column';
 import { Input } from './Input';
-import { Text } from './Text';
+import { MensagemErro } from './MensagemErro';
 import { spacing } from './tokens';
 
 type CampoDataProps = {
@@ -83,11 +83,7 @@ export function CampoData({ label, value, onChange, error }: CampoDataProps) {
         {!!value && <Button variant="icon" icon="limpar" label="Limpar data" onPress={() => onChange('')} />}
       </View>
       {/* O erro fica fora da linha para o "Limpar data" continuar alinhado com o campo, não com a mensagem. */}
-      {!!error && (
-        <Text accessibilityRole="alert" variant="bodySm">
-          {error}
-        </Text>
-      )}
+      {!!error && <MensagemErro>{error}</MensagemErro>}
       {botaoHoje}
     </Column>
   );

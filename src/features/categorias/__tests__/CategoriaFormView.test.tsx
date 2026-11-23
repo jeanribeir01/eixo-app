@@ -112,7 +112,8 @@ describe('CategoriaFormView', () => {
     expect(await screen.findByLabelText('Título')).toBeOnTheScreen();
     expect(screen.queryByText('Editar categoria')).not.toBeOnTheScreen();
     expect(screen.getByLabelText('Título').props.value).toBe('Manutenção');
-    expect(screen.getByRole('tab', { name: 'Saída' })).toHaveStyle({ backgroundColor: '#1c1917' });
+    // Pelo estado de seleção, não pela cor: o visual da aba ativa é do primitivo Tabs.
+    expect(screen.getByRole('tab', { name: 'Saída', selected: true })).toBeOnTheScreen();
   });
 
   it('modo editar: envia a atualização para o id certo', async () => {

@@ -1,37 +1,32 @@
-import { readFileSync } from 'fs';
-import path from 'path';
-
 import { icons, type IconName } from '../icons';
-import { iconSize } from '../tokens';
+import { iconSize, indicatorSize } from '../tokens';
 
-// Catálogo de Material Symbols que o expo-symbols desenha no Android. Lido do disco porque o pacote
-// não exporta o JSON; um nome fora dele vira um quadrado vazio na tela.
-const catalogoAndroid: Record<string, number> = JSON.parse(
-  readFileSync(path.join(path.dirname(require.resolve('expo-symbols')), 'android', 'symbols.json'), 'utf-8'),
-);
-
+// No Jest os ícones do Phosphor vêm do jest.phosphor-stub.js, que dá a cada componente o nome do
+// export pedido (displayName). É assim que o teste confere qual ícone do Phosphor cada nome usa.
 const nomes = Object.keys(icons) as IconName[];
+const nomeDoComponente = (nome: IconName) => (icons[nome] as { displayName?: string }).displayName;
 
-describe('mapa de ícones (NAV-03)', () => {
-  it.each(nomes)('%s usa um nome que existe nos Material Symbols do Android', (nome) => {
-    expect(catalogoAndroid).toHaveProperty(icons[nome].android);
+describe('mapa de ícones (NAV-03, ADR 0007)', () => {
+  it.each(nomes)('%s aponta para um ícone do Phosphor', (nome) => {
+    expect(nomeDoComponente(nome)).toMatch(/^[A-Z][A-Za-z]*Icon$/);
   });
 
-  it.each(nomes)('%s tem o par SF Symbol do iOS', (nome) => {
-    expect(icons[nome].ios).toMatch(/^[a-z0-9.]+$/);
-  });
-
-  it('cada aba do menu tem o ícone pedido na spec (NAV-01)', () => {
-    expect(icons.dashboards.android).toBe('dashboard');
-    expect(icons.financeiro.android).toBe('account_balance_wallet');
-    expect(icons.frota.android).toBe('local_shipping');
-    expect(icons.viagens.android).toBe('route');
-    expect(icons.configuracoes.android).toBe('settings');
+  it('cada aba do menu tem o ícone pedido (NAV-01)', () => {
+    expect(nomeDoComponente('dashboards')).toBe('ChartBarIcon');
+    expect(nomeDoComponente('financeiro')).toBe('WalletIcon');
+    expect(nomeDoComponente('frota')).toBe('TruckIcon');
+    expect(nomeDoComponente('viagens')).toBe('PathIcon');
+    expect(nomeDoComponente('configuracoes')).toBe('GearSixIcon');
   });
 });
 
-describe('token iconSize (NAV-03)', () => {
+describe('tokens de ícone (NAV-03)', () => {
   it('oferece só os tamanhos 16, 20 e 24', () => {
     expect(iconSize).toEqual({ sm: 16, md: 20, lg: 24 });
+  });
+
+  it('a pílula da aba ativa cabe o ícone md com folga', () => {
+    expect(indicatorSize.tabWidth).toBeGreaterThan(iconSize.md);
+    expect(indicatorSize.tabHeight).toBeGreaterThan(iconSize.md);
   });
 });

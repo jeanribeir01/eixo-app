@@ -38,7 +38,7 @@ describe('ListItem — linha padrão (UIP-01)', () => {
 
     expect(screen.getByText('Movimentações')).toBeOnTheScreen();
     expect(screen.getByText('Entradas e saídas do mês')).toBeOnTheScreen();
-    expect(screen.getByTestId('simbolo-swap_vert', { includeHiddenElements: true })).toBeTruthy();
+    expect(screen.getByTestId('icone-movimentacoes', { includeHiddenElements: true })).toBeTruthy();
   });
 
   it('subtítulo longo fica numa linha só, com reticências', () => {
@@ -51,7 +51,7 @@ describe('ListItem — linha padrão (UIP-01)', () => {
     const onPress = jest.fn();
     render(<ListItem title="Categorias" onPress={onPress} />);
 
-    expect(screen.getByTestId('simbolo-chevron_right', { includeHiddenElements: true })).toHaveStyle({
+    expect(screen.getByTestId('icone-avancar', { includeHiddenElements: true })).toHaveStyle({
       color: colors.textMuted,
     });
     fireEvent.press(screen.getByRole('button', { name: 'Categorias' }));
@@ -62,13 +62,13 @@ describe('ListItem — linha padrão (UIP-01)', () => {
     render(<ListItem title="Frete" onPress={jest.fn()} trailing={<Text>+ R$ 100,00</Text>} />);
 
     expect(screen.getByText('+ R$ 100,00')).toBeOnTheScreen();
-    expect(screen.queryByTestId('simbolo-chevron_right', { includeHiddenElements: true })).toBeNull();
+    expect(screen.queryByTestId('icone-avancar', { includeHiddenElements: true })).toBeNull();
   });
 
   it('sem onPress não mostra chevron nem vira botão', () => {
     render(<ListItem title="Versão" trailing={<Text>1.0.0</Text>} />);
 
-    expect(screen.queryByTestId('simbolo-chevron_right', { includeHiddenElements: true })).toBeNull();
+    expect(screen.queryByTestId('icone-avancar', { includeHiddenElements: true })).toBeNull();
     expect(screen.queryByRole('button')).not.toBeOnTheScreen();
   });
 
@@ -92,7 +92,7 @@ describe('ListItem — linha padrão (UIP-01)', () => {
       </ListItem>,
     );
 
-    expect(screen.queryByTestId('simbolo-chevron_right', { includeHiddenElements: true })).toBeNull();
+    expect(screen.queryByTestId('icone-avancar', { includeHiddenElements: true })).toBeNull();
   });
 
   it('control: tocar na linha abre o item e o switch fica fora do botão da linha (LST-01)', () => {
@@ -121,6 +121,6 @@ describe('ListItem — linha padrão (UIP-01)', () => {
   it('control: com o controle à direita, a linha não mostra o chevron', () => {
     render(<ListItem title="Combustível" onPress={jest.fn()} control={<Switch label="Ativa" value onValueChange={jest.fn()} />} />);
 
-    expect(screen.queryByTestId('simbolo-chevron_right', { includeHiddenElements: true })).not.toBeOnTheScreen();
+    expect(screen.queryByTestId('icone-avancar', { includeHiddenElements: true })).not.toBeOnTheScreen();
   });
 });

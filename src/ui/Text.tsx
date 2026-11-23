@@ -7,11 +7,14 @@ export const toneColors = {
   primary: colors.textPrimary,
   body: colors.textBody,
   muted: colors.textMuted,
-  accent: colors.accentEdge,
+  // Link e texto sobre accentSoft. Era accentEdge (3:1 sobre canvas); o accentText passa de 6:1.
+  accent: colors.accentText,
   onAccent: colors.onAccent,
-  // Só para valor de entrada/saída, sempre junto do sinal + / − (DESIGN_CYAN, cores semânticas).
+  // Só para valor de entrada/saída e estado, sempre junto do sinal + / − ou de um rótulo
+  // (DESIGN_CYAN, cores semânticas).
   success: colors.success,
   danger: colors.danger,
+  warning: colors.warning,
 } as const;
 
 export type TextTone = keyof typeof toneColors;
@@ -19,8 +22,9 @@ export type TextTone = keyof typeof toneColors;
 export type TextProps = RNTextProps & {
   variant?: TypographyVariant;
   tone?: TextTone;
-  // Títulos ficam em 400 (regra do guia). "medium" é para rótulos de botão e ênfase curta.
-  weight?: 'regular' | 'medium';
+  // Títulos de tela ficam em 400 (regra do guia). "medium" é para rótulos de botão e ênfase curta;
+  // "semibold" é para número em destaque (saldo, KPI) e título de seção.
+  weight?: 'regular' | 'medium' | 'semibold';
 };
 
 export function Text({ variant = 'body', tone = 'primary', weight = 'regular', style, ...rest }: TextProps) {

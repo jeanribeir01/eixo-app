@@ -114,6 +114,23 @@
 - **Date**: 2026-11-13
 - **Status**: active
 
+### AD-016
+- **Decision**: O guia visual evolui para o DESIGN-CYAN 2.0, direção A · Contido. Muda o seguinte:
+  - ação primária em `accentStrong` `#1677c2`;
+  - seleção em `accentSoft` + `accentText`;
+  - peso 600 para número em destaque;
+  - cantos maiores;
+  - `shadow.card` só no cartão de destaque;
+  - `controlHeight` 48;
+  - ícones Phosphor nas duas plataformas (ADR 0007).
+
+  O guia continua stone + um azul da marca, sem dark mode.
+- **Reason**: Decidido com o usuário em 23/11/2026, depois da auditoria de UI (153 prints, 4 perfis) e do protótipo no Figma com duas direções. Texto branco sobre o ciano do botão primário dava 2,6:1. A hierarquia era achatada, com tudo em 400 e a borda a 1,2:1. Os ícones mudavam de cara entre Android e iOS.
+- **Trade-off**: Os pares pedidos por AD-009 continuam valendo: o guia vence as skills `expo-*` em cor, tipografia e forma. Só que agora são estes valores. O `accent` claro deixa de ser fundo de texto. O `expo-symbols` fica instalado sem uso até um PR de limpeza.
+- **Scope**: `DESIGN_CYAN.md`, `src/ui/`, `app/(app)/(tabs)/_layout.tsx`, `app/_layout.tsx` (barra de status), `docs/adr/0007-design-cyan-2-e-icones-phosphor.md`. As telas são recompostas em PRs seguintes, seguindo o protótipo.
+- **Date**: 2026-11-23
+- **Status**: active
+
 ## Handoff
 
 ### EIX-47 — US14 exportação de relatório (CSV/PDF)

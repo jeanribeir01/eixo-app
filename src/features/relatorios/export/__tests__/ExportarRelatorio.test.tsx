@@ -78,11 +78,11 @@ beforeEach(() => {
 afterEach(() => alerta.mockRestore());
 
 describe('ExportarRelatorio', () => {
-  it('mostra o botão Exportar primário (cyan preenchido) com o período no nome acessível (EXP-01)', () => {
+  it('mostra o botão Exportar primário (accentStrong, DESIGN-CYAN 2.0) com o período no nome acessível (EXP-01)', () => {
     renderizar();
 
     expect(screen.getByText('Exportar')).toBeTruthy();
-    expect(botaoExportar()).toHaveStyle({ backgroundColor: colors.accent });
+    expect(botaoExportar()).toHaveStyle({ backgroundColor: colors.accentStrong });
     expect(botaoExportar().props.accessibilityState).toMatchObject({ disabled: false, busy: false });
   });
 

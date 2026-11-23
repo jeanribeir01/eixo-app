@@ -130,7 +130,10 @@ export function ViagensListView() {
         {/* Aba não tem header nativo; o título fica no conteúdo (DESIGN_CYAN §7) */}
         <Text variant="heading">Viagens</Text>
 
+        {/* scrollable: os quatro status não cabem em 360 de largura; a fileira rola em vez de cortar o
+            rótulo (auditoria de UI, item 9). */}
         <Tabs
+          scrollable
           options={opcoesFiltro}
           value={filtroStatus}
           onChange={(val) => {

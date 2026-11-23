@@ -1,7 +1,7 @@
 import { fireEvent, render, screen } from '@testing-library/react-native';
 
 import { Select } from '../Select';
-import { touchTarget } from '../tokens';
+import { controlHeight, touchTarget } from '../tokens';
 
 const opcoes = [
   { value: 'pix', label: 'Pix' },
@@ -93,10 +93,10 @@ describe('Select', () => {
     expect(screen.queryByRole('button', { name: 'Pix' })).not.toBeOnTheScreen();
   });
 
-  it('campo e opções respeitam o alvo de toque de 44pt', () => {
+  it('campo com 48pt, igual ao Input, e opções com o alvo de toque de 44pt', () => {
     render(<Select label="Forma de pagamento" value={null} options={opcoes} onChange={jest.fn()} />);
 
-    expect(screen.getByRole('button', { name: 'Forma de pagamento' })).toHaveStyle({ minHeight: touchTarget });
+    expect(screen.getByRole('button', { name: 'Forma de pagamento' })).toHaveStyle({ minHeight: controlHeight });
     abrir();
     expect(screen.getByRole('button', { name: 'Pix' })).toHaveStyle({ minHeight: touchTarget });
   });
