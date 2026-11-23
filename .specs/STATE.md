@@ -116,6 +116,15 @@
 
 ## Handoff
 
+### EIX-47 — US14 exportação de relatório (CSV/PDF)
+
+- **Feature**: `.specs/features/eix47-exportacao`, T1–T6 concluídas; Verifier PASS na rodada 2 (`validation.md`, 77/77 mutantes mortos nas duas rodadas)
+- **Completed**: `expo-print` e `expo-sharing` (ADR 0006); `src/features/relatorios/export/` (CSV com BOM e `;`, HTML do PDF em A4, busca paginada, Share Sheet, botão Exportar); botão na aba Dashboards para Admin e Financeiro
+- **Validation**: typecheck e lint exit 0; app 1655+ testes e PGlite 459 verdes (uma rodada do `graficos_caixa.test.ts` falhou por instabilidade e passou ao repetir, sem mudança no banco)
+- **Next step**: usuário revisa as premissas `n` da spec, gera development build novo (módulos nativos) e testa no aparelho: CSV no Excel pt-BR e PDF com muitas linhas; push e PR (revisor da task: Jean, responsável: Eduardo)
+- **Blockers**: nenhum
+- **Branch**: `feat/eix-47-us14-exportacao`; sem push; Linear não alterado
+
 ### EIX-43 — US10 motor de estatísticas de rota e custo por KM
 
 - **Feature**: `.specs/features/eix43-estatisticas-rota`, T1–T6 concluídas
