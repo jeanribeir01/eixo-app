@@ -110,7 +110,7 @@ export function LoginView({ mostrarLoginEmail = loginEmailHabilitado }: LoginVie
                   <View style={styles.divisor}>
                     <View style={styles.linha} />
                     <Text variant="caption" tone="body">
-                      ou com e-mail de teste
+                      ou com e-mail
                     </Text>
                     <View style={styles.linha} />
                   </View>
@@ -203,7 +203,7 @@ const styles = StyleSheet.create({
     maxWidth: layout.contentMaxWidth,
     alignSelf: 'center',
   },
-  // "ou com e-mail de teste" entre duas linhas finas: separa o login principal do de teste.
+  // "ou com e-mail" entre duas linhas finas: separa o Google, o login principal, do login por e-mail.
   divisor: {
     flexDirection: 'row',
     alignItems: 'center',

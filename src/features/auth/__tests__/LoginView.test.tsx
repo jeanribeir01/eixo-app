@@ -135,7 +135,7 @@ describe('LoginView — login de teste por e-mail e senha', () => {
   it('separa o login de teste do Google, com ícone em cada campo e o botão "Entrar"', () => {
     render(<LoginView mostrarLoginEmail />);
 
-    expect(screen.getByText('ou com e-mail de teste')).toBeOnTheScreen();
+    expect(screen.getByText('ou com e-mail')).toBeOnTheScreen();
     expect(screen.getByTestId('icone-email', { includeHiddenElements: true })).toBeTruthy();
     expect(screen.getByTestId('icone-senha', { includeHiddenElements: true })).toBeTruthy();
     expect(screen.getByRole('button', { name: 'Entrar com e-mail' })).toHaveTextContent('Entrar');
@@ -144,7 +144,7 @@ describe('LoginView — login de teste por e-mail e senha', () => {
   it('sem o login de teste, nem o divisor aparece', () => {
     render(<LoginView />);
 
-    expect(screen.queryByText('ou com e-mail de teste')).not.toBeOnTheScreen();
+    expect(screen.queryByText('ou com e-mail')).not.toBeOnTheScreen();
   });
 
   it('bloqueia campos vazios com mensagem em português e não chama o Supabase', () => {
