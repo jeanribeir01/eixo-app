@@ -4,7 +4,7 @@ import { Platform, Pressable, StyleSheet, View } from 'react-native';
 import { Icon } from './Icon';
 import type { IconName } from './icons';
 import { ListSectionContext } from './ListSection';
-import { Text } from './Text';
+import { Text, type TextTone } from './Text';
 import { colors, spacing, touchTarget } from './tokens';
 
 export type ListItemProps = {
@@ -12,6 +12,9 @@ export type ListItemProps = {
   title?: string;
   subtitle?: string;
   icon?: IconName;
+  // Tom do ícone: `body` por padrão. Outro tom só quando o ícone diz o estado da linha (ex.: `warning`
+  // em "Pede atenção"), sempre junto de um texto que diz o mesmo.
+  iconTone?: TextTone;
   // Sem trailing e com onPress, a linha mostra o chevron: "toque para abrir".
   trailing?: ReactNode;
   onPress?: () => void;
@@ -26,14 +29,24 @@ export type ListItemProps = {
 
 // Linha de lista: borda hairline como separador, sem sombra (DESIGN_CYAN §5). Ao tocar, a linha inteira
 // reage com o ripple do Android na cor da hairline; o opacity 0.6 fica para os botões.
-export function ListItem({ title, subtitle, icon, trailing, onPress, accessibilityLabel, control, children }: ListItemProps) {
+export function ListItem({
+  title,
+  subtitle,
+  icon,
+  iconTone = 'body',
+  trailing,
+  onPress,
+  accessibilityLabel,
+  control,
+  children,
+}: ListItemProps) {
   const dentroDeSecao = useContext(ListSectionContext);
   const estiloItem = [styles.item, dentroDeSecao && styles.itemEmSecao];
 
   const conteudo =
     title !== undefined ? (
       <View style={styles.linha}>
-        {icon && <Icon name={icon} tone="body" />}
+        {icon && <Icon name={icon} tone={iconTone} />}
         <View style={styles.textos}>
           <Text>{title}</Text>
           {!!subtitle && (

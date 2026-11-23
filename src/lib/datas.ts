@@ -107,3 +107,10 @@ export function diasEntre(inicioISO: string, fimISO: string): number {
   const milissegundos = Date.UTC(anoFim, mesFim - 1, diaFim) - Date.UTC(anoInicio, mesInicio - 1, diaInicio);
   return milissegundos / 86_400_000;
 }
+
+// Data ISO (AAAA-MM-DD) somada de N dias corridos. Em UTC pelo mesmo motivo do diasEntre: sem
+// horário de verão, somar 1 dia nunca pula nem repete uma data.
+export function somarDias(iso: string, dias: number): string {
+  const [ano, mes, dia] = iso.split('-').map(Number);
+  return new Date(Date.UTC(ano, mes - 1, dia + dias)).toISOString().slice(0, 10);
+}

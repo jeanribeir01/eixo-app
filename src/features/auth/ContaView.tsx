@@ -31,7 +31,7 @@ function profileFromSession(session: Session) {
   };
 }
 
-// Aba Configurações (EIX-64): quem está logado, os atalhos de administração e o Sair. Substitui a
+// Aba Conta (EIX-64; antes "Configurações"): quem está logado, os atalhos de administração e o Sair. Substitui a
 // Home de teste da US15.
 export function ContaView() {
   const router = useRouter();
@@ -47,7 +47,7 @@ export function ContaView() {
   return (
     <Screen scroll>
       {/* Aba não tem header nativo: o título fica no conteúdo. */}
-      <Text variant="heading">Configurações</Text>
+      <Text variant="heading">Conta</Text>
 
       <Card>
         <Avatar name={profile.displayName} photoUrl={profile.photoUrl} />

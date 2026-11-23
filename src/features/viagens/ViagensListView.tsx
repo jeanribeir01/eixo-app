@@ -39,7 +39,13 @@ const opcoesFiltro: TabOption[] = [
   { label: 'Canceladas', value: 'Cancelada' },
 ];
 
-export function ViagensListView() {
+type ViagensListViewProps = {
+  // Aberta pelo hub Frota (Admin, que não tem a aba Viagens), a tela fica sob o header nativo, que
+  // já mostra o título.
+  underHeader?: boolean;
+};
+
+export function ViagensListView({ underHeader = false }: ViagensListViewProps) {
   const router = useRouter();
   const { usuario } = useProfile();
   const ehMotorista = usuario?.perfil === 'Motorista';
@@ -112,6 +118,7 @@ export function ViagensListView() {
   return (
     <Screen
       list
+      underHeader={underHeader}
       fab={
         <FAB
           label="Abrir viagem"
@@ -128,7 +135,7 @@ export function ViagensListView() {
       {/* Fora da lista, na coluna: no tablet fica alinhado com os cartões (EIX-94). */}
       <ScreenColumn>
         {/* Aba não tem header nativo; o título fica no conteúdo (DESIGN_CYAN §7) */}
-        <Text variant="heading">Viagens</Text>
+        {!underHeader && <Text variant="heading">Viagens</Text>}
 
         {/* scrollable: os quatro status não cabem em 360 de largura; a fileira rola em vez de cortar o
             rótulo (auditoria de UI, item 9). */}

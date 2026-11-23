@@ -52,7 +52,7 @@ describe('FinanceiroHubView — saldo (FIN-02)', () => {
   it('título da aba no conteúdo e saldo atual num cartão de destaque, formatado como em Saldo e projeção', async () => {
     await renderComSaldo();
 
-    expect(screen.getByText('Financeiro')).toBeOnTheScreen();
+    expect(screen.getByText('Caixa')).toBeOnTheScreen();
     expect(screen.getByText('Saldo atual')).toBeOnTheScreen();
     expect(screen.getByText('+ R$ 12.500,00')).toHaveStyle({ color: colors.success });
     expect(screen.getByRole('button', { name: NOME_DO_CARTAO })).toHaveStyle({ borderRadius: radius.feature });
@@ -127,10 +127,10 @@ describe('FinanceiroHubView — menu do módulo (FIN-03)', () => {
     expect(mockPush).toHaveBeenCalledWith(rota);
   });
 
-  it('as linhas ficam agrupadas em "Caixa" e "Cadastros", com ícone e chevron', async () => {
+  it('as linhas ficam agrupadas em "Dia a dia" e "Cadastros", com ícone e chevron', async () => {
     await renderComSaldo();
 
-    expect(screen.getByText('Caixa')).toBeOnTheScreen();
+    expect(screen.getByText('Dia a dia')).toBeOnTheScreen();
     expect(screen.getByText('Cadastros')).toBeOnTheScreen();
     expect(screen.getByTestId('icone-movimentacoes', { includeHiddenElements: true })).toBeOnTheScreen();
     expect(screen.getByTestId('icone-dividas', { includeHiddenElements: true })).toBeOnTheScreen();

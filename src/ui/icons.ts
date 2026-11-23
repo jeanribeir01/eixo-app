@@ -7,6 +7,7 @@ import { CaretLeftIcon } from 'phosphor-react-native/src/icons/CaretLeft';
 import { CaretRightIcon } from 'phosphor-react-native/src/icons/CaretRight';
 import { ChartBarIcon } from 'phosphor-react-native/src/icons/ChartBar';
 import { ChartLineUpIcon } from 'phosphor-react-native/src/icons/ChartLineUp';
+import { CheckCircleIcon } from 'phosphor-react-native/src/icons/CheckCircle';
 import { CreditCardIcon } from 'phosphor-react-native/src/icons/CreditCard';
 import { DotsThreeVerticalIcon } from 'phosphor-react-native/src/icons/DotsThreeVertical';
 import { GearSixIcon } from 'phosphor-react-native/src/icons/GearSix';
@@ -57,6 +58,8 @@ export const icons = {
   calendario: CalendarBlankIcon,
   limpar: XIcon,
   alerta: WarningIcon,
+  // Estado "tudo em dia" (Início sem nada pedindo atenção).
+  sucesso: CheckCircleIcon,
   sair: SignOutIcon,
   versao: InfoIcon,
 } as const satisfies Record<string, PhosphorIcon>;

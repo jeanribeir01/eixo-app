@@ -68,6 +68,7 @@ const routes = {
   '(app)/_layout': AppLayout,
   '(app)/(tabs)/_layout': TabsLayout,
   '(app)/(tabs)/index': InicioRoute,
+  '(app)/(tabs)/inicio': telaHome,
   '(app)/(tabs)/dashboards': telaHome,
   '(app)/(tabs)/financeiro': telaHome,
   '(app)/(tabs)/frota': telaHome,
