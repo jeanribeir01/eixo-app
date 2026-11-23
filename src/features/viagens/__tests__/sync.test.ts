@@ -233,11 +233,287 @@ describe('sync de viagens (drenarOutboxViagens)', () => {
     expect(resultado.semConexao).toBe(false);
 
     expect(mockUpsert).toHaveBeenCalled();
+    expect(mockUpsert.mock.calls[0]?.[1]).toEqual({ onConflict: 'id', ignoreDuplicates: true });
     const payloadEnviado = mockUpsert.mock.calls[0]?.[0] as Record<string, unknown>;
     expect(payloadEnviado.km_rodado).toBeUndefined();
     expect('km_rodado' in payloadEnviado).toBe(false);
 
     expect(banco.db.select().from(schema.outbox).all()).toHaveLength(0);
+  });
+
+  it('reenvio da abertura de viagem já finalizada no servidor aplica a versão do servidor sem abrir revisão', async () => {
+    inserirViagemLocal();
+    inserirOutbox();
+
+    const servidor = viagemServidor({
+      status: 'Finalizada',
+      hodometro_final: 10450,
+      km_rodado: 450,
+      data_fim: '2026-10-18T18:00:00.000Z',
+      data_atualizacao: '2026-10-18T18:00:05.000Z',
+    });
+    const { client, mockUpsert, mockUpsertRevisao } = criarMockSupabase({
+      upsertResultado: { data: null, error: null },
+      selectResultado: { data: servidor, error: null },
+    });
+
+    const resultado = await drenarOutboxViagens(
+      { usuarioId: USUARIO_ID },
+      { db: banco.db as unknown as ViagensDb, supabase: client as never },
+    );
+
+    expect(resultado.sincronizados).toBe(1);
+    expect(resultado.conflitos).toBe(0);
+    expect(resultado.itens[0]).toMatchObject({ status: 'sucesso', operacao: 'insert' });
+    expect(mockUpsert.mock.calls[0]?.[1]).toEqual({ onConflict: 'id', ignoreDuplicates: true });
+    expect(mockUpsertRevisao).not.toHaveBeenCalled();
+    expect(banco.db.select().from(schema.outbox).all()).toHaveLength(0);
+
+    const viagemLocal = banco.db
+      .select()
+      .from(schema.viagem)
+      .where(eq(schema.viagem.id, VIAGEM_ID))
+      .get();
+    expect(viagemLocal).toMatchObject({
+      status: 'Finalizada',
+      hodometro_final: 10450,
+      km_rodado: 450,
+      em_revisao: false,
+    });
+  });
+
+  it('reenvio da abertura de viagem ainda aberta no servidor conta como sucesso sem duplicar', async () => {
+    inserirViagemLocal();
+    inserirOutbox();
+
+    const { client, mockUpsert, mockSelect, mockUpsertRevisao } = criarMockSupabase({
+      upsertResultado: { data: null, error: null },
+      selectResultado: { data: viagemServidor(), error: null },
+    });
+
+    const resultado = await drenarOutboxViagens(
+      { usuarioId: USUARIO_ID },
+      { db: banco.db as unknown as ViagensDb, supabase: client as never },
+    );
+
+    expect(resultado.sincronizados).toBe(1);
+    expect(resultado.conflitos).toBe(0);
+    expect(mockUpsert).toHaveBeenCalledTimes(1);
+    expect(mockSelect).toHaveBeenCalledTimes(1);
+    expect(mockUpsertRevisao).not.toHaveBeenCalled();
+    expect(banco.db.select().from(schema.outbox).all()).toHaveLength(0);
+    expect(banco.db.select().from(schema.viagem).all()).toHaveLength(1);
+
+    const viagemLocal = banco.db
+      .select()
+      .from(schema.viagem)
+      .where(eq(schema.viagem.id, VIAGEM_ID))
+      .get();
+    expect(viagemLocal).toMatchObject({ status: 'EmAndamento', em_revisao: false });
+  });
+
+  it('abertura sem resposta e sem viagem no servidor continua em revisão SEM_RESPOSTA', async () => {
+    inserirViagemLocal();
+    inserirOutbox();
+
+    const { client, mockSelect, mockUpsertRevisao } = criarMockSupabase({
+      upsertResultado: { data: null, error: null },
+      selectResultado: { data: null, error: null },
+    });
+
+    const resultado = await drenarOutboxViagens(
+      { usuarioId: USUARIO_ID },
+      { db: banco.db as unknown as ViagensDb, supabase: client as never },
+    );
+
+    expect(resultado.sincronizados).toBe(0);
+    expect(resultado.conflitos).toBe(1);
+    expect(resultado.itens[0]).toMatchObject({ status: 'conflito', codigo: 'SEM_RESPOSTA' });
+    expect(mockSelect).toHaveBeenCalledTimes(1);
+    expect(mockUpsertRevisao).toHaveBeenCalledTimes(1);
+    const revisao = mockUpsertRevisao.mock.calls[0]?.[0] as Record<string, unknown>;
+    expect(revisao).toMatchObject({ viagem_id: VIAGEM_ID, codigo: 'SEM_RESPOSTA' });
+
+    const item = banco.db.select().from(schema.outbox).where(eq(schema.outbox.id, OUTBOX_ID)).get();
+    expect(item?.status).toBe('revisao');
+    expect(item?.codigo_erro).toBe('SEM_RESPOSTA');
+
+    const viagemLocal = banco.db
+      .select()
+      .from(schema.viagem)
+      .where(eq(schema.viagem.id, VIAGEM_ID))
+      .get();
+    expect(viagemLocal).toMatchObject({ status: 'EmAndamento', em_revisao: true });
+  });
+
+  it('mantém a abertura pendente quando a busca da viagem falha por conexão', async () => {
+    inserirViagemLocal();
+    inserirOutbox();
+
+    const { client, mockUpsertRevisao } = criarMockSupabase({
+      upsertResultado: { data: null, error: null },
+      selectResultado: {
+        data: null,
+        error: { code: 'ECONNREFUSED', message: 'Failed to fetch network request' },
+      },
+    });
+
+    const resultado = await drenarOutboxViagens(
+      { usuarioId: USUARIO_ID, agora: new Date(AGORA) },
+      { db: banco.db as unknown as ViagensDb, supabase: client as never },
+    );
+
+    expect(resultado.sincronizados).toBe(0);
+    expect(resultado.semConexao).toBe(true);
+    expect(resultado.falhas).toBe(1);
+    expect(mockUpsertRevisao).not.toHaveBeenCalled();
+
+    const item = banco.db.select().from(schema.outbox).where(eq(schema.outbox.id, OUTBOX_ID)).get();
+    expect(item?.status).toBe('pendente');
+    expect(item?.codigo_erro).toBe('CONEXAO');
+    expect(item?.tentativas).toBe(0);
+    expect(item?.proxima_tentativa_em).not.toBeNull();
+
+    const viagemLocal = banco.db
+      .select()
+      .from(schema.viagem)
+      .where(eq(schema.viagem.id, VIAGEM_ID))
+      .get();
+    expect(viagemLocal).toMatchObject({ status: 'EmAndamento', em_revisao: false });
+  });
+
+  it('erro do servidor (não de rede) na busca da abertura queima tentativa em vez de abrir revisão', async () => {
+    inserirViagemLocal();
+    inserirOutbox();
+
+    // "JWT expired" não é queda de rede: sem esta regra, a abertura iria direto para SEM_RESPOSTA
+    // mesmo com a viagem existindo no servidor.
+    const { client, mockUpsertRevisao } = criarMockSupabase({
+      upsertResultado: { data: null, error: null },
+      selectResultado: { data: null, error: { code: 'PGRST301', message: 'JWT expired' } },
+    });
+
+    const resultado = await drenarOutboxViagens(
+      { usuarioId: USUARIO_ID, agora: new Date(AGORA) },
+      { db: banco.db as unknown as ViagensDb, supabase: client as never },
+    );
+
+    expect(resultado.sincronizados).toBe(0);
+    expect(resultado.conflitos).toBe(0);
+    expect(resultado.falhas).toBe(1);
+    expect(resultado.semConexao).toBe(false);
+    expect(resultado.itens[0]).toMatchObject({ status: 'falha', codigo: 'PGRST301' });
+    expect(mockUpsertRevisao).not.toHaveBeenCalled();
+
+    const item = banco.db.select().from(schema.outbox).where(eq(schema.outbox.id, OUTBOX_ID)).get();
+    expect(item?.status).toBe('pendente');
+    expect(item?.codigo_erro).toBe('PGRST301');
+    expect(item?.tentativas).toBe(1);
+    expect(item?.proxima_tentativa_em).not.toBeNull();
+
+    const viagemLocal = banco.db
+      .select()
+      .from(schema.viagem)
+      .where(eq(schema.viagem.id, VIAGEM_ID))
+      .get();
+    expect(viagemLocal).toMatchObject({ status: 'EmAndamento', em_revisao: false });
+  });
+
+  it('erro do servidor na busca da abertura vai para revisão quando esgota as tentativas', async () => {
+    inserirViagemLocal();
+    inserirOutbox({ tentativas: 4 });
+
+    const { client, mockUpsertRevisao } = criarMockSupabase({
+      upsertResultado: { data: null, error: null },
+      selectResultado: { data: null, error: { code: 'PGRST301', message: 'JWT expired' } },
+    });
+
+    const resultado = await drenarOutboxViagens(
+      { usuarioId: USUARIO_ID, agora: new Date(AGORA), maxTentativas: 5 },
+      { db: banco.db as unknown as ViagensDb, supabase: client as never },
+    );
+
+    expect(resultado.conflitos).toBe(1);
+    expect(mockUpsertRevisao).toHaveBeenCalledTimes(1);
+    const item = banco.db.select().from(schema.outbox).where(eq(schema.outbox.id, OUTBOX_ID)).get();
+    expect(item?.status).toBe('revisao');
+    expect(item?.codigo_erro).toBe('PGRST301');
+  });
+
+  it('abertura reenviada cuja viagem do servidor vem inválida vai para revisão RESPOSTA_INVALIDA', async () => {
+    inserirViagemLocal();
+    inserirOutbox();
+
+    const { client, mockUpsertRevisao } = criarMockSupabase({
+      upsertResultado: { data: null, error: null },
+      selectResultado: { data: viagemServidor({ status: 'StatusQueNaoExiste' }), error: null },
+    });
+
+    const resultado = await drenarOutboxViagens(
+      { usuarioId: USUARIO_ID },
+      { db: banco.db as unknown as ViagensDb, supabase: client as never },
+    );
+
+    expect(resultado.conflitos).toBe(1);
+    expect(resultado.itens[0]).toMatchObject({ status: 'conflito', codigo: 'RESPOSTA_INVALIDA' });
+    const revisao = mockUpsertRevisao.mock.calls[0]?.[0] as Record<string, unknown>;
+    expect(revisao).toMatchObject({ viagem_id: VIAGEM_ID, codigo: 'RESPOSTA_INVALIDA' });
+
+    const item = banco.db.select().from(schema.outbox).where(eq(schema.outbox.id, OUTBOX_ID)).get();
+    expect(item?.status).toBe('revisao');
+    expect(item?.codigo_erro).toBe('RESPOSTA_INVALIDA');
+  });
+
+  it('abertura reenviada com fechamento offline na fila: o fechamento sobe e cai em VG005 com a versão do gestor', async () => {
+    // Motorista abriu e fechou offline; enquanto isso o gestor fechou a mesma viagem no servidor.
+    inserirViagemLocal({ status: 'Finalizada', hodometro_final: 10400, km_rodado: 400 });
+    inserirOutbox();
+    inserirOutbox(
+      {
+        operacao: 'update',
+        payload: JSON.stringify({ id: VIAGEM_ID, status: 'Finalizada', hodometro_final: 10400 }),
+        criado_em: '2026-10-18T11:00:00.000Z',
+      },
+      OUTBOX_ID_2,
+    );
+
+    const servidor = viagemServidor({
+      status: 'Finalizada',
+      hodometro_final: 10450,
+      km_rodado: 450,
+      data_fim: '2026-10-18T18:00:00.000Z',
+      data_atualizacao: '2026-10-18T18:00:05.000Z',
+    });
+    const { client, mockUpdate, mockUpsertRevisao } = criarMockSupabase({
+      upsertResultado: { data: null, error: null },
+      selectResultado: { data: servidor, error: null },
+      updateResultado: { data: null, error: { code: 'VG005', message: 'Viagem encerrada não pode ser alterada.' } },
+    });
+
+    const resultado = await drenarOutboxViagens(
+      { usuarioId: USUARIO_ID, agora: new Date(AGORA) },
+      { db: banco.db as unknown as ViagensDb, supabase: client as never },
+    );
+
+    // A abertura sai como sucesso sem aplicar a versão do servidor por cima do fechamento local.
+    expect(resultado.itens[0]).toMatchObject({ id: OUTBOX_ID, status: 'sucesso', operacao: 'insert' });
+    // O fechamento sobe na mesma passada e o conflito real fica visível para o gestor.
+    expect(mockUpdate).toHaveBeenCalledTimes(1);
+    expect(resultado.itens[1]).toMatchObject({ id: OUTBOX_ID_2, status: 'conflito', codigo: 'VG005' });
+    expect(resultado.sincronizados).toBe(1);
+    expect(resultado.conflitos).toBe(1);
+    expect(mockUpsertRevisao).toHaveBeenCalledTimes(1);
+
+    const outbox = banco.db.select().from(schema.outbox).all();
+    expect(outbox).toHaveLength(1);
+    expect(outbox[0]).toMatchObject({ id: OUTBOX_ID_2, status: 'revisao', codigo_erro: 'VG005' });
+
+    const viagemLocal = banco.db
+      .select()
+      .from(schema.viagem)
+      .where(eq(schema.viagem.id, VIAGEM_ID))
+      .get();
+    expect(viagemLocal).toMatchObject({ status: 'Finalizada', hodometro_final: 10450, em_revisao: true });
   });
 
   it('drena update de fechamento, remove da outbox e atualiza km_rodado local', async () => {

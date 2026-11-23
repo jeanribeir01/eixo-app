@@ -224,10 +224,15 @@ function montarRevisao(
   };
 }
 
-async function buscarViagemNoServidor(
-  cliente: typeof supabase,
-  id: string,
-): Promise<{ ok: true; data: ViagemApi | null } | { ok: false; conexao: boolean }> {
+// `invalida` separa "a viagem não existe" de "a viagem existe, mas o servidor devolveu um formato
+// que o app não entende": os dois chegam sem `data`, mas pedem códigos de revisão diferentes.
+// `erro` leva o erro do servidor para quem precisa tratá-lo como falha temporária (ex.: token
+// expirado, 5xx); exceção lançada pelo fetch não tem erro e conta como queda de conexão.
+type BuscaViagemServidor =
+  | { ok: true; data: ViagemApi | null; invalida: boolean }
+  | { ok: false; conexao: boolean; erro?: NonNullable<ErroSupabase> };
+
+async function buscarViagemNoServidor(cliente: typeof supabase, id: string): Promise<BuscaViagemServidor> {
   try {
     const { data, error } = await cliente
       .from('viagem')
@@ -236,12 +241,14 @@ async function buscarViagemNoServidor(
       .maybeSingle();
 
     if (error) {
-      return { ok: false, conexao: ehErroConexao(error) };
+      return { ok: false, conexao: ehErroConexao(error), erro: error };
     }
-    if (!data) return { ok: true, data: null };
+    if (!data) return { ok: true, data: null, invalida: false };
 
     const parsed = viagemApiSchema.safeParse(data);
-    return parsed.success ? { ok: true, data: parsed.data } : { ok: true, data: null };
+    return parsed.success
+      ? { ok: true, data: parsed.data, invalida: false }
+      : { ok: true, data: null, invalida: true };
   } catch {
     return { ok: false, conexao: true };
   }
@@ -574,7 +581,11 @@ async function enviarItem(ctx: ContextoDreno, item: schema.OutboxItem): Promise<
       item.operacao === 'insert'
         ? await ctx.cliente
             .from('viagem')
-            .upsert(payload as never, { onConflict: 'id' })
+            // `ignoreDuplicates` vira `on conflict do nothing`: o reenvio de uma abertura nunca
+            // sobrescreve a viagem que já está no servidor (ex.: o gestor fechou enquanto a
+            // abertura esperava na outbox). O trigger de insert retorna cedo quando o id já
+            // existe, então o VG005 do ramo de update não é disparado.
+            .upsert(payload as never, { onConflict: 'id', ignoreDuplicates: true })
             .select(COLUNAS_VIAGEM)
             .maybeSingle()
         : await ctx.cliente
@@ -598,19 +609,65 @@ async function enviarItem(ctx: ContextoDreno, item: schema.OutboxItem): Promise<
     }
 
     if (!data) {
-      // Zero linhas sem erro. No insert, o servidor não confirmou a gravação; no update, a viagem
-      // não existe (ou o RLS a escondeu). Nunca apagar a outbox em silêncio: o dado local é
-      // preservado e o conflito vai para revisão.
-      return item.operacao === 'insert'
-        ? revisar(ctx, item, payload, 'SEM_RESPOSTA', 'O servidor não confirmou a gravação da viagem.', true)
-        : revisar(
-            ctx,
+      if (item.operacao === 'insert') {
+        // `ignoreDuplicates` devolve zero linhas quando a viagem já existe no servidor. O
+        // servidor vence: aplica a versão dele no SQLite e tira a operação da outbox, sem abrir
+        // revisão. Isso cobre tanto a viagem que o gestor fechou quanto a que continua aberta.
+        const servidor = await buscarViagemNoServidor(ctx.cliente, idViagem);
+        if (!sessaoLocalAtual(ctx.geracaoLocal)) {
+          return { tipo: 'cancelada', mensagem: MENSAGEM_SESSAO_ALTERADA };
+        }
+        if (!servidor.ok) {
+          if (servidor.conexao || !servidor.erro) {
+            const proxima = proximaTentativa(ctx.agora, item.tentativas);
+            atualizarErroTemporario(
+              ctx.database,
+              item,
+              MENSAGEM_SEM_CONEXAO,
+              'CONEXAO',
+              item.tentativas,
+              proxima,
+            );
+            return { tipo: 'conexao', mensagem: MENSAGEM_SEM_CONEXAO };
+          }
+
+          // Erro do servidor na busca (token expirado, 5xx, timeout do banco) é passageiro: a viagem
+          // pode muito bem existir lá. Segue a regra de qualquer erro genérico — queima uma
+          // tentativa e espera o backoff — em vez de abrir revisão SEM_RESPOSTA para o gestor.
+          const tratado = await tratarErroDoServidor(
+            ctx.cliente,
+            ctx.database,
             item,
+            ctx.usuarioId,
             payload,
-            'VIAGEM_AUSENTE',
-            'A viagem não foi encontrada no servidor. A alteração local foi mantida para revisão.',
-            true,
+            servidor.erro,
+            { maxTentativas: ctx.maxTentativas, agora: ctx.agora, geracaoLocal: ctx.geracaoLocal },
           );
+          return desfechoDaRevisao(tratado, servidor.erro.code);
+        }
+        if (servidor.invalida) {
+          return revisar(ctx, item, payload, 'RESPOSTA_INVALIDA', 'O servidor devolveu uma viagem inválida.');
+        }
+        if (servidor.data) {
+          aplicarSucessoLocal(ctx.database, item, servidor.data);
+          return { tipo: 'sucesso' };
+        }
+
+        // A viagem não voltou (não existe ou o RLS a esconde). Mantém o comportamento atual:
+        // preserva o dado local e abre revisão SEM_RESPOSTA.
+        return revisar(ctx, item, payload, 'SEM_RESPOSTA', 'O servidor não confirmou a gravação da viagem.');
+      }
+
+      // No update, a viagem não existe (ou o RLS a escondeu). Nunca apagar a outbox em silêncio:
+      // o dado local é preservado e o conflito vai para revisão.
+      return revisar(
+        ctx,
+        item,
+        payload,
+        'VIAGEM_AUSENTE',
+        'A viagem não foi encontrada no servidor. A alteração local foi mantida para revisão.',
+        true,
+      );
     }
 
     const parsed = viagemApiSchema.safeParse(data);
