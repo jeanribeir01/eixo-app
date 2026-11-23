@@ -9,7 +9,7 @@ Implement these tasks with the `tlc-spec-driven` skill: **activate it by name an
 ---
 
 **Design**: inline (sem `design.md`). Funções puras montam o CSV e o HTML do PDF; um módulo fino fala com `expo-file-system`, `expo-print` e `expo-sharing`; o componente orquestra alerta, loading e feedback. Decisões no `spec.md`.
-**Status**: In progress
+**Status**: Done (Verifier PASS na rodada 2, ver validation.md)
 
 ---
 
