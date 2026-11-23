@@ -121,7 +121,7 @@ T4 → T5 → T6 → T7 → T8
 
 **Done when**:
 
-- [x] Testes em `graficos/__tests__/queries.test.ts` passam (10)
+- [x] Testes em `graficos/__tests__/queries.test.ts` passam (11)
 - [x] Gate quick passa
 
 **Tests**: unit
@@ -129,7 +129,7 @@ T4 → T5 → T6 → T7 → T8
 
 ---
 
-### T4: Geometria e medidas dos gráficos
+### T4: ✅ Geometria e medidas dos gráficos
 
 **What**: Funções puras: opções de horizonte, mês final limitado ao mês atual, altura proporcional da barra, ângulos e `Path` do setor da rosca, cores das fatias; medidas derivadas dos tokens.
 **Where**: `src/features/dashboard/graficos/geometria.ts`
@@ -144,8 +144,8 @@ T4 → T5 → T6 → T7 → T8
 
 **Done when**:
 
-- [ ] Testes em `graficos/__tests__/geometria.test.ts` passam (inclui fatia de 100% e mês futuro)
-- [ ] Gate build passa (fim da fase)
+- [x] Testes em `graficos/__tests__/geometria.test.ts` passam (16, inclui fatia de 100% e mês futuro)
+- [x] Gate build passa (fim da fase)
 
 **Tests**: unit
 **Gate**: build
