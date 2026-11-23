@@ -2,7 +2,7 @@ import { StyleSheet, View } from 'react-native';
 
 import { profileFromSession } from '@/features/auth/perfilGoogle';
 import { useSessionStore } from '@/features/auth/sessionStore';
-import { Avatar, Column, Text } from '@/ui';
+import { Avatar, Text } from '@/ui';
 import { spacing } from '@/ui/tokens';
 
 import { dataPorExtenso, saudacao } from './saudacao';
@@ -22,14 +22,14 @@ export function CabecalhoInicio({ nome, agora }: CabecalhoInicioProps) {
   return (
     <View style={styles.linha}>
       <Avatar name={nome || '?'} photoUrl={photoUrl} />
-      <Column gap="xs">
-        <Text variant="subheading" accessibilityRole="header">
+      <View style={styles.textos}>
+        <Text variant="subheading" accessibilityRole="header" numberOfLines={1}>
           {saudacao(agora, nome)}
         </Text>
         <Text variant="bodySm" tone="body">
           {dataPorExtenso(agora)}
         </Text>
-      </Column>
+      </View>
     </View>
   );
 }
@@ -39,5 +39,10 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: spacing.md,
+  },
+  // Ocupa o resto da linha: o texto corta com reticências em vez de passar da tela.
+  textos: {
+    flex: 1,
+    gap: spacing.xs,
   },
 });

@@ -62,7 +62,7 @@ describe('InicioFrotaView', () => {
 
     fireEvent.press(screen.getByRole('button', { name: '3 Disponíveis. Ver veículos' }));
     expect(screen.getByRole('button', { name: '2 Em viagem. Ver veículos' })).toBeOnTheScreen();
-    expect(screen.getByRole('button', { name: '1 Manutenção. Ver veículos' })).toBeOnTheScreen();
+    expect(screen.getByRole('button', { name: '1 Oficina. Ver veículos' })).toBeOnTheScreen();
     expect(mockPush).toHaveBeenCalledWith('/frota/veiculos');
   });
 

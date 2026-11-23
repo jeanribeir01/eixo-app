@@ -22,8 +22,9 @@ const MESES = [
 export function saudacao(agora: Date, nome: string): string {
   const hora = agora.getHours();
   const periodo = hora < 5 ? 'Boa noite' : hora < 12 ? 'Bom dia' : hora < 18 ? 'Boa tarde' : 'Boa noite';
-  // Só o primeiro nome: "Bom dia, Jean Ribeiro" soa como formulário.
-  const primeiroNome = nome.trim().split(/\s+/)[0];
+  // Só o primeiro nome: "Bom dia, Jean Ribeiro" soa como formulário. Conta sem nome guarda o e-mail
+  // no lugar dele (contas de teste): aí fica só a saudação, sem "Boa tarde, frotas@...".
+  const primeiroNome = nome.includes('@') ? '' : nome.trim().split(/\s+/)[0];
   return primeiroNome ? `${periodo}, ${primeiroNome}` : periodo;
 }
 

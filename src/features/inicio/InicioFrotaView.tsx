@@ -55,7 +55,8 @@ function CartaoNaEstrada({ viagens, hoje, onPress }: { viagens: ViagemDetalhada[
 const STATUS_DA_FROTA: { status: keyof ContagemFrota; rotulo: string; icone: IconName }[] = [
   { status: 'Disponivel', rotulo: 'Disponíveis', icone: 'sucesso' },
   { status: 'EmViagem', rotulo: 'Em viagem', icone: 'viagens' },
-  { status: 'EmManutencao', rotulo: 'Manutenção', icone: 'manutencoes' },
+  // 'Oficina' e não 'Manutenção': em 360 de largura, com três quadrados, a palavra longa era cortada.
+  { status: 'EmManutencao', rotulo: 'Oficina', icone: 'manutencoes' },
 ];
 
 function ContagemVeiculos({ contagem, onPress }: { contagem: ContagemFrota; onPress: () => void }) {

@@ -14,6 +14,10 @@ describe('saudacao', () => {
   it('sem nome, só a saudação', () => {
     expect(saudacao(new Date(2026, 10, 23, 9), '  ')).toBe('Bom dia');
   });
+
+  it('conta que guarda o e-mail no lugar do nome: só a saudação', () => {
+    expect(saudacao(new Date(2026, 10, 23, 15), 'frotas@eixocerto.com.br')).toBe('Boa tarde');
+  });
 });
 
 describe('dataPorExtenso', () => {
