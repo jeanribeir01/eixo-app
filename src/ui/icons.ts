@@ -1,7 +1,9 @@
 import type { Icon as PhosphorIcon } from 'phosphor-react-native';
 // Um import por ícone, pelo caminho que o próprio Phosphor recomenda: importar do índice do pacote
 // levaria os ~1.500 ícones para o bundle, porque o Metro não descarta código que não é usado.
+import { ArrowDownLeftIcon } from 'phosphor-react-native/src/icons/ArrowDownLeft';
 import { ArrowsDownUpIcon } from 'phosphor-react-native/src/icons/ArrowsDownUp';
+import { ArrowUpRightIcon } from 'phosphor-react-native/src/icons/ArrowUpRight';
 import { CalendarBlankIcon } from 'phosphor-react-native/src/icons/CalendarBlank';
 import { CaretDownIcon } from 'phosphor-react-native/src/icons/CaretDown';
 import { CaretLeftIcon } from 'phosphor-react-native/src/icons/CaretLeft';
@@ -42,6 +44,9 @@ export const icons = {
   conta: UserCircleIcon,
   // Telas do Financeiro
   movimentacoes: ArrowsDownUpIcon,
+  // Direção do dinheiro: entra no caixa (seta para dentro) ou sai (seta para fora).
+  entrada: ArrowDownLeftIcon,
+  saida: ArrowUpRightIcon,
   saldo: ChartLineUpIcon,
   dividas: ReceiptIcon,
   categorias: TagIcon,

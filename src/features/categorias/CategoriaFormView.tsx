@@ -142,7 +142,7 @@ export function CategoriaFormView({ categoriaId, tipoInicial }: CategoriaFormVie
               key={opcao.tipo}
               titulo={rotuloTipoCategoria[opcao.tipo]}
               descricao={opcao.descricao}
-              icon={opcao.tipo === 'Entrada' ? 'saldo' : 'movimentacoes'}
+              icon={opcao.tipo === 'Entrada' ? 'entrada' : 'saida'}
               selecionada={tipo === opcao.tipo}
               onPress={() => setTipo(opcao.tipo)}
             />
