@@ -1,4 +1,4 @@
-import { useCallback, useMemo } from 'react';
+import { useCallback, useEffect, useMemo, useRef } from 'react';
 import { useRouter } from 'expo-router';
 import { FlatList, RefreshControl, StyleSheet, View, type ListRenderItemInfo } from 'react-native';
 
@@ -136,6 +136,17 @@ export function InicioMotoristaView() {
     [usuario],
   );
   const tela = useDadosDaTela(buscar);
+
+  // Terminou uma sincronização (ao abrir o app, ao voltar a internet): relê o SQLite sem skeleton. No
+  // primeiro login a tela abre antes de a primeira descida terminar e ficaria sem o histórico.
+  const ultimaSincronizacaoEm = useSyncStore((state) => state.ultimaSincronizacaoEm);
+  const recarregar = useRef(tela.recarregar);
+  useEffect(() => {
+    recarregar.current = tela.recarregar;
+  });
+  useEffect(() => {
+    if (ultimaSincronizacaoEm !== null) recarregar.current();
+  }, [ultimaSincronizacaoEm]);
 
   const { atual, historico } = useMemo(() => {
     const viagens = tela.dados ?? [];

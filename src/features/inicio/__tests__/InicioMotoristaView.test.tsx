@@ -1,4 +1,4 @@
-import { fireEvent, render, screen } from '@testing-library/react-native';
+import { act, fireEvent, render, screen } from '@testing-library/react-native';
 
 import { useProfileStore } from '@/features/auth/profileStore';
 import { useSyncStore } from '@/features/viagens/syncStore';
@@ -50,6 +50,7 @@ beforeEach(() => {
     emRevisao: 0,
     sincronizando: false,
     ultimoErro: null,
+    ultimaSincronizacaoEm: null,
     atualizarStatus: jest.fn(),
   });
 });
@@ -112,6 +113,18 @@ describe('InicioMotoristaView', () => {
     await renderCom([viagem()]);
 
     expect(screen.getByText('As viagens concluídas aparecem aqui, com a data e os km rodados.')).toBeOnTheScreen();
+  });
+
+  it('terminou uma sincronização: relê as viagens do aparelho sem voltar ao skeleton', async () => {
+    await renderCom([viagem()]);
+    expect(mockListar).toHaveBeenCalledTimes(1);
+
+    mockListar.mockResolvedValue({ ok: true, data: [viagem(), concluida] });
+    await act(async () => useSyncStore.setState({ ultimaSincronizacaoEm: Date.now() }));
+
+    expect(mockListar).toHaveBeenCalledTimes(2);
+    expect(await screen.findByText('20/11/2026 · 532 km')).toBeOnTheScreen();
+    expect(screen.queryByLabelText('Carregando suas viagens')).not.toBeOnTheScreen();
   });
 
   it('erro ao ler: mensagem e "Tentar novamente"', async () => {
