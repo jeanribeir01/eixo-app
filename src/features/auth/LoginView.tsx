@@ -83,7 +83,7 @@ export function LoginView({ mostrarLoginEmail = loginEmailHabilitado }: LoginVie
             accessible={false}
             accessibilityIgnoresInvertColors
             testID="login-foto"
-            style={{ height: Math.round(altura * FRACAO_DA_FOTO) }}
+            style={[styles.foto, { height: Math.round(altura * FRACAO_DA_FOTO) }]}
           />
 
           {/* A folha sobe sobre a foto com os cantos de cima arredondados (referência 4 do redesign).
@@ -173,6 +173,10 @@ const styles = StyleSheet.create({
   },
   flex: {
     flex: 1,
+  },
+  // Largura explícita: sem ela o Android desenha a foto pelo tamanho do arquivo e o "cover" corta demais.
+  foto: {
+    width: '100%',
   },
   // A folha cresce até o fim da tela, mesmo quando o conteúdo é curto (login só com Google).
   rolagem: {
