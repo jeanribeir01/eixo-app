@@ -9,7 +9,7 @@ Implement these tasks with the `tlc-spec-driven` skill: **activate it by name an
 ---
 
 **Design**: inline (sem `design.md`): segue o molde do `kpis_financeiros` (banco) e da `RankingView` (tela). Decisões no `spec.md`.
-**Status**: Done (aguardando Verifier)
+**Status**: Done (Verifier PASS, ver validation.md)
 
 ---
 

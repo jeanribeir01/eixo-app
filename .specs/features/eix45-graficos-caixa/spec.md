@@ -135,25 +135,25 @@ A aba Dashboards só mostra o ranking da US13. O gestor financeiro vê o saldo d
 
 | Requirement ID | Story | Phase | Status |
 | --- | --- | --- | --- |
-| GRAF-01 | P1: Entradas vs Saídas | Execute | Implementing |
-| GRAF-02 | P1: Entradas vs Saídas | Execute | Implementing |
-| GRAF-03 | P1: Entradas vs Saídas | Execute | Implementing |
-| GRAF-04 | P1: Entradas vs Saídas | Execute | Implementing |
-| GRAF-05 | P1: Entradas vs Saídas | Execute | Implementing |
-| GRAF-06 | P1: Entradas vs Saídas | Execute | Implementing |
-| GRAF-07 | P1: Entradas vs Saídas | Execute | Implementing |
-| GRAF-08 | P1: Despesas por categoria | Execute | Implementing |
-| GRAF-09 | P1: Despesas por categoria | Execute | Implementing |
-| GRAF-10 | P1: Despesas por categoria | Execute | Implementing |
-| GRAF-11 | P1: Despesas por categoria | Execute | Implementing |
-| GRAF-12 | P1: Despesas por categoria | Execute | Implementing |
-| GRAF-13 | P1: Despesas por categoria | Execute | Implementing |
-| GRAF-14 | P1: Filtro, estados e acesso | Execute | Implementing |
-| GRAF-15 | P1: Filtro, estados e acesso | Execute | Implementing |
-| GRAF-16 | P1: Filtro, estados e acesso | Execute | Implementing |
-| GRAF-17 | P1: Filtro, estados e acesso | Execute | Implementing |
-| GRAF-18 | P1: Filtro, estados e acesso | Execute | Implementing |
-| GRAF-19 | P1: Filtro, estados e acesso | Execute | Implementing |
+| GRAF-01 | P1: Entradas vs Saídas | Validate | Verified |
+| GRAF-02 | P1: Entradas vs Saídas | Validate | Verified |
+| GRAF-03 | P1: Entradas vs Saídas | Validate | Verified |
+| GRAF-04 | P1: Entradas vs Saídas | Validate | Verified |
+| GRAF-05 | P1: Entradas vs Saídas | Validate | Verified |
+| GRAF-06 | P1: Entradas vs Saídas | Validate | Verified |
+| GRAF-07 | P1: Entradas vs Saídas | Validate | Verified |
+| GRAF-08 | P1: Despesas por categoria | Validate | Verified |
+| GRAF-09 | P1: Despesas por categoria | Validate | Verified |
+| GRAF-10 | P1: Despesas por categoria | Validate | Verified |
+| GRAF-11 | P1: Despesas por categoria | Validate | Verified |
+| GRAF-12 | P1: Despesas por categoria | Validate | Verified |
+| GRAF-13 | P1: Despesas por categoria | Validate | Verified |
+| GRAF-14 | P1: Filtro, estados e acesso | Validate | Verified |
+| GRAF-15 | P1: Filtro, estados e acesso | Validate | Verified |
+| GRAF-16 | P1: Filtro, estados e acesso | Validate | Verified |
+| GRAF-17 | P1: Filtro, estados e acesso | Validate | Verified |
+| GRAF-18 | P1: Filtro, estados e acesso | Validate | Verified |
+| GRAF-19 | P1: Filtro, estados e acesso | Validate | Verified |
 
 **Coverage:** 19 total, 19 mapped to tasks, 0 unmapped
 
