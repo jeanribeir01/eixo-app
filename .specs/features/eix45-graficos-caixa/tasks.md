@@ -175,7 +175,7 @@ T4 → T5 → T6 → T7 → T8
 
 ---
 
-### T6: Gráfico de rosca das despesas
+### T6: ✅ Gráfico de rosca das despesas
 
 **What**: Componente `GraficoRosca` (SVG, centro com total ou fatia selecionada, legenda tocável).
 **Where**: `src/features/dashboard/graficos/GraficoRosca.tsx`
@@ -190,8 +190,8 @@ T4 → T5 → T6 → T7 → T8
 
 **Done when**:
 
-- [ ] Testes em `graficos/__tests__/GraficoRosca.test.tsx` passam
-- [ ] Gate quick passa
+- [x] Testes em `graficos/__tests__/GraficoRosca.test.tsx` passam (7)
+- [x] Gate quick passa
 
 **Tests**: unit
 **Gate**: quick
