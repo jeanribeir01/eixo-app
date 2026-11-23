@@ -104,7 +104,7 @@ T4 → T5 → T6
 
 ---
 
-### T3: Consulta das transações do período
+### T3: ✅ Consulta das transações do período
 
 **What**: `buscarTransacoesDoPeriodo(periodo)` com o filtro da data de referência, paginação de 1000 e ordem do spec.
 **Where**: `src/features/relatorios/export/queries.ts`
@@ -119,8 +119,8 @@ T4 → T5 → T6
 
 **Done when**:
 
-- [ ] Testes cobrem filtro com as datas do período, 2 páginas (1000 + 3), ordem por data e descrição, 42501, erro genérico e linha inválida
-- [ ] Gate quick passa
+- [x] Testes cobrem filtro com as datas do período, 2 páginas (1000 + 3), ordem por data e descrição, 42501, erro genérico e linha inválida
+- [x] Gate quick passa
 
 **Tests**: unit
 **Gate**: quick
