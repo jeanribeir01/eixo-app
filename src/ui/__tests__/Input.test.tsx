@@ -1,7 +1,7 @@
 import { fireEvent, render, screen } from '@testing-library/react-native';
 
 import { Input } from '../Input';
-import { colors, controlHeight } from '../tokens';
+import { colors, controlHeight, iconSize, spacing } from '../tokens';
 
 describe('Input', () => {
   it('renderiza o label e aceita digitação', () => {
@@ -30,6 +30,19 @@ describe('Input', () => {
     render(<Input label="Título" value="" onChangeText={jest.fn()} error="Informe o título da categoria." />);
 
     expect(screen.getByRole('alert')).toHaveTextContent('Informe o título da categoria.');
+  });
+
+  it('com ícone: o ícone fica dentro do campo, à esquerda, e o texto começa depois dele', () => {
+    render(<Input label="E-mail" icone="email" value="" onChangeText={jest.fn()} />);
+
+    expect(screen.getByTestId('icone-email', { includeHiddenElements: true })).toBeTruthy();
+    expect(screen.getByLabelText('E-mail')).toHaveStyle({ paddingLeft: spacing.md + iconSize.md + spacing.sm });
+  });
+
+  it('sem ícone, nenhum ícone aparece no campo', () => {
+    render(<Input label="Título" value="" onChangeText={jest.fn()} />);
+
+    expect(screen.queryByTestId('icone-email', { includeHiddenElements: true })).toBeNull();
   });
 
   it('com erro, borda e mensagem em danger, com ícone de alerta (cor nunca é o único indicador)', () => {

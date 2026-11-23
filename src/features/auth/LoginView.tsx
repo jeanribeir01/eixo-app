@@ -1,8 +1,10 @@
 import { useState } from 'react';
-import { StyleSheet, View } from 'react-native';
+import { StatusBar } from 'expo-status-bar';
+import { Image, KeyboardAvoidingView, ScrollView, StyleSheet, View, useWindowDimensions } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { z } from 'zod';
 
-import { Button, Column, Input, Logo, Screen, Text, spacing } from '@/ui';
+import { Button, Column, Input, Logo, MensagemErro, Text, colors, layout, radius, spacing, useTablet } from '@/ui';
 
 import { loginEmailHabilitado, signInWithEmail } from './emailAuth';
 import { authErrorMessage } from './errors';
@@ -23,6 +25,8 @@ export function LoginView({ mostrarLoginEmail = loginEmailHabilitado }: LoginVie
   const [email, setEmail] = useState('');
   const [senha, setSenha] = useState('');
   const [errosEmail, setErrosEmail] = useState<ErrosEmail>({});
+  const { height: altura } = useWindowDimensions();
+  const tablet = useTablet();
 
   // Um login por vez: enquanto um está em andamento, o outro botão fica desabilitado.
   const entrando = loadingGoogle || loadingEmail;
@@ -61,78 +65,153 @@ export function LoginView({ mostrarLoginEmail = loginEmailHabilitado }: LoginVie
   }
 
   return (
-    <Screen>
-      {/* A mesma marca do ícone e da splash, no topo e centralizada: quem abre o app reconhece onde
-          está (EIX-11). */}
-      <Logo withWordmark />
+    <View style={styles.tela}>
+      {/* Ícones da barra de status claros sobre a foto. Ao sair do Login, a barra volta ao escuro do
+          layout raiz. */}
+      <StatusBar style="light" />
+      <KeyboardAvoidingView behavior="padding" style={styles.flex}>
+        <ScrollView
+          style={styles.flex}
+          contentContainerStyle={styles.rolagem}
+          keyboardShouldPersistTaps="handled"
+          bounces={false}
+        >
+          {/* Foto decorativa: o leitor de tela pula direto para a marca e o login. */}
+          <Image
+            source={FOTO}
+            resizeMode="cover"
+            accessible={false}
+            accessibilityIgnoresInvertColors
+            testID="login-foto"
+            style={[styles.foto, { height: Math.round(altura * FRACAO_DA_FOTO) }]}
+          />
 
-      {/* O login fica no centro do espaço que sobra abaixo da marca. */}
-      <View style={styles.conteudo}>
-        <Column gap="sm">
-          <Text variant="display">Entre para continuar</Text>
-          <Text tone="body">Use sua conta Google para acessar a gestão financeira e a frota da empresa.</Text>
-        </Column>
+          {/* A folha sobe sobre a foto com os cantos de cima arredondados (referência 4 do redesign).
+              O SafeAreaView soma ao respiro de baixo a área do gesto de navegação. */}
+          <SafeAreaView edges={['bottom']} style={styles.folha}>
+            <View style={[styles.conteudo, tablet && styles.coluna]}>
+              <Logo withWordmark compacto />
 
-        <Button
-          label="Continuar com Google"
-          onPress={handleGooglePress}
-          loading={loadingGoogle}
-          disabled={loadingEmail}
-          variant="google"
-        />
+              <Column gap="sm">
+                <Text variant="display">Bem-vindo de volta</Text>
+                <Text tone="body">Caixa, frota e viagens da transportadora num lugar só.</Text>
+              </Column>
 
-        {mostrarLoginEmail && (
-          <Column gap="md">
-            <Text variant="bodySm" tone="muted">
-              Ou entre com uma conta de teste
-            </Text>
-            <Input
-              label="E-mail"
-              placeholder="voce@empresa.com"
-              value={email}
-              onChangeText={setEmail}
-              error={errosEmail.email}
-              autoCapitalize="none"
-              autoComplete="email"
-              keyboardType="email-address"
-              editable={!entrando}
-            />
-            <Input
-              label="Senha"
-              value={senha}
-              onChangeText={setSenha}
-              error={errosEmail.senha}
-              secureTextEntry
-              autoCapitalize="none"
-              autoComplete="password"
-              editable={!entrando}
-            />
-            <Button
-              label="Entrar com e-mail"
-              onPress={handleEmailPress}
-              loading={loadingEmail}
-              disabled={loadingGoogle}
-              variant="ghost"
-            />
-          </Column>
-        )}
+              <Button
+                label="Continuar com Google"
+                onPress={handleGooglePress}
+                loading={loadingGoogle}
+                disabled={loadingEmail}
+                variant="google"
+              />
 
-        {errorMessage && (
-          // role "alert" faz o leitor de tela anunciar o erro assim que ele aparece.
-          <Text accessibilityRole="alert" variant="bodySm">
-            {errorMessage}
-          </Text>
-        )}
-      </View>
-    </Screen>
+              {mostrarLoginEmail && (
+                <Column gap="md">
+                  <View style={styles.divisor}>
+                    <View style={styles.linha} />
+                    <Text variant="caption" tone="body">
+                      ou com e-mail
+                    </Text>
+                    <View style={styles.linha} />
+                  </View>
+                  <Input
+                    label="E-mail"
+                    icone="email"
+                    placeholder="voce@empresa.com"
+                    value={email}
+                    onChangeText={setEmail}
+                    error={errosEmail.email}
+                    autoCapitalize="none"
+                    autoComplete="email"
+                    keyboardType="email-address"
+                    editable={!entrando}
+                  />
+                  <Input
+                    label="Senha"
+                    icone="senha"
+                    value={senha}
+                    onChangeText={setSenha}
+                    error={errosEmail.senha}
+                    secureTextEntry
+                    autoCapitalize="none"
+                    autoComplete="password"
+                    editable={!entrando}
+                  />
+                  {/* "Entrar" na tela, como no protótipo; o leitor de tela ouve qual dos dois logins é. */}
+                  <Button
+                    label="Entrar"
+                    accessibilityLabel="Entrar com e-mail"
+                    onPress={handleEmailPress}
+                    loading={loadingEmail}
+                    disabled={loadingGoogle}
+                  />
+                </Column>
+              )}
+
+              {errorMessage && (
+                // A MensagemErro tem role "alert": o leitor de tela anuncia o erro assim que ele aparece.
+                <MensagemErro>{errorMessage}</MensagemErro>
+              )}
+            </View>
+          </SafeAreaView>
+        </ScrollView>
+      </KeyboardAvoidingView>
+    </View>
   );
 }
 
+// Foto do topo: um caminhão na estrada, escolhida pela equipe e recortada na faixa do caminhão
+// (1200 px de largura, ~120 KB). Trocar a foto é trocar este arquivo.
+const FOTO = require('../../../assets/images/login-caminhao.jpg');
+
+// A foto ocupa ~40% da altura, como no protótipo (360 de 844); a folha cobre o resto.
+const FRACAO_DA_FOTO = 0.42;
+
 const styles = StyleSheet.create({
-  // Ocupa a altura abaixo da marca e centraliza o login nela, com o mesmo gap do Screen.
-  conteudo: {
+  tela: {
     flex: 1,
-    justifyContent: 'center',
+    backgroundColor: colors.surface,
+  },
+  flex: {
+    flex: 1,
+  },
+  // Largura explícita: sem ela o Android desenha a foto pelo tamanho do arquivo e o "cover" corta demais.
+  foto: {
+    width: '100%',
+  },
+  // A folha cresce até o fim da tela, mesmo quando o conteúdo é curto (login só com Google).
+  rolagem: {
+    flexGrow: 1,
+  },
+  folha: {
+    flexGrow: 1,
+    // Sobe 48pt sobre a foto: o canto arredondado aparece por cima dela.
+    marginTop: -spacing.xxl,
+    backgroundColor: colors.surface,
+    borderTopLeftRadius: radius.sheet,
+    borderTopRightRadius: radius.sheet,
+    paddingTop: spacing.xl,
+    paddingHorizontal: spacing.lg,
+    paddingBottom: spacing.lg,
+  },
+  conteudo: {
     gap: spacing.lg,
+  },
+  // No tablet o formulário fica numa coluna legível, centralizado na folha (RNF02).
+  coluna: {
+    width: '100%',
+    maxWidth: layout.contentMaxWidth,
+    alignSelf: 'center',
+  },
+  // "ou com e-mail" entre duas linhas finas: separa o Google, o login principal, do login por e-mail.
+  divisor: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.md,
+  },
+  linha: {
+    flex: 1,
+    height: StyleSheet.hairlineWidth,
+    backgroundColor: colors.border,
   },
 });

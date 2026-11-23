@@ -13,9 +13,11 @@ import { ChartLineUpIcon } from 'phosphor-react-native/src/icons/ChartLineUp';
 import { CheckCircleIcon } from 'phosphor-react-native/src/icons/CheckCircle';
 import { CreditCardIcon } from 'phosphor-react-native/src/icons/CreditCard';
 import { DotsThreeVerticalIcon } from 'phosphor-react-native/src/icons/DotsThreeVertical';
+import { EnvelopeSimpleIcon } from 'phosphor-react-native/src/icons/EnvelopeSimple';
 import { GearSixIcon } from 'phosphor-react-native/src/icons/GearSix';
 import { HouseIcon } from 'phosphor-react-native/src/icons/House';
 import { InfoIcon } from 'phosphor-react-native/src/icons/Info';
+import { LockSimpleIcon } from 'phosphor-react-native/src/icons/LockSimple';
 import { MapTrifoldIcon } from 'phosphor-react-native/src/icons/MapTrifold';
 import { PathIcon } from 'phosphor-react-native/src/icons/Path';
 import { PlusIcon } from 'phosphor-react-native/src/icons/Plus';
@@ -69,6 +71,9 @@ export const icons = {
   // Estado "tudo em dia" (Início sem nada pedindo atenção).
   sucesso: CheckCircleIcon,
   sair: SignOutIcon,
+  // Campos do login de teste: o ícone diz o que vai no campo antes de a pessoa ler o rótulo.
+  email: EnvelopeSimpleIcon,
+  senha: LockSimpleIcon,
   versao: InfoIcon,
 } as const satisfies Record<string, PhosphorIcon>;
 

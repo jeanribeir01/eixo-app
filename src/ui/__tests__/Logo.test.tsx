@@ -26,6 +26,14 @@ describe('Logo (MRC-02)', () => {
     expect(screen.getByLabelText('Eixo Certo')).toHaveStyle({ alignItems: 'center', gap: spacing.sm });
   });
 
+  it('compacto: marca de 28pt com o nome ao lado, não embaixo (cabeçalho do Login)', () => {
+    render(<Logo withWordmark compacto />);
+
+    expect(screen.getByLabelText('Eixo Certo')).toHaveStyle({ flexDirection: 'row' });
+    expect(screen.UNSAFE_getByType(Svg).props.width).toBe(spacing.lg + spacing.xs);
+    expect(screen.getByText('Eixo Certo')).toBeOnTheScreen();
+  });
+
   it('desenha as duas rodas e o eixo na cor accentEdge do design system', () => {
     render(<Logo />);
 
