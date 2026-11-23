@@ -10,6 +10,8 @@ export const toneColors = {
   // Link e texto sobre accentSoft. Era accentEdge (3:1 sobre canvas); o accentText passa de 6:1.
   accent: colors.accentText,
   onAccent: colors.onAccent,
+  // Ação sobre superfície invertida (o "Desfazer" do Snackbar): accentSoft sobre inverted passa de 14:1.
+  accentOnInverted: colors.accentSoft,
   // Só para valor de entrada/saída e estado, sempre junto do sinal + / − ou de um rótulo
   // (DESIGN_CYAN, cores semânticas).
   success: colors.success,

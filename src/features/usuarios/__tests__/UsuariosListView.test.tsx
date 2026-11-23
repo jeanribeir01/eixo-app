@@ -6,7 +6,7 @@ import { Badge, ListItem, Skeleton, colors, spacing } from '@/ui';
 
 import type { Usuario } from '../types';
 import { UsuariosListView } from '../UsuariosListView';
-import { listarUsuarios } from '../usuariosRepository';
+import { alterarStatusUsuario, listarUsuarios } from '../usuariosRepository';
 
 // Largura da janela controlada pelo teste: 412 é celular, 800 é tablet (EIX-94).
 jest.mock('react-native/Libraries/Utilities/useWindowDimensions', () => ({
@@ -39,7 +39,7 @@ jest.mock('expo-router', () => {
   };
 });
 
-jest.mock('../usuariosRepository', () => ({ listarUsuarios: jest.fn() }));
+jest.mock('../usuariosRepository', () => ({ listarUsuarios: jest.fn(), alterarStatusUsuario: jest.fn() }));
 
 // O ListItem real, só embrulhado num jest.fn: o teste de memo (EIX-71) conta quantas vezes ele renderiza.
 jest.mock('@/ui', () => {
@@ -70,6 +70,7 @@ const usuarios: Usuario[] = [
 beforeEach(() => {
   mockPush.mockReset();
   mockListar.mockReset();
+  jest.mocked(alterarStatusUsuario).mockReset();
 });
 
 async function renderComLista() {
@@ -103,19 +104,20 @@ describe('UsuariosListView — linha (CTA-02)', () => {
     expect(rotulosDosBadges()[0]).toBe('Administrador');
   });
 
-  it('usuário aguardando ou bloqueado: o Badge mostra o status, que é o que o Admin precisa resolver', async () => {
+  it('bloqueado: o Badge mostra o status, em danger, que é o que o Admin precisa ver', async () => {
     await renderComLista();
 
-    expect(rotulosDosBadges()).toEqual(['Administrador', 'Aguardando aprovação', 'Bloqueado']);
-    expect(screen.queryByText('Operador/Motorista')).not.toBeOnTheScreen();
+    expect(rotulosDosBadges()).toEqual(['Administrador', 'Bloqueado']);
+    const bloqueado = screen.UNSAFE_getAllByType(Badge).find((badge) => badge.props.label === 'Bloqueado');
+    expect(bloqueado?.props.tone).toBe('danger');
   });
 
-  it('tocar em um usuário abre o detalhe dele', async () => {
+  it('tocar em alguém da equipe abre o detalhe dele', async () => {
     await renderComLista();
 
-    fireEvent.press(screen.getByRole('button', { name: 'Gerenciar Bruno Lima' }));
+    fireEvent.press(screen.getByRole('button', { name: 'Gerenciar Ana Souza' }));
 
-    expect(mockPush).toHaveBeenCalledWith('/usuarios/u2');
+    expect(mockPush).toHaveBeenCalledWith('/usuarios/u1');
   });
 
   it('o título da tela fica no header nativo, não no conteúdo (NAV-02)', async () => {
@@ -133,7 +135,7 @@ describe('UsuariosListView — carga (CTA-02)', () => {
     await renderComLista();
 
     const refresh = screen.UNSAFE_getByType(RefreshControl);
-    expect(refresh.props.colors).toEqual([colors.accent]);
+    expect(refresh.props.colors).toEqual([colors.accentStrong]);
     await act(async () => refresh.props.onRefresh());
 
     expect(mockListar).toHaveBeenCalledTimes(2);
@@ -232,6 +234,53 @@ describe('UsuariosListView — tablet (EIX-94)', () => {
     expect(estiloDaLista()).toMatchObject({ maxWidth: 720, alignSelf: 'center' });
     const coluna = screen.getByTestId('screen-coluna');
     expect(StyleSheet.flatten(coluna.props.style)).toMatchObject({ maxWidth: 720, alignSelf: 'center' });
-    expect(within(coluna).getByText('Toque em um usuário para alterar o perfil, aprovar ou bloquear.')).toBeOnTheScreen();
+    expect(within(coluna).getByText('Buscar')).toBeOnTheScreen();
+  });
+});
+
+// Pedido de acesso no topo, com Aprovar e Recusar ali mesmo (auditoria de UI, item 6).
+describe('UsuariosListView — aguardando aprovação', () => {
+  it('o pedido fica numa seção própria no topo, fora da equipe', async () => {
+    await renderComLista();
+
+    expect(screen.getByText('Aguardando aprovação · 1')).toBeOnTheScreen();
+    expect(screen.getByText('Equipe · 2')).toBeOnTheScreen();
+    expect(screen.getByText(/Ao aprovar, começa como Operador\/Motorista/)).toBeOnTheScreen();
+    expect(screen.queryByRole('button', { name: 'Gerenciar Bruno Lima' })).not.toBeOnTheScreen();
+  });
+
+  it('Aprovar grava Ativo, avisa e move a pessoa para a equipe', async () => {
+    jest.mocked(alterarStatusUsuario).mockResolvedValue({ ok: true, data: { ...usuarios[1], status: 'Ativo' } });
+    await renderComLista();
+
+    fireEvent.press(screen.getByRole('button', { name: 'Aprovar Bruno Lima' }));
+
+    expect(await screen.findByText('Bruno Lima aprovado.')).toBeOnTheScreen();
+    expect(alterarStatusUsuario).toHaveBeenCalledWith('u2', 'Ativo');
+    expect(screen.queryByText('Aguardando aprovação · 1')).not.toBeOnTheScreen();
+    expect(screen.getByRole('button', { name: 'Gerenciar Bruno Lima' })).toBeOnTheScreen();
+  });
+
+  it('Recusar grava Bloqueado; erro do banco aparece e o pedido continua no topo', async () => {
+    jest
+      .mocked(alterarStatusUsuario)
+      .mockResolvedValue({ ok: false, mensagem: 'Não foi possível alterar o status. Tente novamente.' });
+    await renderComLista();
+
+    fireEvent.press(screen.getByRole('button', { name: 'Recusar Bruno Lima' }));
+
+    expect(await screen.findByText('Não foi possível alterar o status. Tente novamente.')).toBeOnTheScreen();
+    expect(alterarStatusUsuario).toHaveBeenCalledWith('u2', 'Bloqueado');
+    expect(screen.getByText('Aguardando aprovação · 1')).toBeOnTheScreen();
+  });
+
+  it('a busca filtra por nome ou e-mail nas duas seções', async () => {
+    await renderComLista();
+
+    fireEvent.changeText(screen.getByPlaceholderText('Nome ou e-mail'), 'carla@');
+
+    expect(screen.getByText('Carla Dias')).toBeOnTheScreen();
+    expect(screen.queryByText('Ana Souza')).not.toBeOnTheScreen();
+    expect(screen.queryByText('Aguardando aprovação · 1')).not.toBeOnTheScreen();
   });
 });

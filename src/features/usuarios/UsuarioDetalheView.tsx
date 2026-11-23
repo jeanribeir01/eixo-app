@@ -1,10 +1,24 @@
 import { useCallback, useState } from 'react';
 import { useFocusEffect, useLocalSearchParams } from 'expo-router';
-import { ActivityIndicator } from 'react-native';
+import { ActivityIndicator, StyleSheet, View } from 'react-native';
 
 import { rotuloPerfil, rotuloStatus, type StatusUsuario } from '@/features/auth/permissions';
 import { useProfile } from '@/features/auth/profileStore';
-import { Badge, Button, Column, EmptyState, ListItem, Screen, Snackbar, Text, colors } from '@/ui';
+import {
+  Avatar,
+  Badge,
+  Button,
+  Column,
+  EmptyState,
+  OpcaoSelecionavel,
+  Screen,
+  Snackbar,
+  Text,
+  colors,
+  spacing,
+  type BadgeTone,
+  type IconName,
+} from '@/ui';
 
 import type { Perfil, Usuario } from './types';
 import {
@@ -21,8 +35,22 @@ type Feedback = { mensagem: string; tone: 'success' | 'error' };
 
 type Acao = 'perfil' | 'aprovar' | 'bloquear';
 
+// O que cada perfil libera, dito na própria opção: o Admin escolhe pela consequência, não pelo nome.
+const DESCRICAO_PERFIL: Record<Perfil['nome'], { descricao: string; icone: IconName }> = {
+  Admin: { descricao: 'Tudo, inclusive aprovar e bloquear usuários', icone: 'usuarios' },
+  Financeiro: { descricao: 'Caixa, dívidas, categorias e relatórios financeiros', icone: 'financeiro' },
+  'Gestor de Frota': { descricao: 'Veículos, rotas, viagens e manutenções', icone: 'frota' },
+  Motorista: { descricao: 'Só as próprias viagens e o hodômetro', icone: 'viagens' },
+};
+
+const TOM_DO_STATUS: Record<StatusUsuario, BadgeTone> = {
+  Ativo: 'success',
+  AguardandoAprovacao: 'warning',
+  Bloqueado: 'danger',
+};
+
 // Ordem de privilégio, do maior para o menor, para a lista de escolha ler de cima para baixo.
-const ORDEM_PERFIS: Perfil['nome'][] = ['Admin', 'Gestor de Frota', 'Financeiro', 'Motorista'];
+const ORDEM_PERFIS: Perfil['nome'][] = ['Admin', 'Financeiro', 'Gestor de Frota', 'Motorista'];
 
 export function UsuarioDetalheView() {
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -93,7 +121,8 @@ export function UsuarioDetalheView() {
 
   function handleAlterarStatus(novoStatus: StatusUsuario) {
     const aprovar = novoStatus === 'Ativo';
-    executar(aprovar ? 'aprovar' : 'bloquear', aprovar ? 'Usuário aprovado.' : 'Usuário bloqueado.', () =>
+    const mensagem = !aprovar ? 'Usuário bloqueado.' : usuario?.status === 'Bloqueado' ? 'Usuário desbloqueado.' : 'Usuário aprovado.';
+    executar(aprovar ? 'aprovar' : 'bloquear', mensagem, () =>
       alterarStatusUsuario(id, novoStatus),
     );
   }
@@ -102,7 +131,7 @@ export function UsuarioDetalheView() {
     return (
       <Screen align="center" underHeader>
         <Column align="center">
-          <ActivityIndicator size="small" color={colors.accent} accessibilityLabel="Carregando usuário" />
+          <ActivityIndicator size="small" color={colors.accentStrong} accessibilityLabel="Carregando usuário" />
         </Column>
       </Screen>
     );
@@ -122,6 +151,7 @@ export function UsuarioDetalheView() {
   }
 
   const perfilMudou = perfilSelecionadoId !== usuario.perfil.id;
+  const primeiroNome = usuario.nome.trim().split(/\s+/)[0];
 
   return (
     <Screen
@@ -129,36 +159,39 @@ export function UsuarioDetalheView() {
       scroll
       overlay={feedback && <Snackbar message={feedback.mensagem} tone={feedback.tone} onDismiss={() => setFeedback(null)} />}
     >
-      <Column gap="xs" align="start">
-        <Text variant="heading">{usuario.nome}</Text>
+      <Column gap="sm" align="center">
+        <Avatar name={usuario.nome} photoUrl={null} />
+        <Text variant="heading" accessibilityRole="header">
+          {usuario.nome}
+        </Text>
         <Text tone="body">{usuario.email}</Text>
-        <Badge label={rotuloStatus[usuario.status]} />
+        <Column direction="row" gap="sm" align="center">
+          <Badge label={rotuloPerfil[usuario.perfil.nome]} tone="muted" />
+          <Badge label={rotuloStatus[usuario.status]} tone={TOM_DO_STATUS[usuario.status]} />
+        </Column>
       </Column>
 
       {ehOProprioUsuario ? (
         <Text tone="body">Você não pode alterar o próprio perfil nem bloquear a si mesmo.</Text>
       ) : (
         <Column gap="sm">
-          <Text variant="subheading">Perfil</Text>
-          <Column gap="xs">
-            {perfis.map((perfil) => {
-              const selecionado = perfil.id === perfilSelecionadoId;
-              return (
-                <ListItem
-                  key={perfil.id}
-                  accessibilityLabel={`Perfil ${rotuloPerfil[perfil.nome]}`}
-                  onPress={() => setPerfilSelecionadoId(perfil.id)}
-                >
-                  <Column direction="row" gap="sm" wrap>
-                    <Text weight={selecionado ? 'medium' : 'regular'}>{rotuloPerfil[perfil.nome]}</Text>
-                    {/* O texto do chip indica a seleção: cor nunca é o único indicador. */}
-                    {selecionado && <Badge label="Selecionado" />}
-                  </Column>
-                </ListItem>
-              );
-            })}
-          </Column>
-          {/* Único elemento cyan preenchido da tela: a ação primária (DESIGN_CYAN §1). */}
+          <Text variant="title" weight="semibold" accessibilityRole="header">
+            Perfil de acesso
+          </Text>
+          <View accessibilityRole="radiogroup" style={styles.opcoes}>
+            {perfis.map((perfil) => (
+              <OpcaoSelecionavel
+                key={perfil.id}
+                titulo={rotuloPerfil[perfil.nome]}
+                descricao={DESCRICAO_PERFIL[perfil.nome].descricao}
+                icon={DESCRICAO_PERFIL[perfil.nome].icone}
+                selecionada={perfil.id === perfilSelecionadoId}
+                onPress={() => setPerfilSelecionadoId(perfil.id)}
+                disabled={acaoEmAndamento !== null}
+              />
+            ))}
+          </View>
+          {/* Único elemento azul preenchido da tela: a ação primária (DESIGN_CYAN §1). */}
           <Button
             label="Salvar perfil"
             onPress={handleSalvarPerfil}
@@ -169,26 +202,45 @@ export function UsuarioDetalheView() {
       )}
 
       <Column gap="sm">
-        {usuario.status !== 'Ativo' && (
+        {usuario.status === 'AguardandoAprovacao' && (
           <Button
-            label="Aprovar"
+            label="Aprovar acesso"
             variant="ghost"
             onPress={() => handleAlterarStatus('Ativo')}
             disabled={acaoEmAndamento !== null}
             loading={acaoEmAndamento === 'aprovar'}
           />
         )}
-        {usuario.status === 'Ativo' && !ehOProprioUsuario && (
+        {usuario.status === 'Bloqueado' && (
           <Button
-            label="Bloquear"
+            label="Desbloquear acesso"
             variant="ghost"
-            onPress={() => handleAlterarStatus('Bloqueado')}
+            onPress={() => handleAlterarStatus('Ativo')}
             disabled={acaoEmAndamento !== null}
-            loading={acaoEmAndamento === 'bloquear'}
+            loading={acaoEmAndamento === 'aprovar'}
           />
         )}
+        {usuario.status !== 'Bloqueado' && !ehOProprioUsuario && (
+          <>
+            <Button
+              label="Bloquear acesso"
+              variant="danger"
+              onPress={() => handleAlterarStatus('Bloqueado')}
+              disabled={acaoEmAndamento !== null}
+              loading={acaoEmAndamento === 'bloquear'}
+            />
+            <Text variant="bodySm" tone="body">
+              {`Bloqueado, ${primeiroNome} perde o acesso ao app. Dá para desbloquear depois.`}
+            </Text>
+          </>
+        )}
       </Column>
-
     </Screen>
   );
 }
+
+const styles = StyleSheet.create({
+  opcoes: {
+    gap: spacing.sm,
+  },
+});

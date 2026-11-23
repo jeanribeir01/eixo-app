@@ -15,6 +15,8 @@ export type ListItemProps = {
   // Tom do ícone: `body` por padrão. Outro tom só quando o ícone diz o estado da linha (ex.: `warning`
   // em "Pede atenção"), sempre junto de um texto que diz o mesmo.
   iconTone?: TextTone;
+  // Elemento à esquerda no lugar do ícone, quando a linha é de uma pessoa (Avatar).
+  leading?: ReactNode;
   // Sem trailing e com onPress, a linha mostra o chevron: "toque para abrir".
   trailing?: ReactNode;
   onPress?: () => void;
@@ -34,6 +36,7 @@ export function ListItem({
   subtitle,
   icon,
   iconTone = 'body',
+  leading,
   trailing,
   onPress,
   accessibilityLabel,
@@ -46,7 +49,7 @@ export function ListItem({
   const conteudo =
     title !== undefined ? (
       <View style={styles.linha}>
-        {icon && <Icon name={icon} tone={iconTone} />}
+        {leading ?? (icon && <Icon name={icon} tone={iconTone} />)}
         <View style={styles.textos}>
           <Text>{title}</Text>
           {!!subtitle && (

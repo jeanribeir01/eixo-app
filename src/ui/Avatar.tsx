@@ -1,36 +1,45 @@
 import { Image, StyleSheet, View } from 'react-native';
 
 import { Text } from './Text';
-import { colors, radius, touchTarget } from './tokens';
+import { colors, radius, spacing, touchTarget } from './tokens';
 
 type AvatarProps = {
   name: string;
   photoUrl: string | null;
+  // `md` (56) no cartão de perfil e no Início; `sm` (40) na linha de lista, ao lado de dois textos.
+  size?: 'sm' | 'md';
 };
 
-const SIZE = touchTarget + 12;
+const TAMANHOS = { sm: touchTarget - spacing.xs, md: touchTarget + spacing.md } as const;
 
-// Foto do usuário quando existe; senão, a inicial do nome sobre accentSoft (mesmo par do Badge neutral).
-export function Avatar({ name, photoUrl }: AvatarProps) {
+// Iniciais: primeira letra do primeiro e do último nome ("Jean Ribeiro" → "JR"), como no protótipo.
+// Um nome só, ou o e-mail no lugar do nome (contas de teste), fica com uma letra.
+export function iniciais(nome: string): string {
+  const partes = nome.trim().split(/\s+/).filter(Boolean);
+  if (partes.length === 0) return '?';
+  if (partes.length === 1 || nome.includes('@')) return partes[0].charAt(0).toUpperCase();
+  return (partes[0].charAt(0) + partes[partes.length - 1].charAt(0)).toUpperCase();
+}
+
+// Foto do usuário quando existe; senão, as iniciais sobre accentSoft (mesmo par do Badge neutral).
+export function Avatar({ name, photoUrl, size = 'md' }: AvatarProps) {
+  const dimensao = TAMANHOS[size];
+  const circulo = { width: dimensao, height: dimensao, borderRadius: radius.pill };
+
   if (photoUrl) {
-    return <Image source={{ uri: photoUrl }} accessibilityLabel={`Foto de ${name}`} style={styles.circle} />;
+    return <Image source={{ uri: photoUrl }} accessibilityLabel={`Foto de ${name}`} style={circulo} />;
   }
 
   return (
-    <View style={[styles.circle, styles.fallback]} accessibilityLabel={`Inicial de ${name}`}>
-      <Text variant="subheading" weight="medium" tone="accent">
-        {name.trim().charAt(0).toUpperCase()}
+    <View style={[circulo, styles.fallback]} accessibilityLabel={`Iniciais de ${name}`}>
+      <Text variant={size === 'sm' ? 'bodySm' : 'subheading'} weight="medium" tone="accent">
+        {iniciais(name)}
       </Text>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  circle: {
-    width: SIZE,
-    height: SIZE,
-    borderRadius: radius.pill,
-  },
   fallback: {
     backgroundColor: colors.accentSoft,
     alignItems: 'center',

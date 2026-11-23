@@ -71,7 +71,7 @@ describe('ContaView — cartão do usuário (CTA-01)', () => {
     expect(screen.getByLabelText('Foto de Maria Silva')).toHaveProp('source', {
       uri: 'https://lh3.googleusercontent.com/foto-maria',
     });
-    expect(screen.queryByLabelText('Inicial de Maria Silva')).not.toBeOnTheScreen();
+    expect(screen.queryByLabelText('Iniciais de Maria Silva')).not.toBeOnTheScreen();
   });
 
   it('sem foto, exibe a inicial maiúscula do nome (AUTH-14)', () => {
@@ -79,7 +79,7 @@ describe('ContaView — cartão do usuário (CTA-01)', () => {
 
     render(<ContaView />);
 
-    expect(screen.getByLabelText('Inicial de maria Silva')).toHaveTextContent('M');
+    expect(screen.getByLabelText('Iniciais de maria Silva')).toHaveTextContent('MS');
   });
 
   it('nome vazio no Google: usa o e-mail no lugar do nome (edge case)', () => {
@@ -89,7 +89,7 @@ describe('ContaView — cartão do usuário (CTA-01)', () => {
 
     // Duas vezes: no lugar do nome e na linha do e-mail.
     expect(screen.getAllByText('joao@example.com')).toHaveLength(2);
-    expect(screen.getByLabelText('Inicial de joao@example.com')).toHaveTextContent('J');
+    expect(screen.getByLabelText('Iniciais de joao@example.com')).toHaveTextContent('J');
   });
 });
 
