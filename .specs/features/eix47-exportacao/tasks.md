@@ -150,7 +150,7 @@ T4 → T5 → T6
 
 ---
 
-### T5: Componente "Exportar"
+### T5: ✅ Componente "Exportar"
 
 **What**: `ExportarRelatorio` com o botão primário, alerta de formato, aviso de período vazio, loading e callback de feedback.
 **Where**: `src/features/relatorios/export/ExportarRelatorio.tsx`
@@ -165,8 +165,8 @@ T4 → T5 → T6
 
 **Done when**:
 
-- [ ] Testes cobrem render, alerta sem consulta, CSV e PDF com sucesso, loading, cada erro, período vazio com Cancelar e com Gerar mesmo assim
-- [ ] Gate quick passa
+- [x] Testes cobrem render, alerta sem consulta, CSV e PDF com sucesso, loading, cada erro, período vazio com Cancelar e com Gerar mesmo assim
+- [x] Gate quick passa
 
 **Tests**: unit
 **Gate**: quick
