@@ -74,14 +74,10 @@ export function IndicadorSincronizacao({
   }, [confirmando]);
 
   const principal = (() => {
-    if (sincronizando) {
-      return (
-        <Aviso
-          tom="info"
-          emAndamento
-          titulo={pendentes > 0 ? `Enviando ${registros(pendentes)}` : 'Atualizando suas viagens'}
-        />
-      );
+    // Só o envio do que está no aparelho ganha aviso. Baixar do servidor, sem nada a enviar, já tem o
+    // indicador de puxar-para-atualizar: um aviso a mais só faria a tela pular a cada abertura.
+    if (sincronizando && pendentes > 0) {
+      return <Aviso tom="info" emAndamento titulo={`Enviando ${registros(pendentes)}`} />;
     }
     if (!isOnline) {
       return (

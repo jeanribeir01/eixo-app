@@ -62,6 +62,12 @@ describe('IndicadorSincronizacao', () => {
     expect(screen.queryByTestId('icone-enviando', { includeHiddenElements: true })).toBeNull();
   });
 
+  it('baixando do servidor sem nada a enviar: nenhum aviso (o puxar-para-atualizar já mostra)', () => {
+    render(<IndicadorSincronizacao isOnline pendentes={0} sincronizando />);
+
+    expect(screen.queryByTestId('indicador-sincronizacao')).toBeNull();
+  });
+
   it('falha no envio: aviso em danger com "Tentar enviar agora", que sincroniza na hora', () => {
     const sincronizar = jest.fn().mockResolvedValue(undefined);
     useSyncStore.setState({ sincronizarTudo: sincronizar });
