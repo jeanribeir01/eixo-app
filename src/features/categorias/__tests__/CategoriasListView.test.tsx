@@ -37,6 +37,7 @@ jest.mock('../categoriasRepository', () => ({
   definirAtivaCategoria: jest.fn(),
 }));
 
+
 // O ListItem real, só embrulhado num jest.fn: o teste de memo (EIX-71) conta quantas vezes cada linha renderiza.
 jest.mock('@/ui', () => {
   const real = jest.requireActual('@/ui');
@@ -60,10 +61,12 @@ function mockLargura(width: number) {
 const mockListar = listarCategorias as jest.MockedFunction<typeof listarCategorias>;
 const mockDefinirAtiva = definirAtivaCategoria as jest.MockedFunction<typeof definirAtivaCategoria>;
 
+// A tela abre na aba Saídas: duas saídas ativas, uma desativada e uma entrada (só aparece na outra aba).
 const categorias: Categoria[] = [
   { id: '1', titulo: 'Frete', tipo: 'Entrada', ativa: true },
   { id: '2', titulo: 'Combustível', tipo: 'Saida', ativa: true },
   { id: '3', titulo: 'Categoria antiga', tipo: 'Saida', ativa: false },
+  { id: '4', titulo: 'Pedágio', tipo: 'Saida', ativa: true },
 ];
 
 beforeEach(() => {
@@ -75,21 +78,20 @@ beforeEach(() => {
 async function renderComLista() {
   mockListar.mockResolvedValue({ ok: true, data: categorias });
   render(<CategoriasListView />);
-  await screen.findByText('Frete');
+  await screen.findByText('Combustível');
 }
 
 describe('CategoriasListView — carga (LST-03)', () => {
-  it('primeira carga: três skeletons, depois a lista com o tipo no subtítulo', async () => {
+  it('primeira carga: três skeletons, depois as saídas ativas', async () => {
     mockListar.mockResolvedValue({ ok: true, data: categorias });
     render(<CategoriasListView />);
 
     expect(screen.getByLabelText('Carregando categorias')).toBeOnTheScreen();
     expect(screen.UNSAFE_getAllByType(Skeleton)).toHaveLength(3);
 
-    expect(await screen.findByText('Frete')).toBeOnTheScreen();
-    expect(screen.getByText('Combustível')).toBeOnTheScreen();
-    expect(screen.getByText('Entrada')).toBeOnTheScreen();
-    expect(screen.getByText('Saída')).toBeOnTheScreen();
+    expect(await screen.findByText('Combustível')).toBeOnTheScreen();
+    expect(screen.getByText('Pedágio')).toBeOnTheScreen();
+    expect(screen.queryByText('Frete')).not.toBeOnTheScreen();
   });
 
   it('o título da tela fica no header nativo, não no conteúdo (NAV-02)', async () => {
@@ -103,23 +105,26 @@ describe('CategoriasListView — carga (LST-03)', () => {
 
   it('voltar o foco com a lista na tela recarrega sem skeleton, e a lista nova substitui a antiga', async () => {
     await renderComLista();
-    mockListar.mockResolvedValue({ ok: true, data: [...categorias, { id: '4', titulo: 'Pedágio', tipo: 'Saida', ativa: true }] });
+    mockListar.mockResolvedValue({
+      ok: true,
+      data: [...categorias, { id: '5', titulo: 'Manutenção', tipo: 'Saida', ativa: true }],
+    });
 
     await act(async () => {
       mockAoFocar?.();
     });
 
     expect(screen.queryByLabelText('Carregando categorias')).not.toBeOnTheScreen();
-    expect(screen.getByText('Frete')).toBeOnTheScreen();
-    expect(screen.getByText('Pedágio')).toBeOnTheScreen();
+    expect(screen.getByText('Combustível')).toBeOnTheScreen();
+    expect(screen.getByText('Manutenção')).toBeOnTheScreen();
   });
 
-  it('pull-to-refresh com o indicador em accent busca de novo', async () => {
+  it('pull-to-refresh com o indicador em accentStrong busca de novo', async () => {
     await renderComLista();
 
     const refresh = screen.UNSAFE_getByType(RefreshControl);
-    expect(refresh.props.colors).toEqual([colors.accent]);
-    expect(refresh.props.tintColor).toBe(colors.accent);
+    expect(refresh.props.colors).toEqual([colors.accentStrong]);
+    expect(refresh.props.tintColor).toBe(colors.accentStrong);
 
     await act(async () => refresh.props.onRefresh());
     expect(mockListar).toHaveBeenCalledTimes(2);
@@ -142,7 +147,47 @@ describe('CategoriasListView — carga (LST-03)', () => {
     expect(await screen.findByText('Não foi possível carregar')).toBeOnTheScreen();
     fireEvent.press(screen.getByRole('button', { name: 'Tentar novamente' }));
 
-    expect(await screen.findByText('Frete')).toBeOnTheScreen();
+    expect(await screen.findByText('Combustível')).toBeOnTheScreen();
+  });
+});
+
+// Abas Saídas/Entradas no lugar do tipo no subtítulo (US01; auditoria de UI, item 6).
+describe('CategoriasListView — abas por tipo', () => {
+  it('as abas mostram quantas categorias ativas cada tipo tem; Saídas vem selecionada', async () => {
+    await renderComLista();
+
+    expect(screen.getByRole('tab', { name: 'Saídas · 2', selected: true })).toBeOnTheScreen();
+    expect(screen.getByRole('tab', { name: 'Entradas · 1', selected: false })).toBeOnTheScreen();
+  });
+
+  it('trocar para Entradas mostra só as entradas', async () => {
+    await renderComLista();
+
+    fireEvent.press(screen.getByRole('tab', { name: 'Entradas · 1' }));
+
+    expect(screen.getByText('Frete')).toBeOnTheScreen();
+    expect(screen.queryByText('Combustível')).not.toBeOnTheScreen();
+  });
+
+  it('o FAB cria a categoria já com o tipo da aba aberta', async () => {
+    await renderComLista();
+
+    fireEvent.press(screen.getByRole('button', { name: 'Nova categoria' }));
+    expect(mockPush).toHaveBeenLastCalledWith('/categorias/nova?tipo=Saida');
+
+    fireEvent.press(screen.getByRole('tab', { name: 'Entradas · 1' }));
+    fireEvent.press(screen.getByRole('button', { name: 'Nova categoria' }));
+    expect(mockPush).toHaveBeenLastCalledWith('/categorias/nova?tipo=Entrada');
+  });
+
+  it('aba sem categoria: estado vazio que aponta o botão de criar', async () => {
+    mockListar.mockResolvedValue({ ok: true, data: categorias.filter((categoria) => categoria.tipo === 'Saida') });
+    render(<CategoriasListView />);
+    await screen.findByText('Combustível');
+
+    fireEvent.press(screen.getByRole('tab', { name: 'Entradas · 0' }));
+
+    expect(screen.getByText('Nenhuma categoria de entrada')).toBeOnTheScreen();
   });
 });
 
@@ -163,7 +208,7 @@ describe('CategoriasListView — linha (LST-01)', () => {
     expect(screen.queryByRole('button', { name: 'Reativar' })).not.toBeOnTheScreen();
   });
 
-  it('switch "Ativa" desativa, fica desabilitado enquanto salva e mostra "Categoria desativada."', async () => {
+  it('switch "Ativa" desativa, fica desabilitado enquanto salva e a categoria vai para Desativadas', async () => {
     let concluir: (valor: Awaited<ReturnType<typeof definirAtivaCategoria>>) => void = () => undefined;
     mockDefinirAtiva.mockReturnValue(new Promise((resolve) => (concluir = resolve)));
     await renderComLista();
@@ -175,9 +220,26 @@ describe('CategoriasListView — linha (LST-01)', () => {
 
     await act(async () => concluir({ ok: true, data: { ...categorias[1]!, ativa: false } }));
 
-    expect(screen.getByRole('alert')).toHaveTextContent('Categoria desativada.');
-    // Com o filtro de desativadas desligado, a categoria sai da lista.
-    expect(screen.queryByText('Combustível')).not.toBeOnTheScreen();
+    expect(screen.getByText('"Combustível" desativada.')).toBeOnTheScreen();
+    expect(screen.queryByRole('button', { name: 'Combustível' })).not.toBeOnTheScreen();
+    expect(screen.getByRole('button', { name: 'Desativadas, 2' })).toBeOnTheScreen();
+    expect(screen.getByRole('tab', { name: 'Saídas · 1' })).toBeOnTheScreen();
+  });
+
+  it('"Desfazer" no Snackbar reativa a categoria que acabou de ser desativada', async () => {
+    mockDefinirAtiva
+      .mockResolvedValueOnce({ ok: true, data: { ...categorias[1]!, ativa: false } })
+      .mockResolvedValueOnce({ ok: true, data: { ...categorias[1]!, ativa: true } });
+    await renderComLista();
+
+    await act(async () => fireEvent(screen.getByRole('switch', { name: 'Ativa: Combustível' }), 'valueChange', false));
+    await act(async () => fireEvent.press(screen.getByRole('button', { name: 'Desfazer' })));
+
+    expect(mockDefinirAtiva).toHaveBeenLastCalledWith('2', true);
+    expect(screen.getByText('"Combustível" reativada.')).toBeOnTheScreen();
+    expect(screen.getByRole('button', { name: 'Combustível' })).toBeOnTheScreen();
+    // Reativar não oferece "Desfazer": não há nada perdido para recuperar.
+    expect(screen.queryByRole('button', { name: 'Desfazer' })).not.toBeOnTheScreen();
   });
 
   it('erro ao desativar mostra o Snackbar de erro e mantém a categoria ativa', async () => {
@@ -194,7 +256,7 @@ describe('CategoriasListView — linha (LST-01)', () => {
     let concluir: (valor: Awaited<ReturnType<typeof definirAtivaCategoria>>) => void = () => undefined;
     mockDefinirAtiva.mockReturnValue(new Promise((resolve) => (concluir = resolve)));
     await renderComLista();
-    const freteAntes = rendersDaLinha('Frete');
+    const pedagioAntes = rendersDaLinha('Pedágio');
     const combustivelAntes = rendersDaLinha('Combustível');
 
     fireEvent(screen.getByRole('switch', { name: 'Ativa: Combustível' }), 'valueChange', false);
@@ -206,35 +268,47 @@ describe('CategoriasListView — linha (LST-01)', () => {
     await act(async () => concluir({ ok: true, data: { ...categorias[1]!, ativa: false } }));
 
     // Salvou, a tela mostrou o Snackbar e a lista mudou; a vizinha, que não mudou, não renderizou nenhuma vez.
-    expect(screen.getByRole('alert')).toHaveTextContent('Categoria desativada.');
-    expect(rendersDaLinha('Frete')).toBe(freteAntes);
+    expect(screen.getByText('"Combustível" desativada.')).toBeOnTheScreen();
+    expect(rendersDaLinha('Pedágio')).toBe(pedagioAntes);
   });
 
   it('o switch fica fora do botão da linha: o leitor de tela alcança os dois', async () => {
     await renderComLista();
 
-    expect(within(screen.getByRole('button', { name: 'Frete' })).queryByRole('switch')).not.toBeOnTheScreen();
+    expect(within(screen.getByRole('button', { name: 'Combustível' })).queryByRole('switch')).not.toBeOnTheScreen();
   });
 });
 
-describe('CategoriasListView — filtros e FAB (LST-01)', () => {
-  it('esconde as desativadas por padrão; com o filtro, aparecem para reativar pelo switch', async () => {
+describe('CategoriasListView — desativadas e busca (LST-01)', () => {
+  it('desativadas ficam recolhidas no fim, com os nomes; ao abrir, aparecem para reativar pelo switch', async () => {
     await renderComLista();
-    expect(screen.queryByText('Categoria antiga')).not.toBeOnTheScreen();
 
-    fireEvent(screen.getByRole('switch', { name: 'Mostrar desativadas' }), 'valueChange', true);
-
+    const cabecalho = screen.getByRole('button', { name: 'Desativadas, 1' });
+    expect(cabecalho).toBeCollapsed();
     expect(screen.getByText('Categoria antiga')).toBeOnTheScreen();
-    expect(screen.getByText('Saída · Desativada')).toBeOnTheScreen();
+    expect(screen.queryByRole('switch', { name: 'Ativa: Categoria antiga' })).not.toBeOnTheScreen();
+
+    fireEvent.press(cabecalho);
+
+    expect(screen.getByRole('button', { name: 'Desativadas, 1' })).toBeExpanded();
+    expect(screen.getByText('Desativada · some dos novos lançamentos')).toBeOnTheScreen();
     expect(screen.getByRole('switch', { name: 'Ativa: Categoria antiga' })).not.toBeChecked();
   });
 
-  it('filtra a lista pela busca no título', async () => {
+  it('sem desativadas, a seção não aparece', async () => {
+    mockListar.mockResolvedValue({ ok: true, data: categorias.filter((categoria) => categoria.ativa) });
+    render(<CategoriasListView />);
+    await screen.findByText('Combustível');
+
+    expect(screen.queryByText(/^Desativadas/)).not.toBeOnTheScreen();
+  });
+
+  it('filtra a aba pela busca no nome', async () => {
     await renderComLista();
 
     fireEvent.changeText(screen.getByLabelText('Buscar'), 'combust');
 
-    expect(screen.queryByText('Frete')).not.toBeOnTheScreen();
+    expect(screen.queryByText('Pedágio')).not.toBeOnTheScreen();
     expect(screen.getByText('Combustível')).toBeOnTheScreen();
   });
 
@@ -244,14 +318,6 @@ describe('CategoriasListView — filtros e FAB (LST-01)', () => {
     fireEvent.changeText(screen.getByLabelText('Buscar'), 'zzz');
 
     expect(screen.getByText('Nenhuma categoria encontrada')).toBeOnTheScreen();
-  });
-
-  it('o FAB "Nova categoria" abre a criação', async () => {
-    await renderComLista();
-
-    fireEvent.press(screen.getByRole('button', { name: 'Nova categoria' }));
-
-    expect(mockPush).toHaveBeenCalledWith('/categorias/nova');
   });
 });
 
@@ -273,7 +339,7 @@ describe('CategoriasListView — tablet (EIX-94)', () => {
     expect(estiloDaLista().maxWidth).toBeUndefined();
   });
 
-  it('800: a lista rola na largura toda; busca, filtro e linhas ficam na mesma coluna de 720', async () => {
+  it('800: a lista rola na largura toda; abas, busca e linhas ficam na mesma coluna de 720', async () => {
     mockLargura(800);
     await renderComLista();
 
@@ -284,13 +350,13 @@ describe('CategoriasListView — tablet (EIX-94)', () => {
     const coluna = screen.getByTestId('screen-coluna');
     expect(StyleSheet.flatten(coluna.props.style)).toMatchObject({ maxWidth: 720, alignSelf: 'center' });
     expect(within(coluna).getByLabelText('Buscar')).toBeOnTheScreen();
-    expect(within(coluna).getByRole('switch', { name: 'Mostrar desativadas' })).toBeOnTheScreen();
+    expect(within(coluna).getByRole('tab', { name: 'Saídas · 2' })).toBeOnTheScreen();
   });
 
   it('celular → tablet com a tela aberta: a busca digitada continua valendo e a lista ganha a coluna', async () => {
     mockListar.mockResolvedValue({ ok: true, data: categorias });
     const { rerender } = render(<CategoriasListView />);
-    await screen.findByText('Frete');
+    await screen.findByText('Combustível');
     fireEvent.changeText(screen.getByLabelText('Buscar'), 'combust');
 
     mockLargura(800);
@@ -298,7 +364,7 @@ describe('CategoriasListView — tablet (EIX-94)', () => {
 
     expect(estiloDaLista()).toMatchObject({ maxWidth: 720, alignSelf: 'center' });
     expect(screen.getByLabelText('Buscar').props.value).toBe('combust');
-    expect(screen.queryByText('Frete')).not.toBeOnTheScreen();
+    expect(screen.queryByText('Pedágio')).not.toBeOnTheScreen();
     expect(screen.getByText('Combustível')).toBeOnTheScreen();
   });
 });

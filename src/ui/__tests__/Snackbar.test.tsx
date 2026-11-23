@@ -1,4 +1,4 @@
-import { act, render, screen, waitFor } from '@testing-library/react-native';
+import { act, fireEvent, render, screen, waitFor } from '@testing-library/react-native';
 import { AccessibilityInfo, Animated, Text } from 'react-native';
 
 import { FAB } from '../FAB';
@@ -62,6 +62,38 @@ describe('Snackbar', () => {
       jest.advanceTimersByTime(1000);
     });
 
+    expect(onDismiss).toHaveBeenCalledTimes(1);
+  });
+});
+
+// "Desfazer" depois de desativar (auditoria de UI, item 6): a ação é um botão próprio, alcançável pelo
+// leitor de tela, e o Snackbar fica mais tempo para dar tempo de tocar.
+describe('Snackbar — com ação', () => {
+  it('a ação é um botão; tocar chama a ação e fecha o Snackbar', async () => {
+    const onPress = jest.fn();
+    const onDismiss = jest.fn();
+    render(<Snackbar message="Categoria desativada." tone="success" onDismiss={onDismiss} action={{ label: 'Desfazer', onPress }} />);
+    await esperarEntradaComecar();
+
+    fireEvent.press(screen.getByRole('button', { name: 'Desfazer' }));
+
+    expect(onPress).toHaveBeenCalledTimes(1);
+    expect(onDismiss).toHaveBeenCalledTimes(1);
+  });
+
+  it('com ação, fica 6 s na tela (sem ação, 3 s)', async () => {
+    const onDismiss = jest.fn();
+    render(<Snackbar message="Categoria desativada." tone="success" onDismiss={onDismiss} action={{ label: 'Desfazer', onPress: jest.fn() }} />);
+    await esperarEntradaComecar();
+
+    act(() => {
+      jest.advanceTimersByTime(3000);
+    });
+    expect(onDismiss).not.toHaveBeenCalled();
+
+    act(() => {
+      jest.advanceTimersByTime(3000);
+    });
     expect(onDismiss).toHaveBeenCalledTimes(1);
   });
 });

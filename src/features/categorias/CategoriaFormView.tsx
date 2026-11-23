@@ -1,9 +1,9 @@
 import { useEffect, useState } from 'react';
 import { useRouter } from 'expo-router';
-import { ActivityIndicator } from 'react-native';
+import { ActivityIndicator, StyleSheet, View } from 'react-native';
 import { z } from 'zod';
 
-import { Button, Column, EmptyState, Input, Screen, Snackbar, Tabs, Text, colors } from '@/ui';
+import { Button, Column, EmptyState, Input, MensagemErro, OpcaoSelecionavel, Screen, Snackbar, Text, colors, spacing } from '@/ui';
 
 import { atualizarCategoria, buscarCategoriaPorId, criarCategoria } from './categoriasRepository';
 import { categoriaSchema } from './schema';
@@ -13,24 +13,28 @@ type Erros = Partial<Record<'titulo' | 'tipo', string>>;
 type Feedback = { mensagem: string; tone: 'success' | 'error' };
 type StatusCarga = 'carregando' | 'pronto' | 'erro';
 
-const opcoesTipo = [
-  { label: rotuloTipoCategoria.Entrada, value: 'Entrada' },
-  { label: rotuloTipoCategoria.Saida, value: 'Saida' },
+// Cada tipo diz o que significa: "Entrada" sozinho não diz para que lado vai o dinheiro.
+const OPCOES_TIPO: { tipo: TipoCategoria; descricao: string }[] = [
+  { tipo: 'Saida', descricao: 'Dinheiro que sai do caixa' },
+  { tipo: 'Entrada', descricao: 'Dinheiro que entra no caixa' },
 ];
 
 export type CategoriaFormViewProps = {
   // Sem id: modo criar. Com id: modo editar, carrega a categoria antes de mostrar o formulário.
   categoriaId?: string;
+  // Modo criar: o tipo já vem escolhido pela aba de onde a pessoa veio (Saídas ou Entradas). Sem ele,
+  // nada vem marcado e o formulário pede a escolha.
+  tipoInicial?: TipoCategoria;
 };
 
-export function CategoriaFormView({ categoriaId }: CategoriaFormViewProps) {
+export function CategoriaFormView({ categoriaId, tipoInicial }: CategoriaFormViewProps) {
   const router = useRouter();
   const modoEdicao = !!categoriaId;
 
   const [status, setStatus] = useState<StatusCarga>(modoEdicao ? 'carregando' : 'pronto');
   const [erroCarga, setErroCarga] = useState<string | null>(null);
   const [titulo, setTitulo] = useState('');
-  const [tipo, setTipo] = useState<TipoCategoria>('Entrada');
+  const [tipo, setTipo] = useState<TipoCategoria | null>(tipoInicial ?? null);
   const [erros, setErros] = useState<Erros>({});
   const [salvando, setSalvando] = useState(false);
   const [feedback, setFeedback] = useState<Feedback | null>(null);
@@ -64,7 +68,7 @@ export function CategoriaFormView({ categoriaId }: CategoriaFormViewProps) {
   }, [categoriaId]);
 
   async function handleSalvar() {
-    const resultado = categoriaSchema.safeParse({ titulo, tipo });
+    const resultado = categoriaSchema.safeParse({ titulo, tipo: tipo ?? undefined });
     if (!resultado.success) {
       const fieldErrors = z.flattenError(resultado.error).fieldErrors;
       setErros({ titulo: fieldErrors.titulo?.[0], tipo: fieldErrors.tipo?.[0] });
@@ -100,7 +104,7 @@ export function CategoriaFormView({ categoriaId }: CategoriaFormViewProps) {
   if (status === 'carregando') {
     return (
       <Screen align="center" underHeader>
-        <ActivityIndicator size="small" color={colors.accent} accessibilityLabel="Carregando categoria" />
+        <ActivityIndicator size="small" color={colors.accentStrong} accessibilityLabel="Carregando categoria" />
       </Screen>
     );
   }
@@ -108,7 +112,12 @@ export function CategoriaFormView({ categoriaId }: CategoriaFormViewProps) {
   if (status === 'erro') {
     return (
       <Screen align="center" underHeader>
-        <EmptyState title="Não foi possível carregar a categoria" description={erroCarga ?? undefined} actionLabel="Voltar" onAction={() => router.back()} />
+        <EmptyState
+          title="Não foi possível carregar a categoria"
+          description={erroCarga ?? undefined}
+          actionLabel="Voltar"
+          onAction={() => router.back()}
+        />
       </Screen>
     );
   }
@@ -117,27 +126,41 @@ export function CategoriaFormView({ categoriaId }: CategoriaFormViewProps) {
     <Screen
       underHeader
       scroll
-      overlay={feedback && <Snackbar message={feedback.mensagem} tone={feedback.tone} duration={1200} onDismiss={handleFeedbackDismiss} />}
+      overlay={
+        feedback && (
+          <Snackbar message={feedback.mensagem} tone={feedback.tone} duration={1200} onDismiss={handleFeedbackDismiss} />
+        )
+      }
     >
-      <Column gap="md">
-        <Input label="Título" placeholder="Ex.: Combustível" value={titulo} onChangeText={setTitulo} error={erros.titulo} />
-
-        <Column gap="xs">
-          <Text variant="bodySm" tone="body" weight="medium">
-            Tipo
-          </Text>
-          <Tabs options={opcoesTipo} value={tipo} onChange={(valor) => setTipo(valor as TipoCategoria)} accessibilityLabel="Tipo da categoria" />
-          {!!erros.tipo && (
-            <Text accessibilityRole="alert" variant="bodySm">
-              {erros.tipo}
-            </Text>
-          )}
-        </Column>
+      <Column gap="sm">
+        <Text variant="bodySm" weight="medium">
+          Tipo
+        </Text>
+        <View accessibilityRole="radiogroup" accessibilityLabel="Tipo da categoria" style={styles.opcoes}>
+          {OPCOES_TIPO.map((opcao) => (
+            <OpcaoSelecionavel
+              key={opcao.tipo}
+              titulo={rotuloTipoCategoria[opcao.tipo]}
+              descricao={opcao.descricao}
+              icon={opcao.tipo === 'Entrada' ? 'entrada' : 'saida'}
+              selecionada={tipo === opcao.tipo}
+              onPress={() => setTipo(opcao.tipo)}
+            />
+          ))}
+        </View>
+        {!!erros.tipo && <MensagemErro>{erros.tipo}</MensagemErro>}
       </Column>
 
-      <Button label="Salvar" onPress={handleSalvar} loading={salvando} />
-      <Button label="Cancelar" variant="ghost" onPress={() => router.back()} />
+      <Input label="Título" placeholder="Ex.: Combustível" value={titulo} onChangeText={setTitulo} error={erros.titulo} />
 
+      {/* Sem "Cancelar": o voltar do header já desiste sem salvar. O único botão é a ação da tela. */}
+      <Button label={modoEdicao ? 'Salvar alterações' : 'Criar categoria'} onPress={handleSalvar} loading={salvando} />
     </Screen>
   );
 }
+
+const styles = StyleSheet.create({
+  opcoes: {
+    gap: spacing.sm,
+  },
+});

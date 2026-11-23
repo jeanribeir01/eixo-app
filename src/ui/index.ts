@@ -1,5 +1,5 @@
 export { AcaoRapida } from './AcaoRapida';
-export { Avatar } from './Avatar';
+export { Avatar, iniciais } from './Avatar';
 export { Badge, type BadgeProps, type BadgeTone } from './Badge';
 export { Button, type ButtonProps, type ButtonVariant } from './Button';
 export { CampoData } from './CampoData';
@@ -18,6 +18,7 @@ export { List } from './List';
 export { ListSection } from './ListSection';
 export { Logo, type LogoProps } from './Logo';
 export { MensagemErro } from './MensagemErro';
+export { OpcaoSelecionavel } from './OpcaoSelecionavel';
 export { Screen, ScreenColumn, useScreenColumn } from './Screen';
 export { Select, type SelectOption, type SelectProps } from './Select';
 export { Skeleton, type SkeletonProps } from './Skeleton';

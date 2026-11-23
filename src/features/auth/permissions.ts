@@ -18,6 +18,14 @@ export const rotuloPerfil: Record<PerfilNome, string> = {
   Motorista: 'Operador/Motorista',
 };
 
+// Rótulo curto para selo em linha de lista, onde o nome completo espreme o e-mail.
+export const rotuloCurtoPerfil: Record<PerfilNome, string> = {
+  Admin: 'Admin',
+  'Gestor de Frota': 'Gestor',
+  Financeiro: 'Financeiro',
+  Motorista: 'Motorista',
+};
+
 export const rotuloStatus: Record<StatusUsuario, string> = {
   AguardandoAprovacao: 'Aguardando aprovação',
   Ativo: 'Ativo',
