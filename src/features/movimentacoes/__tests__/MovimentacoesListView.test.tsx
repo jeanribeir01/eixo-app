@@ -13,7 +13,7 @@ jest.setTimeout(15000);
 
 const mockPush = jest.fn();
 // Guarda os callbacks de foco (lista e resumo) para o teste simular "voltei para esta tela".
-let mockFocos: Array<() => void> = [];
+let mockFocos: (() => void)[] = [];
 let mockAoFocar: (() => void) | null = null;
 
 jest.mock('expo-router', () => {
