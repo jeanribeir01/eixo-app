@@ -224,10 +224,15 @@ function montarRevisao(
   };
 }
 
-async function buscarViagemNoServidor(
-  cliente: typeof supabase,
-  id: string,
-): Promise<{ ok: true; data: ViagemApi | null } | { ok: false; conexao: boolean }> {
+// `invalida` separa "a viagem não existe" de "a viagem existe, mas o servidor devolveu um formato
+// que o app não entende": os dois chegam sem `data`, mas pedem códigos de revisão diferentes.
+// `erro` leva o erro do servidor para quem precisa tratá-lo como falha temporária (ex.: token
+// expirado, 5xx); exceção lançada pelo fetch não tem erro e conta como queda de conexão.
+type BuscaViagemServidor =
+  | { ok: true; data: ViagemApi | null; invalida: boolean }
+  | { ok: false; conexao: boolean; erro?: NonNullable<ErroSupabase> };
+
+async function buscarViagemNoServidor(cliente: typeof supabase, id: string): Promise<BuscaViagemServidor> {
   try {
     const { data, error } = await cliente
       .from('viagem')
@@ -236,12 +241,14 @@ async function buscarViagemNoServidor(
       .maybeSingle();
 
     if (error) {
-      return { ok: false, conexao: ehErroConexao(error) };
+      return { ok: false, conexao: ehErroConexao(error), erro: error };
     }
-    if (!data) return { ok: true, data: null };
+    if (!data) return { ok: true, data: null, invalida: false };
 
     const parsed = viagemApiSchema.safeParse(data);
-    return parsed.success ? { ok: true, data: parsed.data } : { ok: true, data: null };
+    return parsed.success
+      ? { ok: true, data: parsed.data, invalida: false }
+      : { ok: true, data: null, invalida: true };
   } catch {
     return { ok: false, conexao: true };
   }
@@ -610,19 +617,38 @@ async function enviarItem(ctx: ContextoDreno, item: schema.OutboxItem): Promise<
         if (!sessaoLocalAtual(ctx.geracaoLocal)) {
           return { tipo: 'cancelada', mensagem: MENSAGEM_SESSAO_ALTERADA };
         }
-        if (!servidor.ok && servidor.conexao) {
-          const proxima = proximaTentativa(ctx.agora, item.tentativas);
-          atualizarErroTemporario(
+        if (!servidor.ok) {
+          if (servidor.conexao || !servidor.erro) {
+            const proxima = proximaTentativa(ctx.agora, item.tentativas);
+            atualizarErroTemporario(
+              ctx.database,
+              item,
+              MENSAGEM_SEM_CONEXAO,
+              'CONEXAO',
+              item.tentativas,
+              proxima,
+            );
+            return { tipo: 'conexao', mensagem: MENSAGEM_SEM_CONEXAO };
+          }
+
+          // Erro do servidor na busca (token expirado, 5xx, timeout do banco) é passageiro: a viagem
+          // pode muito bem existir lá. Segue a regra de qualquer erro genérico — queima uma
+          // tentativa e espera o backoff — em vez de abrir revisão SEM_RESPOSTA para o gestor.
+          const tratado = await tratarErroDoServidor(
+            ctx.cliente,
             ctx.database,
             item,
-            MENSAGEM_SEM_CONEXAO,
-            'CONEXAO',
-            item.tentativas,
-            proxima,
+            ctx.usuarioId,
+            payload,
+            servidor.erro,
+            { maxTentativas: ctx.maxTentativas, agora: ctx.agora, geracaoLocal: ctx.geracaoLocal },
           );
-          return { tipo: 'conexao', mensagem: MENSAGEM_SEM_CONEXAO };
+          return desfechoDaRevisao(tratado, servidor.erro.code);
         }
-        if (servidor.ok && servidor.data) {
+        if (servidor.invalida) {
+          return revisar(ctx, item, payload, 'RESPOSTA_INVALIDA', 'O servidor devolveu uma viagem inválida.');
+        }
+        if (servidor.data) {
           aplicarSucessoLocal(ctx.database, item, servidor.data);
           return { tipo: 'sucesso' };
         }
