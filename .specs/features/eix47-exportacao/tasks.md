@@ -58,7 +58,7 @@ T4 → T5 → T6
 
 ## Task Breakdown
 
-### T1: Instalar `expo-print` e `expo-sharing` e registrar o ADR
+### T1: ✅ Instalar `expo-print` e `expo-sharing` e registrar o ADR
 
 **What**: Dependências nas versões do SDK 57 (lockfile gerado com npm 10), ADR 0006 e `EXPO_PUBLIC_NOME_EMPRESA` no `.env.example`.
 **Where**: `package.json`, `package-lock.json`, `docs/adr/0006-exportacao-relatorios.md`, `.env.example`
@@ -73,8 +73,8 @@ T4 → T5 → T6
 
 **Done when**:
 
-- [ ] `npx -y npm@10 ci --dry-run --ignore-scripts` passa
-- [ ] Gate build passa
+- [x] `npx -y npm@10 ci --dry-run --ignore-scripts` passa
+- [x] Gate build passa
 
 **Tests**: none
 **Gate**: build
