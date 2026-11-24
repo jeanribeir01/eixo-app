@@ -17,6 +17,7 @@ import { CloudCheckIcon } from 'phosphor-react-native/src/icons/CloudCheck';
 import { CreditCardIcon } from 'phosphor-react-native/src/icons/CreditCard';
 import { DotsThreeVerticalIcon } from 'phosphor-react-native/src/icons/DotsThreeVertical';
 import { EnvelopeSimpleIcon } from 'phosphor-react-native/src/icons/EnvelopeSimple';
+import { GaugeIcon } from 'phosphor-react-native/src/icons/Gauge';
 import { GearSixIcon } from 'phosphor-react-native/src/icons/GearSix';
 import { HouseIcon } from 'phosphor-react-native/src/icons/House';
 import { InfoIcon } from 'phosphor-react-native/src/icons/Info';
@@ -61,6 +62,7 @@ export const icons = {
   // Telas da Frota (Veículos usa o ícone da aba)
   rotas: MapTrifoldIcon,
   manutencoes: WrenchIcon,
+  hodometro: GaugeIcon,
   // Ações
   adicionar: PlusIcon,
   avancar: CaretRightIcon,

@@ -280,7 +280,7 @@ function CartaoViagem({ viagem }: { viagem: ViagemDetalhada }) {
           <View style={styles.acaoRodape}>
             <Button
               variant="ghost"
-              label="Fechar viagem"
+              label="Finalizar viagem"
               onPress={() => router.push(`/viagens/${viagem.id}/fechar`)}
             />
           </View>
