@@ -4,6 +4,7 @@ export { Badge, type BadgeProps, type BadgeTone } from './Badge';
 export { Button, type ButtonProps, type ButtonVariant } from './Button';
 export { CampoData } from './CampoData';
 export { CampoMoeda } from './CampoMoeda';
+export { Aviso, type AvisoProps, type AvisoTom } from './Aviso';
 export { Card } from './Card';
 export { ChipFiltro, LinhaDeFiltros, type ChipFiltroProps } from './ChipFiltro';
 export { Column } from './Column';

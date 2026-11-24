@@ -32,13 +32,16 @@ beforeEach(() => {
 });
 
 describe('AguardandoLiberacaoView', () => {
-  it('conta pendente: mostra "Aguardando liberação" (Novo usuário AC6)', () => {
+  it('conta pendente: "Aguardando aprovação", quem é e o que falta (Novo usuário AC6)', () => {
     useProfileStore.setState({ usuarioId: 'u1', estado: 'pronto', usuario: usuario('AguardandoAprovacao') });
 
     render(<AguardandoLiberacaoView />);
 
-    expect(screen.getByText('Aguardando liberação')).toBeOnTheScreen();
+    expect(screen.getByRole('header', { name: 'Aguardando aprovação' })).toBeOnTheScreen();
+    expect(screen.getByText('Ana')).toBeOnTheScreen();
     expect(screen.getByText('ana@empresa.com')).toBeOnTheScreen();
+    expect(screen.getByText('Falta liberar seu acesso')).toBeOnTheScreen();
+    expect(screen.getByTestId('icone-aguardando', { includeHiddenElements: true })).toBeTruthy();
   });
 
   it('sem linha em usuario: também mostra "Aguardando liberação" (deny-by-default)', () => {
@@ -46,7 +49,7 @@ describe('AguardandoLiberacaoView', () => {
 
     render(<AguardandoLiberacaoView />);
 
-    expect(screen.getByText('Aguardando liberação')).toBeOnTheScreen();
+    expect(screen.getByRole('header', { name: 'Aguardando aprovação' })).toBeOnTheScreen();
   });
 
   it('conta bloqueada: mostra o texto de bloqueio (AC7)', () => {
@@ -54,26 +57,37 @@ describe('AguardandoLiberacaoView', () => {
 
     render(<AguardandoLiberacaoView />);
 
-    expect(screen.getByText('Seu acesso foi bloqueado. Fale com o administrador.')).toBeOnTheScreen();
-    expect(screen.queryByRole('button', { name: 'Verificar novamente' })).not.toBeOnTheScreen();
+    expect(screen.getByRole('header', { name: 'Acesso bloqueado' })).toBeOnTheScreen();
+    expect(screen.getByText('Seu acesso foi bloqueado')).toBeOnTheScreen();
+    expect(screen.getByTestId('icone-bloqueado', { includeHiddenElements: true })).toBeTruthy();
+    expect(screen.queryByRole('button', { name: 'Verificar aprovação' })).not.toBeOnTheScreen();
   });
 
   it('Sair encerra a sessão (AC8)', () => {
     useProfileStore.setState({ usuarioId: 'u1', estado: 'pronto', usuario: usuario('AguardandoAprovacao') });
     render(<AguardandoLiberacaoView />);
 
-    fireEvent.press(screen.getByRole('button', { name: 'Sair' }));
+    fireEvent.press(screen.getByRole('button', { name: 'Sair da conta' }));
 
     expect(signOut).toHaveBeenCalledTimes(1);
   });
 
-  it('Verificar novamente recarrega o perfil', async () => {
+  it('"Verificar aprovação" recarrega o perfil', async () => {
     useProfileStore.setState({ usuarioId: 'u1', estado: 'pronto', usuario: usuario('AguardandoAprovacao') });
     render(<AguardandoLiberacaoView />);
 
-    fireEvent.press(screen.getByRole('button', { name: 'Verificar novamente' }));
+    fireEvent.press(screen.getByRole('button', { name: 'Verificar aprovação' }));
 
     await waitFor(() => expect(mockConsulta).toHaveBeenCalledWith('usuario', 'u1'));
+  });
+
+  it('verificou e a aprovação ainda não saiu: a tela diz isso, em vez de parecer que nada aconteceu', async () => {
+    useProfileStore.setState({ usuarioId: 'u1', estado: 'pronto', usuario: usuario('AguardandoAprovacao') });
+    render(<AguardandoLiberacaoView />);
+
+    fireEvent.press(screen.getByRole('button', { name: 'Verificar aprovação' }));
+
+    expect(await screen.findByText('Verificado agora: a aprovação ainda não saiu.')).toBeOnTheScreen();
   });
 
   it('erro ao carregar: mensagem, "Tentar novamente" e "Sair" (AC9)', async () => {
@@ -85,7 +99,7 @@ describe('AguardandoLiberacaoView', () => {
     fireEvent.press(screen.getByRole('button', { name: 'Tentar novamente' }));
     await waitFor(() => expect(mockConsulta).toHaveBeenCalledWith('usuario', 'u1'));
 
-    fireEvent.press(screen.getByRole('button', { name: 'Sair' }));
+    fireEvent.press(screen.getByRole('button', { name: 'Sair da conta' }));
     expect(signOut).toHaveBeenCalledTimes(1);
   });
 
@@ -95,6 +109,6 @@ describe('AguardandoLiberacaoView', () => {
     render(<AguardandoLiberacaoView />);
 
     expect(screen.getByLabelText('Carregando seu perfil')).toBeOnTheScreen();
-    expect(screen.queryByText('Aguardando liberação')).not.toBeOnTheScreen();
+    expect(screen.queryByText('Aguardando aprovação')).not.toBeOnTheScreen();
   });
 });
