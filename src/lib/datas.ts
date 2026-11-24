@@ -121,3 +121,19 @@ export function horaLocal(timestamp: string): string {
   const data = new Date(timestamp);
   return `${doisDigitos(data.getHours())}:${doisDigitos(data.getMinutes())}`;
 }
+
+const DIAS_DA_SEMANA = ['Domingo', 'Segunda', 'Terça', 'Quarta', 'Quinta', 'Sexta', 'Sábado'];
+
+// Cabeçalho de um dia numa lista agrupada por data: "Hoje, 23 de novembro", "Ontem, 22 de novembro",
+// "Sexta, 21 de novembro". Ano só quando não é o de hoje. As duas datas em ISO (AAAA-MM-DD).
+export function rotuloDoDia(iso: string, hoje: string): string {
+  const [ano, mes, dia] = iso.split('-').map(Number);
+  const nomeDoMes = NOMES_DOS_MESES[mes - 1].toLowerCase();
+  const data = `${dia} de ${nomeDoMes}${ano === Number(hoje.slice(0, 4)) ? '' : ` de ${ano}`}`;
+  const diferenca = diasEntre(iso, hoje);
+  if (diferenca === 0) return `Hoje, ${data}`;
+  if (diferenca === 1) return `Ontem, ${data}`;
+  if (diferenca === -1) return `Amanhã, ${data}`;
+  // Dia da semana em UTC, pelo mesmo motivo do diasEntre: a data ISO não tem fuso.
+  return `${DIAS_DA_SEMANA[new Date(Date.UTC(ano, mes - 1, dia)).getUTCDay()]}, ${data}`;
+}

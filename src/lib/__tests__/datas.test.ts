@@ -8,6 +8,7 @@ import {
   mascararData,
   mesDeHoje,
   nomeDoMes,
+  rotuloDoDia,
   somarDias,
   somarMeses,
 } from '../datas';
@@ -146,5 +147,17 @@ describe('horaLocal', () => {
   it('mostra a hora do aparelho com dois dígitos', () => {
     const data = new Date(2026, 10, 23, 8, 5);
     expect(horaLocal(data.toISOString())).toBe('08:05');
+  });
+});
+
+describe('rotuloDoDia', () => {
+  it.each([
+    ['2026-11-23', 'Hoje, 23 de novembro'],
+    ['2026-11-22', 'Ontem, 22 de novembro'],
+    ['2026-11-24', 'Amanhã, 24 de novembro'],
+    ['2026-11-20', 'Sexta, 20 de novembro'],
+    ['2025-12-31', 'Quarta, 31 de dezembro de 2025'],
+  ])('%s → %s', (iso, esperado) => {
+    expect(rotuloDoDia(iso, '2026-11-23')).toBe(esperado);
   });
 });

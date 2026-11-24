@@ -5,6 +5,7 @@ export { Button, type ButtonProps, type ButtonVariant } from './Button';
 export { CampoData } from './CampoData';
 export { CampoMoeda } from './CampoMoeda';
 export { Card } from './Card';
+export { ChipFiltro, LinhaDeFiltros, type ChipFiltroProps } from './ChipFiltro';
 export { Column } from './Column';
 export { EmptyState, type EmptyStateProps } from './EmptyState';
 export { FAB, FAB_ALTURA_RESERVADA } from './FAB';

@@ -8,14 +8,15 @@ import {
   Badge,
   Button,
   Card,
+  ChipFiltro,
   Column,
   EmptyState,
   FAB,
   FAB_ALTURA_RESERVADA,
+  LinhaDeFiltros,
   Screen,
   ScreenColumn,
   Snackbar,
-  Tabs,
   Text,
   colors,
   spacing,
@@ -137,18 +138,21 @@ export function ViagensListView({ underHeader = false }: ViagensListViewProps) {
         {/* Aba não tem header nativo; o título fica no conteúdo (DESIGN_CYAN §7) */}
         {!underHeader && <Text variant="heading">Viagens</Text>}
 
-        {/* scrollable: os quatro status não cabem em 360 de largura; a fileira rola em vez de cortar o
-            rótulo (auditoria de UI, item 9). */}
-        <Tabs
-          scrollable
-          options={opcoesFiltro}
-          value={filtroStatus}
-          onChange={(val) => {
-            // O snackbar de erro pertence à consulta anterior; não deve sobreviver ao filtro novo.
-            tela.limparFeedbackErro();
-            setFiltroStatus(val as FiltroStatus);
-          }}
-        />
+        {/* Chip no lugar da fileira de abas: "Em andamento" não quebra mais em três linhas
+            (referência Nubank do redesign). */}
+        <LinhaDeFiltros accessibilityLabel="Filtros">
+          <ChipFiltro
+            label="Status"
+            value={filtroStatus}
+            valorPadrao="Todos"
+            options={opcoesFiltro}
+            onChange={(val) => {
+              // O snackbar de erro pertence à consulta anterior; não deve sobreviver ao filtro novo.
+              tela.limparFeedbackErro();
+              setFiltroStatus(val as FiltroStatus);
+            }}
+          />
+        </LinhaDeFiltros>
 
         {tela.status === 'carregando' && (
           <View style={styles.centro}>
