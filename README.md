@@ -14,7 +14,7 @@ estão em construção.
 
 | Camada | Tecnologia |
 |---|---|
-| App | Expo SDK 57, React Native, TypeScript strict, expo-router |
+| App | Expo SDK 58, React Native, TypeScript strict, expo-router |
 | Backend | Supabase: Postgres com RLS, RPCs em plpgsql, Auth com provider Google, Storage |
 | Login | `@react-native-google-signin/google-signin` → `supabase.auth.signInWithIdToken` |
 | Sessão | `expo-secure-store` (nunca AsyncStorage) |

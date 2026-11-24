@@ -70,7 +70,7 @@ beforeEach(() => {
   alerta = jest.spyOn(Alert, 'alert').mockImplementation(() => {});
   onFeedback.mockReset();
   mockBuscar.mockReset().mockResolvedValue({ ok: true, data: TRANSACOES });
-  mockCsv.mockReset().mockReturnValue({ ok: true, data: { uri: 'file:///cache/eixo-certo-2026-11.csv', formato: 'csv' } });
+  mockCsv.mockReset().mockResolvedValue({ ok: true, data: { uri: 'file:///cache/eixo-certo-2026-11.csv', formato: 'csv' } });
   mockPdf.mockReset().mockResolvedValue({ ok: true, data: { uri: 'file:///cache/eixo-certo-2026-11.pdf', formato: 'pdf' } });
   mockCompartilhar.mockReset().mockResolvedValue({ ok: true, data: null });
 });
@@ -102,9 +102,7 @@ describe('ExportarRelatorio', () => {
   });
 
   it('erro inesperado ao montar o arquivo vira Snackbar de erro e devolve o botão (EXP-18)', async () => {
-    mockCsv.mockImplementation(() => {
-      throw new Error('inesperado');
-    });
+    mockCsv.mockRejectedValue(new Error('inesperado'));
     await renderizar();
     await fireEvent.press(botaoExportar());
 
@@ -197,7 +195,7 @@ describe('ExportarRelatorio', () => {
   });
 
   it('erro ao gravar o CSV mostra a mensagem e não compartilha (EXP-18)', async () => {
-    mockCsv.mockReturnValue({ ok: false, mensagem: ERRO });
+    mockCsv.mockResolvedValue({ ok: false, mensagem: ERRO });
     await renderizar();
     await fireEvent.press(botaoExportar());
 
