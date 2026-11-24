@@ -115,6 +115,13 @@ export function somarDias(iso: string, dias: number): string {
   return new Date(Date.UTC(ano, mes - 1, dia + dias)).toISOString().slice(0, 10);
 }
 
+// Hora local "08:15" de um timestamp do banco (timestamptz em ISO). O banco guarda em UTC; a hora
+// mostrada é a do aparelho, que é onde a pessoa está.
+export function horaLocal(timestamp: string): string {
+  const data = new Date(timestamp);
+  return `${doisDigitos(data.getHours())}:${doisDigitos(data.getMinutes())}`;
+}
+
 const DIAS_DA_SEMANA = ['Domingo', 'Segunda', 'Terça', 'Quarta', 'Quinta', 'Sexta', 'Sábado'];
 
 // Cabeçalho de um dia numa lista agrupada por data: "Hoje, 23 de novembro", "Ontem, 22 de novembro",
