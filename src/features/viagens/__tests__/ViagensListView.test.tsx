@@ -147,25 +147,26 @@ describe('ViagensListView', () => {
 
     render(<ViagensListView />);
 
-    expect(await screen.findByText('BRA2E19 • Actros')).toBeTruthy();
+    expect(await screen.findByText('BRA2E19 · São Paulo → Campinas')).toBeTruthy();
     expect(screen.getByText('Viagens')).toBeTruthy();
-    expect(screen.getByText('XYZ9K88 • FH')).toBeTruthy();
-    expect(screen.getByText('Concluída')).toBeTruthy();
+    expect(screen.getByText('XYZ9K88 · São Paulo → Ribeirão Preto')).toBeTruthy();
+    expect(screen.getByText('Na estrada · 1')).toBeTruthy();
+    expect(screen.getByText('Concluídas · 1')).toBeTruthy();
 
-    expect(screen.getByText('Distância rodada: 500 km')).toBeTruthy();
+    expect(screen.getByText(/^Pedro Santos · \d{2}\/\d{2} · 500 km$/)).toBeTruthy();
     expect(screen.getByText(/acima da rota/i)).toBeTruthy();
 
-    const botaoFechar = screen.getByRole('button', { name: 'Fechar viagem' });
-    fireEvent.press(botaoFechar);
+    const linhaNaEstrada = screen.getByRole('button', { name: 'Finalizar viagem BRA2E19, São Paulo → Campinas' });
+    fireEvent.press(linhaNaEstrada);
     expect(mockPush).toHaveBeenCalledWith('/viagens/viagem-1/fechar');
   });
 
-  it('exibe "Concluída" na viagem e no filtro, como na tela de fechamento', async () => {
+  it('agrupa as concluídas como "Concluídas", o mesmo nome do filtro', async () => {
     jest.spyOn(repo, 'listarViagens').mockResolvedValue({ ok: true, data: mockViagens });
 
     render(<ViagensListView />);
 
-    expect(await screen.findByText('Concluída')).toBeOnTheScreen();
+    expect(await screen.findByText('Concluídas · 1')).toBeOnTheScreen();
     fireEvent.press(screen.getByRole('button', { name: 'Status: Todas' }));
     expect(screen.getByRole('button', { name: 'Concluídas' })).toBeOnTheScreen();
     expect(screen.queryByText(/Finalizada/)).not.toBeOnTheScreen();
@@ -180,16 +181,14 @@ describe('ViagensListView', () => {
     render(<ViagensListView />);
 
     expect(await screen.findByText('Em revisão')).toBeOnTheScreen();
-    expect(
-      screen.getByText('Esta viagem tem uma operação aguardando revisão do gestor.'),
-    ).toBeOnTheScreen();
+    expect(screen.getByTestId('icone-alerta', { includeHiddenElements: true })).toBeOnTheScreen();
   });
 
   it('navega para nova viagem ao tocar no FAB', async () => {
     jest.spyOn(repo, 'listarViagens').mockResolvedValue({ ok: true, data: mockViagens });
 
     render(<ViagensListView />);
-    await screen.findByText('BRA2E19 • Actros');
+    await screen.findByText('BRA2E19 · São Paulo → Campinas');
 
     fireEvent.press(screen.getByRole('button', { name: 'Abrir viagem' }));
 
@@ -202,14 +201,14 @@ describe('ViagensListView', () => {
       .mockResolvedValue({ ok: true, data: mockViagens });
 
     render(<ViagensListView />);
-    await screen.findByText('BRA2E19 • Actros');
+    await screen.findByText('BRA2E19 · São Paulo → Campinas');
 
     mockListar.mockResolvedValueOnce({ ok: true, data: [mockViagens[0]] });
     escolherStatus('Em andamento');
 
     await waitFor(() => expect(mockListar).toHaveBeenLastCalledWith({ status: 'EmAndamento' }));
-    expect(await screen.findByText('BRA2E19 • Actros')).toBeOnTheScreen();
-    expect(screen.queryByText('XYZ9K88 • FH')).not.toBeOnTheScreen();
+    expect(await screen.findByText('BRA2E19 · São Paulo → Campinas')).toBeOnTheScreen();
+    expect(screen.queryByText('XYZ9K88 · São Paulo → Ribeirão Preto')).not.toBeOnTheScreen();
   });
 
   it('Motorista lê só as próprias viagens no cache local', async () => {
@@ -224,7 +223,7 @@ describe('ViagensListView', () => {
       .mockResolvedValue({ ok: true, data: mockViagens });
 
     render(<ViagensListView />);
-    await screen.findByText('BRA2E19 • Actros');
+    await screen.findByText('BRA2E19 · São Paulo → Campinas');
 
     expect(mockListar).toHaveBeenLastCalledWith({
       status: 'Todos',
@@ -256,7 +255,7 @@ describe('ViagensListView', () => {
       .mockResolvedValue({ ok: true, data: mockViagens });
 
     render(<ViagensListView />);
-    await screen.findByText('BRA2E19 • Actros');
+    await screen.findByText('BRA2E19 · São Paulo → Campinas');
 
     mockListar.mockResolvedValueOnce({ ok: false, mensagem: 'Sem conexão com o servidor.' });
 
@@ -265,7 +264,7 @@ describe('ViagensListView', () => {
     });
 
     expect(screen.getByRole('alert')).toHaveTextContent('Sem conexão com o servidor.');
-    expect(screen.getByText('BRA2E19 • Actros')).toBeOnTheScreen();
+    expect(screen.getByText('BRA2E19 · São Paulo → Campinas')).toBeOnTheScreen();
   });
 
   it('erro na primeira carga mostra o estado de erro e "Tentar novamente" recarrega', async () => {
@@ -279,7 +278,7 @@ describe('ViagensListView', () => {
     expect(await screen.findByText('Não foi possível carregar as viagens')).toBeOnTheScreen();
     fireEvent.press(screen.getByRole('button', { name: 'Tentar novamente' }));
 
-    expect(await screen.findByText('BRA2E19 • Actros')).toBeOnTheScreen();
+    expect(await screen.findByText('BRA2E19 · São Paulo → Campinas')).toBeOnTheScreen();
     expect(mockListar).toHaveBeenCalledTimes(2);
   });
 
@@ -302,7 +301,7 @@ describe('ViagensListView', () => {
     });
 
     render(<ViagensListView />);
-    await screen.findByText('BRA2E19 • Actros');
+    await screen.findByText('BRA2E19 · São Paulo → Campinas');
 
     escolherStatus('Em andamento');
     expect(await screen.findByText('Nenhuma viagem com esse status no momento.')).toBeOnTheScreen();
@@ -310,7 +309,7 @@ describe('ViagensListView', () => {
     fireEvent.press(screen.getByRole('button', { name: 'Ver todas' }));
 
     await waitFor(() => expect(mockListar).toHaveBeenLastCalledWith({ status: 'Todos' }));
-    expect(await screen.findByText('BRA2E19 • Actros')).toBeOnTheScreen();
+    expect(await screen.findByText('BRA2E19 · São Paulo → Campinas')).toBeOnTheScreen();
   });
 
   it('limpa o Snackbar de erro ao trocar de filtro', async () => {
@@ -321,7 +320,7 @@ describe('ViagensListView', () => {
       .mockResolvedValueOnce({ ok: true, data: mockViagens });
 
     render(<ViagensListView />);
-    await screen.findByText('BRA2E19 • Actros');
+    await screen.findByText('BRA2E19 · São Paulo → Campinas');
 
     const refresh = screen.UNSAFE_getByType(RefreshControl);
     await act(async () => {
@@ -343,7 +342,7 @@ describe('ViagensListView', () => {
       .mockResolvedValueOnce({ ok: true, data: [mockViagens[0]] });
 
     render(<ViagensListView />);
-    await screen.findByText('BRA2E19 • Actros');
+    await screen.findByText('BRA2E19 · São Paulo → Campinas');
 
     const refresh = screen.UNSAFE_getByType(RefreshControl);
     expect(refresh.props.colors).toEqual([colors.accent]);
@@ -357,8 +356,8 @@ describe('ViagensListView', () => {
 
     expect(useSyncStore.getState().sincronizarTudo).toHaveBeenCalled();
     expect(mockListar).toHaveBeenCalledTimes(2);
-    expect(await screen.findByText('BRA2E19 • Actros')).toBeOnTheScreen();
-    expect(screen.queryByText('XYZ9K88 • FH')).not.toBeOnTheScreen();
+    expect(await screen.findByText('BRA2E19 · São Paulo → Campinas')).toBeOnTheScreen();
+    expect(screen.queryByText('XYZ9K88 · São Paulo → Ribeirão Preto')).not.toBeOnTheScreen();
   });
 
   describe('ViagensListView — tablet (EIX-94)', () => {
@@ -375,7 +374,7 @@ describe('ViagensListView', () => {
     it('412: nada muda, o respiro lateral continua no Screen e a lista não ganha coluna', async () => {
       jest.spyOn(repo, 'listarViagens').mockResolvedValue({ ok: true, data: mockViagens });
       render(<ViagensListView />);
-      await screen.findByText('BRA2E19 • Actros');
+      await screen.findByText('BRA2E19 · São Paulo → Campinas');
 
       expect(estiloDoConteudo()).toMatchObject({ paddingHorizontal: spacing.base });
       expect(estiloDaLista()?.maxWidth).toBeUndefined();
@@ -385,7 +384,7 @@ describe('ViagensListView', () => {
       mockLargura(800);
       jest.spyOn(repo, 'listarViagens').mockResolvedValue({ ok: true, data: mockViagens });
       render(<ViagensListView />);
-      await screen.findByText('BRA2E19 • Actros');
+      await screen.findByText('BRA2E19 · São Paulo → Campinas');
 
       expect(estiloDoConteudo().maxWidth).toBeUndefined();
       expect(estiloDoConteudo().paddingHorizontal).toBeUndefined();
@@ -394,5 +393,24 @@ describe('ViagensListView', () => {
       expect(StyleSheet.flatten(coluna.props.style)).toMatchObject({ maxWidth: 720, alignSelf: 'center' });
       expect(within(coluna).getByText('Viagens')).toBeOnTheScreen();
     });
+  });
+
+  it('põe a estrada antes das concluídas e só a viagem em andamento abre o fechamento', async () => {
+    // A lista chega com a concluída primeiro: o agrupamento reordena pelo que o gestor precisa agir.
+    jest.spyOn(repo, 'listarViagens').mockResolvedValue({ ok: true, data: [mockViagens[1], mockViagens[0]] });
+
+    render(<ViagensListView />);
+
+    const naEstrada = await screen.findByText('Na estrada · 1');
+    const concluidas = screen.getByText('Concluídas · 1');
+    const textos = screen.getAllByText(/ · 1$/).map((elemento) => elemento.props.children);
+    expect(textos).toEqual(['Na estrada · 1', 'Concluídas · 1']);
+    expect(naEstrada).toBeOnTheScreen();
+    expect(concluidas).toBeOnTheScreen();
+
+    // Fora de hoje, a viagem em andamento diz o dia da saída.
+    expect(screen.getByText(/^João Silva · saída em \d{2}\/\d{2}$/)).toBeOnTheScreen();
+    expect(screen.getByText('Acima da rota')).toBeOnTheScreen();
+    expect(screen.queryByRole('button', { name: /XYZ9K88/ })).not.toBeOnTheScreen();
   });
 });
