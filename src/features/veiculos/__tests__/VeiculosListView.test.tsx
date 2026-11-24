@@ -1,14 +1,20 @@
 import { act, fireEvent, render, screen, waitFor, within } from '@testing-library/react-native';
 import { Alert, FlatList, ScrollView, StyleSheet, useWindowDimensions } from 'react-native';
 
-import { segurarPrimeiraCarga } from '@/testing/eventos';
 import { porTipo } from '@/testing/componentes';
+import { segurarPrimeiraCarga } from '@/testing/eventos';
 import { spacing } from '@/ui';
 
 import { VeiculosListView } from '../VeiculosListView';
 import { inativarVeiculo, listarVeiculos, reativarVeiculo } from '../repository';
 
 // Largura da janela controlada pelo teste: 412 é celular, 800 é tablet (EIX-94).
+// O filtro de status é um chip: abre a folha e toca na opção.
+async function escolherStatus(opcao: string) {
+  await fireEvent.press(screen.getByRole('button', { name: /^Status: / }));
+  await fireEvent.press(screen.getByRole('button', { name: opcao }));
+}
+
 jest.mock('react-native/Libraries/Utilities/useWindowDimensions', () => ({
   __esModule: true,
   default: jest.fn(() => ({ width: 412, height: 900, scale: 1, fontScale: 1 })),
@@ -90,7 +96,7 @@ describe('VeiculosListView', () => {
     await confirmar();
     expect(inativarVeiculo).toHaveBeenCalledWith('1');
     expect(screen.getByText('Veículo inativado.')).toBeOnTheScreen();
-    expect(screen.getAllByText('Inativo')).toHaveLength(2);
+    expect(screen.getAllByText('Inativo')).toHaveLength(1);
     expect(screen.queryByRole('button', { name: 'Inativar ABC-1234' })).toBeNull();
   });
 
@@ -99,7 +105,7 @@ describe('VeiculosListView', () => {
     (inativarVeiculo as jest.Mock).mockResolvedValue({ ok: true, data: { ...veiculosMock[0], status: 'Inativo' } });
     await render(<VeiculosListView />);
     await screen.findByText('ABC-1234');
-    await fireEvent.press(screen.getByRole('tab', { name: 'Disponível' }));
+    await escolherStatus('Disponível');
     await waitFor(() => expect(listarVeiculos).toHaveBeenLastCalledWith({ busca: undefined, status: 'Disponivel' }));
     await screen.findByRole('button', { name: 'Inativar ABC-1234' });
     (listarVeiculos as jest.Mock).mockResolvedValue({ ok: true, data: [] });
@@ -153,11 +159,11 @@ describe('VeiculosListView', () => {
     (listarVeiculos as jest.Mock).mockResolvedValue({ ok: true, data: [] });
     await render(<VeiculosListView />);
     await screen.findByText('Nenhum veículo cadastrado');
-    // A rolagem agora vem do próprio Tabs (variante `scrollable`, EIX-82), não de um ScrollView da tela.
+    // O filtro é um chip numa linha que rola na horizontal: nada quebra nem corta em 360 (EIX-82).
     const filtro = porTipo(ScrollView);
     expect(filtro.props.horizontal).toBe(true);
-    expect(within(filtro.elementoNativo()).getByRole('tab', { name: 'Inativo' })).toBeOnTheScreen();
-    await fireEvent.press(screen.getByRole('tab', { name: 'Inativo' }));
+    expect(within(filtro.elementoNativo()).getByRole('button', { name: 'Status: Todos' })).toBeOnTheScreen();
+    await escolherStatus('Inativo');
     await waitFor(() => expect(listarVeiculos).toHaveBeenLastCalledWith({ busca: undefined, status: 'Inativo' }));
     expect(await screen.findByText('Nenhum veículo encontrado')).toBeOnTheScreen();
   });
@@ -215,7 +221,7 @@ describe('VeiculosListView', () => {
       (reativarVeiculo as jest.Mock).mockResolvedValue({ ok: true, data: { ...inativo, status: 'Disponivel' } });
       await render(<VeiculosListView />);
       await screen.findByText('GHI-1234');
-      await fireEvent.press(screen.getByRole('tab', { name: 'Inativo' }));
+      await escolherStatus('Inativo');
       await waitFor(() => expect(listarVeiculos).toHaveBeenLastCalledWith({ busca: undefined, status: 'Inativo' }));
       await screen.findByRole('button', { name: 'Reativar GHI-1234' });
       (listarVeiculos as jest.Mock).mockResolvedValue({ ok: true, data: [] });
@@ -265,9 +271,9 @@ describe('VeiculosListView', () => {
 
   it('mostra carregando e depois a lista com placa mascarada, capacidade e chip de status', async () => {
     (listarVeiculos as jest.Mock).mockResolvedValue({ ok: true, data: veiculosMock });
-
     // Segura a primeira carga: o render async esperaria a resposta e pularia o "carregando".
     const liberarCarga = segurarPrimeiraCarga(jest.mocked(listarVeiculos));
+
     await render(<VeiculosListView />);
 
     expect(screen.getByLabelText('Carregando veículos')).toBeOnTheScreen();
@@ -275,10 +281,10 @@ describe('VeiculosListView', () => {
     expect(await screen.findByText('ABC-1234')).toBeOnTheScreen();
     expect(screen.getByText('DEF1G23')).toBeOnTheScreen();
     expect(screen.getByText('Volvo FH 540 · 12,5 t')).toBeOnTheScreen();
-    // O rótulo aparece na aba de filtro e no chip do veículo.
-    expect(screen.getAllByText('Disponível')).toHaveLength(2);
-    expect(screen.getAllByText('Em Manutenção')).toHaveLength(2);
-    expect(screen.getAllByText('Em Viagem')).toHaveLength(1);
+    // O rótulo aparece só no selo do veículo: as opções do filtro ficam na folha, fechada.
+    expect(screen.getAllByText('Disponível')).toHaveLength(1);
+    expect(screen.getAllByText('Em Manutenção')).toHaveLength(1);
+    expect(screen.queryAllByText('Em Viagem')).toHaveLength(0);
   });
 
   // Desde a EIX-77 a lista abre por cima do hub de Frota, com o header nativo "Veículos" (NAV5-14).
@@ -321,7 +327,7 @@ describe('VeiculosListView', () => {
     await screen.findByText('ABC-1234');
 
     (listarVeiculos as jest.Mock).mockResolvedValue({ ok: true, data: [] });
-    await fireEvent.press(screen.getByRole('tab', { name: 'Em Viagem' }));
+    await escolherStatus('Em Viagem');
 
     await waitFor(() => expect(listarVeiculos).toHaveBeenLastCalledWith({ busca: undefined, status: 'EmViagem' }));
     expect(await screen.findByText('Nenhum veículo encontrado')).toBeOnTheScreen();

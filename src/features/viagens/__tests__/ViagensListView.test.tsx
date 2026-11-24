@@ -10,6 +10,12 @@ import { contarRevisoesPendentes } from '../revisoesRepository';
 import { useSyncStore } from '../syncStore';
 
 // Largura da janela controlada pelo teste: 412 é celular, 800 é tablet (EIX-94).
+// O filtro de status é um chip: abre a folha e toca na opção.
+async function escolherStatus(opcao: string) {
+  await fireEvent.press(screen.getByRole('button', { name: /^Status: / }));
+  await fireEvent.press(screen.getByRole('button', { name: opcao }));
+}
+
 jest.mock('react-native/Libraries/Utilities/useWindowDimensions', () => ({
   __esModule: true,
   default: jest.fn(() => ({ width: 412, height: 900, scale: 1, fontScale: 1 })),
@@ -161,7 +167,8 @@ describe('ViagensListView', () => {
     await render(<ViagensListView />);
 
     expect(await screen.findByText('Concluída')).toBeOnTheScreen();
-    expect(screen.getByText('Concluídas')).toBeOnTheScreen();
+    await fireEvent.press(screen.getByRole('button', { name: 'Status: Todas' }));
+    expect(screen.getByRole('button', { name: 'Concluídas' })).toBeOnTheScreen();
     expect(screen.queryByText(/Finalizada/)).not.toBeOnTheScreen();
   });
 
@@ -199,7 +206,7 @@ describe('ViagensListView', () => {
     await screen.findByText('BRA2E19 • Actros');
 
     mockListar.mockResolvedValueOnce({ ok: true, data: [mockViagens[0]] });
-    await fireEvent.press(screen.getByRole('tab', { name: 'Em andamento' }));
+    await escolherStatus('Em andamento');
 
     await waitFor(() => expect(mockListar).toHaveBeenLastCalledWith({ status: 'EmAndamento' }));
     expect(await screen.findByText('BRA2E19 • Actros')).toBeOnTheScreen();
@@ -298,7 +305,7 @@ describe('ViagensListView', () => {
     await render(<ViagensListView />);
     await screen.findByText('BRA2E19 • Actros');
 
-    await fireEvent.press(screen.getByRole('tab', { name: 'Em andamento' }));
+    await escolherStatus('Em andamento');
     expect(await screen.findByText('Nenhuma viagem com esse status no momento.')).toBeOnTheScreen();
 
     await fireEvent.press(screen.getByRole('button', { name: 'Ver todas' }));
@@ -324,7 +331,7 @@ describe('ViagensListView', () => {
 
     expect(screen.getByRole('alert')).toHaveTextContent('Sem conexão com o servidor.');
 
-    await fireEvent.press(screen.getByRole('tab', { name: 'Em andamento' }));
+    await escolherStatus('Em andamento');
 
     await waitFor(() => expect(mockListar).toHaveBeenLastCalledWith({ status: 'EmAndamento' }));
     await waitFor(() => expect(screen.queryByRole('alert')).not.toBeOnTheScreen());

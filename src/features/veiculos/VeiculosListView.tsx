@@ -3,6 +3,8 @@ import { useFocusEffect, useRouter } from 'expo-router';
 import { ActivityIndicator, Alert } from 'react-native';
 
 import {
+  ChipFiltro,
+  LinhaDeFiltros,
   List,
   Badge,
   Button,
@@ -13,7 +15,6 @@ import {
   Screen,
   ScreenColumn,
   Snackbar,
-  Tabs,
   Text,
   colors,
   useScreenColumn,
@@ -177,7 +178,11 @@ export function VeiculosListView() {
           autoCorrect={false}
         />
 
-        <Tabs options={opcoesFiltro} value={filtroStatus} onChange={setFiltroStatus} accessibilityLabel="Filtrar por status" scrollable />
+        {/* Chip no lugar da fileira de abas: cinco status não cabem lado a lado em 360 (referência
+            Nubank do redesign). */}
+        <LinhaDeFiltros accessibilityLabel="Filtros">
+          <ChipFiltro label="Status" value={filtroStatus} valorPadrao={TODOS} options={opcoesFiltro} onChange={setFiltroStatus} />
+        </LinhaDeFiltros>
 
         {/* Único elemento cyan preenchido da tela: a ação primária (DESIGN_CYAN §1). */}
         <Button label="Novo veículo" onPress={() => router.push('/frota/novo')} />

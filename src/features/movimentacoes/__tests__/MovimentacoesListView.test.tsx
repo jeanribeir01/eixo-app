@@ -2,8 +2,9 @@ import { act, fireEvent, render, screen, within } from '@testing-library/react-n
 import { Alert, FlatList, RefreshControl, StyleSheet, useWindowDimensions } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-import { segurarPrimeiraCarga } from '@/testing/eventos';
 import { porTipo, todosPorTipo } from '@/testing/componentes';
+import { segurarPrimeiraCarga } from '@/testing/eventos';
+import { buscarFluxoMensal } from '@/features/dashboard/graficos/queries';
 import { FAB_ALTURA_RESERVADA, ListItem, Skeleton, colors, spacing } from '@/ui';
 
 import { MovimentacoesListView } from '../MovimentacoesListView';
@@ -13,7 +14,8 @@ import type { Movimentacao } from '../types';
 jest.setTimeout(15000);
 
 const mockPush = jest.fn();
-// Guarda o callback do foco para o teste simular "voltei para esta tela".
+// Guarda os callbacks de foco (lista e resumo) para o teste simular "voltei para esta tela".
+let mockFocos: (() => void)[] = [];
 let mockAoFocar: (() => void) | null = null;
 
 jest.mock('expo-router', () => {
@@ -25,7 +27,8 @@ jest.mock('expo-router', () => {
   return {
     useRouter: () => roteador,
     useFocusEffect: (callback: () => void) => {
-      mockAoFocar = callback;
+      mockFocos.push(callback);
+      mockAoFocar = () => new Set(mockFocos).forEach((aoFocar) => aoFocar());
       react.useEffect(callback, [callback]);
     },
   };
@@ -34,6 +37,9 @@ jest.mock('expo-router', () => {
 // O requireActual abaixo carrega o client real; no Node 20 do CI (sem WebSocket nativo)
 // o createClient quebra ao montar o Realtime. Nenhum teste aqui fala com o banco.
 jest.mock('@/supabase/client', () => ({ supabase: {} }));
+
+// O resumo do mês vem do RPC fluxo_caixa_mensal; aqui, um valor pronto.
+jest.mock('@/features/dashboard/graficos/queries', () => ({ buscarFluxoMensal: jest.fn() }));
 
 jest.mock('../movimentacoesRepository', () => ({
   ...jest.requireActual('../movimentacoesRepository'),
@@ -59,6 +65,13 @@ function mockLargura(width: number) {
 
 const mockListar = listarMovimentacoesDoMes as jest.MockedFunction<typeof listarMovimentacoesDoMes>;
 const mockExcluir = excluirMovimentacao as jest.MockedFunction<typeof excluirMovimentacao>;
+const mockFluxo = jest.mocked(buscarFluxoMensal);
+
+// Abre o chip ("Mês", "Tipo", "Status") e toca na opção da folha.
+async function escolher(filtro: string, opcao: string) {
+  await act(async () => fireEvent.press(screen.getByRole('button', { name: new RegExp(`^${filtro}: `) })));
+  await act(async () => fireEvent.press(screen.getByRole('button', { name: opcao })));
+}
 
 function mov(sobrescrever: Partial<Movimentacao>): Movimentacao {
   return {
@@ -111,10 +124,19 @@ beforeEach(() => {
     now: new Date(2026, 9, 15, 10, 0),
     doNotFake: ['setTimeout', 'clearTimeout', 'setInterval', 'clearInterval', 'setImmediate', 'nextTick', 'queueMicrotask'],
   });
+  mockFocos = [];
   mockPush.mockReset();
   mockListar.mockReset();
   mockExcluir.mockReset();
   mockListar.mockResolvedValue({ ok: true, data: [frete, diesel, parcela] });
+  mockFluxo.mockReset().mockResolvedValue({
+    ok: true,
+    data: [
+      { mes: '2026-08', entradas_centavos: 0, saidas_centavos: 0 },
+      { mes: '2026-09', entradas_centavos: 0, saidas_centavos: 0 },
+      { mes: '2026-10', entradas_centavos: 150000, saidas_centavos: 8000 },
+    ],
+  });
 });
 
 afterEach(() => {
@@ -145,38 +167,39 @@ describe('MovimentacoesListView — mês (MOV-08, LST-02)', () => {
     expect(porTipo(SafeAreaView).props.edges).not.toContain('top');
   });
 
-  it('"Mês anterior" e "Próximo mês" são ícones e trocam o mês (LST-02, AC 12)', async () => {
+  it('o mês é um chip: abre os meses e troca a consulta (LST-02, AC 12)', async () => {
     await renderLista();
 
-    expect(screen.queryByRole('button', { name: '‹' })).not.toBeOnTheScreen();
-    expect(screen.getByTestId('icone-voltarMes', { includeHiddenElements: true })).toBeOnTheScreen();
+    expect(screen.getByRole('button', { name: 'Mês: Outubro 2026' })).toBeOnTheScreen();
 
-    await act(async () => await fireEvent.press(screen.getByRole('button', { name: 'Mês anterior' })));
+    await escolher('Mês', 'Setembro 2026');
     expect(screen.getByText('Setembro 2026')).toBeOnTheScreen();
     expect(mockListar).toHaveBeenLastCalledWith(2026, 9);
-
-    await act(async () => await fireEvent.press(screen.getByRole('button', { name: 'Próximo mês' })));
-    await act(async () => await fireEvent.press(screen.getByRole('button', { name: 'Próximo mês' })));
-    expect(screen.getByText('Novembro 2026')).toBeOnTheScreen();
-    expect(mockListar).toHaveBeenLastCalledWith(2026, 11);
   });
 
-  it('dezembro → "Próximo mês" vira janeiro do ano seguinte', async () => {
+  it('o seletor vai de um ano atrás até três meses à frente, virando o ano', async () => {
     jest.setSystemTime(new Date(2026, 11, 20));
     await render(<MovimentacoesListView />);
     await screen.findByText('Dezembro 2026');
 
-    await act(async () => await fireEvent.press(screen.getByRole('button', { name: 'Próximo mês' })));
+    await escolher('Mês', 'Janeiro 2027');
 
-    expect(screen.getByText('Janeiro 2027')).toBeOnTheScreen();
     expect(mockListar).toHaveBeenLastCalledWith(2027, 1);
+    await act(async () => await fireEvent.press(screen.getByRole('button', { name: /^Mês: / })));
+    // A folha é uma FlatList virtualizada: as opções são conferidas pelos dados, não pelo que já renderizou.
+    const opcoesDe = (dados: unknown) => Array.from((dados ?? []) as ArrayLike<{ label: string }>);
+    const folha = todosPorTipo(FlatList).find((lista) => opcoesDe(lista.props.data)[0]?.label === 'Março 2027');
+    const meses = opcoesDe(folha?.props.data).map((opcao) => opcao.label);
+    expect(meses).toHaveLength(16);
+    expect(meses.at(-1)).toBe('Dezembro 2025');
+    expect(meses).not.toContain('Abril 2027');
   });
 
   it('trocar de mês mostra o skeleton, não as movimentações do mês anterior', async () => {
     await renderLista();
     mockListar.mockReturnValueOnce(new Promise(() => {}));
 
-    await act(async () => await fireEvent.press(screen.getByRole('button', { name: 'Próximo mês' })));
+    await escolher('Mês', 'Novembro 2026');
 
     expect(screen.getByLabelText('Carregando movimentações')).toBeOnTheScreen();
     expect(screen.queryByText('Frete Curitiba')).not.toBeOnTheScreen();
@@ -188,7 +211,7 @@ describe('MovimentacoesListView — mês (MOV-08, LST-02)', () => {
     mockListar.mockResolvedValueOnce({ ok: true, data: [diesel] });
     await render(<MovimentacoesListView />);
 
-    await act(async () => await fireEvent.press(screen.getByRole('button', { name: 'Próximo mês' })));
+    await escolher('Mês', 'Novembro 2026');
     expect(await screen.findByText('Diesel')).toBeOnTheScreen();
 
     await act(async () => responderOutubro({ ok: true, data: [frete] }));
@@ -210,11 +233,11 @@ describe('MovimentacoesListView — mês (MOV-08, LST-02)', () => {
     expect(screen.getByText('Frete Curitiba')).toBeOnTheScreen();
   });
 
-  it('pull-to-refresh em accent e espaço para o FAB no fim da lista', async () => {
+  it('pull-to-refresh em accentStrong e espaço para o FAB no fim da lista', async () => {
     await renderLista();
 
     const refresh = porTipo(RefreshControl);
-    expect(refresh.props.colors).toEqual([colors.accent]);
+    expect(refresh.props.colors).toEqual([colors.accentStrong]);
     await act(async () => refresh.props.onRefresh!());
     expect(mockListar).toHaveBeenCalledTimes(2);
 
@@ -225,26 +248,28 @@ describe('MovimentacoesListView — mês (MOV-08, LST-02)', () => {
 });
 
 describe('MovimentacoesListView — filtros (MOV-08)', () => {
-  it('aba Entradas mostra só categoria de entrada; Saídas só de saída', async () => {
+  it('chip Tipo: Entradas mostra só categoria de entrada; Saídas só de saída', async () => {
     await renderLista();
 
-    await fireEvent.press(screen.getByRole('tab', { name: 'Entradas' }));
+    expect(screen.getByRole('button', { name: 'Tipo: Todas' })).toBeOnTheScreen();
+    await escolher('Tipo', 'Entradas');
+    expect(screen.getByRole('button', { name: 'Tipo: Entradas' })).toBeOnTheScreen();
     expect(screen.getByText('Frete Curitiba')).toBeOnTheScreen();
     expect(screen.queryByText('Diesel')).not.toBeOnTheScreen();
 
-    await fireEvent.press(screen.getByRole('tab', { name: 'Saídas' }));
+    await escolher('Tipo', 'Saídas');
     expect(screen.queryByText('Frete Curitiba')).not.toBeOnTheScreen();
     expect(screen.getByText('Diesel')).toBeOnTheScreen();
   });
 
-  it('aba Pendentes e Pagos filtram pelo status', async () => {
+  it('chip Status: Pendentes e Pagos filtram pelo status', async () => {
     await renderLista();
 
-    await fireEvent.press(screen.getByRole('tab', { name: 'Pagos' }));
+    await escolher('Status', 'Pagos');
     expect(screen.getByText('Frete Curitiba')).toBeOnTheScreen();
     expect(screen.queryByText('Diesel')).not.toBeOnTheScreen();
 
-    await fireEvent.press(screen.getByRole('tab', { name: 'Pendentes' }));
+    await escolher('Status', 'Pendentes');
     expect(screen.queryByText('Frete Curitiba')).not.toBeOnTheScreen();
     expect(screen.getByText('Diesel')).toBeOnTheScreen();
   });
@@ -258,12 +283,67 @@ describe('MovimentacoesListView — linhas e estados (LST-02)', () => {
     expect(screen.getByText('− R$ 80,00')).toHaveStyle({ color: colors.danger });
   });
 
-  it('subtítulo com categoria, data de referência e status; a parcela avisa que é parcela', async () => {
+  it('subtítulo com categoria e status (a data está no cabeçalho do dia); a parcela avisa que é parcela', async () => {
     await renderLista();
 
-    expect(screen.getByText('Frete · 05/10 · Recebido')).toBeOnTheScreen();
-    expect(screen.getByText('Combustível · 12/10 · Pendente')).toBeOnTheScreen();
-    expect(screen.getByText('Combustível · 20/10 · Pendente · Parcela')).toBeOnTheScreen();
+    expect(screen.getByText('Frete · Recebido')).toBeOnTheScreen();
+    expect(screen.getByText('Combustível · Pendente')).toBeOnTheScreen();
+    expect(screen.getByText('Combustível · Pendente · Parcela')).toBeOnTheScreen();
+  });
+
+  it('agrupa por dia, do mais recente ao mais antigo, com o cabeçalho do dia (hoje = 15/10)', async () => {
+    await renderLista();
+
+    const cabecalhos = screen.getAllByRole('header').map((cabecalho) => cabecalho.props.children);
+    expect(cabecalhos).toEqual(['Terça, 20 de outubro', 'Segunda, 12 de outubro', 'Segunda, 5 de outubro']);
+  });
+
+  it('resumo do mês: pago em entradas menos saídas, com os dois totais vindos do banco', async () => {
+    await renderLista();
+
+    expect(mockFluxo).toHaveBeenCalledWith('2026-10-01', 3);
+    expect(screen.getByText('Pago em outubro')).toBeOnTheScreen();
+    expect(screen.getByText('+ R$ 1.420,00')).toBeOnTheScreen();
+    expect(screen.getByText('+ R$ 1.500,00 em entradas · − R$ 80,00 em saídas')).toBeOnTheScreen();
+  });
+
+  it('resumo acompanha o Tipo: Entradas mostra o recebido; Saídas, o pago', async () => {
+    await renderLista();
+
+    await escolher('Tipo', 'Entradas');
+    expect(screen.getByText('Recebido em outubro')).toBeOnTheScreen();
+    // O mesmo valor aparece no cartão e na linha do frete, a única entrada do mês.
+    expect(screen.getAllByText('+ R$ 1.500,00')).toHaveLength(2);
+    expect(screen.queryByText(/em entradas ·/)).not.toBeOnTheScreen();
+
+    await escolher('Tipo', 'Saídas');
+    expect(screen.getByText('Pago em outubro')).toBeOnTheScreen();
+    // No cartão (só as saídas pagas do mês) e na linha do Diesel.
+    expect(screen.getAllByText('− R$ 80,00')).toHaveLength(2);
+  });
+
+  it('com Status "Pendentes" o cartão some: ele falaria de "pago" ao lado do que não foi pago', async () => {
+    await renderLista();
+
+    await escolher('Status', 'Pendentes');
+    expect(screen.queryByText('Pago em outubro')).not.toBeOnTheScreen();
+
+    await escolher('Status', 'Pagos');
+    expect(screen.getByText('Pago em outubro')).toBeOnTheScreen();
+  });
+
+  it('o cartão diz que conta pelo dia do pagamento (a lista agrupa pelo vencimento)', async () => {
+    await renderLista();
+
+    expect(screen.getByText('Pelo dia do pagamento.')).toBeOnTheScreen();
+  });
+
+  it('se o resumo falhar, a lista continua na tela, só sem o cartão', async () => {
+    mockFluxo.mockResolvedValue({ ok: false, mensagem: 'Sem conexão.' });
+    await renderLista();
+
+    expect(screen.queryByText('Pago em outubro')).not.toBeOnTheScreen();
+    expect(screen.getByText('Diesel')).toBeOnTheScreen();
   });
 
   it('mês vazio mostra o estado vazio, e o FAB continua na tela', async () => {
@@ -384,7 +464,7 @@ describe('MovimentacoesListView — tablet (EIX-94)', () => {
     expect(estiloDaLista()?.maxWidth).toBeUndefined();
   });
 
-  it('800: a lista rola na largura toda; mês, abas e linhas ficam na mesma coluna de 720', async () => {
+  it('800: a lista rola na largura toda; filtros e linhas ficam na mesma coluna de 720', async () => {
     mockLargura(800);
     await renderLista();
 
@@ -394,14 +474,14 @@ describe('MovimentacoesListView — tablet (EIX-94)', () => {
 
     const coluna = screen.getByTestId('screen-coluna');
     expect(StyleSheet.flatten(coluna.props.style)).toMatchObject({ maxWidth: 720, alignSelf: 'center' });
-    expect(within(coluna).getByRole('button', { name: 'Mês anterior' })).toBeOnTheScreen();
-    expect(within(coluna).getByRole('tab', { name: 'Entradas' })).toBeOnTheScreen();
+    expect(within(coluna).getByRole('button', { name: 'Mês: Outubro 2026' })).toBeOnTheScreen();
+    expect(within(coluna).getByRole('button', { name: 'Tipo: Todas' })).toBeOnTheScreen();
   });
 
   it('celular → tablet com a tela aberta: o filtro escolhido continua valendo e a lista ganha a coluna', async () => {
     const { rerender } = await render(<MovimentacoesListView />);
     await screen.findByText('Frete Curitiba');
-    await fireEvent.press(screen.getByRole('tab', { name: 'Saídas' }));
+    await escolher('Tipo', 'Saídas');
 
     mockLargura(800);
     await rerender(<MovimentacoesListView />);

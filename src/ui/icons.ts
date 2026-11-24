@@ -11,6 +11,9 @@ import { CaretRightIcon } from 'phosphor-react-native/src/icons/CaretRight';
 import { ChartBarIcon } from 'phosphor-react-native/src/icons/ChartBar';
 import { ChartLineUpIcon } from 'phosphor-react-native/src/icons/ChartLineUp';
 import { CheckCircleIcon } from 'phosphor-react-native/src/icons/CheckCircle';
+import { ClockIcon } from 'phosphor-react-native/src/icons/Clock';
+import { CloudArrowUpIcon } from 'phosphor-react-native/src/icons/CloudArrowUp';
+import { CloudCheckIcon } from 'phosphor-react-native/src/icons/CloudCheck';
 import { CreditCardIcon } from 'phosphor-react-native/src/icons/CreditCard';
 import { DotsThreeVerticalIcon } from 'phosphor-react-native/src/icons/DotsThreeVertical';
 import { EnvelopeSimpleIcon } from 'phosphor-react-native/src/icons/EnvelopeSimple';
@@ -29,6 +32,7 @@ import { UserCircleIcon } from 'phosphor-react-native/src/icons/UserCircle';
 import { UsersIcon } from 'phosphor-react-native/src/icons/Users';
 import { WalletIcon } from 'phosphor-react-native/src/icons/Wallet';
 import { WarningIcon } from 'phosphor-react-native/src/icons/Warning';
+import { WifiSlashIcon } from 'phosphor-react-native/src/icons/WifiSlash';
 import { WrenchIcon } from 'phosphor-react-native/src/icons/Wrench';
 import { XIcon } from 'phosphor-react-native/src/icons/X';
 
@@ -74,6 +78,12 @@ export const icons = {
   // Campos do login de teste: o ícone diz o que vai no campo antes de a pessoa ler o rótulo.
   email: EnvelopeSimpleIcon,
   senha: LockSimpleIcon,
+  // Estados da conta e do envio (Aguardando aprovação, Sincronização).
+  aguardando: ClockIcon,
+  bloqueado: LockSimpleIcon,
+  semInternet: WifiSlashIcon,
+  enviando: CloudArrowUpIcon,
+  enviado: CloudCheckIcon,
   versao: InfoIcon,
 } as const satisfies Record<string, PhosphorIcon>;
 
