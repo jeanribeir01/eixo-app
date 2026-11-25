@@ -1,20 +1,21 @@
 import { useEffect, useRef, useState } from 'react';
 import { useRouter } from 'expo-router';
-import { ActivityIndicator, Alert, StyleSheet, View } from 'react-native';
+import { Alert, StyleSheet, View } from 'react-native';
 import { z } from 'zod';
 
+import { horaLocal } from '@/lib/datas';
 import {
-  Badge,
+  Aviso,
   Button,
   Card,
   Column,
   EmptyState,
   Input,
   Screen,
+  Skeleton,
   Snackbar,
   Text,
   colors,
-  spacing,
 } from '@/ui';
 
 import {
@@ -114,15 +115,14 @@ export function FecharViagemView({ viagemId }: FecharViagemViewProps) {
 
     setErroHodometro(null);
 
-    // Passo 3.2: confirmação no Alert padrão do sistema, com a distância já formatada.
-    const mensagem = `${formatarKm(kmCalculado)} rodados, confirma?`;
-    const aviso = distanciaExcessiva
-      ? '\n\nAtenção: a distância percorrida é consideravelmente superior à distância estimada para esta rota.'
-      : '';
+    // Passo 3.2: confirmação no Alert padrão do sistema, com a distância já formatada. O botão diz a
+    // ação ("Finalizar"), não um "Confirmar" genérico.
+    const mensagem = `${formatarKm(kmCalculado)} rodados nesta viagem.`;
+    const aviso = distanciaExcessiva ? '\n\nA distância está bem acima da estimada para esta rota.' : '';
 
-    Alert.alert('Confirmar encerramento', `${mensagem}${aviso}`, [
+    Alert.alert('Finalizar viagem?', `${mensagem}${aviso}`, [
       { text: 'Cancelar', style: 'cancel' },
-      { text: 'Confirmar', onPress: () => executarFechamento(validacao.data.hodometro_final) },
+      { text: 'Finalizar', onPress: () => executarFechamento(validacao.data.hodometro_final) },
     ]);
   }
 
@@ -150,10 +150,10 @@ export function FecharViagemView({ viagemId }: FecharViagemViewProps) {
       // O botão segue em loading até a tela fechar: sem setTimeout, o toque repetido durante a
       // mensagem de sucesso não fecha a viagem duas vezes.
       sucesso = true;
-      setFeedback({ mensagem: 'Viagem concluída com sucesso!', tone: 'success' });
+      setFeedback({ mensagem: 'Viagem finalizada.', tone: 'success' });
     } catch {
       setFeedback({
-        mensagem: 'Não foi possível fechar a viagem. Tente novamente.',
+        mensagem: 'Não foi possível finalizar a viagem. Tente novamente.',
         tone: 'error',
       });
     } finally {
@@ -182,132 +182,124 @@ export function FecharViagemView({ viagemId }: FecharViagemViewProps) {
       }
     >
       {carregando ? (
-        <View style={styles.centro}>
-          <ActivityIndicator size="large" color={colors.accent} />
-        </View>
+        <Column gap="lg">
+          <Skeleton height="xxl" accessibilityLabel="Carregando a viagem" />
+          <Skeleton height="xxl" />
+        </Column>
       ) : erroCarregamento || !viagem ? (
         <EmptyState
           icon="viagens"
-          title="Erro ao carregar viagem"
-          description={erroCarregamento ?? 'Viagem não encontrada.'}
+          title="Não foi possível carregar a viagem"
+          description={erroCarregamento ?? 'A viagem não está neste aparelho.'}
           actionLabel="Voltar"
           onAction={() => router.back()}
         />
       ) : viagem.status !== 'EmAndamento' ? (
         <EmptyState
           icon="viagens"
-          title="Viagem já encerrada"
-          description={`Esta viagem está com o status "${rotuloStatusViagem[viagem.status]}" e não pode ser fechada novamente.`}
+          title="Esta viagem já foi encerrada"
+          description={`Ela está como "${rotuloStatusViagem[viagem.status]}", então não há o que finalizar.`}
           actionLabel="Voltar"
           onAction={() => router.back()}
         />
       ) : (
         <Column gap="lg">
-          {/* Dados da viagem aberta */}
-          <Card>
-            <Column gap="sm">
-              <View style={styles.linhaTopo}>
-                <Text variant="subheading">Viagem em andamento</Text>
-                <Badge label={rotuloStatusViagem.EmAndamento} tone="neutral" />
-              </View>
+          <ResumoDaViagem viagem={viagem} />
 
-              {viagem.veiculo && (
-                <Text variant="body" weight="medium">
-                  {`Veículo: ${viagem.veiculo.placa} • ${viagem.veiculo.modelo}`}
-                </Text>
-              )}
+          <Column gap="xs">
+            <Input
+              label="Hodômetro final (km)"
+              icone="hodometro"
+              placeholder={`Maior que ${formatarHodometro(viagem.hodometro_inicial)}`}
+              keyboardType="numeric"
+              value={hodometroFinal}
+              onChangeText={(texto) => {
+                setHodometroFinal(texto);
+                setErroHodometro(null);
+              }}
+              error={erroHodometro ?? undefined}
+            />
 
-              {viagem.rota && (
-                <Text variant="bodySm" tone="body">
-                  {`Rota: ${viagem.rota.cidade_origem}/${viagem.rota.uf_origem} → ${viagem.rota.cidade_destino}/${viagem.rota.uf_destino}`}
-                  {viagem.rota.distancia_estimada_km ? ` (est. ${viagem.rota.distancia_estimada_km} km)` : ''}
-                </Text>
-              )}
-
-              {viagem.motorista && (
-                <Text variant="bodySm" tone="muted">
-                  {`Motorista: ${viagem.motorista.nome}`}
-                </Text>
-              )}
-
-              <Text variant="body" weight="medium">
-                {`Hodômetro Inicial: ${formatarHodometro(viagem.hodometro_inicial)} km`}
+            {/* Passo 3.1: a distância aparece enquanto o motorista digita, antes de confirmar. */}
+            {kmCalculado !== null && !distanciaExcessiva && (
+              <Text variant="bodySm" tone="body">
+                {`${formatarKm(kmCalculado)} rodados nesta viagem.`}
               </Text>
-            </Column>
-          </Card>
+            )}
+          </Column>
 
-          {/* Formulário solicitando o Hodômetro Final */}
-          <Card>
-            <Column gap="md">
-              <Text variant="subheading">Encerramento da viagem</Text>
+          {/* Passo 3.3: muito acima da estimativa costuma ser dígito a mais. Aviso, não bloqueio: o
+              painel pode mesmo mostrar esse valor (desvio, rota alternativa). */}
+          {distanciaExcessiva && (
+            <Aviso tom="warning" icone="alerta" titulo="Confira o hodômetro final">
+              {`${formatarKm(kmCalculado)} rodados, bem acima dos ${viagem.rota?.distancia_estimada_km} km estimados para esta rota. Se o painel mostra esse valor, pode finalizar.`}
+            </Aviso>
+          )}
 
-              <Input
-                label="Hodômetro Final (km)"
-                placeholder={`Ex.: ${viagem.hodometro_inicial + 100}`}
-                keyboardType="numeric"
-                value={hodometroFinal}
-                onChangeText={(texto) => {
-                  setHodometroFinal(texto);
-                  setErroHodometro(null);
-                }}
-                error={erroHodometro ?? undefined}
-              />
-
-              {/* Distância calculada em tempo real (Passo 3.1) */}
-              {kmCalculado !== null && (
-                <View style={styles.blocoCalculo}>
-                  <Text variant="body" weight="medium">
-                    {`Distância calculada: ${formatarKm(kmCalculado)}`}
-                  </Text>
-                </View>
-              )}
-
-              {/* Passo 3.3: Feedback visual na tela caso passe muito da estimativa */}
-              {distanciaExcessiva && (
-                <View style={styles.blocoAviso}>
-                  {/* Verde/vermelho são exclusivos de valor financeiro; o texto já avisa do desvio. */}
-                  <Badge
-                    tone="neutral"
-                    label={`Atenção: ${formatarKm(kmCalculado)} rodados excede a estimativa da rota (${viagem.rota?.distancia_estimada_km} km).`}
-                  />
-                  <Text variant="caption" tone="body">
-                    Revise o valor digitado no hodômetro antes de confirmar.
-                  </Text>
-                </View>
-              )}
-            </Column>
-          </Card>
-
-          {/* Único botão preenchido cyan da tela (DESIGN_CYAN §1) */}
-          <Button
-            label="Fechar viagem"
-            variant="primary"
-            loading={fechando}
-            disabled={fechando}
-            onPress={solicitarConfirmacao}
-          />
+          {/* Um botão preenchido só por tela (DESIGN_CYAN §7). "Continuar viagem" volta sem salvar. */}
+          <Column gap="sm">
+            <Button
+              label="Finalizar viagem"
+              variant="primary"
+              loading={fechando}
+              disabled={fechando}
+              onPress={solicitarConfirmacao}
+            />
+            <Button
+              label="Continuar viagem"
+              variant="ghost"
+              disabled={fechando}
+              onPress={() => router.back()}
+            />
+          </Column>
         </Column>
       )}
     </Screen>
   );
 }
 
+// "João Silva · saída às 08:00": quem está com o caminhão e desde quando, no fuso do aparelho.
+function quemEQuando(viagem: ViagemDetalhada): string | null {
+  const partes = [viagem.motorista?.nome, viagem.data_inicio ? `saída às ${horaLocal(viagem.data_inicio)}` : null];
+  const texto = partes.filter(Boolean).join(' · ');
+  return texto ? texto.charAt(0).toUpperCase() + texto.slice(1) : null;
+}
+
+// O que o motorista precisa ver antes de digitar: qual caminhão, qual trecho e de onde o hodômetro partiu.
+// Mesmo cartão de destaque do Início do Motorista, para a tela parecer a continuação dele.
+function ResumoDaViagem({ viagem }: { viagem: ViagemDetalhada }) {
+  const linhaDeQuem = quemEQuando(viagem);
+  return (
+    <Card variant="feature">
+      <Text variant="bodySm" tone="body">
+        Viagem em andamento
+      </Text>
+      <Column gap="xs">
+        <Text variant="display" weight="semibold">
+          {viagem.veiculo?.placa ?? 'Veículo'}
+        </Text>
+        {viagem.rota && (
+          <Text tone="body">
+            {`${viagem.rota.cidade_origem}/${viagem.rota.uf_origem} → ${viagem.rota.cidade_destino}/${viagem.rota.uf_destino}`}
+          </Text>
+        )}
+      </Column>
+      <View style={styles.divisor} />
+      {linhaDeQuem && (
+        <Text variant="bodySm" tone="body">
+          {linhaDeQuem}
+        </Text>
+      )}
+      <Text variant="bodySm" tone="body">
+        {`${viagem.veiculo?.modelo ? `${viagem.veiculo.modelo} · ` : ''}hodômetro na saída: ${formatarHodometro(viagem.hodometro_inicial)} km`}
+      </Text>
+    </Card>
+  );
+}
+
 const styles = StyleSheet.create({
-  centro: {
-    paddingVertical: spacing.xl,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  linhaTopo: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-  },
-  blocoCalculo: {
-    paddingVertical: spacing.xs,
-  },
-  blocoAviso: {
-    gap: spacing.xs,
-    paddingTop: spacing.xs,
+  divisor: {
+    height: StyleSheet.hairlineWidth,
+    backgroundColor: colors.border,
   },
 });

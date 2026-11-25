@@ -533,7 +533,7 @@ describe('header nativo nas telas internas (NAV-02)', () => {
     ['/manutencoes', 'Tela Manutencoes', 'Manutenções'],
     ['/manutencoes/nova', 'Tela Nova Manutencao', 'Nova manutenção'],
     ['/viagens/nova', 'Tela Abrir Viagem', 'Abrir viagem'],
-    ['/viagens/v1/fechar', 'Tela Fechar Viagem', 'Fechar viagem'],
+    ['/viagens/v1/fechar', 'Tela Fechar Viagem', 'Finalizar viagem'],
     // Detalhe do veículo (EIX-39)
     ['/frota/v1', 'Tela Detalhe Veiculo', 'Veículo'],
   ] as const)('%s abre %s com o header "%s" e o botão voltar', async (rota, tela, titulo) => {

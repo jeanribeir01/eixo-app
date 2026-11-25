@@ -1,22 +1,20 @@
 import { useEffect, useRef, useState } from 'react';
 import { useRouter } from 'expo-router';
-import { ActivityIndicator, StyleSheet, View } from 'react-native';
 import { z } from 'zod';
 
 import { useProfile } from '@/features/auth/profileStore';
 import { rotuloStatusVeiculo } from '@/features/veiculos/types';
 import {
+  Aviso,
   Button,
-  Card,
   Column,
   EmptyState,
   Input,
   Screen,
   Select,
+  Skeleton,
   Snackbar,
   Text,
-  colors,
-  spacing,
   type SelectOption,
 } from '@/ui';
 
@@ -230,10 +228,7 @@ export function AbrirViagemView() {
 
     // O botão segue em loading até a tela fechar: sem setTimeout, o toque repetido durante a
     // mensagem de sucesso não abre uma segunda viagem.
-    setFeedback({
-      mensagem: 'Viagem aberta com sucesso! Os dados serão enviados quando houver conexão.',
-      tone: 'success',
-    });
+    setFeedback({ mensagem: 'Viagem aberta. Boa viagem!', tone: 'success' });
   }
 
   function dispensarFeedback() {
@@ -245,13 +240,13 @@ export function AbrirViagemView() {
   const opcoesVeiculos: SelectOption[] = veiculos.map((v) => ({
     value: v.id,
     label: `${v.placa} • ${v.modelo}`,
-    description: `Status: ${rotuloStatusVeiculo[v.status]} | Capacidade: ${v.capacidade_carga} t`,
+    description: `${rotuloStatusVeiculo[v.status]} · ${v.capacidade_carga} t de capacidade`,
   }));
 
   const opcoesRotas: SelectOption[] = rotas.map((r) => ({
     value: r.id,
     label: `${r.cidade_origem}/${r.uf_origem} → ${r.cidade_destino}/${r.uf_destino}`,
-    description: `Distância estimada: ${r.distancia_estimada_km} km`,
+    description: `${r.distancia_estimada_km} km estimados`,
   }));
 
   const opcoesMotoristas: SelectOption[] = motoristas.map((m) => ({
@@ -267,12 +262,12 @@ export function AbrirViagemView() {
       ? {
           titulo: 'Nenhum veículo disponível',
           descricao:
-            'Todos os veículos estão em viagem ou em manutenção, ou o cache ainda não foi baixado. Conecte-se para atualizar.',
+            'Todos os veículos estão em viagem ou em manutenção, ou o aparelho ainda não recebeu a lista. Conecte-se à internet para atualizar.',
         }
       : rotas.length === 0
         ? {
             titulo: 'Nenhuma rota ativa',
-            descricao: 'Cadastre uma rota ativa ou conecte-se à internet para atualizar os dados.',
+            descricao: 'Cadastre uma rota ativa ou conecte-se à internet para atualizar a lista.',
           }
         : opcoesMotoristas.length === 0
           ? {
@@ -292,13 +287,13 @@ export function AbrirViagemView() {
       }
     >
       {carregandoDados ? (
-        <View style={styles.centro}>
-          <ActivityIndicator
-            size="large"
-            color={colors.accent}
-            accessibilityLabel="Carregando dados da viagem"
-          />
-        </View>
+        // O formato do formulário já aparece enquanto o cache local responde: sem spinner no vazio.
+        <Column gap="lg">
+          <Skeleton height="xxl" accessibilityLabel="Carregando dados da viagem" />
+          <Skeleton height="xxl" />
+          <Skeleton height="xxl" />
+          <Skeleton height="xxl" />
+        </Column>
       ) : erroCarregamento ? (
         <EmptyState
           icon="viagens"
@@ -316,48 +311,51 @@ export function AbrirViagemView() {
           onAction={() => setTentativa((atual) => atual + 1)}
         />
       ) : (
+        // Formulário direto na tela, sem cartão em volta: o cartão de destaque fica para a viagem em
+        // andamento (Início do Motorista), e um cartão a mais aqui só empurraria o botão para baixo.
         <Column gap="lg">
-          <Card>
-            <Column gap="md">
-              <Text variant="subheading">Informações da nova viagem</Text>
+          <Text tone="body">Confira a placa e o hodômetro no painel antes de sair.</Text>
 
-              <Select
-                label="Veículo"
-                placeholder="Selecione o veículo"
-                options={opcoesVeiculos}
-                value={veiculoId}
-                onChange={aoSelecionarVeiculo}
-                error={erros.veiculo_id}
-              />
+          <Column gap="md">
+            <Select
+              label="Veículo"
+              placeholder="Selecione o veículo"
+              options={opcoesVeiculos}
+              value={veiculoId}
+              onChange={aoSelecionarVeiculo}
+              error={erros.veiculo_id}
+            />
 
-              <Select
-                label="Rota"
-                placeholder="Selecione a rota"
-                options={opcoesRotas}
-                value={rotaId}
-                onChange={(valor) => {
-                  setRotaId(valor);
-                  setErros((prev) => ({ ...prev, rota_id: undefined }));
-                }}
-                error={erros.rota_id}
-              />
+            <Select
+              label="Rota"
+              placeholder="Selecione a rota"
+              options={opcoesRotas}
+              value={rotaId}
+              onChange={(valor) => {
+                setRotaId(valor);
+                setErros((prev) => ({ ...prev, rota_id: undefined }));
+              }}
+              error={erros.rota_id}
+            />
 
-              <Select
-                label="Motorista"
-                placeholder="Selecione o motorista"
-                options={opcoesMotoristas}
-                value={motoristaId}
-                disabled={ehMotorista}
-                onChange={(valor) => {
-                  setMotoristaId(valor);
-                  setErros((prev) => ({ ...prev, motorista_id: undefined }));
-                }}
-                error={erros.motorista_id}
-              />
+            <Select
+              label="Motorista"
+              placeholder="Selecione o motorista"
+              options={opcoesMotoristas}
+              value={motoristaId}
+              disabled={ehMotorista}
+              onChange={(valor) => {
+                setMotoristaId(valor);
+                setErros((prev) => ({ ...prev, motorista_id: undefined }));
+              }}
+              error={erros.motorista_id}
+            />
 
+            <Column gap="xs">
               <Input
                 label="Hodômetro inicial (km)"
-                placeholder="Ex.: 15000"
+                icone="hodometro"
+                placeholder="Como está no painel"
                 keyboardType="numeric"
                 value={hodometroInicial}
                 onChangeText={(texto) => {
@@ -368,31 +366,31 @@ export function AbrirViagemView() {
               />
 
               {ehAdminOuGestor && ultimoHodometroVeiculo !== null && (
-                <Text variant="caption" tone="muted">
+                <Text variant="caption" tone="body">
                   {`Último hodômetro final registrado: ${formatarHodometro(ultimoHodometroVeiculo)} km`}
                 </Text>
               )}
             </Column>
-          </Card>
+          </Column>
 
-          {/* Único botão preenchido cyan da tela (DESIGN_CYAN §1) */}
-          <Button
-            label="Abrir viagem"
-            variant="primary"
-            loading={salvando}
-            disabled={salvando}
-            onPress={submeter}
-          />
+          {/* Offline-first (RNF01): quem está no pátio sem sinal precisa saber que pode seguir. */}
+          <Aviso tom="info" icone="enviando" titulo="Pode abrir sem internet">
+            A viagem fica guardada no aparelho e é enviada quando a conexão voltar.
+          </Aviso>
+
+          {/* Um botão preenchido só por tela (DESIGN_CYAN §7); Cancelar é a saída sem salvar. */}
+          <Column gap="sm">
+            <Button
+              label="Abrir viagem"
+              variant="primary"
+              loading={salvando}
+              disabled={salvando}
+              onPress={submeter}
+            />
+            <Button label="Cancelar" variant="ghost" disabled={salvando} onPress={() => router.back()} />
+          </Column>
         </Column>
       )}
     </Screen>
   );
 }
-
-const styles = StyleSheet.create({
-  centro: {
-    paddingVertical: spacing.xl,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-});

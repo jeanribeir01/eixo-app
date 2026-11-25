@@ -59,7 +59,7 @@ export default function AppLayout() {
       {/* Viagens (US08) seguem a aba: o Motorista também abre e fecha. A lista é a própria aba. */}
       <Stack.Protected guard={podeVerViagens} redirectTo="/">
         <Stack.Screen name="viagens/nova" options={{ title: 'Abrir viagem' }} />
-        <Stack.Screen name="viagens/[id]/fechar" options={{ title: 'Fechar viagem' }} />
+        <Stack.Screen name="viagens/[id]/fechar" options={{ title: 'Finalizar viagem' }} />
       </Stack.Protected>
       {/* A lista de viagens fora da aba: só para quem vê viagens e não tem a aba (Admin). */}
       <Stack.Protected guard={viagensForaDaAba} redirectTo="/">

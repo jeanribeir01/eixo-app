@@ -156,7 +156,7 @@ describe('ViagensListView', () => {
     expect(screen.getByText('Distância rodada: 500 km')).toBeTruthy();
     expect(screen.getByText(/acima da rota/i)).toBeTruthy();
 
-    const botaoFechar = screen.getByRole('button', { name: 'Fechar viagem' });
+    const botaoFechar = screen.getByRole('button', { name: 'Finalizar viagem' });
     await fireEvent.press(botaoFechar);
     expect(mockPush).toHaveBeenCalledWith('/viagens/viagem-1/fechar');
   });

@@ -174,7 +174,7 @@ describe('AbrirViagemView', () => {
   it('renderiza os campos Veículo, Rota, Motorista e Hodômetro inicial', async () => {
     await render(<AbrirViagemView />);
 
-    expect(await screen.findByText('Informações da nova viagem')).toBeOnTheScreen();
+    expect(await screen.findByText('Confira a placa e o hodômetro no painel antes de sair.')).toBeOnTheScreen();
     expect(screen.getByRole('button', { name: 'Veículo' })).toBeTruthy();
     expect(screen.getByRole('button', { name: 'Rota' })).toBeTruthy();
     expect(screen.getByRole('button', { name: 'Motorista' })).toBeTruthy();
@@ -185,7 +185,7 @@ describe('AbrirViagemView', () => {
     (authStore.useProfile as jest.Mock).mockReturnValue(perfilDoUsuario(usuarioGestor));
     await render(<AbrirViagemView />);
 
-    await screen.findByText('Informações da nova viagem');
+    await screen.findByText('Confira a placa e o hodômetro no painel antes de sair.');
 
     expect(repo.listarVeiculosParaViagem).toHaveBeenCalledTimes(1);
     expect(repo.listarRotasParaViagem).toHaveBeenCalledTimes(1);
@@ -217,7 +217,7 @@ describe('AbrirViagemView', () => {
       await promessa;
     });
 
-    expect(await screen.findByText('Informações da nova viagem')).toBeOnTheScreen();
+    expect(await screen.findByText('Confira a placa e o hodômetro no painel antes de sair.')).toBeOnTheScreen();
   });
 
   it('mostra erro de leitura local e permite tentar novamente', async () => {
@@ -233,7 +233,7 @@ describe('AbrirViagemView', () => {
 
     await fireEvent.press(screen.getByRole('button', { name: 'Tentar novamente' }));
 
-    expect(await screen.findByText('Informações da nova viagem')).toBeOnTheScreen();
+    expect(await screen.findByText('Confira a placa e o hodômetro no painel antes de sair.')).toBeOnTheScreen();
     expect(repo.listarVeiculosParaViagem).toHaveBeenCalledTimes(2);
   });
 
@@ -245,7 +245,7 @@ describe('AbrirViagemView', () => {
     expect(await screen.findByText('Nenhum veículo disponível')).toBeOnTheScreen();
     expect(
       screen.getByText(
-        'Todos os veículos estão em viagem ou em manutenção, ou o cache ainda não foi baixado. Conecte-se para atualizar.',
+        'Todos os veículos estão em viagem ou em manutenção, ou o aparelho ainda não recebeu a lista. Conecte-se à internet para atualizar.',
       ),
     ).toBeOnTheScreen();
   });
@@ -257,7 +257,7 @@ describe('AbrirViagemView', () => {
 
     expect(await screen.findByText('Nenhuma rota ativa')).toBeOnTheScreen();
     expect(
-      screen.getByText('Cadastre uma rota ativa ou conecte-se à internet para atualizar os dados.'),
+      screen.getByText('Cadastre uma rota ativa ou conecte-se à internet para atualizar a lista.'),
     ).toBeOnTheScreen();
   });
 
@@ -271,7 +271,7 @@ describe('AbrirViagemView', () => {
       .mockResolvedValue({ ok: true, data: { ...mockVeiculo, status } });
 
     await render(<AbrirViagemView />);
-    await screen.findByText('Informações da nova viagem');
+    await screen.findByText('Confira a placa e o hodômetro no painel antes de sair.');
     await selecionarVeiculo('BRA2E19 • R450');
 
     expect(await screen.findByText(mensagem)).toBeOnTheScreen();
@@ -285,7 +285,7 @@ describe('AbrirViagemView', () => {
     });
 
     await render(<AbrirViagemView />);
-    await screen.findByText('Informações da nova viagem');
+    await screen.findByText('Confira a placa e o hodômetro no painel antes de sair.');
     await selecionarVeiculo('BRA2E19 • R450');
 
     await waitFor(() => expect(repo.buscarVeiculoParaViagem).toHaveBeenCalledWith('veic-1'));
@@ -298,7 +298,7 @@ describe('AbrirViagemView', () => {
     const spyAbrir = jest.spyOn(repo, 'abrirViagem');
 
     await render(<AbrirViagemView />);
-    await screen.findByText('Informações da nova viagem');
+    await screen.findByText('Confira a placa e o hodômetro no painel antes de sair.');
 
     await fireEvent.press(screen.getByRole('button', { name: 'Abrir viagem' }));
 
@@ -311,7 +311,7 @@ describe('AbrirViagemView', () => {
     const spyAbrir = jest.spyOn(repo, 'abrirViagem');
 
     await render(<AbrirViagemView />);
-    await screen.findByText('Informações da nova viagem');
+    await screen.findByText('Confira a placa e o hodômetro no painel antes de sair.');
     await preencherFormulario('abc');
 
     await fireEvent.press(screen.getByRole('button', { name: 'Abrir viagem' }));
@@ -329,7 +329,7 @@ describe('AbrirViagemView', () => {
     });
 
     await render(<AbrirViagemView />);
-    await screen.findByText('Informações da nova viagem');
+    await screen.findByText('Confira a placa e o hodômetro no painel antes de sair.');
     await preencherFormulario('14000', { ultimoHodometroPreenchido: 15000 });
 
     await fireEvent.press(screen.getByRole('button', { name: 'Abrir viagem' }));
@@ -351,7 +351,7 @@ describe('AbrirViagemView', () => {
     });
 
     await render(<AbrirViagemView />);
-    await screen.findByText('Informações da nova viagem');
+    await screen.findByText('Confira a placa e o hodômetro no painel antes de sair.');
     await preencherFormulario('15000', { ultimoHodometroPreenchido: 15000 });
     expect(screen.getByText('Último hodômetro final registrado: 15.000 km')).toBeOnTheScreen();
     await escolherMotorista('João Motorista');
@@ -374,7 +374,7 @@ describe('AbrirViagemView', () => {
 
     await render(<AbrirViagemView />);
 
-    await screen.findByText('Informações da nova viagem');
+    await screen.findByText('Confira a placa e o hodômetro no painel antes de sair.');
     await preencherFormulario('15.000');
 
     await fireEvent.press(screen.getByRole('button', { name: 'Abrir viagem' }));
@@ -407,7 +407,7 @@ describe('AbrirViagemView', () => {
       );
 
     await render(<AbrirViagemView />);
-    await screen.findByText('Informações da nova viagem');
+    await screen.findByText('Confira a placa e o hodômetro no painel antes de sair.');
 
     await selecionarVeiculo('BRA2E19 • R450');
     await waitFor(() => expect(spyHodometro).toHaveBeenCalledWith('veic-1'));
@@ -432,7 +432,7 @@ describe('AbrirViagemView', () => {
     const spyAbrir = jest.spyOn(repo, 'abrirViagem');
 
     await render(<AbrirViagemView />);
-    await screen.findByText('Informações da nova viagem');
+    await screen.findByText('Confira a placa e o hodômetro no painel antes de sair.');
 
     // O gestor logado não vira o responsável por omissão.
     expect(screen.queryByText(usuarioGestor.nome)).not.toBeOnTheScreen();
@@ -451,7 +451,7 @@ describe('AbrirViagemView', () => {
 
   it('Motorista não consulta a lista de usuários e tem o campo travado nele mesmo', async () => {
     await render(<AbrirViagemView />);
-    await screen.findByText('Informações da nova viagem');
+    await screen.findByText('Confira a placa e o hodômetro no painel antes de sair.');
 
     expect(repo.listarMotoristasParaViagem).not.toHaveBeenCalled();
     expect(screen.getByRole('button', { name: 'Motorista' })).toBeDisabled();
@@ -467,7 +467,7 @@ describe('AbrirViagemView', () => {
     jest.spyOn(repo, 'buscarUltimoHodometro').mockReturnValue(resposta);
 
     await render(<AbrirViagemView />);
-    await screen.findByText('Informações da nova viagem');
+    await screen.findByText('Confira a placa e o hodômetro no painel antes de sair.');
     await selecionarVeiculo('BRA2E19 • R450');
     await waitFor(() => expect(repo.buscarUltimoHodometro).toHaveBeenCalledWith('veic-1'));
 
@@ -490,7 +490,7 @@ describe('AbrirViagemView', () => {
     });
 
     await render(<AbrirViagemView />);
-    await screen.findByText('Informações da nova viagem');
+    await screen.findByText('Confira a placa e o hodômetro no painel antes de sair.');
     await selecionarVeiculo('BRA2E19 • R450');
 
     expect(await screen.findByRole('alert')).toHaveTextContent(
@@ -504,14 +504,14 @@ describe('AbrirViagemView', () => {
     jest.spyOn(repo, 'abrirViagem').mockResolvedValue({ ok: true, data: viagemAberta });
 
     await render(<AbrirViagemView />);
-    await screen.findByText('Informações da nova viagem');
+    await screen.findByText('Confira a placa e o hodômetro no painel antes de sair.');
     await preencherFormulario('15000');
 
     await fireEvent.press(screen.getByRole('button', { name: 'Abrir viagem' }));
 
     await waitFor(() => expect(repo.abrirViagem).toHaveBeenCalledTimes(1));
     expect(screen.getByRole('alert')).toHaveTextContent(
-      'Viagem aberta com sucesso! Os dados serão enviados quando houver conexão.',
+      'Viagem aberta. Boa viagem!',
     );
     // Espera a entrada do Snackbar montar o timer de auto-dismiss.
     await waitFor(() => expect(Animated.timing).toHaveBeenCalled());
@@ -523,5 +523,21 @@ describe('AbrirViagemView', () => {
     });
 
     expect(mockBack).toHaveBeenCalledTimes(1);
+  });
+
+  it('avisa que a viagem pode ser aberta sem internet e Cancelar volta sem salvar', async () => {
+    const spyAbrir = jest.spyOn(repo, 'abrirViagem');
+    await render(<AbrirViagemView />);
+
+    expect(await screen.findByText('Pode abrir sem internet')).toBeOnTheScreen();
+    expect(
+      screen.getByText('A viagem fica guardada no aparelho e é enviada quando a conexão voltar.'),
+    ).toBeOnTheScreen();
+    expect(screen.getByTestId('icone-hodometro', { includeHiddenElements: true })).toBeOnTheScreen();
+
+    await fireEvent.press(screen.getByRole('button', { name: 'Cancelar' }));
+
+    expect(mockBack).toHaveBeenCalledTimes(1);
+    expect(spyAbrir).not.toHaveBeenCalled();
   });
 });
