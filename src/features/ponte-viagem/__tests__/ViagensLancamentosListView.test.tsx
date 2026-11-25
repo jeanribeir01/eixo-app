@@ -1,6 +1,7 @@
 import { act, fireEvent, render, screen } from '@testing-library/react-native';
 import { FlatList, StyleSheet, useWindowDimensions } from 'react-native';
 
+import { porTipo } from '@/testing/componentes';
 import { spacing } from '@/ui';
 
 import { ViagensLancamentosListView } from '../ViagensLancamentosListView';
@@ -73,7 +74,7 @@ beforeEach(() => {
 describe('ViagensLancamentosListView', () => {
   // DETALHE-01
   it('lista as viagens vinculáveis com placa, rota, status e início', async () => {
-    render(<ViagensLancamentosListView />);
+    await render(<ViagensLancamentosListView />);
 
     expect(await screen.findByText('ABC1D23 · São Paulo/SP → Curitiba/PR')).toBeOnTheScreen();
     expect(screen.getByText('XYZ9K88 · Campinas/SP → Belo Horizonte/MG')).toBeOnTheScreen();
@@ -82,17 +83,17 @@ describe('ViagensLancamentosListView', () => {
 
   // DETALHE-01
   it('tocar numa viagem abre o detalhe dela', async () => {
-    render(<ViagensLancamentosListView />);
+    await render(<ViagensLancamentosListView />);
 
-    fireEvent.press(await screen.findByRole('button', { name: 'XYZ9K88 · Campinas/SP → Belo Horizonte/MG' }));
+    await fireEvent.press(await screen.findByRole('button', { name: 'XYZ9K88 · Campinas/SP → Belo Horizonte/MG' }));
 
     expect(mockPush).toHaveBeenCalledWith('/viagens/v-2');
   });
 
-  it('mostra o carregando enquanto busca', () => {
+  it('mostra o carregando enquanto busca', async () => {
     mockListar.mockReturnValue(new Promise(() => undefined));
 
-    render(<ViagensLancamentosListView />);
+    await render(<ViagensLancamentosListView />);
 
     expect(screen.getByLabelText('Carregando viagens')).toBeOnTheScreen();
   });
@@ -100,17 +101,17 @@ describe('ViagensLancamentosListView', () => {
   it('sem viagens mostra o estado vazio', async () => {
     mockListar.mockResolvedValue({ ok: true, data: [] });
 
-    render(<ViagensLancamentosListView />);
+    await render(<ViagensLancamentosListView />);
 
     expect(await screen.findByText('Nenhuma viagem por aqui')).toBeOnTheScreen();
   });
 
   it('erro mostra a mensagem e "Tentar novamente" busca de novo', async () => {
     mockListar.mockResolvedValueOnce({ ok: false, mensagem: 'Não foi possível carregar as viagens. Tente novamente.' });
-    render(<ViagensLancamentosListView />);
+    await render(<ViagensLancamentosListView />);
 
     expect(await screen.findByText('Não foi possível carregar as viagens. Tente novamente.')).toBeOnTheScreen();
-    await act(async () => fireEvent.press(screen.getByRole('button', { name: 'Tentar novamente' })));
+    await act(async () => await fireEvent.press(screen.getByRole('button', { name: 'Tentar novamente' })));
 
     expect(await screen.findByText('ABC1D23 · São Paulo/SP → Curitiba/PR')).toBeOnTheScreen();
   });
@@ -124,11 +125,11 @@ describe('ViagensLancamentosListView — tablet (EIX-94)', () => {
   }
 
   function estiloDaLista() {
-    return StyleSheet.flatten(screen.UNSAFE_getByType(FlatList).props.contentContainerStyle);
+    return StyleSheet.flatten(porTipo(FlatList).props.contentContainerStyle);
   }
 
   it('412: nada muda, o respiro lateral continua no Screen e a lista não ganha coluna', async () => {
-    render(<ViagensLancamentosListView />);
+    await render(<ViagensLancamentosListView />);
     await screen.findByText('ABC1D23 · São Paulo/SP → Curitiba/PR');
 
     expect(estiloDoConteudo()).toMatchObject({ paddingHorizontal: spacing.base });
@@ -137,7 +138,7 @@ describe('ViagensLancamentosListView — tablet (EIX-94)', () => {
 
   it('800: a lista rola na largura toda e o conteúdo fica na coluna de 720', async () => {
     mockLargura(800);
-    render(<ViagensLancamentosListView />);
+    await render(<ViagensLancamentosListView />);
     await screen.findByText('ABC1D23 · São Paulo/SP → Curitiba/PR');
 
     expect(estiloDoConteudo().maxWidth).toBeUndefined();

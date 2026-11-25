@@ -15,8 +15,8 @@ describe('Text — tons', () => {
     ['accent', colors.accentText],
     ['warning', colors.warning],
     ['onAccent', colors.onAccent],
-  ] as const)('tom %s usa a cor %s', (tone, cor) => {
-    render(<Text tone={tone}>+ R$ 10,00</Text>);
+  ] as const)('tom %s usa a cor %s', async (tone, cor) => {
+    await render(<Text tone={tone}>+ R$ 10,00</Text>);
 
     expect(screen.getByText('+ R$ 10,00')).toHaveStyle({ color: cor });
   });

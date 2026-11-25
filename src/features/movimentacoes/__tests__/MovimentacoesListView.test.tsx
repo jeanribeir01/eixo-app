@@ -2,6 +2,8 @@ import { act, fireEvent, render, screen, within } from '@testing-library/react-n
 import { Alert, FlatList, RefreshControl, StyleSheet, useWindowDimensions } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
+import { porTipo, todosPorTipo } from '@/testing/componentes';
+import { segurarPrimeiraCarga } from '@/testing/eventos';
 import { buscarFluxoMensal } from '@/features/dashboard/graficos/queries';
 import { FAB_ALTURA_RESERVADA, ListItem, Skeleton, colors, spacing } from '@/ui';
 
@@ -105,14 +107,14 @@ const diesel = mov({ id: 'diesel', descricao: 'Diesel', valorCentavos: 8000, dat
 const parcela = mov({ id: 'parcela', descricao: 'Financiamento (1/12)', divida_id: 'div-1', data_vencimento: '2026-10-20' });
 
 async function renderLista() {
-  render(<MovimentacoesListView />);
+  await render(<MovimentacoesListView />);
   await screen.findByText('Frete Curitiba');
 }
 
 // Abre o diálogo de exclusão da linha e devolve os botões dele (o Alert nativo não aparece na árvore).
-function abrirMaisOpcoes(descricao: string) {
+async function abrirMaisOpcoes(descricao: string) {
   const alerta = jest.spyOn(Alert, 'alert');
-  fireEvent.press(screen.getByRole('button', { name: `Mais opções: ${descricao}` }));
+  await fireEvent.press(screen.getByRole('button', { name: `Mais opções: ${descricao}` }));
   return { alerta, botoes: alerta.mock.calls.at(-1)?.[2] ?? [] };
 }
 
@@ -145,10 +147,13 @@ afterEach(() => {
 
 describe('MovimentacoesListView — mês (MOV-08, LST-02)', () => {
   it('primeira carga: três skeletons, depois as movimentações do mês atual', async () => {
-    render(<MovimentacoesListView />);
+    // Segura a primeira carga: o render async esperaria a resposta e pularia o "carregando".
+    const liberarCarga = segurarPrimeiraCarga(mockListar);
+    await render(<MovimentacoesListView />);
 
     expect(screen.getByLabelText('Carregando movimentações')).toBeOnTheScreen();
-    expect(screen.UNSAFE_getAllByType(Skeleton)).toHaveLength(3);
+    expect(todosPorTipo(Skeleton)).toHaveLength(3);
+    await liberarCarga();
     expect(await screen.findByText('Frete Curitiba')).toBeOnTheScreen();
     expect(screen.getByText('Outubro 2026')).toBeOnTheScreen();
     expect(mockListar).toHaveBeenCalledWith(2026, 10);
@@ -159,7 +164,7 @@ describe('MovimentacoesListView — mês (MOV-08, LST-02)', () => {
 
     expect(screen.queryByText('Eixo Certo')).not.toBeOnTheScreen();
     expect(screen.queryByText('Movimentações')).not.toBeOnTheScreen();
-    expect(screen.UNSAFE_getByType(SafeAreaView).props.edges).not.toContain('top');
+    expect(porTipo(SafeAreaView).props.edges).not.toContain('top');
   });
 
   it('o mês é um chip: abre os meses e troca a consulta (LST-02, AC 12)', async () => {
@@ -174,16 +179,17 @@ describe('MovimentacoesListView — mês (MOV-08, LST-02)', () => {
 
   it('o seletor vai de um ano atrás até três meses à frente, virando o ano', async () => {
     jest.setSystemTime(new Date(2026, 11, 20));
-    render(<MovimentacoesListView />);
+    await render(<MovimentacoesListView />);
     await screen.findByText('Dezembro 2026');
 
     await escolher('Mês', 'Janeiro 2027');
 
     expect(mockListar).toHaveBeenLastCalledWith(2027, 1);
-    await act(async () => fireEvent.press(screen.getByRole('button', { name: /^Mês: / })));
+    await act(async () => await fireEvent.press(screen.getByRole('button', { name: /^Mês: / })));
     // A folha é uma FlatList virtualizada: as opções são conferidas pelos dados, não pelo que já renderizou.
-    const folha = screen.UNSAFE_getAllByType(FlatList).find((lista) => lista.props.data[0]?.label === 'Março 2027');
-    const meses = folha?.props.data.map((opcao: { label: string }) => opcao.label);
+    const opcoesDe = (dados: unknown) => Array.from((dados ?? []) as ArrayLike<{ label: string }>);
+    const folha = todosPorTipo(FlatList).find((lista) => opcoesDe(lista.props.data)[0]?.label === 'Março 2027');
+    const meses = opcoesDe(folha?.props.data).map((opcao) => opcao.label);
     expect(meses).toHaveLength(16);
     expect(meses.at(-1)).toBe('Dezembro 2025');
     expect(meses).not.toContain('Abril 2027');
@@ -203,7 +209,7 @@ describe('MovimentacoesListView — mês (MOV-08, LST-02)', () => {
     let responderOutubro: (valor: Awaited<ReturnType<typeof listarMovimentacoesDoMes>>) => void = () => undefined;
     mockListar.mockReturnValueOnce(new Promise((resolve) => (responderOutubro = resolve)));
     mockListar.mockResolvedValueOnce({ ok: true, data: [diesel] });
-    render(<MovimentacoesListView />);
+    await render(<MovimentacoesListView />);
 
     await escolher('Mês', 'Novembro 2026');
     expect(await screen.findByText('Diesel')).toBeOnTheScreen();
@@ -230,12 +236,12 @@ describe('MovimentacoesListView — mês (MOV-08, LST-02)', () => {
   it('pull-to-refresh em accentStrong e espaço para o FAB no fim da lista', async () => {
     await renderLista();
 
-    const refresh = screen.UNSAFE_getByType(RefreshControl);
+    const refresh = porTipo(RefreshControl);
     expect(refresh.props.colors).toEqual([colors.accentStrong]);
-    await act(async () => refresh.props.onRefresh());
+    await act(async () => refresh.props.onRefresh!());
     expect(mockListar).toHaveBeenCalledTimes(2);
 
-    expect(StyleSheet.flatten(screen.UNSAFE_getByType(FlatList).props.contentContainerStyle)).toMatchObject({
+    expect(StyleSheet.flatten(porTipo(FlatList).props.contentContainerStyle)).toMatchObject({
       paddingBottom: FAB_ALTURA_RESERVADA,
     });
   });
@@ -342,19 +348,19 @@ describe('MovimentacoesListView — linhas e estados (LST-02)', () => {
 
   it('mês vazio mostra o estado vazio, e o FAB continua na tela', async () => {
     mockListar.mockResolvedValue({ ok: true, data: [] });
-    render(<MovimentacoesListView />);
+    await render(<MovimentacoesListView />);
 
     expect(await screen.findByText('Nenhuma movimentação neste mês')).toBeOnTheScreen();
-    fireEvent.press(screen.getByRole('button', { name: 'Nova movimentação' }));
+    await fireEvent.press(screen.getByRole('button', { name: 'Nova movimentação' }));
     expect(mockPush).toHaveBeenCalledWith('/movimentacoes/nova');
   });
 
   it('erro mostra "Tentar novamente", que recarrega', async () => {
     mockListar.mockResolvedValueOnce({ ok: false, mensagem: 'Não foi possível carregar as movimentações. Tente novamente.' });
-    render(<MovimentacoesListView />);
+    await render(<MovimentacoesListView />);
 
     expect(await screen.findByText('Não foi possível carregar as movimentações. Tente novamente.')).toBeOnTheScreen();
-    await act(async () => fireEvent.press(screen.getByRole('button', { name: 'Tentar novamente' })));
+    await act(async () => await fireEvent.press(screen.getByRole('button', { name: 'Tentar novamente' })));
     expect(await screen.findByText('Frete Curitiba')).toBeOnTheScreen();
   });
 
@@ -370,10 +376,10 @@ describe('MovimentacoesListView — editar e excluir (LST-02)', () => {
   it('tocar na linha abre o formulário da movimentação (inclusive parcela)', async () => {
     await renderLista();
 
-    fireEvent.press(screen.getByRole('button', { name: 'Diesel' }));
+    await fireEvent.press(screen.getByRole('button', { name: 'Diesel' }));
     expect(mockPush).toHaveBeenCalledWith('/movimentacoes/diesel/editar');
 
-    fireEvent.press(screen.getByRole('button', { name: 'Financiamento (1/12)' }));
+    await fireEvent.press(screen.getByRole('button', { name: 'Financiamento (1/12)' }));
     expect(mockPush).toHaveBeenCalledWith('/movimentacoes/parcela/editar');
   });
 
@@ -383,7 +389,7 @@ describe('MovimentacoesListView — editar e excluir (LST-02)', () => {
     const linha = screen.getByRole('button', { name: 'Diesel' });
     expect(within(linha).queryByRole('button', { name: 'Mais opções: Diesel' })).not.toBeOnTheScreen();
 
-    const { alerta, botoes } = abrirMaisOpcoes('Diesel');
+    const { alerta, botoes } = await abrirMaisOpcoes('Diesel');
 
     expect(alerta).toHaveBeenCalledWith('Excluir movimentação?', 'Diesel', expect.any(Array));
     expect(botoes.map((botao) => botao.text)).toEqual(['Cancelar', 'Excluir']);
@@ -399,7 +405,7 @@ describe('MovimentacoesListView — editar e excluir (LST-02)', () => {
   it('Cancelar no diálogo mantém a linha', async () => {
     await renderLista();
 
-    const { botoes } = abrirMaisOpcoes('Diesel');
+    const { botoes } = await abrirMaisOpcoes('Diesel');
     const cancelar = botoes.find((botao) => botao.text === 'Cancelar');
     expect(cancelar?.style).toBe('cancel');
     cancelar?.onPress?.();
@@ -412,7 +418,7 @@ describe('MovimentacoesListView — editar e excluir (LST-02)', () => {
     mockExcluir.mockResolvedValue({ ok: false, mensagem: 'Movimentação não encontrada ou não pode ser excluída.' });
     await renderLista();
 
-    const { botoes } = abrirMaisOpcoes('Diesel');
+    const { botoes } = await abrirMaisOpcoes('Diesel');
     await act(async () => botoes.find((botao) => botao.text === 'Excluir')?.onPress?.());
 
     expect(screen.getByRole('alert')).toHaveTextContent('Movimentação não encontrada ou não pode ser excluída.');
@@ -422,7 +428,7 @@ describe('MovimentacoesListView — editar e excluir (LST-02)', () => {
   it('a tela re-renderizar (Snackbar de erro) não re-renderiza as linhas: elas são memoizadas (EIX-71)', async () => {
     mockExcluir.mockResolvedValue({ ok: false, mensagem: 'Sem conexão.' });
     await renderLista();
-    const { botoes } = abrirMaisOpcoes('Diesel');
+    const { botoes } = await abrirMaisOpcoes('Diesel');
     const rendersAntes = jest.mocked(ListItem).mock.calls.length;
 
     await act(async () => botoes.find((botao) => botao.text === 'Excluir')?.onPress?.());
@@ -448,14 +454,14 @@ describe('MovimentacoesListView — tablet (EIX-94)', () => {
   }
 
   function estiloDaLista() {
-    return StyleSheet.flatten(screen.UNSAFE_getByType(FlatList).props.contentContainerStyle);
+    return StyleSheet.flatten(porTipo(FlatList).props.contentContainerStyle);
   }
 
   it('412: nada muda, o respiro lateral continua no Screen e a lista não ganha coluna', async () => {
     await renderLista();
 
     expect(estiloDoConteudo()).toMatchObject({ paddingHorizontal: spacing.base });
-    expect(estiloDaLista().maxWidth).toBeUndefined();
+    expect(estiloDaLista()?.maxWidth).toBeUndefined();
   });
 
   it('800: a lista rola na largura toda; filtros e linhas ficam na mesma coluna de 720', async () => {
@@ -473,12 +479,12 @@ describe('MovimentacoesListView — tablet (EIX-94)', () => {
   });
 
   it('celular → tablet com a tela aberta: o filtro escolhido continua valendo e a lista ganha a coluna', async () => {
-    const { rerender } = render(<MovimentacoesListView />);
+    const { rerender } = await render(<MovimentacoesListView />);
     await screen.findByText('Frete Curitiba');
     await escolher('Tipo', 'Saídas');
 
     mockLargura(800);
-    rerender(<MovimentacoesListView />);
+    await rerender(<MovimentacoesListView />);
 
     expect(estiloDaLista()).toMatchObject({ maxWidth: 720, alignSelf: 'center' });
     expect(screen.queryByText('Frete Curitiba')).not.toBeOnTheScreen();

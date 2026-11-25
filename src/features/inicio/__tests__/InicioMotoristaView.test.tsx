@@ -57,7 +57,7 @@ beforeEach(() => {
 
 async function renderCom(viagens = [viagem(), concluida]) {
   mockListar.mockResolvedValue({ ok: true, data: viagens });
-  render(<InicioMotoristaView />);
+  await render(<InicioMotoristaView />);
   await screen.findByText('Suas viagens');
 }
 
@@ -81,7 +81,7 @@ describe('InicioMotoristaView', () => {
   it('"Finalizar viagem" abre o fechamento da viagem em andamento', async () => {
     await renderCom();
 
-    fireEvent.press(screen.getByRole('button', { name: 'Finalizar viagem' }));
+    await fireEvent.press(screen.getByRole('button', { name: 'Finalizar viagem' }));
 
     expect(mockPush).toHaveBeenCalledWith('/viagens/vg1/fechar');
   });
@@ -92,7 +92,7 @@ describe('InicioMotoristaView', () => {
     expect(screen.getByText('Nenhuma viagem em andamento')).toBeOnTheScreen();
     expect(screen.queryByRole('button', { name: 'Finalizar viagem' })).not.toBeOnTheScreen();
 
-    fireEvent.press(screen.getByRole('button', { name: 'Abrir viagem' }));
+    await fireEvent.press(screen.getByRole('button', { name: 'Abrir viagem' }));
     expect(mockPush).toHaveBeenCalledWith('/viagens/nova');
   });
 
@@ -129,7 +129,7 @@ describe('InicioMotoristaView', () => {
 
   it('erro ao ler: mensagem e "Tentar novamente"', async () => {
     mockListar.mockResolvedValue({ ok: false, mensagem: 'Não foi possível ler as viagens.' });
-    render(<InicioMotoristaView />);
+    await render(<InicioMotoristaView />);
 
     expect(await screen.findByText('Não foi possível carregar suas viagens')).toBeOnTheScreen();
     expect(screen.getByRole('button', { name: 'Tentar novamente' })).toBeOnTheScreen();

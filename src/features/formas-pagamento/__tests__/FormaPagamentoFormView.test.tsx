@@ -5,6 +5,8 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { FormaPagamentoFormView } from '../FormaPagamentoFormView';
 import { atualizarFormaPagamento, buscarFormaPagamentoPorId, criarFormaPagamento } from '../formasPagamentoRepository';
 
+import { porTipo } from '@/testing/componentes';
+
 const mockBack = jest.fn();
 const mockSetParams = jest.fn();
 
@@ -30,24 +32,24 @@ describe('FormaPagamentoFormView', () => {
     (criarFormaPagamento as jest.Mock).mockReset();
   });
 
-  it('renderiza o formulário para criar nova forma; o título da tela fica no header (NAV-02)', () => {
-    render(<FormaPagamentoFormView />);
+  it('renderiza o formulário para criar nova forma; o título da tela fica no header (NAV-02)', async () => {
+    await render(<FormaPagamentoFormView />);
     expect(screen.queryByText('Nova forma de pagamento')).not.toBeOnTheScreen();
     expect(screen.queryByText('Eixo Certo')).not.toBeOnTheScreen();
     // Tela interna: o header nativo protege o topo, o Screen não repete o inset (NAV-04, AC 11).
-    expect(screen.UNSAFE_getByType(SafeAreaView).props.edges).not.toContain('top');
+    expect(porTipo(SafeAreaView).props.edges).not.toContain('top');
     // Formulário rola e sobe com o teclado (NAV-04, AC 9 e 10).
-    expect(screen.UNSAFE_getByType(KeyboardAvoidingView).findByType(ScrollView).props.keyboardShouldPersistTaps).toBe('handled');
+    expect(porTipo(KeyboardAvoidingView).porTipo(ScrollView).props.keyboardShouldPersistTaps).toBe('handled');
     expect(screen.getByPlaceholderText('Ex.: Dinheiro')).toBeOnTheScreen();
   });
 
   it('cria a forma de pagamento e volta com feedback de sucesso', async () => {
     (criarFormaPagamento as jest.Mock).mockResolvedValue({ ok: true, data: dinheiro });
 
-    render(<FormaPagamentoFormView />);
+    await render(<FormaPagamentoFormView />);
 
-    fireEvent.changeText(screen.getByPlaceholderText('Ex.: Dinheiro'), 'Dinheiro');
-    fireEvent.press(screen.getByRole('button', { name: 'Salvar' }));
+    await fireEvent.changeText(screen.getByPlaceholderText('Ex.: Dinheiro'), 'Dinheiro');
+    await fireEvent.press(screen.getByRole('button', { name: 'Salvar' }));
 
     await waitFor(() => {
       expect(criarFormaPagamento).toHaveBeenCalledWith({ nome: 'Dinheiro' });
@@ -55,7 +57,7 @@ describe('FormaPagamentoFormView', () => {
     expect(screen.getByText('Forma de pagamento criada.')).toBeOnTheScreen();
 
     // Simula o término do Snackbar
-    fireEvent(screen.getByText('Forma de pagamento criada.'), 'dismiss');
+    await fireEvent(screen.getByText('Forma de pagamento criada.'), 'dismiss');
     expect(mockBack).toHaveBeenCalled();
   });
 
@@ -65,10 +67,10 @@ describe('FormaPagamentoFormView', () => {
       mensagem: 'Já existe uma forma de pagamento com esse nome.',
     });
 
-    render(<FormaPagamentoFormView />);
+    await render(<FormaPagamentoFormView />);
 
-    fireEvent.changeText(screen.getByPlaceholderText('Ex.: Dinheiro'), 'Pix');
-    fireEvent.press(screen.getByRole('button', { name: 'Salvar' }));
+    await fireEvent.changeText(screen.getByPlaceholderText('Ex.: Dinheiro'), 'Pix');
+    await fireEvent.press(screen.getByRole('button', { name: 'Salvar' }));
 
     await waitFor(() => {
       expect(screen.getAllByText('Já existe uma forma de pagamento com esse nome.')).toHaveLength(2); // input error e snackbar
@@ -80,12 +82,12 @@ describe('FormaPagamentoFormView', () => {
     (buscarFormaPagamentoPorId as jest.Mock).mockResolvedValue({ ok: true, data: dinheiro });
     (atualizarFormaPagamento as jest.Mock).mockResolvedValue({ ok: true, data: dinheiro });
 
-    render(<FormaPagamentoFormView formaPagamentoId="1" />);
+    await render(<FormaPagamentoFormView formaPagamentoId="1" />);
 
     expect(await screen.findByDisplayValue('Dinheiro')).toBeOnTheScreen();
 
-    fireEvent.changeText(screen.getByDisplayValue('Dinheiro'), 'Dinheiro em espécie');
-    fireEvent.press(screen.getByRole('button', { name: 'Salvar' }));
+    await fireEvent.changeText(screen.getByDisplayValue('Dinheiro'), 'Dinheiro em espécie');
+    await fireEvent.press(screen.getByRole('button', { name: 'Salvar' }));
 
     await waitFor(() => {
       expect(atualizarFormaPagamento).toHaveBeenCalledWith('1', { nome: 'Dinheiro em espécie' });
@@ -96,7 +98,7 @@ describe('FormaPagamentoFormView', () => {
   it('bloqueia edição de formas de pagamento fixas', async () => {
     (buscarFormaPagamentoPorId as jest.Mock).mockResolvedValue({ ok: true, data: pix });
 
-    render(<FormaPagamentoFormView formaPagamentoId="2" />);
+    await render(<FormaPagamentoFormView formaPagamentoId="2" />);
 
     expect(await screen.findByDisplayValue('Pix')).toBeOnTheScreen();
     expect(screen.getByText('Formas de pagamento padrão não podem ter o nome alterado.')).toBeOnTheScreen();
@@ -109,9 +111,9 @@ describe('FormaPagamentoFormView', () => {
   });
 
   it('exibe erro do Zod para campo vazio', async () => {
-    render(<FormaPagamentoFormView />);
+    await render(<FormaPagamentoFormView />);
     
-    fireEvent.press(screen.getByRole('button', { name: 'Salvar' }));
+    await fireEvent.press(screen.getByRole('button', { name: 'Salvar' }));
 
     await waitFor(() => {
       expect(screen.getByText('Informe o nome da forma de pagamento.')).toBeOnTheScreen();
@@ -122,19 +124,19 @@ describe('FormaPagamentoFormView', () => {
 
 // Carregando e erro de carga também abrem sob o header nativo: sem inset de topo duplicado (NAV-04, AC 11).
 describe('FormaPagamentoFormView — estados de carga sob o header (NAV-04)', () => {
-  it('carregando: sem o inset de topo', () => {
+  it('carregando: sem o inset de topo', async () => {
     (buscarFormaPagamentoPorId as jest.Mock).mockReturnValue(new Promise(() => {}));
-    render(<FormaPagamentoFormView formaPagamentoId="2" />);
+    await render(<FormaPagamentoFormView formaPagamentoId="2" />);
 
     expect(screen.getByLabelText('Carregando forma de pagamento')).toBeOnTheScreen();
-    expect(screen.UNSAFE_getByType(SafeAreaView).props.edges).not.toContain('top');
+    expect(porTipo(SafeAreaView).props.edges).not.toContain('top');
   });
 
   it('erro ao carregar: sem o inset de topo', async () => {
     (buscarFormaPagamentoPorId as jest.Mock).mockResolvedValue({ ok: false, mensagem: 'Forma de pagamento não encontrada.' });
-    render(<FormaPagamentoFormView formaPagamentoId="2" />);
+    await render(<FormaPagamentoFormView formaPagamentoId="2" />);
 
     expect(await screen.findByText('Não foi possível carregar a forma de pagamento')).toBeOnTheScreen();
-    expect(screen.UNSAFE_getByType(SafeAreaView).props.edges).not.toContain('top');
+    expect(porTipo(SafeAreaView).props.edges).not.toContain('top');
   });
 });

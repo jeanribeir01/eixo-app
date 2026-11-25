@@ -44,8 +44,8 @@ function foto(largura: number) {
   return { canceled: false, assets: [{ uri: 'file://original.jpg', width: largura, height: largura }] };
 }
 
-function renderAnexo(value: string | null = null) {
-  render(<AnexoComprovante label="Comprovante (opcional)" value={value} onChange={onChange} onErro={onErro} />);
+async function renderAnexo(value: string | null = null) {
+  await render(<AnexoComprovante label="Comprovante (opcional)" value={value} onChange={onChange} onErro={onErro} />);
 }
 
 // A miniatura só fica tocável depois que a signed URL chega.
@@ -73,17 +73,17 @@ beforeEach(() => {
 });
 
 describe('AnexoComprovante — anexar (EIX-34)', () => {
-  it('sem anexo mostra o rótulo e o botão "Anexar comprovante"', () => {
-    renderAnexo();
+  it('sem anexo mostra o rótulo e o botão "Anexar comprovante"', async () => {
+    await renderAnexo();
 
     expect(screen.getByText('Comprovante (opcional)')).toBeOnTheScreen();
     expect(screen.getByRole('button', { name: 'Anexar comprovante' })).toBeOnTheScreen();
   });
 
-  it('oferece tirar foto na hora ou escolher da galeria (AC 1)', () => {
-    renderAnexo();
+  it('oferece tirar foto na hora ou escolher da galeria (AC 1)', async () => {
+    await renderAnexo();
 
-    fireEvent.press(screen.getByRole('button', { name: 'Anexar comprovante' }));
+    await fireEvent.press(screen.getByRole('button', { name: 'Anexar comprovante' }));
 
     const opcoes = mockAlert.mock.calls[0][2]?.map((botao) => botao.text);
     expect(opcoes).toEqual(['Câmera', 'Galeria', 'Cancelar']);
@@ -91,9 +91,9 @@ describe('AnexoComprovante — anexar (EIX-34)', () => {
 
   it('câmera: comprime para 1600 px em JPEG 0,6, envia e devolve o caminho (AC 3, 4)', async () => {
     mockCamera.mockResolvedValue(foto(4000));
-    renderAnexo();
+    await renderAnexo();
 
-    fireEvent.press(screen.getByRole('button', { name: 'Anexar comprovante' }));
+    await fireEvent.press(screen.getByRole('button', { name: 'Anexar comprovante' }));
     await escolherNoAlerta('Câmera');
 
     expect(mockPermissaoCamera).toHaveBeenCalled();
@@ -106,9 +106,9 @@ describe('AnexoComprovante — anexar (EIX-34)', () => {
 
   it('imagem menor que 1600 px não é ampliada, só comprimida', async () => {
     mockGaleria.mockResolvedValue(foto(1200));
-    renderAnexo();
+    await renderAnexo();
 
-    fireEvent.press(screen.getByRole('button', { name: 'Anexar comprovante' }));
+    await fireEvent.press(screen.getByRole('button', { name: 'Anexar comprovante' }));
     await escolherNoAlerta('Galeria');
 
     expect(contexto.resize).not.toHaveBeenCalled();
@@ -118,9 +118,9 @@ describe('AnexoComprovante — anexar (EIX-34)', () => {
 
   it('cancelar na câmera não envia nada', async () => {
     mockCamera.mockResolvedValue({ canceled: true, assets: null });
-    renderAnexo();
+    await renderAnexo();
 
-    fireEvent.press(screen.getByRole('button', { name: 'Anexar comprovante' }));
+    await fireEvent.press(screen.getByRole('button', { name: 'Anexar comprovante' }));
     await escolherNoAlerta('Câmera');
 
     expect(mockUpload).not.toHaveBeenCalled();
@@ -131,9 +131,9 @@ describe('AnexoComprovante — anexar (EIX-34)', () => {
     let concluir: (resultado: Awaited<ReturnType<typeof uploadComprovante>>) => void = () => undefined;
     mockUpload.mockReturnValue(new Promise((resolve) => (concluir = resolve)));
     mockCamera.mockResolvedValue(foto(4000));
-    renderAnexo();
+    await renderAnexo();
 
-    fireEvent.press(screen.getByRole('button', { name: 'Anexar comprovante' }));
+    await fireEvent.press(screen.getByRole('button', { name: 'Anexar comprovante' }));
     // Sem esperar o envio terminar: o upload fica pendente até `concluir`.
     const camera = mockAlert.mock.calls[0][2]?.find((botao) => botao.text === 'Câmera');
     await act(async () => {
@@ -151,9 +151,9 @@ describe('AnexoComprovante — anexar (EIX-34)', () => {
 describe('AnexoComprovante — erros (EIX-34)', () => {
   it('câmera negada: não abre a câmera e explica como liberar (AC 2)', async () => {
     mockPermissaoCamera.mockResolvedValue({ granted: false });
-    renderAnexo();
+    await renderAnexo();
 
-    fireEvent.press(screen.getByRole('button', { name: 'Anexar comprovante' }));
+    await fireEvent.press(screen.getByRole('button', { name: 'Anexar comprovante' }));
     await escolherNoAlerta('Câmera');
 
     expect(mockCamera).not.toHaveBeenCalled();
@@ -164,9 +164,9 @@ describe('AnexoComprovante — erros (EIX-34)', () => {
 
   it('galeria negada: não abre a galeria e explica como liberar (AC 2)', async () => {
     mockPermissaoGaleria.mockResolvedValue({ granted: false });
-    renderAnexo();
+    await renderAnexo();
 
-    fireEvent.press(screen.getByRole('button', { name: 'Anexar comprovante' }));
+    await fireEvent.press(screen.getByRole('button', { name: 'Anexar comprovante' }));
     await escolherNoAlerta('Galeria');
 
     expect(mockGaleria).not.toHaveBeenCalled();
@@ -178,9 +178,9 @@ describe('AnexoComprovante — erros (EIX-34)', () => {
   it('falha no upload: repassa a mensagem, não muda o campo e volta o botão (AC 7)', async () => {
     mockCamera.mockResolvedValue(foto(4000));
     mockUpload.mockResolvedValue({ ok: false, mensagem: 'Não foi possível enviar o comprovante. Tente novamente.' });
-    renderAnexo();
+    await renderAnexo();
 
-    fireEvent.press(screen.getByRole('button', { name: 'Anexar comprovante' }));
+    await fireEvent.press(screen.getByRole('button', { name: 'Anexar comprovante' }));
     await escolherNoAlerta('Câmera');
 
     expect(onErro).toHaveBeenCalledWith('Não foi possível enviar o comprovante. Tente novamente.');
@@ -191,9 +191,9 @@ describe('AnexoComprovante — erros (EIX-34)', () => {
   it('falha ao comprimir: mensagem em português, sem enviar', async () => {
     mockCamera.mockResolvedValue(foto(4000));
     contexto.renderAsync.mockRejectedValue(new Error('detalhe técnico'));
-    renderAnexo();
+    await renderAnexo();
 
-    fireEvent.press(screen.getByRole('button', { name: 'Anexar comprovante' }));
+    await fireEvent.press(screen.getByRole('button', { name: 'Anexar comprovante' }));
     await escolherNoAlerta('Câmera');
 
     expect(mockUpload).not.toHaveBeenCalled();
@@ -203,7 +203,7 @@ describe('AnexoComprovante — erros (EIX-34)', () => {
 
 describe('AnexoComprovante — com anexo (EIX-34)', () => {
   it('pede a signed URL do caminho e mostra a miniatura (AC 5)', async () => {
-    renderAnexo('antigo.jpg');
+    await renderAnexo('antigo.jpg');
 
     await esperarMiniatura();
     expect(mockUrl).toHaveBeenCalledWith('antigo.jpg');
@@ -212,28 +212,28 @@ describe('AnexoComprovante — com anexo (EIX-34)', () => {
   });
 
   it('tocar na miniatura abre a imagem em tela cheia, e "Fechar" volta (AC 5)', async () => {
-    renderAnexo('antigo.jpg');
+    await renderAnexo('antigo.jpg');
 
-    fireEvent.press(await esperarMiniatura());
+    await fireEvent.press(await esperarMiniatura());
     expect(screen.getByLabelText('Comprovante')).toHaveProp('source', { uri: 'https://assinada.example/antigo.jpg' });
 
-    fireEvent.press(screen.getByRole('button', { name: 'Fechar' }));
+    await fireEvent.press(screen.getByRole('button', { name: 'Fechar' }));
     expect(screen.queryByLabelText('Comprovante')).not.toBeOnTheScreen();
   });
 
   it('falha ao gerar a signed URL vira mensagem de erro', async () => {
     mockUrl.mockResolvedValue({ ok: false, mensagem: 'Não foi possível abrir o comprovante.' });
-    renderAnexo('antigo.jpg');
+    await renderAnexo('antigo.jpg');
 
     await waitFor(() => expect(onErro).toHaveBeenCalledWith('Não foi possível abrir o comprovante.'));
     expect(screen.getByRole('imagebutton', { name: 'Ver comprovante em tela cheia' })).toBeDisabled();
   });
 
   it('remover pede confirmação e só então limpa o campo (AC 6)', async () => {
-    renderAnexo('antigo.jpg');
+    await renderAnexo('antigo.jpg');
     await esperarMiniatura();
 
-    fireEvent.press(screen.getByRole('button', { name: 'Remover' }));
+    await fireEvent.press(screen.getByRole('button', { name: 'Remover' }));
     expect(onChange).not.toHaveBeenCalled();
 
     await escolherNoAlerta('Remover');

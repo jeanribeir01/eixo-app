@@ -7,6 +7,8 @@ import { ListItem } from '../ListItem';
 import { Skeleton } from '../Skeleton';
 import { touchTarget } from '../tokens';
 
+import { porTipo } from '@/testing/componentes';
+
 const renderItem = ({ item }: { item: { id: string } }) => <ListItem title={item.id} />;
 const keyExtractor = (item: { id: string }) => item.id;
 
@@ -40,51 +42,51 @@ describe('Movimento das listas (ANI-01)', () => {
     jest.spyOn(AccessibilityInfo, 'isReduceMotionEnabled').mockResolvedValue(false);
     const duration = jest.spyOn(LinearTransition, 'duration');
     const reduceMotion = jest.spyOn(LinearTransition, 'reduceMotion');
-    const { rerender } = render(<List data={[{ id: 'A' }]} renderItem={renderItem} keyExtractor={keyExtractor} />);
-    await waitFor(() => expect(screen.UNSAFE_getByType(Animated.FlatList).props.itemLayoutAnimation).toBeDefined());
-    const transition = screen.UNSAFE_getByType(Animated.FlatList).props.itemLayoutAnimation;
+    const { rerender } = await render(<List data={[{ id: 'A' }]} renderItem={renderItem} keyExtractor={keyExtractor} />);
+    await waitFor(() => expect(porTipo(Animated.FlatList).props.itemLayoutAnimation).toBeDefined());
+    const transition = porTipo(Animated.FlatList).props.itemLayoutAnimation;
     expect(duration).toHaveBeenCalledWith(200);
     expect(reduceMotion).toHaveBeenCalledWith(ReduceMotion.Never);
 
-    rerender(<List data={[{ id: 'B' }, { id: 'A' }]} renderItem={renderItem} keyExtractor={keyExtractor} />);
+    await rerender(<List data={[{ id: 'B' }, { id: 'A' }]} renderItem={renderItem} keyExtractor={keyExtractor} />);
     expect(screen.getByText('B')).toBeOnTheScreen();
-    expect(screen.UNSAFE_getByType(Animated.FlatList).props.itemLayoutAnimation).toBe(transition);
-    rerender(<List data={[{ id: 'A' }]} renderItem={renderItem} keyExtractor={keyExtractor} />);
+    expect(porTipo(Animated.FlatList).props.itemLayoutAnimation).toBe(transition);
+    await rerender(<List data={[{ id: 'A' }]} renderItem={renderItem} keyExtractor={keyExtractor} />);
     expect(screen.queryByText('B')).not.toBeOnTheScreen();
-    expect(screen.UNSAFE_getByType(Animated.FlatList).props.itemLayoutAnimation).toBe(transition);
+    expect(porTipo(Animated.FlatList).props.itemLayoutAnimation).toBe(transition);
   });
 
   it('primeira montagem e nova visita não têm entering nem exiting', async () => {
     jest.spyOn(AccessibilityInfo, 'isReduceMotionEnabled').mockResolvedValue(false);
     const check = () => {
-      const list = screen.UNSAFE_getByType(Animated.FlatList);
+      const list = porTipo(Animated.FlatList);
       expect(list.props.skipEnteringExitingAnimations).toBe(true);
       expect(list.props.entering).toBeUndefined();
       expect(list.props.exiting).toBeUndefined();
-      expect(screen.UNSAFE_root.findAll((node) => node.props.entering !== undefined || node.props.exiting !== undefined)).toHaveLength(0);
+      expect(screen.container.queryAll((node) => node.props.entering !== undefined || node.props.exiting !== undefined)).toHaveLength(0);
     };
-    const first = render(<List data={[{ id: 'A' }]} renderItem={renderItem} keyExtractor={keyExtractor} />);
-    await waitFor(() => expect(screen.UNSAFE_getByType(Animated.FlatList).props.itemLayoutAnimation).toBeDefined());
+    const first = await render(<List data={[{ id: 'A' }]} renderItem={renderItem} keyExtractor={keyExtractor} />);
+    await waitFor(() => expect(porTipo(Animated.FlatList).props.itemLayoutAnimation).toBeDefined());
     check();
-    first.unmount();
-    render(<List data={[{ id: 'A' }]} renderItem={renderItem} keyExtractor={keyExtractor} />);
-    await waitFor(() => expect(screen.UNSAFE_getByType(Animated.FlatList).props.itemLayoutAnimation).toBeDefined());
+    await first.unmount();
+    await render(<List data={[{ id: 'A' }]} renderItem={renderItem} keyExtractor={keyExtractor} />);
+    await waitFor(() => expect(porTipo(Animated.FlatList).props.itemLayoutAnimation).toBeDefined());
     check();
   });
 
   it('só a célula anima: a linha fica parada, dentro e fora da List', async () => {
     jest.spyOn(AccessibilityInfo, 'isReduceMotionEnabled').mockResolvedValue(false);
-    render(<List data={[{ id: 'A' }, { id: 'B' }]} renderItem={renderItem} keyExtractor={keyExtractor} />);
-    await waitFor(() => expect(screen.UNSAFE_getByType(Animated.FlatList).props.itemLayoutAnimation).toBeDefined());
-    expect(screen.UNSAFE_root.findAll((node) => node.props.layout !== undefined)).toHaveLength(0);
+    await render(<List data={[{ id: 'A' }, { id: 'B' }]} renderItem={renderItem} keyExtractor={keyExtractor} />);
+    await waitFor(() => expect(porTipo(Animated.FlatList).props.itemLayoutAnimation).toBeDefined());
+    expect(screen.container.queryAll((node) => node.props.layout !== undefined)).toHaveLength(0);
   });
 
   // Embrulhar o Pressable com createAnimatedComponent fazia o Reanimated trocar o estilo-função por
   // [função], e no aparelho a linha perdia altura mínima, padding e separador. O mock do Reanimated
   // devolve o Pressable sem mudança, então o Jest não reproduz o bug: quem impede a volta dele é o
   // teste acima (a linha não recebe `layout`). Este confere o estilo que a linha precisa manter.
-  it('linha tocável mantém o estilo da linha, com alvo de 44pt', () => {
-    render(<ListItem title="Dívidas" onPress={() => {}} />);
+  it('linha tocável mantém o estilo da linha, com alvo de 44pt', async () => {
+    await render(<ListItem title="Dívidas" onPress={() => {}} />);
     const estilo = StyleSheet.flatten(screen.getByRole('button', { name: 'Dívidas' }).props.style);
     expect(estilo).toMatchObject({ minHeight: touchTarget, borderBottomWidth: 1 });
   });
@@ -93,26 +95,26 @@ describe('Movimento das listas (ANI-01)', () => {
     jest.spyOn(AccessibilityInfo, 'isReduceMotionEnabled').mockResolvedValue(true);
     const reduceMotion = jest.spyOn(LinearTransition, 'reduceMotion');
     const { mudar } = capturarMudancas();
-    render(<List data={[{ id: 'A' }]} renderItem={renderItem} keyExtractor={keyExtractor} />);
+    await render(<List data={[{ id: 'A' }]} renderItem={renderItem} keyExtractor={keyExtractor} />);
     await act(async () => {});
-    expect(screen.UNSAFE_getByType(Animated.FlatList).props.itemLayoutAnimation).toBeUndefined();
+    expect(porTipo(Animated.FlatList).props.itemLayoutAnimation).toBeUndefined();
 
-    mudar(false);
+    await mudar(false);
     // Ao reativar, o snapshot de inicialização do Reanimated não pode suprimir a transição.
     expect(reduceMotion).toHaveBeenCalledWith(ReduceMotion.Never);
-    expect(screen.UNSAFE_getByType(Animated.FlatList).props.itemLayoutAnimation).toBeDefined();
+    expect(porTipo(Animated.FlatList).props.itemLayoutAnimation).toBeDefined();
 
-    mudar(true);
-    expect(screen.UNSAFE_getByType(Animated.FlatList).props.itemLayoutAnimation).toBeUndefined();
+    await mudar(true);
+    expect(porTipo(Animated.FlatList).props.itemLayoutAnimation).toBeUndefined();
   });
 
   it('sem movimento enquanto a preferência não chegou', async () => {
     let responder: (value: boolean) => void = () => {};
     jest.spyOn(AccessibilityInfo, 'isReduceMotionEnabled').mockReturnValue(new Promise((resolve) => { responder = resolve; }));
-    render(<List data={[{ id: 'A' }]} renderItem={renderItem} keyExtractor={keyExtractor} />);
-    expect(screen.UNSAFE_getByType(Animated.FlatList).props.itemLayoutAnimation).toBeUndefined();
+    await render(<List data={[{ id: 'A' }]} renderItem={renderItem} keyExtractor={keyExtractor} />);
+    expect(porTipo(Animated.FlatList).props.itemLayoutAnimation).toBeUndefined();
     await act(async () => responder(false));
-    expect(screen.UNSAFE_getByType(Animated.FlatList).props.itemLayoutAnimation).toBeDefined();
+    expect(porTipo(Animated.FlatList).props.itemLayoutAnimation).toBeDefined();
   });
 });
 
@@ -125,18 +127,18 @@ describe('Preferência de movimento compartilhada', () => {
   it('uma lista com várias linhas e skeletons consulta e assina a preferência uma vez só', async () => {
     const consulta = jest.spyOn(AccessibilityInfo, 'isReduceMotionEnabled').mockResolvedValue(false);
     const { subscribe, remove } = capturarMudancas();
-    const { unmount } = render(
+    const { unmount } = await render(
       <View>
         <Skeleton accessibilityLabel="Carregando" />
         <Skeleton accessibilityLabel="Carregando mais" />
         <List data={[{ id: 'A' }, { id: 'B' }, { id: 'C' }]} renderItem={renderItem} keyExtractor={keyExtractor} />
       </View>,
     );
-    await waitFor(() => expect(screen.UNSAFE_getByType(Animated.FlatList).props.itemLayoutAnimation).toBeDefined());
+    await waitFor(() => expect(porTipo(Animated.FlatList).props.itemLayoutAnimation).toBeDefined());
     expect(consulta).toHaveBeenCalledTimes(1);
     expect(subscribe.mock.calls.filter(([event]) => event === 'reduceMotionChanged')).toHaveLength(1);
 
-    unmount();
+    await unmount();
     expect(remove).toHaveBeenCalledTimes(1);
   });
 
@@ -150,11 +152,11 @@ describe('Preferência de movimento compartilhada', () => {
         {comSkeleton && <Skeleton accessibilityLabel="Carregando" />}
       </View>
     );
-    const { rerender } = render(tela(false));
-    await waitFor(() => expect(screen.UNSAFE_getByType(Animated.FlatList).props.itemLayoutAnimation).toBeDefined());
+    const { rerender } = await render(tela(false));
+    await waitFor(() => expect(porTipo(Animated.FlatList).props.itemLayoutAnimation).toBeDefined());
 
-    mudar(true);
-    rerender(tela(true));
+    await mudar(true);
+    await rerender(tela(true));
     expect(StyleSheet.flatten(screen.getByLabelText('Carregando').props.style).animationName).toBeUndefined();
   });
 });

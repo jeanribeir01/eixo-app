@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { isRunningInExpoGo } from 'expo';
 import { StatusBar } from 'expo-status-bar';
 import { Image, KeyboardAvoidingView, ScrollView, StyleSheet, View, useWindowDimensions } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -27,6 +28,12 @@ export function LoginView({ mostrarLoginEmail = loginEmailHabilitado }: LoginVie
   const [errosEmail, setErrosEmail] = useState<ErrosEmail>({});
   const { height: altura } = useWindowDimensions();
   const tablet = useTablet();
+
+  // O Expo Go não tem o módulo nativo do Google Sign-In. Lá o botão do Google some e o login por
+  // e-mail aparece mesmo sem a variável do .env: é o jeito de abrir o app num iPhone sem conta da Apple.
+  const noExpoGo = isRunningInExpoGo();
+  const mostrarGoogle = !noExpoGo;
+  const mostrarEmail = mostrarLoginEmail || noExpoGo;
 
   // Um login por vez: enquanto um está em andamento, o outro botão fica desabilitado.
   const entrando = loadingGoogle || loadingEmail;
@@ -97,23 +104,28 @@ export function LoginView({ mostrarLoginEmail = loginEmailHabilitado }: LoginVie
                 <Text tone="body">Caixa, frota e viagens da transportadora num lugar só.</Text>
               </Column>
 
-              <Button
-                label="Continuar com Google"
-                onPress={handleGooglePress}
-                loading={loadingGoogle}
-                disabled={loadingEmail}
-                variant="google"
-              />
+              {mostrarGoogle && (
+                <Button
+                  label="Continuar com Google"
+                  onPress={handleGooglePress}
+                  loading={loadingGoogle}
+                  disabled={loadingEmail}
+                  variant="google"
+                />
+              )}
 
-              {mostrarLoginEmail && (
+              {mostrarEmail && (
                 <Column gap="md">
-                  <View style={styles.divisor}>
-                    <View style={styles.linha} />
-                    <Text variant="caption" tone="body">
-                      ou com e-mail
-                    </Text>
-                    <View style={styles.linha} />
-                  </View>
+                  {/* O divisor só separa os dois logins: sozinho, o de e-mail não precisa dele. */}
+                  {mostrarGoogle && (
+                    <View style={styles.divisor}>
+                      <View style={styles.linha} />
+                      <Text variant="caption" tone="body">
+                        ou com e-mail
+                      </Text>
+                      <View style={styles.linha} />
+                    </View>
+                  )}
                   <Input
                     label="E-mail"
                     icone="email"

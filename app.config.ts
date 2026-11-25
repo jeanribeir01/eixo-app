@@ -1,4 +1,19 @@
 import type { ExpoConfig } from 'expo/config';
+import { withGradleProperties, type ConfigPlugin } from 'expo/config-plugins';
+
+// Build Android no Windows. Desde o SDK 58, o plugin da Expo sobe o CMAKE_OBJECT_PATH_MAX para 1024,
+// contando com um CMake mais novo, cujo ninja aceita caminhos longos. O CMake padrão do Android Studio
+// (3.22.1) não aceita: o build quebra com "Filename longer than 260 characters" já em C:\dev\eixo-app,
+// por causa do C++ do react-native-gesture-handler. O valor 0 volta ao padrão do CMake, que encurta
+// esses caminhos com um hash, como no SDK 57. No Linux (EAS) o padrão do CMake já é 1000.
+const PROPRIEDADE_CAMINHO_CMAKE = 'expo.android.cmakeObjectPathMax';
+
+const withCaminhoCurtoNoCMake: ConfigPlugin = (configuracao) =>
+  withGradleProperties(configuracao, (mod) => {
+    mod.modResults = mod.modResults.filter((item) => !(item.type === 'property' && item.key === PROPRIEDADE_CAMINHO_CMAKE));
+    mod.modResults.push({ type: 'property', key: PROPRIEDADE_CAMINHO_CMAKE, value: '0' });
+    return mod;
+  });
 
 const config: ExpoConfig = {
   name: 'Eixo Certo',
@@ -66,4 +81,4 @@ const config: ExpoConfig = {
   },
 };
 
-export default config;
+export default withCaminhoCurtoNoCMake(config);

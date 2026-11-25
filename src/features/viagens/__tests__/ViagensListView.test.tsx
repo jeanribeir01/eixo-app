@@ -1,6 +1,7 @@
 import { act, fireEvent, render, screen, waitFor, within } from '@testing-library/react-native';
 import { FlatList, RefreshControl, StyleSheet, useWindowDimensions } from 'react-native';
 
+import { porTipo } from '@/testing/componentes';
 import { FAB_ALTURA_RESERVADA, colors, spacing } from '@/ui';
 
 import { ViagensListView } from '../ViagensListView';
@@ -10,9 +11,9 @@ import { useSyncStore } from '../syncStore';
 
 // Largura da janela controlada pelo teste: 412 é celular, 800 é tablet (EIX-94).
 // O filtro de status é um chip: abre a folha e toca na opção.
-function escolherStatus(opcao: string) {
-  fireEvent.press(screen.getByRole('button', { name: /^Status: / }));
-  fireEvent.press(screen.getByRole('button', { name: opcao }));
+async function escolherStatus(opcao: string) {
+  await fireEvent.press(screen.getByRole('button', { name: /^Status: / }));
+  await fireEvent.press(screen.getByRole('button', { name: opcao }));
 }
 
 jest.mock('react-native/Libraries/Utilities/useWindowDimensions', () => ({
@@ -145,7 +146,7 @@ describe('ViagensListView', () => {
   it('renderiza viagens, calcula quilometragem offline e exibe aviso de discrepância', async () => {
     jest.spyOn(repo, 'listarViagens').mockResolvedValue({ ok: true, data: mockViagens });
 
-    render(<ViagensListView />);
+    await render(<ViagensListView />);
 
     expect(await screen.findByText('BRA2E19 • Actros')).toBeTruthy();
     expect(screen.getByText('Viagens')).toBeTruthy();
@@ -156,17 +157,17 @@ describe('ViagensListView', () => {
     expect(screen.getByText(/acima da rota/i)).toBeTruthy();
 
     const botaoFechar = screen.getByRole('button', { name: 'Fechar viagem' });
-    fireEvent.press(botaoFechar);
+    await fireEvent.press(botaoFechar);
     expect(mockPush).toHaveBeenCalledWith('/viagens/viagem-1/fechar');
   });
 
   it('exibe "Concluída" na viagem e no filtro, como na tela de fechamento', async () => {
     jest.spyOn(repo, 'listarViagens').mockResolvedValue({ ok: true, data: mockViagens });
 
-    render(<ViagensListView />);
+    await render(<ViagensListView />);
 
     expect(await screen.findByText('Concluída')).toBeOnTheScreen();
-    fireEvent.press(screen.getByRole('button', { name: 'Status: Todas' }));
+    await fireEvent.press(screen.getByRole('button', { name: 'Status: Todas' }));
     expect(screen.getByRole('button', { name: 'Concluídas' })).toBeOnTheScreen();
     expect(screen.queryByText(/Finalizada/)).not.toBeOnTheScreen();
   });
@@ -177,7 +178,7 @@ describe('ViagensListView', () => {
       data: [{ ...mockViagens[0], em_revisao: true }],
     });
 
-    render(<ViagensListView />);
+    await render(<ViagensListView />);
 
     expect(await screen.findByText('Em revisão')).toBeOnTheScreen();
     expect(
@@ -188,10 +189,10 @@ describe('ViagensListView', () => {
   it('navega para nova viagem ao tocar no FAB', async () => {
     jest.spyOn(repo, 'listarViagens').mockResolvedValue({ ok: true, data: mockViagens });
 
-    render(<ViagensListView />);
+    await render(<ViagensListView />);
     await screen.findByText('BRA2E19 • Actros');
 
-    fireEvent.press(screen.getByRole('button', { name: 'Abrir viagem' }));
+    await fireEvent.press(screen.getByRole('button', { name: 'Abrir viagem' }));
 
     expect(mockPush).toHaveBeenCalledWith('/viagens/nova');
   });
@@ -201,11 +202,11 @@ describe('ViagensListView', () => {
       .spyOn(repo, 'listarViagens')
       .mockResolvedValue({ ok: true, data: mockViagens });
 
-    render(<ViagensListView />);
+    await render(<ViagensListView />);
     await screen.findByText('BRA2E19 • Actros');
 
     mockListar.mockResolvedValueOnce({ ok: true, data: [mockViagens[0]] });
-    escolherStatus('Em andamento');
+    await escolherStatus('Em andamento');
 
     await waitFor(() => expect(mockListar).toHaveBeenLastCalledWith({ status: 'EmAndamento' }));
     expect(await screen.findByText('BRA2E19 • Actros')).toBeOnTheScreen();
@@ -223,7 +224,7 @@ describe('ViagensListView', () => {
       .spyOn(repo, 'listarViagens')
       .mockResolvedValue({ ok: true, data: mockViagens });
 
-    render(<ViagensListView />);
+    await render(<ViagensListView />);
     await screen.findByText('BRA2E19 • Actros');
 
     expect(mockListar).toHaveBeenLastCalledWith({
@@ -242,10 +243,10 @@ describe('ViagensListView', () => {
     mockContarRevisoes.mockResolvedValue({ ok: true, data: 2 });
     jest.spyOn(repo, 'listarViagens').mockResolvedValue({ ok: true, data: [] });
 
-    render(<ViagensListView />);
+    await render(<ViagensListView />);
 
     expect(await screen.findByText('2 viagens precisam de revisão')).toBeOnTheScreen();
-    fireEvent.press(screen.getByRole('button', { name: 'Ver revisões' }));
+    await fireEvent.press(screen.getByRole('button', { name: 'Ver revisões' }));
 
     expect(mockPush).toHaveBeenCalledWith('/viagens/revisoes');
   });
@@ -255,7 +256,7 @@ describe('ViagensListView', () => {
       .spyOn(repo, 'listarViagens')
       .mockResolvedValue({ ok: true, data: mockViagens });
 
-    render(<ViagensListView />);
+    await render(<ViagensListView />);
     await screen.findByText('BRA2E19 • Actros');
 
     mockListar.mockResolvedValueOnce({ ok: false, mensagem: 'Sem conexão com o servidor.' });
@@ -274,10 +275,10 @@ describe('ViagensListView', () => {
       .mockResolvedValueOnce({ ok: false, mensagem: 'Não foi possível carregar as viagens.' })
       .mockResolvedValueOnce({ ok: true, data: mockViagens });
 
-    render(<ViagensListView />);
+    await render(<ViagensListView />);
 
     expect(await screen.findByText('Não foi possível carregar as viagens')).toBeOnTheScreen();
-    fireEvent.press(screen.getByRole('button', { name: 'Tentar novamente' }));
+    await fireEvent.press(screen.getByRole('button', { name: 'Tentar novamente' }));
 
     expect(await screen.findByText('BRA2E19 • Actros')).toBeOnTheScreen();
     expect(mockListar).toHaveBeenCalledTimes(2);
@@ -286,13 +287,13 @@ describe('ViagensListView', () => {
   it('mostra o estado vazio quando não há viagens', async () => {
     jest.spyOn(repo, 'listarViagens').mockResolvedValue({ ok: true, data: [] });
 
-    render(<ViagensListView />);
+    await render(<ViagensListView />);
 
     expect(await screen.findByText('Nenhuma viagem encontrada')).toBeOnTheScreen();
     expect(
       screen.getByText('Nenhuma viagem registrada ainda. Abra a primeira viagem.'),
     ).toBeOnTheScreen();
-    expect(screen.UNSAFE_getByType(RefreshControl)).toBeTruthy();
+    expect(porTipo(RefreshControl)).toBeTruthy();
   });
 
   it('estado vazio de um filtro oferece "Ver todas" e volta para Todos', async () => {
@@ -301,13 +302,13 @@ describe('ViagensListView', () => {
       return { ok: true, data: mockViagens };
     });
 
-    render(<ViagensListView />);
+    await render(<ViagensListView />);
     await screen.findByText('BRA2E19 • Actros');
 
-    escolherStatus('Em andamento');
+    await escolherStatus('Em andamento');
     expect(await screen.findByText('Nenhuma viagem com esse status no momento.')).toBeOnTheScreen();
 
-    fireEvent.press(screen.getByRole('button', { name: 'Ver todas' }));
+    await fireEvent.press(screen.getByRole('button', { name: 'Ver todas' }));
 
     await waitFor(() => expect(mockListar).toHaveBeenLastCalledWith({ status: 'Todos' }));
     expect(await screen.findByText('BRA2E19 • Actros')).toBeOnTheScreen();
@@ -320,17 +321,17 @@ describe('ViagensListView', () => {
       .mockResolvedValueOnce({ ok: false, mensagem: 'Sem conexão com o servidor.' })
       .mockResolvedValueOnce({ ok: true, data: mockViagens });
 
-    render(<ViagensListView />);
+    await render(<ViagensListView />);
     await screen.findByText('BRA2E19 • Actros');
 
-    const refresh = screen.UNSAFE_getByType(RefreshControl);
+    const refresh = porTipo(RefreshControl);
     await act(async () => {
-      await refresh.props.onRefresh();
+      await refresh.props.onRefresh!();
     });
 
     expect(screen.getByRole('alert')).toHaveTextContent('Sem conexão com o servidor.');
 
-    escolherStatus('Em andamento');
+    await escolherStatus('Em andamento');
 
     await waitFor(() => expect(mockListar).toHaveBeenLastCalledWith({ status: 'EmAndamento' }));
     await waitFor(() => expect(screen.queryByRole('alert')).not.toBeOnTheScreen());
@@ -342,17 +343,17 @@ describe('ViagensListView', () => {
       .mockResolvedValueOnce({ ok: true, data: mockViagens })
       .mockResolvedValueOnce({ ok: true, data: [mockViagens[0]] });
 
-    render(<ViagensListView />);
+    await render(<ViagensListView />);
     await screen.findByText('BRA2E19 • Actros');
 
-    const refresh = screen.UNSAFE_getByType(RefreshControl);
+    const refresh = porTipo(RefreshControl);
     expect(refresh.props.colors).toEqual([colors.accent]);
     expect(
-      StyleSheet.flatten(screen.UNSAFE_getByType(FlatList).props.contentContainerStyle),
+      StyleSheet.flatten(porTipo(FlatList).props.contentContainerStyle),
     ).toMatchObject({ paddingBottom: FAB_ALTURA_RESERVADA });
 
     await act(async () => {
-      await refresh.props.onRefresh();
+      await refresh.props.onRefresh!();
     });
 
     expect(useSyncStore.getState().sincronizarTudo).toHaveBeenCalled();
@@ -369,12 +370,12 @@ describe('ViagensListView', () => {
     }
 
     function estiloDaLista() {
-      return StyleSheet.flatten(screen.UNSAFE_getByType(FlatList).props.contentContainerStyle);
+      return StyleSheet.flatten(porTipo(FlatList).props.contentContainerStyle);
     }
 
     it('412: nada muda, o respiro lateral continua no Screen e a lista não ganha coluna', async () => {
       jest.spyOn(repo, 'listarViagens').mockResolvedValue({ ok: true, data: mockViagens });
-      render(<ViagensListView />);
+      await render(<ViagensListView />);
       await screen.findByText('BRA2E19 • Actros');
 
       expect(estiloDoConteudo()).toMatchObject({ paddingHorizontal: spacing.base });
@@ -384,7 +385,7 @@ describe('ViagensListView', () => {
     it('800: a lista rola na largura toda e o conteúdo fica na coluna de 720', async () => {
       mockLargura(800);
       jest.spyOn(repo, 'listarViagens').mockResolvedValue({ ok: true, data: mockViagens });
-      render(<ViagensListView />);
+      await render(<ViagensListView />);
       await screen.findByText('BRA2E19 • Actros');
 
       expect(estiloDoConteudo().maxWidth).toBeUndefined();

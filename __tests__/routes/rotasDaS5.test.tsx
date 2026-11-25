@@ -43,8 +43,8 @@ describe('rotas da S5 renderizam a view da feature (NAV5-11)', () => {
     ['(tabs)/viagens', ViagensRoute, 'ViagensListView {}'],
     ['viagens/nova', AbrirViagemRoute, 'AbrirViagemView {}'],
     ['viagens/[id]/fechar', FecharViagemRoute, 'FecharViagemView {"viagemId":"id-1"}'],
-  ])('%s', (_rota, Rota, esperado) => {
-    render(<Rota />);
+  ])('%s', async (_rota, Rota, esperado) => {
+    await render(<Rota />);
 
     expect(screen.getByText(esperado)).toBeOnTheScreen();
   });

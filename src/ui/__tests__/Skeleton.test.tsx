@@ -9,7 +9,7 @@ describe('Skeleton', () => {
 
   it('pulsa entre 1 e 0,5 e volta a 1 em ciclo de 1 segundo (ANI-01)', async () => {
     jest.spyOn(AccessibilityInfo, 'isReduceMotionEnabled').mockResolvedValue(false);
-    render(<Skeleton accessibilityLabel="Carregando" />);
+    await render(<Skeleton accessibilityLabel="Carregando" />);
     await waitFor(() => expect(StyleSheet.flatten(screen.getByLabelText('Carregando').props.style)).toMatchObject({
       animationName: { from: { opacity: 1 }, '50%': { opacity: 0.5 }, to: { opacity: 1 } },
       animationDuration: 1000,
@@ -20,7 +20,7 @@ describe('Skeleton', () => {
   it('sem animação até conhecer a preferência e com remover animações ligado (ANI-01)', async () => {
     let resolvePreference: (value: boolean) => void = () => {};
     jest.spyOn(AccessibilityInfo, 'isReduceMotionEnabled').mockReturnValue(new Promise((resolve) => { resolvePreference = resolve; }));
-    render(<Skeleton accessibilityLabel="Carregando" />);
+    await render(<Skeleton accessibilityLabel="Carregando" />);
     expect(StyleSheet.flatten(screen.getByLabelText('Carregando').props.style).animationName).toBeUndefined();
     await act(async () => resolvePreference(true));
     expect(StyleSheet.flatten(screen.getByLabelText('Carregando').props.style).animationName).toBeUndefined();
@@ -36,16 +36,16 @@ describe('Skeleton', () => {
       changePreference = handler;
       return { remove };
     });
-    const { unmount } = render(<Skeleton accessibilityLabel="Carregando" />);
+    const { unmount } = await render(<Skeleton accessibilityLabel="Carregando" />);
     await waitFor(() => expect(StyleSheet.flatten(screen.getByLabelText('Carregando').props.style).animationDuration).toBe(1000));
-    act(() => changePreference(true));
+    await act(() => changePreference(true));
     expect(StyleSheet.flatten(screen.getByLabelText('Carregando').props.style).animationName).toBeUndefined();
     expect(screen.getByLabelText('Carregando')).toHaveStyle({ opacity: 1 });
-    unmount();
+    await unmount();
     expect(remove).toHaveBeenCalledTimes(1);
   });
-  it('bloco neutro na cor da hairline, com radius de cartão', () => {
-    render(<Skeleton accessibilityLabel="Carregando" />);
+  it('bloco neutro na cor da hairline, com radius de cartão', async () => {
+    await render(<Skeleton accessibilityLabel="Carregando" />);
 
     expect(screen.getByLabelText('Carregando')).toHaveStyle({
       backgroundColor: colors.border,
@@ -54,8 +54,8 @@ describe('Skeleton', () => {
     });
   });
 
-  it('a altura vem de um token de spacing', () => {
-    render(<Skeleton height="xxl" accessibilityLabel="Carregando saldo" />);
+  it('a altura vem de um token de spacing', async () => {
+    await render(<Skeleton height="xxl" accessibilityLabel="Carregando saldo" />);
 
     expect(screen.getByLabelText('Carregando saldo')).toHaveStyle({ height: spacing.xxl });
   });

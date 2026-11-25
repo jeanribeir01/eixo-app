@@ -8,8 +8,8 @@ import { colors, radius, spacing, touchTarget, typography } from '../tokens';
 // Grupo de linhas (UIP-02): rótulo opcional + bloco surface com borda, radius de cartão e hairline
 // entre as linhas — o padrão de menu e de tela de ajustes, sem virar "um cartão por linha".
 describe('ListSection (UIP-02)', () => {
-  it('mostra o rótulo do grupo em caption textBody', () => {
-    render(
+  it('mostra o rótulo do grupo em caption textBody', async () => {
+    await render(
       <ListSection label="Administração">
         <ListItem title="Usuários" />
       </ListSection>,
@@ -18,8 +18,8 @@ describe('ListSection (UIP-02)', () => {
     expect(screen.getByText('Administração')).toHaveStyle({ color: colors.textBody, fontSize: typography.caption.fontSize });
   });
 
-  it('bloco em surface com borda hairline e radius de cartão', () => {
-    render(
+  it('bloco em surface com borda hairline e radius de cartão', async () => {
+    await render(
       <ListSection>
         <ListItem title="Versão" />
       </ListSection>,
@@ -33,9 +33,9 @@ describe('ListSection (UIP-02)', () => {
     });
   });
 
-  it('N linhas geram N−1 separadores; linha condicional que não aparece não deixa separador sobrando', () => {
+  it('N linhas geram N−1 separadores; linha condicional que não aparece não deixa separador sobrando', async () => {
     const mostrarUsuarios = false;
-    render(
+    await render(
       <ListSection>
         <ListItem title="Movimentações" />
         <ListItem title="Saldo e projeção" />
@@ -47,8 +47,8 @@ describe('ListSection (UIP-02)', () => {
     expect(screen.getAllByTestId('separador-secao')).toHaveLength(2);
   });
 
-  it('dentro do grupo, a linha não desenha a própria borda e ganha o respiro lateral da tela', () => {
-    render(
+  it('dentro do grupo, a linha não desenha a própria borda e ganha o respiro lateral da tela', async () => {
+    await render(
       <ListSection>
         <ListItem title="Categorias" />
       </ListSection>,

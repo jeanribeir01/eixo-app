@@ -252,7 +252,7 @@ export function UsuariosListView() {
           // Vazio dentro da lista: o pull-to-refresh funciona até sem usuário nenhum. Sem ação, porque
           // conta nova nasce do primeiro login com Google, não de um cadastro aqui.
           ListEmptyComponent={
-            pedidos.length > 0 ? null : (
+            pedidos.length > 0 ? undefined : (
               <EmptyState
                 icon="usuarios"
                 title={termo ? 'Ninguém com esse nome ou e-mail' : 'Nenhum usuário encontrado'}

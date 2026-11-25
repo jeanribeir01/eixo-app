@@ -4,9 +4,11 @@ import { Path } from 'react-native-svg';
 import { Button } from '../Button';
 import { colors, controlHeight, shadow } from '../tokens';
 
+import { todosPorTipo } from '@/testing/componentes';
+
 describe('Button', () => {
-  it('primary: fundo accentStrong e texto branco (4,7:1, DESIGN_CYAN 2.0)', () => {
-    render(<Button label="Continuar" onPress={jest.fn()} />);
+  it('primary: fundo accentStrong e texto branco (4,7:1, DESIGN_CYAN 2.0)', async () => {
+    await render(<Button label="Continuar" onPress={jest.fn()} />);
 
     expect(screen.getByRole('button', { name: 'Continuar' })).toHaveStyle({
       backgroundColor: colors.accentStrong,
@@ -15,15 +17,15 @@ describe('Button', () => {
     expect(screen.getByText('Continuar')).toHaveStyle({ color: '#ffffff' });
   });
 
-  it('accessibilityLabel substitui o nome lido pelo leitor de tela, mantendo o rótulo visível', () => {
-    render(<Button label="Reativar" variant="ghost" accessibilityLabel="Reativar GHI-1234" onPress={jest.fn()} />);
+  it('accessibilityLabel substitui o nome lido pelo leitor de tela, mantendo o rótulo visível', async () => {
+    await render(<Button label="Reativar" variant="ghost" accessibilityLabel="Reativar GHI-1234" onPress={jest.fn()} />);
 
     expect(screen.getByRole('button', { name: 'Reativar GHI-1234' })).toBeOnTheScreen();
     expect(screen.getByText('Reativar')).toBeOnTheScreen();
   });
 
-  it('ghost: fundo surface, borda borderMuted e texto primário', () => {
-    render(<Button label="Sair" variant="ghost" onPress={jest.fn()} />);
+  it('ghost: fundo surface, borda borderMuted e texto primário', async () => {
+    await render(<Button label="Sair" variant="ghost" onPress={jest.fn()} />);
 
     expect(screen.getByRole('button', { name: 'Sair' })).toHaveStyle({
       backgroundColor: colors.surface,
@@ -32,15 +34,15 @@ describe('Button', () => {
     expect(screen.getByText('Sair')).toHaveStyle({ color: colors.textPrimary });
   });
 
-  it('danger: fundo dangerWash e texto danger, para ação grave como bloquear', () => {
-    render(<Button label="Bloquear acesso" variant="danger" onPress={jest.fn()} />);
+  it('danger: fundo dangerWash e texto danger, para ação grave como bloquear', async () => {
+    await render(<Button label="Bloquear acesso" variant="danger" onPress={jest.fn()} />);
 
     expect(screen.getByRole('button', { name: 'Bloquear acesso' })).toHaveStyle({ backgroundColor: colors.dangerWash });
     expect(screen.getByText('Bloquear acesso')).toHaveStyle({ color: colors.danger });
   });
 
-  it('google: fundo branco, borda hairline e sombra sutil, sem reaproveitar o ghost (EIX-12)', () => {
-    render(<Button label="Continuar com Google" variant="google" onPress={jest.fn()} />);
+  it('google: fundo branco, borda hairline e sombra sutil, sem reaproveitar o ghost (EIX-12)', async () => {
+    await render(<Button label="Continuar com Google" variant="google" onPress={jest.fn()} />);
 
     const button = screen.getByRole('button', { name: 'Continuar com Google' });
     expect(button).toHaveStyle({ backgroundColor: colors.surface, borderColor: colors.borderMuted });
@@ -54,69 +56,69 @@ describe('Button', () => {
     expect(screen.getByText('Continuar com Google')).toHaveStyle({ color: colors.textPrimary });
   });
 
-  it('google: mostra o logo multicolor quando não está carregando', () => {
-    render(<Button label="Continuar com Google" variant="google" onPress={jest.fn()} />);
+  it('google: mostra o logo multicolor quando não está carregando', async () => {
+    await render(<Button label="Continuar com Google" variant="google" onPress={jest.fn()} />);
 
-    expect(screen.UNSAFE_queryAllByType(Path)).toHaveLength(4);
+    expect(todosPorTipo(Path)).toHaveLength(4);
   });
 
-  it('google: some o logo e mostra o indicador durante o loading', () => {
-    render(<Button label="Continuar com Google" variant="google" onPress={jest.fn()} loading />);
+  it('google: some o logo e mostra o indicador durante o loading', async () => {
+    await render(<Button label="Continuar com Google" variant="google" onPress={jest.fn()} loading />);
 
     expect(screen.getByTestId('button-loading')).toBeOnTheScreen();
-    expect(screen.UNSAFE_queryAllByType(Path)).toHaveLength(0);
+    expect(todosPorTipo(Path)).toHaveLength(0);
   });
 
-  it('google: altura confortável de 48pt, acima do mínimo de 44', () => {
-    render(<Button label="Continuar com Google" variant="google" onPress={jest.fn()} />);
+  it('google: altura confortável de 48pt, acima do mínimo de 44', async () => {
+    await render(<Button label="Continuar com Google" variant="google" onPress={jest.fn()} />);
 
     expect(screen.getByRole('button', { name: 'Continuar com Google' })).toHaveStyle({ minHeight: controlHeight });
   });
 
-  it('dispara onPress quando habilitado', () => {
+  it('dispara onPress quando habilitado', async () => {
     const onPress = jest.fn();
-    render(<Button label="Continuar" onPress={onPress} />);
+    await render(<Button label="Continuar" onPress={onPress} />);
 
-    fireEvent.press(screen.getByRole('button', { name: 'Continuar' }));
+    await fireEvent.press(screen.getByRole('button', { name: 'Continuar' }));
 
     expect(onPress).toHaveBeenCalledTimes(1);
   });
 
-  it('loading: fica desabilitado, mostra indicador e ignora toques (AUTH-03)', () => {
+  it('loading: fica desabilitado, mostra indicador e ignora toques (AUTH-03)', async () => {
     const onPress = jest.fn();
-    render(<Button label="Continuar" onPress={onPress} loading />);
+    await render(<Button label="Continuar" onPress={onPress} loading />);
 
     const button = screen.getByRole('button', { name: 'Continuar' });
     expect(button).toBeDisabled();
     expect(button).toBeBusy();
     expect(screen.getByTestId('button-loading')).toBeOnTheScreen();
 
-    fireEvent.press(button);
+    await fireEvent.press(button);
     expect(onPress).not.toHaveBeenCalled();
   });
 
-  it('sem loading não mostra indicador', () => {
-    render(<Button label="Continuar" onPress={jest.fn()} />);
+  it('sem loading não mostra indicador', async () => {
+    await render(<Button label="Continuar" onPress={jest.fn()} />);
 
     expect(screen.queryByTestId('button-loading')).not.toBeOnTheScreen();
   });
 
-  it('tem altura confortável de 48pt, acima do mínimo de 44', () => {
-    render(<Button label="Continuar" onPress={jest.fn()} />);
+  it('tem altura confortável de 48pt, acima do mínimo de 44', async () => {
+    await render(<Button label="Continuar" onPress={jest.fn()} />);
 
     expect(screen.getByRole('button', { name: 'Continuar' })).toHaveStyle({ minHeight: controlHeight });
   });
 
-  it('icon: só o ícone, com o rótulo como nome acessível e alvo de 44×44 sem borda (LST-02)', () => {
+  it('icon: só o ícone, com o rótulo como nome acessível e alvo de 44×44 sem borda (LST-02)', async () => {
     const onPress = jest.fn();
-    render(<Button variant="icon" icon="voltarMes" label="Mês anterior" onPress={onPress} />);
+    await render(<Button variant="icon" icon="voltarMes" label="Mês anterior" onPress={onPress} />);
 
     const botao = screen.getByRole('button', { name: 'Mês anterior' });
     expect(screen.queryByText('Mês anterior')).not.toBeOnTheScreen();
     expect(screen.getByTestId('icone-voltarMes', { includeHiddenElements: true })).toBeOnTheScreen();
     expect(botao).toHaveStyle({ minHeight: 44, minWidth: 44, backgroundColor: 'transparent', borderColor: 'transparent' });
 
-    fireEvent.press(botao);
+    await fireEvent.press(botao);
     expect(onPress).toHaveBeenCalledTimes(1);
   });
 });

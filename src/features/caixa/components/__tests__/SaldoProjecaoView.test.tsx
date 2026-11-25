@@ -2,6 +2,7 @@ import { act, fireEvent, render, screen } from '@testing-library/react-native';
 import { RefreshControl } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
+import { porTipo } from '@/testing/componentes';
 import { colors } from '@/ui';
 
 import { resumoCaixaComDados, resumoCaixaVazio } from '../../__mocks__/resumoCaixaMock';
@@ -42,10 +43,10 @@ describe('SaldoProjecaoView', () => {
     (buscarResumoCaixa as jest.Mock).mockReset();
   });
 
-  it('carregando: mostra o skeleton enquanto o resumo não chega', () => {
+  it('carregando: mostra o skeleton enquanto o resumo não chega', async () => {
     (buscarResumoCaixa as jest.Mock).mockReturnValue(new Promise(() => undefined));
 
-    render(<SaldoProjecaoView />);
+    await render(<SaldoProjecaoView />);
 
     expect(screen.getByLabelText('Carregando saldo')).toBeOnTheScreen();
   });
@@ -53,7 +54,7 @@ describe('SaldoProjecaoView', () => {
   it('render com dados: saldo atual em R$, projeção por mês e bloco sem data', async () => {
     responder(resumoCaixaComDados);
 
-    render(<SaldoProjecaoView />);
+    await render(<SaldoProjecaoView />);
 
     const saldo = await screen.findByText('+ R$ 12.500,00');
     expect(saldo).toHaveStyle({ color: colors.success });
@@ -73,19 +74,19 @@ describe('SaldoProjecaoView', () => {
   it('o título da tela fica no header nativo, não no conteúdo (NAV-02)', async () => {
     responder(resumoCaixaComDados);
 
-    render(<SaldoProjecaoView />);
+    await render(<SaldoProjecaoView />);
     await screen.findByText('+ R$ 12.500,00');
 
     expect(screen.queryByText('Financeiro')).not.toBeOnTheScreen();
     expect(screen.queryByText('Saldo e projeção')).not.toBeOnTheScreen();
     // Tela interna: o header nativo protege o topo, o Screen não repete o inset (NAV-04, AC 11).
-    expect(screen.UNSAFE_getByType(SafeAreaView).props.edges).not.toContain('top');
+    expect(porTipo(SafeAreaView).props.edges).not.toContain('top');
   });
 
   it('mês com saldo projetado negativo: valor em vermelho com sinal e alerta', async () => {
     responder(resumoCaixaComDados);
 
-    render(<SaldoProjecaoView />);
+    await render(<SaldoProjecaoView />);
 
     // Só novembro fecha negativo no mock: exatamente um alerta.
     expect(await screen.findAllByText('⚠ Saldo negativo')).toHaveLength(1);
@@ -98,7 +99,7 @@ describe('SaldoProjecaoView', () => {
       projecao: resumoCaixaComDados.projecao.filter((mes) => mes.saldoProjetadoCentavos >= 0),
     });
 
-    render(<SaldoProjecaoView />);
+    await render(<SaldoProjecaoView />);
 
     await screen.findByText('Outubro de 2026');
     expect(screen.queryByText('⚠ Saldo negativo')).not.toBeOnTheScreen();
@@ -107,7 +108,7 @@ describe('SaldoProjecaoView', () => {
   it('saldo atual negativo fica vermelho e com sinal de menos', async () => {
     responder({ ...resumoCaixaComDados, saldoAtualCentavos: -30_000 });
 
-    render(<SaldoProjecaoView />);
+    await render(<SaldoProjecaoView />);
 
     expect(await screen.findByText('− R$ 300,00')).toHaveStyle({ color: colors.danger });
   });
@@ -115,7 +116,7 @@ describe('SaldoProjecaoView', () => {
   it('estado vazio: nenhuma movimentação ainda', async () => {
     responder(resumoCaixaVazio);
 
-    render(<SaldoProjecaoView />);
+    await render(<SaldoProjecaoView />);
 
     expect(await screen.findByText('Nenhuma movimentação ainda')).toBeOnTheScreen();
     expect(screen.queryByText('Saldo atual')).not.toBeOnTheScreen();
@@ -126,11 +127,11 @@ describe('SaldoProjecaoView', () => {
       .mockResolvedValueOnce({ ok: false, mensagem: 'Não foi possível carregar o saldo. Tente novamente.' })
       .mockResolvedValueOnce({ ok: true, data: resumoCaixaComDados });
 
-    render(<SaldoProjecaoView />);
+    await render(<SaldoProjecaoView />);
 
     expect(await screen.findByText('Não foi possível carregar o saldo. Tente novamente.')).toBeOnTheScreen();
 
-    fireEvent.press(screen.getByRole('button', { name: 'Tentar novamente' }));
+    await fireEvent.press(screen.getByRole('button', { name: 'Tentar novamente' }));
 
     expect(await screen.findByText('Saldo atual')).toBeOnTheScreen();
     expect(buscarResumoCaixa).toHaveBeenCalledTimes(2);
@@ -141,11 +142,11 @@ describe('SaldoProjecaoView', () => {
       .mockResolvedValueOnce({ ok: true, data: resumoCaixaComDados })
       .mockResolvedValueOnce({ ok: true, data: { ...resumoCaixaComDados, saldoAtualCentavos: 1_500_000 } });
 
-    render(<SaldoProjecaoView />);
+    await render(<SaldoProjecaoView />);
     await screen.findByText('+ R$ 12.500,00');
 
     await act(async () => {
-      screen.UNSAFE_getByType(RefreshControl).props.onRefresh();
+      porTipo(RefreshControl).props.onRefresh!();
     });
 
     expect(await screen.findByText('+ R$ 15.000,00')).toBeOnTheScreen();
@@ -157,11 +158,11 @@ describe('SaldoProjecaoView', () => {
       .mockResolvedValueOnce({ ok: true, data: resumoCaixaComDados })
       .mockResolvedValueOnce({ ok: false, mensagem: 'Não foi possível carregar o saldo. Tente novamente.' });
 
-    render(<SaldoProjecaoView />);
+    await render(<SaldoProjecaoView />);
     await screen.findByText('+ R$ 12.500,00');
 
     await act(async () => {
-      screen.UNSAFE_getByType(RefreshControl).props.onRefresh();
+      porTipo(RefreshControl).props.onRefresh!();
     });
 
     expect(await screen.findByText('Não foi possível carregar o saldo. Tente novamente.')).toBeOnTheScreen();
@@ -174,7 +175,7 @@ describe('SaldoProjecaoView', () => {
       .mockResolvedValueOnce({ ok: true, data: resumoCaixaComDados })
       .mockReturnValueOnce(new Promise((resolve) => (entregarNovo = resolve)));
 
-    render(<SaldoProjecaoView />);
+    await render(<SaldoProjecaoView />);
     await screen.findByText('+ R$ 12.500,00');
 
     await focarDeNovo();
@@ -196,7 +197,7 @@ describe('SaldoProjecaoView', () => {
       .mockResolvedValueOnce({ ok: true, data: resumoCaixaComDados })
       .mockResolvedValueOnce({ ok: false, mensagem: 'Não foi possível carregar o saldo. Tente novamente.' });
 
-    render(<SaldoProjecaoView />);
+    await render(<SaldoProjecaoView />);
     await screen.findByText('+ R$ 12.500,00');
 
     await focarDeNovo();
