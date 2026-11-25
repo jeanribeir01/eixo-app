@@ -2,6 +2,8 @@ import { act, fireEvent, render, screen, within } from '@testing-library/react-n
 import { FlatList, RefreshControl, StyleSheet, useWindowDimensions } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
+import { segurarPrimeiraCarga } from '@/testing/eventos';
+import { porTipo, todosPorTipo } from '@/testing/componentes';
 import { Badge, ListItem, Skeleton, colors, spacing } from '@/ui';
 
 import type { Usuario } from '../types';
@@ -75,22 +77,25 @@ beforeEach(() => {
 
 async function renderComLista() {
   mockListar.mockResolvedValue({ ok: true, data: usuarios });
-  render(<UsuariosListView />);
+  await render(<UsuariosListView />);
   await screen.findByText('Ana Souza');
 }
 
 function rotulosDosBadges(): string[] {
-  return screen.UNSAFE_getAllByType(Badge).map((badge) => badge.props.label);
+  return todosPorTipo(Badge).map((badge) => badge.props.label);
 }
 
 describe('UsuariosListView — linha (CTA-02)', () => {
   it('primeira carga: três skeletons, depois nome e e-mail de cada usuário', async () => {
     mockListar.mockResolvedValue({ ok: true, data: usuarios });
-    render(<UsuariosListView />);
+    // Segura a primeira carga: o render async esperaria a resposta e pularia o "carregando".
+    const liberarCarga = segurarPrimeiraCarga(mockListar);
+    await render(<UsuariosListView />);
 
     expect(screen.getByLabelText('Carregando usuários')).toBeOnTheScreen();
-    expect(screen.UNSAFE_getAllByType(Skeleton)).toHaveLength(3);
+    expect(todosPorTipo(Skeleton)).toHaveLength(3);
 
+    await liberarCarga();
     expect(await screen.findByText('Ana Souza')).toBeOnTheScreen();
     expect(screen.getByText('ana@empresa.com')).toBeOnTheScreen();
     expect(screen.getByText('Bruno Lima')).toBeOnTheScreen();
@@ -108,14 +113,14 @@ describe('UsuariosListView — linha (CTA-02)', () => {
     await renderComLista();
 
     expect(rotulosDosBadges()).toEqual(['Admin', 'Bloqueado']);
-    const bloqueado = screen.UNSAFE_getAllByType(Badge).find((badge) => badge.props.label === 'Bloqueado');
+    const bloqueado = todosPorTipo(Badge).find((badge) => badge.props.label === 'Bloqueado');
     expect(bloqueado?.props.tone).toBe('danger');
   });
 
   it('tocar em alguém da equipe abre o detalhe dele', async () => {
     await renderComLista();
 
-    fireEvent.press(screen.getByRole('button', { name: 'Gerenciar Ana Souza' }));
+    await fireEvent.press(screen.getByRole('button', { name: 'Gerenciar Ana Souza' }));
 
     expect(mockPush).toHaveBeenCalledWith('/usuarios/u1');
   });
@@ -126,7 +131,7 @@ describe('UsuariosListView — linha (CTA-02)', () => {
     expect(screen.queryByText('Eixo Certo')).not.toBeOnTheScreen();
     expect(screen.queryByText('Usuários')).not.toBeOnTheScreen();
     // Tela interna: o header nativo protege o topo, o Screen não repete o inset (NAV-04, AC 11).
-    expect(screen.UNSAFE_getByType(SafeAreaView).props.edges).not.toContain('top');
+    expect(porTipo(SafeAreaView).props.edges).not.toContain('top');
   });
 });
 
@@ -134,9 +139,9 @@ describe('UsuariosListView — carga (CTA-02)', () => {
   it('puxar a lista para baixo recarrega (AC 7)', async () => {
     await renderComLista();
 
-    const refresh = screen.UNSAFE_getByType(RefreshControl);
+    const refresh = porTipo(RefreshControl);
     expect(refresh.props.colors).toEqual([colors.accentStrong]);
-    await act(async () => refresh.props.onRefresh());
+    await act(async () => refresh.props.onRefresh!());
 
     expect(mockListar).toHaveBeenCalledTimes(2);
   });
@@ -185,22 +190,22 @@ describe('UsuariosListView — carga (CTA-02)', () => {
   it('lista vazia: "Nenhum usuário encontrado", ainda com pull-to-refresh', async () => {
     mockListar.mockResolvedValue({ ok: true, data: [] });
 
-    render(<UsuariosListView />);
+    await render(<UsuariosListView />);
 
     expect(await screen.findByText('Nenhum usuário encontrado')).toBeOnTheScreen();
-    expect(screen.UNSAFE_getByType(RefreshControl)).toBeTruthy();
+    expect(porTipo(RefreshControl)).toBeTruthy();
   });
 
   it('erro na primeira carga: mensagem e "Tentar novamente" recarrega', async () => {
     mockListar
       .mockResolvedValueOnce({ ok: false, mensagem: 'Não foi possível carregar os usuários. Tente novamente.' })
       .mockResolvedValueOnce({ ok: true, data: usuarios });
-    render(<UsuariosListView />);
+    await render(<UsuariosListView />);
 
     expect(await screen.findByText('Não foi possível carregar')).toBeOnTheScreen();
     expect(screen.getByText('Não foi possível carregar os usuários. Tente novamente.')).toBeOnTheScreen();
 
-    fireEvent.press(screen.getByRole('button', { name: 'Tentar novamente' }));
+    await fireEvent.press(screen.getByRole('button', { name: 'Tentar novamente' }));
 
     expect(await screen.findByText('Ana Souza')).toBeOnTheScreen();
     expect(mockListar).toHaveBeenCalledTimes(2);
@@ -215,7 +220,7 @@ describe('UsuariosListView — tablet (EIX-94)', () => {
   }
 
   function estiloDaLista() {
-    return StyleSheet.flatten(screen.UNSAFE_getByType(FlatList).props.contentContainerStyle);
+    return StyleSheet.flatten(porTipo(FlatList).props.contentContainerStyle);
   }
 
   it('412: nada muda, o respiro lateral continua no Screen e a lista não ganha coluna', async () => {
@@ -253,7 +258,7 @@ describe('UsuariosListView — aguardando aprovação', () => {
     jest.mocked(alterarStatusUsuario).mockResolvedValue({ ok: true, data: { ...usuarios[1], status: 'Ativo' } });
     await renderComLista();
 
-    fireEvent.press(screen.getByRole('button', { name: 'Aprovar Bruno Lima' }));
+    await fireEvent.press(screen.getByRole('button', { name: 'Aprovar Bruno Lima' }));
 
     expect(await screen.findByText('Bruno Lima aprovado.')).toBeOnTheScreen();
     expect(alterarStatusUsuario).toHaveBeenCalledWith('u2', 'Ativo');
@@ -267,7 +272,7 @@ describe('UsuariosListView — aguardando aprovação', () => {
       .mockResolvedValue({ ok: false, mensagem: 'Não foi possível alterar o status. Tente novamente.' });
     await renderComLista();
 
-    fireEvent.press(screen.getByRole('button', { name: 'Recusar Bruno Lima' }));
+    await fireEvent.press(screen.getByRole('button', { name: 'Recusar Bruno Lima' }));
 
     expect(await screen.findByText('Não foi possível alterar o status. Tente novamente.')).toBeOnTheScreen();
     expect(alterarStatusUsuario).toHaveBeenCalledWith('u2', 'Bloqueado');
@@ -277,7 +282,7 @@ describe('UsuariosListView — aguardando aprovação', () => {
   it('a busca filtra por nome ou e-mail nas duas seções', async () => {
     await renderComLista();
 
-    fireEvent.changeText(screen.getByPlaceholderText('Nome ou e-mail'), 'carla@');
+    await fireEvent.changeText(screen.getByPlaceholderText('Nome ou e-mail'), 'carla@');
 
     expect(screen.getByText('Carla Dias')).toBeOnTheScreen();
     expect(screen.queryByText('Ana Souza')).not.toBeOnTheScreen();

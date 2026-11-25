@@ -1,6 +1,7 @@
 import { fireEvent, render, screen } from '@testing-library/react-native';
 import { ScrollView, StyleSheet } from 'react-native';
 
+import { porTipo } from '@/testing/componentes';
 import { colors } from '@/ui/tokens';
 
 import { GraficoBarras } from '../GraficoBarras';
@@ -17,8 +18,8 @@ function coluna(nome: RegExp) {
 }
 
 describe('GraficoBarras', () => {
-  it('desenha uma coluna tocável por mês e abre no mês mais recente (GRAF-06)', () => {
-    render(<GraficoBarras meses={MESES} />);
+  it('desenha uma coluna tocável por mês e abre no mês mais recente (GRAF-06)', async () => {
+    await render(<GraficoBarras meses={MESES} />);
 
     expect(screen.getAllByRole('button')).toHaveLength(3);
     expect(screen.getByText('Novembro de 2026')).toBeOnTheScreen();
@@ -27,10 +28,10 @@ describe('GraficoBarras', () => {
     expect(coluna(/^Novembro de 2026/)).toBeSelected();
   });
 
-  it('tocar num mês mostra as Entradas com "+" e as Saídas com "−" daquele mês (GRAF-07)', () => {
-    render(<GraficoBarras meses={MESES} />);
+  it('tocar num mês mostra as Entradas com "+" e as Saídas com "−" daquele mês (GRAF-07)', async () => {
+    await render(<GraficoBarras meses={MESES} />);
 
-    fireEvent.press(coluna(/^Outubro de 2026/));
+    await fireEvent.press(coluna(/^Outubro de 2026/));
 
     expect(screen.getByText('Outubro de 2026')).toBeOnTheScreen();
     expect(screen.getByText('+ R$ 1.001,63')).toBeOnTheScreen();
@@ -39,28 +40,28 @@ describe('GraficoBarras', () => {
     expect(coluna(/^Novembro de 2026/)).not.toBeSelected();
   });
 
-  it('mês parado mostra zero sem sinal', () => {
-    render(<GraficoBarras meses={MESES} />);
+  it('mês parado mostra zero sem sinal', async () => {
+    await render(<GraficoBarras meses={MESES} />);
 
-    fireEvent.press(coluna(/^Setembro de 2026/));
+    await fireEvent.press(coluna(/^Setembro de 2026/));
 
     expect(screen.getAllByText('R$ 0,00')).toHaveLength(2);
   });
 
-  it('o leitor de tela anuncia mês e valores de cada coluna', () => {
-    render(<GraficoBarras meses={MESES} />);
+  it('o leitor de tela anuncia mês e valores de cada coluna', async () => {
+    await render(<GraficoBarras meses={MESES} />);
 
     expect(coluna(/^Outubro de 2026: entradas \+ R\$ 1\.001,63, saídas − R\$ 200,25$/)).toBeOnTheScreen();
   });
 
-  it('cada coluna tem pelo menos 44pt de largura e as barras usam as cores dos tokens (GRAF-19)', () => {
-    render(<GraficoBarras meses={MESES} />);
+  it('cada coluna tem pelo menos 44pt de largura e as barras usam as cores dos tokens (GRAF-19)', async () => {
+    await render(<GraficoBarras meses={MESES} />);
 
     const estilo = StyleSheet.flatten(coluna(/^Outubro de 2026/).props.style);
     expect(estilo.width).toBeGreaterThanOrEqual(44);
 
-    const cores = screen
-      .UNSAFE_root.findAll((no) => typeof no.props.style !== 'undefined')
+    const cores = screen.container
+      .queryAll((no) => typeof no.props.style !== 'undefined')
       .map((no) => StyleSheet.flatten(no.props.style)?.backgroundColor)
       .filter((cor): cor is string => typeof cor === 'string');
     expect(cores).toContain(colors.accent);
@@ -68,25 +69,25 @@ describe('GraficoBarras', () => {
     expect(cores.every((cor) => (Object.values(colors) as string[]).includes(cor))).toBe(true);
   });
 
-  it('com 24 meses numa tela estreita, as colunas mantêm 44pt e o gráfico rola na horizontal (GRAF-19)', () => {
+  it('com 24 meses numa tela estreita, as colunas mantêm 44pt e o gráfico rola na horizontal (GRAF-19)', async () => {
     const vinteQuatroMeses: MesDoFluxo[] = Array.from({ length: 24 }, (_, indice) => ({
       mes: `${2025 + Math.floor(indice / 12)}-${String((indice % 12) + 1).padStart(2, '0')}`,
       entradas_centavos: 1000,
       saidas_centavos: 500,
     }));
-    render(<GraficoBarras meses={vinteQuatroMeses} />);
+    await render(<GraficoBarras meses={vinteQuatroMeses} />);
 
     // Largura de um celular pequeno: 24 × 44pt não cabe em 320pt.
-    fireEvent(screen.UNSAFE_getByType(ScrollView).parent!, 'layout', { nativeEvent: { layout: { width: 320 } } });
+    await fireEvent(porTipo(ScrollView).elementoNativo().parent!, 'layout', { nativeEvent: { layout: { width: 320 } } });
 
-    expect(screen.UNSAFE_getByType(ScrollView).props.horizontal).toBe(true);
+    expect(porTipo(ScrollView).props.horizontal).toBe(true);
     const larguras = screen.getAllByRole('button').map((botao) => StyleSheet.flatten(botao.props.style).width);
     expect(larguras).toHaveLength(24);
     expect(larguras.every((largura) => largura >= 44)).toBe(true);
   });
 
-  it('a legenda dá nome às duas cores', () => {
-    render(<GraficoBarras meses={MESES} />);
+  it('a legenda dá nome às duas cores', async () => {
+    await render(<GraficoBarras meses={MESES} />);
 
     expect(screen.getByText('Entradas')).toBeOnTheScreen();
     expect(screen.getByText('Saídas')).toBeOnTheScreen();

@@ -12,57 +12,58 @@
   },
   "dependencies": {
     "@expo-google-fonts/inter": "^0.4.2",
-    "@react-native-community/datetimepicker": "9.1.0",
+    "@react-native-community/datetimepicker": "9.2.1",
     "@react-native-google-signin/google-signin": "^16.1.5",
     "@supabase/supabase-js": "^2.116.0",
     "drizzle-orm": "^0.45.4",
-    "expo": "~57.0.22",
-    "expo-asset": "~57.0.17",
-    "expo-constants": "~57.0.18",
-    "expo-crypto": "~57.0.4",
-    "expo-dev-client": "~57.0.19",
-    "expo-file-system": "~57.0.7",
-    "expo-font": "~57.0.4",
-    "expo-image-manipulator": "~57.0.20",
-    "expo-image-picker": "~57.0.20",
-    "expo-linking": "~57.0.10",
-    "expo-network": "~57.0.2",
-    "expo-print": "~57.0.2",
-    "expo-router": "~57.0.21",
-    "expo-secure-store": "~57.0.4",
-    "expo-sharing": "~57.0.19",
-    "expo-splash-screen": "~57.0.9",
-    "expo-sqlite": "~57.0.4",
-    "expo-status-bar": "~57.0.1",
-    "expo-symbols": "~57.0.3",
-    "expo-system-ui": "~57.0.4",
+    "expo": "~58.0.26",
+    "expo-asset": "~58.0.21",
+    "expo-constants": "~58.0.16",
+    "expo-crypto": "~58.0.8",
+    "expo-dev-client": "~58.0.21",
+    "expo-file-system": "~58.0.14",
+    "expo-font": "~58.0.12",
+    "expo-image-manipulator": "~58.0.16",
+    "expo-image-picker": "~58.0.10",
+    "expo-linking": "~58.0.17",
+    "expo-network": "~58.0.5",
+    "expo-print": "~58.0.9",
+    "expo-router": "~58.0.32",
+    "expo-secure-store": "~58.0.3",
+    "expo-sharing": "~58.0.23",
+    "expo-splash-screen": "~58.0.14",
+    "expo-sqlite": "~58.0.18",
+    "expo-status-bar": "~58.0.5",
+    "expo-symbols": "~58.0.5",
+    "expo-system-ui": "~58.0.7",
     "phosphor-react-native": "^3.0.6",
-    "react": "19.2.3",
-    "react-dom": "19.2.3",
-    "react-native": "0.86.3",
-    "react-native-reanimated": "4.5.1",
-    "react-native-safe-area-context": "~5.7.0",
-    "react-native-screens": "~4.26.0",
-    "react-native-svg": "15.15.4",
-    "react-native-worklets": "0.10.1",
+    "react": "19.3.0",
+    "react-dom": "19.3.0",
+    "react-native": "0.88.1",
+    "react-native-gesture-handler": "~3.3.0",
+    "react-native-reanimated": "4.7.1",
+    "react-native-safe-area-context": "~5.11.1",
+    "react-native-screens": "~4.30.1",
+    "react-native-svg": "15.16.0",
+    "react-native-worklets": "0.13.0",
     "zod": "^4.6.5",
     "zustand": "^5.0.15"
   },
   "devDependencies": {
     "@electric-sql/pglite": "^0.5.8",
-    "@testing-library/react-native": "^13.3.3",
+    "@testing-library/react-native": "^14.1.0",
     "@types/better-sqlite3": "^9.6.0",
-    "@types/jest": "^29.5.14",
-    "@types/react": "~19.2.2",
+    "@types/jest": "30.0.0",
+    "@types/react": "~19.3.0",
     "babel-plugin-inline-import": "^3.0.0",
-    "babel-preset-expo": "~57.0.0",
+    "babel-preset-expo": "~58.0.0",
     "better-sqlite3": "^13.0.3",
     "drizzle-kit": "^0.31.11",
     "eslint": "^9.39.5",
-    "eslint-config-expo": "~57.0.2",
-    "jest": "~29.7.0",
-    "jest-expo": "~57.0.5",
-    "react-test-renderer": "19.2.3",
+    "eslint-config-expo": "~58.0.4",
+    "jest": "~30.5.2",
+    "jest-expo": "~58.0.15",
+    "test-renderer": "^1.3.0",
     "typescript": "~6.0.3"
   },
   "jest": {
@@ -70,7 +71,7 @@
     "projects": [
       {
         "displayName": "app",
-        "resolver": "react-native-worklets/jest/resolver",
+        "resolver": "react-native-reanimated/jest/resolver",
         "preset": "jest-expo",
         "setupFiles": [
           "<rootDir>/jest.setup.ts",
@@ -80,7 +81,9 @@
           "^@/(.*)$": "<rootDir>/src/$1",
           "^phosphor-react-native/src/icons/.*$": "<rootDir>/jest.phosphor-stub.js"
         },
-        "testPathIgnorePatterns": ["<rootDir>/supabase/"],
+        "testPathIgnorePatterns": [
+          "<rootDir>/supabase/"
+        ],
         "transformIgnorePatterns": [
           "node_modules/(?!((jest-)?react-native|@react-native(-community)?)|expo(nent)?|@expo(nent)?/.*|@expo-google-fonts/.*|react-navigation|@react-navigation/.*|@supabase/.*|standard-navigation)"
         ]
@@ -88,9 +91,18 @@
       {
         "displayName": "supabase",
         "preset": "jest-expo/node",
-        "testMatch": ["<rootDir>/supabase/tests/**/*.test.ts"],
+        "testMatch": [
+          "<rootDir>/supabase/tests/**/*.test.ts"
+        ],
         "transform": {
-          "\\.[jt]sx?$": ["babel-jest", { "presets": ["babel-preset-expo"] }]
+          "\\.[jt]sx?$": [
+            "babel-jest",
+            {
+              "presets": [
+                "babel-preset-expo"
+              ]
+            }
+          ]
         }
       }
     ]

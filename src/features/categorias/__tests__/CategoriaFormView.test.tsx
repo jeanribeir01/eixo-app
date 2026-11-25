@@ -5,6 +5,8 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { CategoriaFormView } from '../CategoriaFormView';
 import { atualizarCategoria, buscarCategoriaPorId, criarCategoria } from '../categoriasRepository';
 
+import { porTipo } from '@/testing/componentes';
+
 // O runner do GitHub Actions é mais lento que a máquina local: o padrão de 5s estourava no CI.
 jest.setTimeout(15000);
 
@@ -35,42 +37,42 @@ describe('CategoriaFormView', () => {
     jest.useRealTimers();
   });
 
-  it('modo criar: renderiza o campo Título e as opções de tipo; o título da tela fica no header (NAV-02)', () => {
-    render(<CategoriaFormView />);
+  it('modo criar: renderiza o campo Título e as opções de tipo; o título da tela fica no header (NAV-02)', async () => {
+    await render(<CategoriaFormView />);
 
     expect(screen.queryByText('Nova categoria')).not.toBeOnTheScreen();
     expect(screen.queryByText('Eixo Certo')).not.toBeOnTheScreen();
     expect(screen.getByLabelText('Título')).toBeOnTheScreen();
     // Tela interna: o header nativo protege o topo, o Screen não repete o inset (NAV-04, AC 11).
-    expect(screen.UNSAFE_getByType(SafeAreaView).props.edges).not.toContain('top');
+    expect(porTipo(SafeAreaView).props.edges).not.toContain('top');
     // Formulário rola e sobe com o teclado (NAV-04, AC 9 e 10).
-    expect(screen.UNSAFE_getByType(KeyboardAvoidingView).findByType(ScrollView).props.keyboardShouldPersistTaps).toBe('handled');
+    expect(porTipo(KeyboardAvoidingView).porTipo(ScrollView).props.keyboardShouldPersistTaps).toBe('handled');
     // Tipo como duas opções que dizem para que lado vai o dinheiro; sem tipo da aba, nenhuma vem marcada.
     expect(screen.getByRole('radio', { name: 'Entrada. Dinheiro que entra no caixa' })).not.toBeChecked();
     expect(screen.getByRole('radio', { name: 'Saída. Dinheiro que sai do caixa' })).not.toBeChecked();
   });
 
-  it('aberta pela aba Saídas: o tipo já vem marcado', () => {
-    render(<CategoriaFormView tipoInicial="Saida" />);
+  it('aberta pela aba Saídas: o tipo já vem marcado', async () => {
+    await render(<CategoriaFormView tipoInicial="Saida" />);
 
     expect(screen.getByRole('radio', { name: /^Saída\. / })).toBeChecked();
     expect(screen.getByRole('radio', { name: /^Entrada\. / })).not.toBeChecked();
   });
 
-  it('sem tipo escolhido, não salva e pede a escolha', () => {
-    render(<CategoriaFormView />);
+  it('sem tipo escolhido, não salva e pede a escolha', async () => {
+    await render(<CategoriaFormView />);
 
-    fireEvent.changeText(screen.getByLabelText('Título'), 'Pneus');
-    fireEvent.press(screen.getByRole('button', { name: 'Criar categoria' }));
+    await fireEvent.changeText(screen.getByLabelText('Título'), 'Pneus');
+    await fireEvent.press(screen.getByRole('button', { name: 'Criar categoria' }));
 
     expect(screen.getByRole('alert')).toHaveTextContent('Escolha Entrada ou Saída.');
     expect(criarCategoria).not.toHaveBeenCalled();
   });
 
-  it('não permite salvar com título vazio e mostra a mensagem no campo', () => {
-    render(<CategoriaFormView tipoInicial="Saida" />);
+  it('não permite salvar com título vazio e mostra a mensagem no campo', async () => {
+    await render(<CategoriaFormView tipoInicial="Saida" />);
 
-    fireEvent.press(screen.getByRole('button', { name: 'Criar categoria' }));
+    await fireEvent.press(screen.getByRole('button', { name: 'Criar categoria' }));
 
     expect(screen.getByText('Informe o título da categoria.')).toBeOnTheScreen();
     expect(criarCategoria).not.toHaveBeenCalled();
@@ -82,19 +84,19 @@ describe('CategoriaFormView', () => {
       data: { id: '1', titulo: 'Pneus', tipo: 'Saida' },
     });
 
-    render(<CategoriaFormView />);
+    await render(<CategoriaFormView />);
 
-    fireEvent.changeText(screen.getByLabelText('Título'), 'Pneus');
-    fireEvent.press(screen.getByRole('radio', { name: /^Saída\. / }));
+    await fireEvent.changeText(screen.getByLabelText('Título'), 'Pneus');
+    await fireEvent.press(screen.getByRole('radio', { name: /^Saída\. / }));
 
     await act(async () => {
-      fireEvent.press(screen.getByRole('button', { name: 'Criar categoria' }));
+      await fireEvent.press(screen.getByRole('button', { name: 'Criar categoria' }));
     });
 
     expect(criarCategoria).toHaveBeenCalledWith({ titulo: 'Pneus', tipo: 'Saida' });
     expect(await screen.findByText('Categoria criada.')).toBeOnTheScreen();
 
-    act(() => {
+    await act(() => {
       jest.advanceTimersByTime(1200);
     });
 
@@ -107,12 +109,12 @@ describe('CategoriaFormView', () => {
       mensagem: 'Já existe uma categoria com esse título.',
     });
 
-    render(<CategoriaFormView tipoInicial="Saida" />);
+    await render(<CategoriaFormView tipoInicial="Saida" />);
 
-    fireEvent.changeText(screen.getByLabelText('Título'), 'Combustível');
+    await fireEvent.changeText(screen.getByLabelText('Título'), 'Combustível');
 
     await act(async () => {
-      fireEvent.press(screen.getByRole('button', { name: 'Criar categoria' }));
+      await fireEvent.press(screen.getByRole('button', { name: 'Criar categoria' }));
     });
 
     expect(screen.getAllByText('Já existe uma categoria com esse título.').length).toBeGreaterThan(0);
@@ -125,7 +127,7 @@ describe('CategoriaFormView', () => {
       data: { id: '9', titulo: 'Manutenção', tipo: 'Saida' },
     });
 
-    render(<CategoriaFormView categoriaId="9" />);
+    await render(<CategoriaFormView categoriaId="9" />);
 
     expect(await screen.findByLabelText('Título')).toBeOnTheScreen();
     expect(screen.queryByText('Editar categoria')).not.toBeOnTheScreen();
@@ -144,13 +146,13 @@ describe('CategoriaFormView', () => {
       data: { id: '9', titulo: 'Manutenção preventiva', tipo: 'Saida' },
     });
 
-    render(<CategoriaFormView categoriaId="9" />);
+    await render(<CategoriaFormView categoriaId="9" />);
     await screen.findByLabelText('Título');
 
-    fireEvent.changeText(screen.getByLabelText('Título'), 'Manutenção preventiva');
+    await fireEvent.changeText(screen.getByLabelText('Título'), 'Manutenção preventiva');
 
     await act(async () => {
-      fireEvent.press(screen.getByRole('button', { name: 'Salvar alterações' }));
+      await fireEvent.press(screen.getByRole('button', { name: 'Salvar alterações' }));
     });
 
     expect(atualizarCategoria).toHaveBeenCalledWith('9', { titulo: 'Manutenção preventiva', tipo: 'Saida' });
@@ -160,17 +162,17 @@ describe('CategoriaFormView', () => {
   it('erro ao carregar a categoria mostra estado de erro e "Voltar" navega para trás', async () => {
     (buscarCategoriaPorId as jest.Mock).mockResolvedValue({ ok: false, mensagem: 'Categoria não encontrada.' });
 
-    render(<CategoriaFormView categoriaId="inexistente" />);
+    await render(<CategoriaFormView categoriaId="inexistente" />);
 
     expect(await screen.findByText('Não foi possível carregar a categoria')).toBeOnTheScreen();
 
-    fireEvent.press(screen.getByRole('button', { name: 'Voltar' }));
+    await fireEvent.press(screen.getByRole('button', { name: 'Voltar' }));
 
     expect(mockBack).toHaveBeenCalledTimes(1);
   });
 
-  it('um botão só, a ação da tela: sem "Cancelar", porque o voltar do header já desiste', () => {
-    render(<CategoriaFormView />);
+  it('um botão só, a ação da tela: sem "Cancelar", porque o voltar do header já desiste', async () => {
+    await render(<CategoriaFormView />);
 
     expect(screen.getAllByRole('button').map((botao) => botao.props.accessibilityLabel)).toEqual(['Criar categoria']);
   });
@@ -178,19 +180,19 @@ describe('CategoriaFormView', () => {
 
 // Carregando e erro de carga também abrem sob o header nativo: sem inset de topo duplicado (NAV-04, AC 11).
 describe('CategoriaFormView — estados de carga sob o header (NAV-04)', () => {
-  it('carregando: sem o inset de topo', () => {
+  it('carregando: sem o inset de topo', async () => {
     (buscarCategoriaPorId as jest.Mock).mockReturnValue(new Promise(() => {}));
-    render(<CategoriaFormView categoriaId="9" />);
+    await render(<CategoriaFormView categoriaId="9" />);
 
     expect(screen.getByLabelText('Carregando categoria')).toBeOnTheScreen();
-    expect(screen.UNSAFE_getByType(SafeAreaView).props.edges).not.toContain('top');
+    expect(porTipo(SafeAreaView).props.edges).not.toContain('top');
   });
 
   it('erro ao carregar: sem o inset de topo', async () => {
     (buscarCategoriaPorId as jest.Mock).mockResolvedValue({ ok: false, mensagem: 'Categoria não encontrada.' });
-    render(<CategoriaFormView categoriaId="9" />);
+    await render(<CategoriaFormView categoriaId="9" />);
 
     expect(await screen.findByText('Não foi possível carregar a categoria')).toBeOnTheScreen();
-    expect(screen.UNSAFE_getByType(SafeAreaView).props.edges).not.toContain('top');
+    expect(porTipo(SafeAreaView).props.edges).not.toContain('top');
   });
 });

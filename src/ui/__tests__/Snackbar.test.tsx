@@ -38,14 +38,14 @@ afterEach(() => {
 
 describe('Snackbar', () => {
   it('mostra a mensagem de sucesso', async () => {
-    render(<Snackbar message="Categoria salva." tone="success" onDismiss={jest.fn()} />);
+    await render(<Snackbar message="Categoria salva." tone="success" onDismiss={jest.fn()} />);
     await esperarEntradaComecar();
 
     expect(screen.getByRole('alert')).toHaveTextContent('Categoria salva.');
   });
 
   it('mostra a mensagem de erro', async () => {
-    render(<Snackbar message="Não foi possível salvar." tone="error" onDismiss={jest.fn()} />);
+    await render(<Snackbar message="Não foi possível salvar." tone="error" onDismiss={jest.fn()} />);
     await esperarEntradaComecar();
 
     expect(screen.getByRole('alert')).toHaveTextContent('Não foi possível salvar.');
@@ -53,12 +53,12 @@ describe('Snackbar', () => {
 
   it('continua anunciando como alerta e chama onDismiss sozinho após a duração (UIP-04)', async () => {
     const onDismiss = jest.fn();
-    render(<Snackbar message="Categoria salva." tone="success" onDismiss={onDismiss} duration={1000} />);
+    await render(<Snackbar message="Categoria salva." tone="success" onDismiss={onDismiss} duration={1000} />);
     await esperarEntradaComecar();
 
     expect(screen.getByRole('alert')).toHaveProp('accessibilityLiveRegion', 'polite');
 
-    act(() => {
+    await act(() => {
       jest.advanceTimersByTime(1000);
     });
 
@@ -72,10 +72,10 @@ describe('Snackbar — com ação', () => {
   it('a ação é um botão; tocar chama a ação e fecha o Snackbar', async () => {
     const onPress = jest.fn();
     const onDismiss = jest.fn();
-    render(<Snackbar message="Categoria desativada." tone="success" onDismiss={onDismiss} action={{ label: 'Desfazer', onPress }} />);
+    await render(<Snackbar message="Categoria desativada." tone="success" onDismiss={onDismiss} action={{ label: 'Desfazer', onPress }} />);
     await esperarEntradaComecar();
 
-    fireEvent.press(screen.getByRole('button', { name: 'Desfazer' }));
+    await fireEvent.press(screen.getByRole('button', { name: 'Desfazer' }));
 
     expect(onPress).toHaveBeenCalledTimes(1);
     expect(onDismiss).toHaveBeenCalledTimes(1);
@@ -83,15 +83,15 @@ describe('Snackbar — com ação', () => {
 
   it('com ação, fica 6 s na tela (sem ação, 3 s)', async () => {
     const onDismiss = jest.fn();
-    render(<Snackbar message="Categoria desativada." tone="success" onDismiss={onDismiss} action={{ label: 'Desfazer', onPress: jest.fn() }} />);
+    await render(<Snackbar message="Categoria desativada." tone="success" onDismiss={onDismiss} action={{ label: 'Desfazer', onPress: jest.fn() }} />);
     await esperarEntradaComecar();
 
-    act(() => {
+    await act(() => {
       jest.advanceTimersByTime(3000);
     });
     expect(onDismiss).not.toHaveBeenCalled();
 
-    act(() => {
+    await act(() => {
       jest.advanceTimersByTime(3000);
     });
     expect(onDismiss).toHaveBeenCalledTimes(1);
@@ -100,7 +100,7 @@ describe('Snackbar — com ação', () => {
 
 describe('Snackbar — entrada (UIP-04)', () => {
   it('começa transparente e 8pt abaixo do lugar final (AC 7)', async () => {
-    render(<Snackbar message="Categoria salva." tone="success" onDismiss={jest.fn()} />);
+    await render(<Snackbar message="Categoria salva." tone="success" onDismiss={jest.fn()} />);
     await esperarEntradaComecar();
 
     expect(screen.getByRole('alert')).toHaveStyle({ opacity: 0, transform: [{ translateY: spacing.sm }] });
@@ -108,7 +108,7 @@ describe('Snackbar — entrada (UIP-04)', () => {
 
   it('anima em 200 ms no driver nativo e termina opaco e no lugar (AC 7)', async () => {
     animarAteOFim();
-    render(<Snackbar message="Categoria salva." tone="success" onDismiss={jest.fn()} />);
+    await render(<Snackbar message="Categoria salva." tone="success" onDismiss={jest.fn()} />);
     await esperarEntradaComecar();
 
     expect(Animated.timing).toHaveBeenCalledWith(
@@ -120,7 +120,7 @@ describe('Snackbar — entrada (UIP-04)', () => {
 
   it('com "remover animações" ligado, entra só com fade, sem deslize (AC 8)', async () => {
     jest.spyOn(AccessibilityInfo, 'isReduceMotionEnabled').mockResolvedValue(true);
-    render(<Snackbar message="Categoria salva." tone="success" onDismiss={jest.fn()} />);
+    await render(<Snackbar message="Categoria salva." tone="success" onDismiss={jest.fn()} />);
     await esperarEntradaComecar();
 
     // Ainda transparente (o fade continua), mas já na posição final: nada desliza.
@@ -130,14 +130,14 @@ describe('Snackbar — entrada (UIP-04)', () => {
   it('sem conseguir ler a preferência do sistema, entra assim mesmo', async () => {
     jest.spyOn(AccessibilityInfo, 'isReduceMotionEnabled').mockRejectedValue(new Error('indisponível'));
     animarAteOFim();
-    render(<Snackbar message="Categoria salva." tone="success" onDismiss={jest.fn()} />);
+    await render(<Snackbar message="Categoria salva." tone="success" onDismiss={jest.fn()} />);
     await esperarEntradaComecar();
 
     expect(screen.getByRole('alert')).toHaveStyle({ opacity: 1 });
   });
 
   it('no overlay de uma tela com FAB, o Snackbar fica acima do FAB, nunca por cima dele (edge case)', async () => {
-    render(
+    await render(
       <Screen
         overlay={<Snackbar message="Categoria salva." tone="success" onDismiss={jest.fn()} />}
         fab={<FAB label="Nova categoria" onPress={jest.fn()} />}
@@ -149,9 +149,9 @@ describe('Snackbar — entrada (UIP-04)', () => {
 
     // A camada flutuante empilha os filhos de cima para baixo a partir do rodapé: quem vem
     // primeiro fica acima. O gap entre eles impede que um cubra o outro.
-    const camada = screen.root.find((no) => typeof no.type === 'string' && no.props.pointerEvents === 'box-none');
-    const papeis = camada
-      .findAll((no) => typeof no.type === 'string' && ['alert', 'button'].includes(no.props.accessibilityRole))
+    const [camada] = screen.container.queryAll((no) => no.props.pointerEvents === 'box-none');
+    const papeis = camada!
+      .queryAll((no) => typeof no.type === 'string' && ['alert', 'button'].includes(no.props.accessibilityRole))
       .map((no) => no.props.accessibilityRole);
     expect(papeis).toEqual(['alert', 'button']);
     expect(camada).toHaveStyle({ justifyContent: 'flex-end', gap: spacing.md });

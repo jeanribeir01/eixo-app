@@ -347,7 +347,7 @@ export function MovimentacoesListView() {
                 nomeMes={nomeDoMes(periodo.ano, periodo.mes).split(' ')[0]}
                 tipo={filtroTipo}
               />
-            ) : null
+            ) : undefined
           }
           // Vazio dentro da lista: o pull-to-refresh funciona até num mês sem lançamento. Sem ação
           // aqui, porque o FAB "Nova movimentação" já está na tela.

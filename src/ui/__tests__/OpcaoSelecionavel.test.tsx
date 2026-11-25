@@ -5,17 +5,17 @@ import { OpcaoSelecionavel } from '../OpcaoSelecionavel';
 import { colors } from '../tokens';
 
 describe('OpcaoSelecionavel', () => {
-  it('é um rádio com título e descrição no nome; tocar chama onPress', () => {
+  it('é um rádio com título e descrição no nome; tocar chama onPress', async () => {
     const onPress = jest.fn();
-    render(<OpcaoSelecionavel titulo="Financeiro" descricao="Caixa e dívidas" selecionada={false} onPress={onPress} />);
+    await render(<OpcaoSelecionavel titulo="Financeiro" descricao="Caixa e dívidas" selecionada={false} onPress={onPress} />);
 
-    fireEvent.press(screen.getByRole('radio', { name: 'Financeiro. Caixa e dívidas' }));
+    await fireEvent.press(screen.getByRole('radio', { name: 'Financeiro. Caixa e dívidas' }));
 
     expect(onPress).toHaveBeenCalledTimes(1);
   });
 
-  it('selecionada: estado checked, fundo accentSoft e círculo cheio (cor nunca é o único indicador)', () => {
-    render(<OpcaoSelecionavel titulo="Saída" selecionada onPress={jest.fn()} />);
+  it('selecionada: estado checked, fundo accentSoft e círculo cheio (cor nunca é o único indicador)', async () => {
+    await render(<OpcaoSelecionavel titulo="Saída" selecionada onPress={jest.fn()} />);
 
     const opcao = screen.getByRole('radio', { name: 'Saída' });
     expect(opcao).toBeChecked();
@@ -23,19 +23,19 @@ describe('OpcaoSelecionavel', () => {
     expect(screen.getByTestId('opcao-radio-marcado')).toBeOnTheScreen();
   });
 
-  it('não selecionada: círculo vazio com borda de 3:1 (textBody), sem o miolo', () => {
-    render(<OpcaoSelecionavel titulo="Entrada" selecionada={false} onPress={jest.fn()} />);
+  it('não selecionada: círculo vazio com borda de 3:1 (textBody), sem o miolo', async () => {
+    await render(<OpcaoSelecionavel titulo="Entrada" selecionada={false} onPress={jest.fn()} />);
 
     expect(screen.getByRole('radio', { name: 'Entrada' })).not.toBeChecked();
     expect(screen.getByTestId('opcao-radio')).toHaveStyle({ borderColor: colors.textBody });
     expect(screen.queryByTestId('opcao-radio-marcado')).not.toBeOnTheScreen();
   });
 
-  it('desabilitada: não responde ao toque', () => {
+  it('desabilitada: não responde ao toque', async () => {
     const onPress = jest.fn();
-    render(<OpcaoSelecionavel titulo="Admin" selecionada={false} onPress={onPress} disabled />);
+    await render(<OpcaoSelecionavel titulo="Admin" selecionada={false} onPress={onPress} disabled />);
 
-    fireEvent.press(screen.getByRole('radio', { name: 'Admin' }));
+    await fireEvent.press(screen.getByRole('radio', { name: 'Admin' }));
 
     expect(screen.getByRole('radio', { name: 'Admin' })).toBeDisabled();
     expect(onPress).not.toHaveBeenCalled();
@@ -55,8 +55,8 @@ describe('Avatar — iniciais', () => {
     expect(iniciais(nome)).toBe(esperado);
   });
 
-  it('sem foto, mostra as iniciais; no tamanho sm o círculo é menor', () => {
-    render(<Avatar name="Jean Ribeiro" photoUrl={null} size="sm" />);
+  it('sem foto, mostra as iniciais; no tamanho sm o círculo é menor', async () => {
+    await render(<Avatar name="Jean Ribeiro" photoUrl={null} size="sm" />);
 
     expect(screen.getByLabelText('Iniciais de Jean Ribeiro')).toHaveTextContent('JR');
     expect(screen.getByLabelText('Iniciais de Jean Ribeiro')).toHaveStyle({ width: 40, height: 40 });

@@ -46,7 +46,7 @@ beforeEach(() => {
 
 async function renderPronto(resumo = resumoFinanceiro()) {
   mockBuscar.mockResolvedValue({ ok: true, data: resumo });
-  render(<InicioFinanceiroView />);
+  await render(<InicioFinanceiroView />);
   await screen.findByText('Saldo atual');
 }
 
@@ -67,9 +67,9 @@ describe('InicioFinanceiroView', () => {
     useSessionStore.setState({ session: null });
   });
 
-  it('carregando: skeleton com rótulo, sem cartão de saldo', () => {
+  it('carregando: skeleton com rótulo, sem cartão de saldo', async () => {
     mockBuscar.mockReturnValue(new Promise(() => {}));
-    render(<InicioFinanceiroView />);
+    await render(<InicioFinanceiroView />);
 
     expect(screen.getByLabelText('Carregando o início')).toBeOnTheScreen();
     expect(screen.queryByText('Saldo atual')).not.toBeOnTheScreen();
@@ -77,10 +77,10 @@ describe('InicioFinanceiroView', () => {
 
   it('erro: mensagem do repositório e "Tentar novamente" refaz a busca', async () => {
     mockBuscar.mockResolvedValue({ ok: false, mensagem: 'Não foi possível carregar o início. Tente novamente.' });
-    render(<InicioFinanceiroView />);
+    await render(<InicioFinanceiroView />);
 
     expect(await screen.findByText('Não foi possível carregar o início. Tente novamente.')).toBeOnTheScreen();
-    fireEvent.press(screen.getByRole('button', { name: 'Tentar novamente' }));
+    await fireEvent.press(screen.getByRole('button', { name: 'Tentar novamente' }));
     expect(mockBuscar).toHaveBeenCalledTimes(2);
   });
 
@@ -93,7 +93,7 @@ describe('InicioFinanceiroView', () => {
     expect(screen.getByText('+ R$ 85.100,00')).toBeOnTheScreen();
     expect(screen.getByText('− R$ 91.000,00')).toBeOnTheScreen();
 
-    fireEvent.press(cartao);
+    await fireEvent.press(cartao);
     expect(mockPush).toHaveBeenCalledWith('/caixa');
   });
 
@@ -105,7 +105,7 @@ describe('InicioFinanceiroView', () => {
   ])('atalho "%s" abre %s', async (rotulo, rota) => {
     await renderPronto();
 
-    fireEvent.press(screen.getByRole('button', { name: rotulo }));
+    await fireEvent.press(screen.getByRole('button', { name: rotulo }));
 
     expect(mockPush).toHaveBeenCalledWith(rota);
   });
@@ -113,7 +113,7 @@ describe('InicioFinanceiroView', () => {
   it('pede atenção: a linha de contas a pagar leva para Movimentações', async () => {
     await renderPronto();
 
-    fireEvent.press(screen.getByRole('button', { name: 'Contas a pagar nos próximos 7 dias' }));
+    await fireEvent.press(screen.getByRole('button', { name: 'Contas a pagar nos próximos 7 dias' }));
 
     expect(screen.getByText('R$ 9.340,00 até 29/11')).toBeOnTheScreen();
     expect(mockPush).toHaveBeenCalledWith('/movimentacoes');
@@ -131,7 +131,7 @@ describe('InicioFinanceiroView', () => {
     await renderPronto(resumoFinanceiro({ usuariosAguardando: [usuario()], manutencoesAbertas: [] }));
 
     expect(mockBuscar).toHaveBeenCalledWith({ verUsuarios: true, verManutencoes: true });
-    fireEvent.press(screen.getByRole('button', { name: '1 usuário aguardando aprovação' }));
+    await fireEvent.press(screen.getByRole('button', { name: '1 usuário aguardando aprovação' }));
     expect(mockPush).toHaveBeenCalledWith('/usuarios');
   });
 
@@ -148,10 +148,10 @@ describe('InicioFinanceiroView', () => {
     expect(screen.getByText('Recebido')).toBeOnTheScreen();
     expect(screen.getByText('− R$ 1.095,98')).toHaveStyle({ color: colors.danger });
 
-    fireEvent.press(screen.getByRole('button', { name: 'Frete para BH' }));
+    await fireEvent.press(screen.getByRole('button', { name: 'Frete para BH' }));
     expect(mockPush).toHaveBeenCalledWith('/movimentacoes/frete/editar');
 
-    fireEvent.press(screen.getByRole('button', { name: 'Ver todas as movimentações' }));
+    await fireEvent.press(screen.getByRole('button', { name: 'Ver todas as movimentações' }));
     expect(mockPush).toHaveBeenCalledWith('/movimentacoes');
   });
 

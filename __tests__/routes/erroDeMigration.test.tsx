@@ -25,10 +25,10 @@ afterEach(() => {
 });
 
 describe('erro de migration no layout raiz', () => {
-  it('mostra a mensagem em português e esconde a splash', () => {
+  it('mostra a mensagem em português e esconde a splash', async () => {
     mockUseMigrations.mockImplementation(() => ({ success: false, error: new Error('falha') }));
 
-    renderRouter({ _layout: RootLayout, index: () => <Text>Tela Inicial</Text> }, { initialUrl: '/' });
+    await renderRouter({ _layout: RootLayout, index: () => <Text>Tela Inicial</Text> }, { initialUrl: '/' });
 
     expect(screen.getByText('Não foi possível preparar o banco local')).toBeOnTheScreen();
     expect(SplashScreen.hideAsync).toHaveBeenCalled();

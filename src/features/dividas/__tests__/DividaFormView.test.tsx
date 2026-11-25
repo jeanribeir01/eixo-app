@@ -2,6 +2,7 @@ import { act, fireEvent, render, screen, waitFor } from '@testing-library/react-
 import { KeyboardAvoidingView, ScrollView } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
+import { porTipo } from '@/testing/componentes';
 import { listarOpcoesMovimentacao, type OpcoesMovimentacao } from '@/features/movimentacoes/movimentacoesRepository';
 
 import { DividaFormView } from '../components/DividaFormView';
@@ -43,19 +44,19 @@ beforeEach(() => {
 });
 
 async function renderForm() {
-  render(<DividaFormView />);
+  await render(<DividaFormView />);
   await screen.findByLabelText('Descrição');
 }
 
-function salvar() {
-  fireEvent.press(screen.getByRole('button', { name: 'Salvar' }));
+async function salvar() {
+  await fireEvent.press(screen.getByRole('button', { name: 'Salvar' }));
 }
 
-function preencherValido() {
-  fireEvent.changeText(screen.getByLabelText('Descrição'), 'Financiamento do caminhão');
-  fireEvent.changeText(screen.getByLabelText('Quantidade de parcelas'), '12');
-  fireEvent.changeText(screen.getByLabelText('Valor da parcela (R$)'), '350000');
-  fireEvent.changeText(screen.getByLabelText('Vencimento da 1ª parcela'), '15012027');
+async function preencherValido() {
+  await fireEvent.changeText(screen.getByLabelText('Descrição'), 'Financiamento do caminhão');
+  await fireEvent.changeText(screen.getByLabelText('Quantidade de parcelas'), '12');
+  await fireEvent.changeText(screen.getByLabelText('Valor da parcela (R$)'), '350000');
+  await fireEvent.changeText(screen.getByLabelText('Vencimento da 1ª parcela'), '15012027');
 }
 
 describe('DividaFormView — campos (EIX-50)', () => {
@@ -63,8 +64,8 @@ describe('DividaFormView — campos (EIX-50)', () => {
     await renderForm();
 
     expect(screen.queryByText('Nova dívida')).not.toBeOnTheScreen();
-    expect(screen.UNSAFE_getByType(SafeAreaView).props.edges).not.toContain('top');
-    expect(screen.UNSAFE_getByType(KeyboardAvoidingView).findByType(ScrollView)).toBeDefined();
+    expect(porTipo(SafeAreaView).props.edges).not.toContain('top');
+    expect(porTipo(KeyboardAvoidingView).porTipo(ScrollView)).toBeDefined();
   });
 
   it('pré-seleciona a categoria "Financiamento" e a forma "Boleto"', async () => {
@@ -77,7 +78,7 @@ describe('DividaFormView — campos (EIX-50)', () => {
   it('o seletor de categoria oferece só as de Saída', async () => {
     await renderForm();
 
-    fireEvent.press(screen.getByRole('button', { name: 'Categoria' }));
+    await fireEvent.press(screen.getByRole('button', { name: 'Categoria' }));
 
     expect(screen.getByRole('button', { name: 'Combustível' })).toBeOnTheScreen();
     expect(screen.queryByRole('button', { name: 'Frete' })).not.toBeOnTheScreen();
@@ -88,12 +89,12 @@ describe('DividaFormView — campos (EIX-50)', () => {
     const soma = screen.getByLabelText('Soma total');
     expect(soma).toHaveProp('editable', false);
 
-    fireEvent.changeText(screen.getByLabelText('Quantidade de parcelas'), '12');
-    fireEvent.changeText(screen.getByLabelText('Valor da parcela (R$)'), '350000');
+    await fireEvent.changeText(screen.getByLabelText('Quantidade de parcelas'), '12');
+    await fireEvent.changeText(screen.getByLabelText('Valor da parcela (R$)'), '350000');
 
     expect(screen.getByLabelText('Soma total')).toHaveDisplayValue('R$ 42.000,00');
 
-    fireEvent.changeText(screen.getByLabelText('Quantidade de parcelas'), '24');
+    await fireEvent.changeText(screen.getByLabelText('Quantidade de parcelas'), '24');
     expect(screen.getByLabelText('Soma total')).toHaveDisplayValue('R$ 84.000,00');
   });
 });
@@ -101,9 +102,9 @@ describe('DividaFormView — campos (EIX-50)', () => {
 describe('DividaFormView — validação (EIX-50)', () => {
   it('campos vazios mostram as mensagens embaixo de cada um e não chamam a RPC', async () => {
     await renderForm();
-    fireEvent.changeText(screen.getByLabelText('Quantidade de parcelas'), '');
+    await fireEvent.changeText(screen.getByLabelText('Quantidade de parcelas'), '');
 
-    salvar();
+    await salvar();
 
     expect(screen.getByText('Informe a descrição.')).toBeOnTheScreen();
     expect(screen.getByText('Informe ao menos 1 parcela.')).toBeOnTheScreen();
@@ -114,10 +115,10 @@ describe('DividaFormView — validação (EIX-50)', () => {
 
   it('mais de 120 parcelas → "O máximo é 120 parcelas."', async () => {
     await renderForm();
-    preencherValido();
-    fireEvent.changeText(screen.getByLabelText('Quantidade de parcelas'), '121');
+    await preencherValido();
+    await fireEvent.changeText(screen.getByLabelText('Quantidade de parcelas'), '121');
 
-    salvar();
+    await salvar();
 
     expect(screen.getByText('O máximo é 120 parcelas.')).toBeOnTheScreen();
     expect(mockCriar).not.toHaveBeenCalled();
@@ -125,11 +126,11 @@ describe('DividaFormView — validação (EIX-50)', () => {
 
   it('quitação maior que a soma total → "A quitação não pode passar da soma total."', async () => {
     await renderForm();
-    preencherValido();
+    await preencherValido();
     // Soma: 12 × R$ 3.500,00 = R$ 42.000,00. Quitação: R$ 50.000,00.
-    fireEvent.changeText(screen.getByLabelText('Valor de quitação antecipada (opcional)'), '5000000');
+    await fireEvent.changeText(screen.getByLabelText('Valor de quitação antecipada (opcional)'), '5000000');
 
-    salvar();
+    await salvar();
 
     expect(screen.getByText('A quitação não pode passar da soma total.')).toBeOnTheScreen();
     expect(mockCriar).not.toHaveBeenCalled();
@@ -138,9 +139,9 @@ describe('DividaFormView — validação (EIX-50)', () => {
   it('sem forma de pagamento → "Escolha a forma de pagamento."', async () => {
     mockOpcoes.mockResolvedValue({ ok: true, data: { ...opcoes, formasPagamento: [{ id: 'fp-pix', nome: 'Pix', ativa: true }] } });
     await renderForm();
-    preencherValido();
+    await preencherValido();
 
-    salvar();
+    await salvar();
 
     expect(screen.getByText('Escolha a forma de pagamento.')).toBeOnTheScreen();
     expect(mockCriar).not.toHaveBeenCalled();
@@ -151,7 +152,7 @@ describe('DividaFormView — salvar (EIX-50)', () => {
   it('chama a RPC com centavos e data ISO, mostra "12 parcelas geradas." e volta para a lista', async () => {
     mockCriar.mockResolvedValue({ ok: true, data: { id: 'div-1', quantidadeParcelas: 12 } });
     await renderForm();
-    preencherValido();
+    await preencherValido();
 
     await act(async () => salvar());
 
@@ -171,8 +172,8 @@ describe('DividaFormView — salvar (EIX-50)', () => {
   it('uma parcela só: "1 parcela gerada."', async () => {
     mockCriar.mockResolvedValue({ ok: true, data: { id: 'div-1', quantidadeParcelas: 1 } });
     await renderForm();
-    preencherValido();
-    fireEvent.changeText(screen.getByLabelText('Quantidade de parcelas'), '1');
+    await preencherValido();
+    await fireEvent.changeText(screen.getByLabelText('Quantidade de parcelas'), '1');
 
     await act(async () => salvar());
 
@@ -182,10 +183,10 @@ describe('DividaFormView — salvar (EIX-50)', () => {
   it('depois do sucesso o botão continua em loading: um segundo toque não cria a dívida de novo', async () => {
     mockCriar.mockResolvedValue({ ok: true, data: { id: 'div-1', quantidadeParcelas: 12 } });
     await renderForm();
-    preencherValido();
+    await preencherValido();
 
     await act(async () => salvar());
-    salvar();
+    await salvar();
 
     expect(screen.getByRole('button', { name: 'Salvar' })).toBeBusy();
     expect(mockCriar).toHaveBeenCalledTimes(1);
@@ -194,7 +195,7 @@ describe('DividaFormView — salvar (EIX-50)', () => {
   it('erro da RPC: Snackbar com a mensagem em português, form preenchido e botão livre', async () => {
     mockCriar.mockResolvedValue({ ok: false, mensagem: 'Categoria ou forma de pagamento inválida. Escolha outra.' });
     await renderForm();
-    preencherValido();
+    await preencherValido();
 
     await act(async () => salvar());
 
@@ -206,20 +207,20 @@ describe('DividaFormView — salvar (EIX-50)', () => {
 });
 
 describe('DividaFormView — carga das opções (EIX-50)', () => {
-  it('carregando: indicador sob o header', () => {
+  it('carregando: indicador sob o header', async () => {
     mockOpcoes.mockReturnValue(new Promise(() => {}));
-    render(<DividaFormView />);
+    await render(<DividaFormView />);
 
     expect(screen.getByLabelText('Carregando formulário')).toBeOnTheScreen();
-    expect(screen.UNSAFE_getByType(SafeAreaView).props.edges).not.toContain('top');
+    expect(porTipo(SafeAreaView).props.edges).not.toContain('top');
   });
 
   it('erro: mostra a mensagem e o botão Voltar', async () => {
     mockOpcoes.mockResolvedValue({ ok: false, mensagem: 'Não foi possível carregar as categorias. Tente novamente.' });
-    render(<DividaFormView />);
+    await render(<DividaFormView />);
 
     expect(await screen.findByText('Não foi possível carregar as categorias. Tente novamente.')).toBeOnTheScreen();
-    fireEvent.press(screen.getByRole('button', { name: 'Voltar' }));
+    await fireEvent.press(screen.getByRole('button', { name: 'Voltar' }));
     expect(mockBack).toHaveBeenCalled();
   });
 });

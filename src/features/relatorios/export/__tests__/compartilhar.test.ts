@@ -23,7 +23,10 @@ jest.mock('expo-file-system', () => {
       if (mockDisco.has(this.uri)) throw new Error('já existe');
       mockDisco.set(this.uri, '');
     }
-    write(conteudo: string) {
+    // Assíncrono como o write() do SDK 58: a gravação só termina depois de um tique, então quem não
+    // esperar a promessa vê o arquivo vazio e deixa a falha escapar do try.
+    async write(conteudo: string) {
+      await Promise.resolve();
       if (mockFalhaAoGravar.ativa) throw new Error('disco cheio');
       mockDisco.set(this.uri, conteudo);
     }
@@ -55,26 +58,26 @@ beforeEach(() => {
 });
 
 describe('gerarArquivoCsv', () => {
-  it('grava o conteúdo no cache com o nome do período (EXP-14)', () => {
-    const resultado = gerarArquivoCsv('eixo-certo-2026-11.csv', '﻿Data;Descrição\r\n');
+  it('grava o conteúdo no cache com o nome do período (EXP-14)', async () => {
+    const resultado = await gerarArquivoCsv('eixo-certo-2026-11.csv', '﻿Data;Descrição\r\n');
 
     expect(resultado).toEqual({ ok: true, data: { uri: 'file:///cache/eixo-certo-2026-11.csv', formato: 'csv' } });
     expect(mockDisco.get('file:///cache/eixo-certo-2026-11.csv')).toBe('﻿Data;Descrição\r\n');
   });
 
-  it('exportar de novo o mesmo período sobrescreve o arquivo', () => {
+  it('exportar de novo o mesmo período sobrescreve o arquivo', async () => {
     mockDisco.set('file:///cache/eixo-certo-2026-11.csv', 'antigo');
 
-    const resultado = gerarArquivoCsv('eixo-certo-2026-11.csv', 'novo');
+    const resultado = await gerarArquivoCsv('eixo-certo-2026-11.csv', 'novo');
 
     expect(resultado.ok).toBe(true);
     expect(mockDisco.get('file:///cache/eixo-certo-2026-11.csv')).toBe('novo');
   });
 
-  it('erro ao gravar vira a mensagem genérica (EXP-18)', () => {
+  it('erro ao gravar vira a mensagem genérica (EXP-18)', async () => {
     mockFalhaAoGravar.ativa = true;
 
-    expect(gerarArquivoCsv('eixo-certo-2026-11.csv', 'x')).toEqual({ ok: false, mensagem: ERRO });
+    expect(await gerarArquivoCsv('eixo-certo-2026-11.csv', 'x')).toEqual({ ok: false, mensagem: ERRO });
   });
 });
 

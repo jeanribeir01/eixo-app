@@ -137,7 +137,7 @@ function usarPerfil(podeVerFrota: boolean, podeVerCaixa = true) {
 }
 
 async function abrirVeiculos() {
-  fireEvent.press(screen.getByRole('tab', { name: 'Veículos' }));
+  await fireEvent.press(screen.getByRole('tab', { name: 'Veículos' }));
   await screen.findByText('Top 3 veículos com maior custo por KM');
 }
 
@@ -148,10 +148,10 @@ describe('RankingView', () => {
     usarPerfil(true);
   });
 
-  it('carregando: mostra o skeleton enquanto o ranking não chega', () => {
+  it('carregando: mostra o skeleton enquanto o ranking não chega', async () => {
     mockBuscar.mockReturnValue(new Promise(() => undefined));
 
-    render(<RankingView />);
+    await render(<RankingView />);
 
     expect(screen.getByLabelText('Carregando ranking')).toBeOnTheScreen();
   });
@@ -159,7 +159,7 @@ describe('RankingView', () => {
   it('reutiliza o FiltroPeriodo e consulta o mês atual ao abrir', async () => {
     responder(RANKING_COMPLETO);
 
-    render(<RankingView />);
+    await render(<RankingView />);
     await screen.findByText('Top 3 rotas mais lucrativas');
 
     expect(screen.getByRole('tab', { name: 'Mês' })).toBeSelected();
@@ -170,7 +170,7 @@ describe('RankingView', () => {
   it('rotas: lista o Top 3 com posição, trecho e lucro em R$', async () => {
     responder(RANKING_COMPLETO);
 
-    render(<RankingView />);
+    await render(<RankingView />);
     const secao = await screen.findByText('Top 3 rotas mais lucrativas');
 
     expect(secao).toBeOnTheScreen();
@@ -187,7 +187,7 @@ describe('RankingView', () => {
   it('alterna para veículos: Top 3 com placa e custo em R$/km, sem consultar de novo', async () => {
     responder(RANKING_COMPLETO);
 
-    render(<RankingView />);
+    await render(<RankingView />);
     await screen.findByText('Top 3 rotas mais lucrativas');
     await abrirVeiculos();
 
@@ -203,7 +203,7 @@ describe('RankingView', () => {
   it('menos de 3 itens: mostra só as posições que existem', async () => {
     responder(montarRanking([rota('r1', 'Curitiba', 133457), rota('r2', 'Londrina', 90000)], [veiculo('v1', 'ABC1D23', 250)]));
 
-    render(<RankingView />);
+    await render(<RankingView />);
     await screen.findByText('Top 3 rotas mais lucrativas');
 
     expect(screen.getByText('2º')).toBeOnTheScreen();
@@ -219,7 +219,7 @@ describe('RankingView', () => {
       montarRanking([rota('r1', 'Curitiba', 90000), rota('r2', 'Londrina', 90000), rota('r3', 'Maringá', 50000, 1)], []),
     );
 
-    render(<RankingView />);
+    await render(<RankingView />);
     await screen.findByText('Top 3 rotas mais lucrativas');
 
     expect(screen.getAllByText('1º')).toHaveLength(2);
@@ -232,19 +232,19 @@ describe('RankingView', () => {
   it('estado vazio: "ainda sem dados para ranquear" nas duas visões', async () => {
     responder(montarRanking([], []));
 
-    render(<RankingView />);
+    await render(<RankingView />);
 
     expect(await screen.findByText('Ainda sem dados para ranquear')).toBeOnTheScreen();
     expect(screen.queryByText('Top 3 rotas mais lucrativas')).not.toBeOnTheScreen();
 
-    fireEvent.press(screen.getByRole('tab', { name: 'Veículos' }));
+    await fireEvent.press(screen.getByRole('tab', { name: 'Veículos' }));
     expect(await screen.findByText('Ainda sem dados para ranquear')).toBeOnTheScreen();
   });
 
   it('vazio sem viagem: pede para finalizar uma viagem', async () => {
     responder(montarRanking([], []));
 
-    render(<RankingView />);
+    await render(<RankingView />);
 
     expect(await screen.findByText(/finalize uma viagem/)).toBeOnTheScreen();
   });
@@ -252,7 +252,7 @@ describe('RankingView', () => {
   it('vazio porque nenhuma rota deu lucro: explica o motivo, sem pedir para finalizar viagem', async () => {
     responder(montarRanking([], [], { rotasSemLucro: true, veiculosSemKm: false }));
 
-    render(<RankingView />);
+    await render(<RankingView />);
 
     expect(await screen.findByText(/Nenhuma rota deu lucro/)).toBeOnTheScreen();
     expect(screen.queryByText(/finalize uma viagem/)).not.toBeOnTheScreen();
@@ -261,10 +261,10 @@ describe('RankingView', () => {
   it('vazio porque nenhum veículo rodou KM: explica o motivo, sem pedir para finalizar viagem', async () => {
     responder(montarRanking([rota('r1', 'Curitiba', 133457)], [], { rotasSemLucro: false, veiculosSemKm: true }));
 
-    render(<RankingView />);
+    await render(<RankingView />);
     await screen.findByText('Top 3 rotas mais lucrativas');
 
-    fireEvent.press(screen.getByRole('tab', { name: 'Veículos' }));
+    await fireEvent.press(screen.getByRole('tab', { name: 'Veículos' }));
     expect(await screen.findByText(/não rodaram KM/)).toBeOnTheScreen();
     expect(screen.queryByText(/finalize uma viagem/)).not.toBeOnTheScreen();
   });
@@ -272,10 +272,10 @@ describe('RankingView', () => {
   it('vazio só numa visão: a outra continua com o ranking', async () => {
     responder(montarRanking([rota('r1', 'Curitiba', 133457)], []));
 
-    render(<RankingView />);
+    await render(<RankingView />);
     await screen.findByText('Top 3 rotas mais lucrativas');
 
-    fireEvent.press(screen.getByRole('tab', { name: 'Veículos' }));
+    await fireEvent.press(screen.getByRole('tab', { name: 'Veículos' }));
     expect(await screen.findByText('Ainda sem dados para ranquear')).toBeOnTheScreen();
   });
 
@@ -283,10 +283,10 @@ describe('RankingView', () => {
     mockBuscar.mockResolvedValueOnce({ ok: false, mensagem: 'Não foi possível carregar as estatísticas. Tente novamente.' });
     responder(RANKING_COMPLETO);
 
-    render(<RankingView />);
+    await render(<RankingView />);
 
     expect(await screen.findByText('Não foi possível carregar as estatísticas. Tente novamente.')).toBeOnTheScreen();
-    fireEvent.press(screen.getByRole('button', { name: 'Tentar novamente' }));
+    await fireEvent.press(screen.getByRole('button', { name: 'Tentar novamente' }));
 
     expect(await screen.findByText('Top 3 rotas mais lucrativas')).toBeOnTheScreen();
     expect(mockBuscar).toHaveBeenCalledTimes(2);
@@ -295,11 +295,11 @@ describe('RankingView', () => {
   it('troca de período: consulta o novo intervalo', async () => {
     responder(RANKING_COMPLETO);
 
-    render(<RankingView />);
+    await render(<RankingView />);
     await screen.findByText('Top 3 rotas mais lucrativas');
 
     await act(async () => {
-      fireEvent.press(screen.getByRole('tab', { name: 'Ano' }));
+      await fireEvent.press(screen.getByRole('tab', { name: 'Ano' }));
     });
     await screen.findByText('Top 3 rotas mais lucrativas');
 
@@ -310,14 +310,14 @@ describe('RankingView', () => {
   it('tocar na rota abre a rota; tocar no veículo abre o detalhe do veículo', async () => {
     responder(RANKING_COMPLETO);
 
-    render(<RankingView />);
+    await render(<RankingView />);
     await screen.findByText('Top 3 rotas mais lucrativas');
 
-    fireEvent.press(screen.getByRole('button', { name: /^1º lugar, Curitiba\/PR → São Paulo\/SP/ }));
+    await fireEvent.press(screen.getByRole('button', { name: /^1º lugar, Curitiba\/PR → São Paulo\/SP/ }));
     expect(mockPush).toHaveBeenLastCalledWith('/rotas/r1/editar');
 
     await abrirVeiculos();
-    fireEvent.press(screen.getByRole('button', { name: /^2º lugar, XYZ9K87/ }));
+    await fireEvent.press(screen.getByRole('button', { name: /^2º lugar, XYZ9K87/ }));
     expect(mockPush).toHaveBeenLastCalledWith('/frota/v2');
   });
 
@@ -325,7 +325,7 @@ describe('RankingView', () => {
     usarPerfil(false);
     responder(RANKING_COMPLETO);
 
-    render(<RankingView />);
+    await render(<RankingView />);
     await screen.findByText('Top 3 rotas mais lucrativas');
 
     expect(screen.queryByRole('button', { name: /lugar/ })).not.toBeOnTheScreen();
@@ -335,7 +335,7 @@ describe('RankingView', () => {
   it('a linha anuncia posição, item e métrica ao leitor de tela', async () => {
     responder(RANKING_COMPLETO);
 
-    render(<RankingView />);
+    await render(<RankingView />);
     await screen.findByText('Top 3 rotas mais lucrativas');
 
     const linha = screen.getByRole('button', {
@@ -348,13 +348,13 @@ describe('RankingView', () => {
     it('Admin e Financeiro veem os gráficos com o período do filtro, e eles acompanham a troca (GRAF-14)', async () => {
       responder(RANKING_COMPLETO);
 
-      render(<RankingView />);
+      await render(<RankingView />);
       await screen.findByText('Top 3 rotas mais lucrativas');
 
       const { dataInicial, dataFinal } = mesAtual();
       expect(screen.getByText(`Gráficos ${dataInicial} a ${dataFinal}`)).toBeOnTheScreen();
 
-      fireEvent.press(screen.getByRole('button', { name: 'Mês anterior' }));
+      await fireEvent.press(screen.getByRole('button', { name: 'Mês anterior' }));
 
       expect(screen.queryByText(`Gráficos ${dataInicial} a ${dataFinal}`)).not.toBeOnTheScreen();
       expect(screen.getByText(/^Gráficos \d{4}-\d{2}-01 a /)).toBeOnTheScreen();
@@ -364,7 +364,7 @@ describe('RankingView', () => {
       usarPerfil(true, false);
       responder(RANKING_COMPLETO);
 
-      render(<RankingView />);
+      await render(<RankingView />);
       await screen.findByText('Top 3 rotas mais lucrativas');
 
       expect(screen.queryByText(/^Gráficos /)).not.toBeOnTheScreen();
@@ -373,10 +373,10 @@ describe('RankingView', () => {
     it('erro ao atualizar os gráficos aparece no Snackbar da tela', async () => {
       responder(RANKING_COMPLETO);
 
-      render(<RankingView />);
+      await render(<RankingView />);
       await screen.findByText('Top 3 rotas mais lucrativas');
 
-      fireEvent.press(screen.getByText(/^Gráficos /));
+      await fireEvent.press(screen.getByText(/^Gráficos /));
 
       expect(await screen.findByText('Sem conexão.')).toBeOnTheScreen();
     });
@@ -386,13 +386,13 @@ describe('RankingView', () => {
     it('Admin e Financeiro veem o Exportar com o período do filtro, e ele acompanha a troca (EXP-01)', async () => {
       responder(RANKING_COMPLETO);
 
-      render(<RankingView />);
+      await render(<RankingView />);
       await screen.findByText('Top 3 rotas mais lucrativas');
 
       const { dataInicial, dataFinal } = mesAtual();
       expect(screen.getByText(`Exportar ${dataInicial} a ${dataFinal}`)).toBeOnTheScreen();
 
-      fireEvent.press(screen.getByRole('button', { name: 'Mês anterior' }));
+      await fireEvent.press(screen.getByRole('button', { name: 'Mês anterior' }));
 
       expect(screen.queryByText(`Exportar ${dataInicial} a ${dataFinal}`)).not.toBeOnTheScreen();
       expect(screen.getByText(/^Exportar \d{4}-\d{2}-01 a /)).toBeOnTheScreen();
@@ -401,7 +401,7 @@ describe('RankingView', () => {
     it('o Exportar fica logo abaixo do FiltroPeriodo, antes dos gráficos (EXP-01)', async () => {
       responder(RANKING_COMPLETO);
 
-      render(<RankingView />);
+      await render(<RankingView />);
       await screen.findByText('Top 3 rotas mais lucrativas');
 
       const arvore = JSON.stringify(screen.toJSON());
@@ -414,7 +414,7 @@ describe('RankingView', () => {
       usarPerfil(true, false);
       responder(RANKING_COMPLETO);
 
-      render(<RankingView />);
+      await render(<RankingView />);
       await screen.findByText('Top 3 rotas mais lucrativas');
 
       expect(screen.queryByText(/^Exportar /)).not.toBeOnTheScreen();
@@ -423,10 +423,10 @@ describe('RankingView', () => {
     it('o resultado da exportação aparece no Snackbar da tela (EXP-15)', async () => {
       responder(RANKING_COMPLETO);
 
-      render(<RankingView />);
+      await render(<RankingView />);
       await screen.findByText('Top 3 rotas mais lucrativas');
 
-      fireEvent.press(screen.getByText(/^Exportar /));
+      await fireEvent.press(screen.getByText(/^Exportar /));
 
       expect(await screen.findByText('Relatório gerado.')).toBeOnTheScreen();
     });

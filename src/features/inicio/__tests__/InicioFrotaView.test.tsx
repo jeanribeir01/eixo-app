@@ -35,7 +35,7 @@ beforeEach(() => {
 
 async function renderPronto(resumo = resumoFrota()) {
   mockBuscar.mockResolvedValue({ ok: true, data: resumo });
-  render(<InicioFrotaView />);
+  await render(<InicioFrotaView />);
   await screen.findByText('Viagens em andamento');
 }
 
@@ -47,7 +47,7 @@ describe('InicioFrotaView', () => {
     expect(screen.getByText('RTA4B21 · Campinas → Belo Horizonte')).toBeOnTheScreen();
     expect(screen.getByText(/^Carlos Almeida · saiu /)).toBeOnTheScreen();
 
-    fireEvent.press(screen.getByRole('button', { name: 'Viagens em andamento: 1 na estrada. Ver viagens' }));
+    await fireEvent.press(screen.getByRole('button', { name: 'Viagens em andamento: 1 na estrada. Ver viagens' }));
     expect(mockPush).toHaveBeenCalledWith('/viagens');
   });
 
@@ -60,7 +60,7 @@ describe('InicioFrotaView', () => {
   it('contagem da frota por status; cada número abre Veículos', async () => {
     await renderPronto();
 
-    fireEvent.press(screen.getByRole('button', { name: '3 Disponíveis. Ver veículos' }));
+    await fireEvent.press(screen.getByRole('button', { name: '3 Disponíveis. Ver veículos' }));
     expect(screen.getByRole('button', { name: '2 Em viagem. Ver veículos' })).toBeOnTheScreen();
     expect(screen.getByRole('button', { name: '1 Oficina. Ver veículos' })).toBeOnTheScreen();
     expect(mockPush).toHaveBeenCalledWith('/frota/veiculos');
@@ -69,14 +69,14 @@ describe('InicioFrotaView', () => {
   it('pede atenção: revisão pendente leva para Revisões de viagens', async () => {
     await renderPronto();
 
-    fireEvent.press(screen.getByRole('button', { name: '1 viagem para revisar' }));
+    await fireEvent.press(screen.getByRole('button', { name: '1 viagem para revisar' }));
 
     expect(mockPush).toHaveBeenCalledWith('/viagens/revisoes');
   });
 
   it('erro: mensagem e "Tentar novamente"', async () => {
     mockBuscar.mockResolvedValue({ ok: false, mensagem: 'Não foi possível carregar o início. Tente novamente.' });
-    render(<InicioFrotaView />);
+    await render(<InicioFrotaView />);
 
     expect(await screen.findByText('Não foi possível carregar o início. Tente novamente.')).toBeOnTheScreen();
     expect(screen.getByRole('button', { name: 'Tentar novamente' })).toBeOnTheScreen();
