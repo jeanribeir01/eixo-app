@@ -47,6 +47,8 @@ function divida(sobrescrever: Partial<Divida> = {}): Divida {
     valorQuitacaoCentavos: null,
     dataVencimentoPrimeira: '2026-01-15',
     parcelasPagas: 2,
+    saldoPendenteCentavos: 6900000,
+    proximaParcela: { numero: 3, dataVencimento: '2026-03-15', valorCentavos: 150000 },
     ativa: true,
     ...sobrescrever,
   };
@@ -65,19 +67,22 @@ describe('DividasListView (EIX-50)', () => {
     expect(screen.getByLabelText('Carregando dívidas')).toBeOnTheScreen();
   });
 
-  it('mostra descrição, total e parcelas pagas de cada dívida', async () => {
+  it('mostra descrição, saldo pendente, parcelas pagas e a próxima parcela de cada dívida', async () => {
     mockListar.mockResolvedValue({ ok: true, data: [divida()] });
     await render(<DividasListView />);
 
-    expect(await screen.findByText('Financiamento do caminhão')).toBeOnTheScreen();
-    expect(screen.getByText('R$ 72.000,00')).toBeOnTheScreen();
-    expect(screen.getByText('2 de 48 parcelas pagas')).toBeOnTheScreen();
+    expect(await screen.findByText('Ativas · 1')).toBeOnTheScreen();
+    // A descrição aparece na linha e no próximo vencimento do cartão.
+    expect(screen.getAllByText('Financiamento do caminhão')).toHaveLength(2);
+    // O saldo aparece no cartão de resumo e na linha da dívida.
+    expect(screen.getAllByText('R$ 69.000,00')).toHaveLength(2);
+    expect(screen.getByText('2 de 48 pagas · venceu 15/03')).toBeOnTheScreen();
   });
 
   it('título no header nativo: a tela não repete "Dívidas" nem "Eixo Certo" (NAV-02)', async () => {
     mockListar.mockResolvedValue({ ok: true, data: [divida()] });
     await render(<DividasListView />);
-    await screen.findByText('Financiamento do caminhão');
+    await screen.findByText('Ativas · 1');
 
     expect(screen.queryByText('Dívidas')).not.toBeOnTheScreen();
     expect(screen.queryByText('Eixo Certo')).not.toBeOnTheScreen();
@@ -89,7 +94,7 @@ describe('DividasListView (EIX-50)', () => {
     await render(<DividasListView />);
 
     await fireEvent.press(
-      await screen.findByRole('button', { name: 'Financiamento do caminhão, total R$ 72.000,00, 2 de 48 parcelas pagas' }),
+      await screen.findByRole('button', { name: 'Financiamento do caminhão, falta pagar R$ 69.000,00, 2 de 48 parcelas pagas' }),
     );
 
     expect(mockPush).toHaveBeenCalledWith('/dividas/div-1');
@@ -107,7 +112,7 @@ describe('DividasListView (EIX-50)', () => {
   it('a lista reserva o espaço do FAB no fim, para ele não cobrir a última dívida', async () => {
     mockListar.mockResolvedValue({ ok: true, data: [divida()] });
     await render(<DividasListView />);
-    await screen.findByText('Financiamento do caminhão');
+    await screen.findByText('Ativas · 1');
 
     expect(StyleSheet.flatten(porTipo(FlatList).props.contentContainerStyle)).toMatchObject({
       paddingBottom: FAB_ALTURA_RESERVADA,
@@ -132,7 +137,7 @@ describe('DividasListView (EIX-50)', () => {
     await act(async () => await fireEvent.press(screen.getByRole('button', { name: 'Tentar novamente' })));
 
     expect(mockListar).toHaveBeenCalledTimes(2);
-    expect(screen.getByText('Financiamento do caminhão')).toBeOnTheScreen();
+    expect(screen.getByText('Ativas · 1')).toBeOnTheScreen();
   });
 });
 
@@ -150,7 +155,7 @@ describe('DividasListView — tablet (EIX-94)', () => {
   it('412: nada muda, o respiro lateral continua no Screen e a lista não ganha coluna', async () => {
     mockListar.mockResolvedValue({ ok: true, data: [divida()] });
     await render(<DividasListView />);
-    await screen.findByText('Financiamento do caminhão');
+    await screen.findByText('Ativas · 1');
 
     expect(estiloDoConteudo()).toMatchObject({ paddingHorizontal: spacing.base });
     expect(estiloDaLista()?.maxWidth).toBeUndefined();
@@ -160,11 +165,60 @@ describe('DividasListView — tablet (EIX-94)', () => {
     mockLargura(800);
     mockListar.mockResolvedValue({ ok: true, data: [divida()] });
     await render(<DividasListView />);
-    await screen.findByText('Financiamento do caminhão');
+    await screen.findByText('Ativas · 1');
 
     expect(estiloDoConteudo().maxWidth).toBeUndefined();
     expect(estiloDoConteudo().paddingHorizontal).toBeUndefined();
     expect(estiloDaLista()).toMatchObject({ maxWidth: 720, alignSelf: 'center' });
     expect(screen.queryByTestId('screen-coluna')).toBeNull();
   });
+
+describe('DividasListView: resumo no topo', () => {
+  it('soma o saldo das dívidas ativas e mostra o próximo vencimento entre todas', async () => {
+    mockListar.mockResolvedValue({
+      ok: true,
+      data: [
+        divida({ proximaParcela: { numero: 3, dataVencimento: '2099-03-15', valorCentavos: 150000 } }),
+        divida({
+          id: 'div-2',
+          descricao: 'Seguro da frota',
+          quantidadeParcelas: 12,
+          parcelasPagas: 0,
+          saldoPendenteCentavos: 960000,
+          proximaParcela: { numero: 1, dataVencimento: '2099-01-10', valorCentavos: 80000 },
+        }),
+      ],
+    });
+    await render(<DividasListView />);
+
+    expect(await screen.findByText('Saldo pendente')).toBeOnTheScreen();
+    expect(screen.getByText('R$ 78.600,00')).toBeOnTheScreen();
+    expect(screen.getByText('58 parcelas em aberto em 2 dívidas')).toBeOnTheScreen();
+    expect(screen.getByText('Próximo vencimento')).toBeOnTheScreen();
+    expect(screen.getAllByText('Seguro da frota').length).toBeGreaterThan(0);
+    expect(screen.getByText('Vence 10/01 · R$ 800,00')).toBeOnTheScreen();
+    expect(screen.queryByText('Em atraso')).not.toBeOnTheScreen();
+    expect(screen.getByText('Ativas · 2')).toBeOnTheScreen();
+  });
+
+  it('parcela vencida e não paga aparece como "Em atraso"', async () => {
+    mockListar.mockResolvedValue({ ok: true, data: [divida()] });
+    await render(<DividasListView />);
+
+    expect(await screen.findByText('Em atraso')).toBeOnTheScreen();
+    expect(screen.getByText('Venceu 15/03 · R$ 1.500,00')).toBeOnTheScreen();
+  });
+
+  it('dívida quitada mostra o selo no lugar do valor e fica fora do próximo vencimento', async () => {
+    mockListar.mockResolvedValue({
+      ok: true,
+      data: [divida({ parcelasPagas: 48, saldoPendenteCentavos: 0, proximaParcela: null })],
+    });
+    await render(<DividasListView />);
+
+    expect(await screen.findByText('Quitada')).toBeOnTheScreen();
+    expect(screen.getByText('Quitada · 48 de 48 pagas')).toBeOnTheScreen();
+    expect(screen.queryByText('Próximo vencimento')).not.toBeOnTheScreen();
+  });
+});
 });

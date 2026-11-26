@@ -116,7 +116,7 @@ describe('criarDivida', () => {
 });
 
 describe('listarDividas', () => {
-  it('busca só as ativas e devolve soma total, parcelas pagas e quantidade em centavos inteiros', async () => {
+  it('busca só as ativas e devolve soma total, parcelas pagas, saldo pendente e próxima parcela em centavos', async () => {
     const builder = responder(ok([linhaDivida()]));
 
     const resultado = await listarDividas();
@@ -136,9 +136,29 @@ describe('listarDividas', () => {
           valorQuitacaoCentavos: null,
           dataVencimentoPrimeira: '2026-01-15',
           parcelasPagas: 1,
+          // As duas pendentes, somadas pelo valor de cada uma; a próxima é a de menor vencimento.
+          saldoPendenteCentavos: 3998,
+          proximaParcela: { numero: 2, dataVencimento: '2026-02-15', valorCentavos: 1999 },
           ativa: true,
         },
       ],
+    });
+  });
+
+  it('dívida quitada: saldo pendente zero e sem próxima parcela', async () => {
+    const pagas = linhaDivida().movimentacao.map((parcela) => ({
+      ...parcela,
+      data_pagamento: parcela.data_vencimento,
+      status_pagamento: 'Pago',
+    }));
+    responder(ok([linhaDivida({ movimentacao: pagas })]));
+
+    const resultado = await listarDividas();
+
+    expect(resultado.ok && resultado.data[0]).toMatchObject({
+      parcelasPagas: 3,
+      saldoPendenteCentavos: 0,
+      proximaParcela: null,
     });
   });
 
