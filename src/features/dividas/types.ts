@@ -16,6 +16,11 @@ export type Divida = {
   valorQuitacaoCentavos: number | null;
   dataVencimentoPrimeira: LinhaDivida['data_vencimento_primeira'];
   parcelasPagas: number;
+  // Soma das parcelas ainda pendentes, tirada das próprias parcelas (e não de quantidade × valor), para
+  // bater com o caixa mesmo se uma parcela tiver centavos de ajuste.
+  saldoPendenteCentavos: number;
+  // A pendente de vencimento mais próximo; null quando a dívida está quitada.
+  proximaParcela: Pick<Parcela, 'numero' | 'dataVencimento' | 'valorCentavos'> | null;
   ativa: LinhaDivida['ativa'];
 };
 

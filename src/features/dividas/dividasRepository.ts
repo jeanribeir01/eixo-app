@@ -68,6 +68,10 @@ function paraDividaDetalhe(linha: z.infer<typeof linhaSchema>): DividaDetalhe {
       dataPagamento: parcela.data_pagamento,
     }));
 
+  const pendentes = parcelas.filter((parcela) => parcela.status === 'Pendente');
+  // Já ordenadas por vencimento: a primeira pendente é a próxima a pagar.
+  const proxima = pendentes[0];
+
   return {
     id: linha.id,
     descricao: linha.descricao,
@@ -78,7 +82,11 @@ function paraDividaDetalhe(linha: z.infer<typeof linhaSchema>): DividaDetalhe {
     valorQuitacaoCentavos:
       linha.valor_quitacao_antecipada === null ? null : reaisParaCentavos(linha.valor_quitacao_antecipada),
     dataVencimentoPrimeira: linha.data_vencimento_primeira,
-    parcelasPagas: parcelas.filter((parcela) => parcela.status === 'Pago').length,
+    parcelasPagas: parcelas.length - pendentes.length,
+    saldoPendenteCentavos: pendentes.reduce((soma, parcela) => soma + parcela.valorCentavos, 0),
+    proximaParcela: proxima
+      ? { numero: proxima.numero, dataVencimento: proxima.dataVencimento, valorCentavos: proxima.valorCentavos }
+      : null,
     ativa: linha.ativa,
     parcelas,
   };

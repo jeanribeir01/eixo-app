@@ -7,7 +7,7 @@ import { spacing } from '@/ui';
 
 import { DividaDetalheView } from '../components/DividaDetalheView';
 import { buscarDivida } from '../dividasRepository';
-import type { DividaDetalhe } from '../types';
+import type { DividaDetalhe, Parcela } from '../types';
 
 // Largura da janela controlada pelo teste: 412 é celular, 800 é tablet (EIX-94).
 jest.mock('react-native/Libraries/Utilities/useWindowDimensions', () => ({
@@ -35,6 +35,8 @@ const detalhe: DividaDetalhe = {
   valorQuitacaoCentavos: null,
   dataVencimentoPrimeira: '2026-01-15',
   parcelasPagas: 1,
+  saldoPendenteCentavos: 300000,
+  proximaParcela: { numero: 2, dataVencimento: '2026-02-15', valorCentavos: 150000 },
   ativa: true,
   // O repositório já devolve as parcelas ordenadas e numeradas.
   parcelas: [
@@ -89,10 +91,10 @@ describe('DividaDetalheView (EIX-50)', () => {
     mockBuscar.mockResolvedValue({ ok: true, data: detalhe });
     await render(<DividaDetalheView id="div-1" />);
 
-    expect(await screen.findByText('Parcela 1')).toBeOnTheScreen();
-    expect(screen.getByText('Vencimento 15/01/2026 · Pago')).toBeOnTheScreen();
-    expect(screen.getByText('Parcela 3')).toBeOnTheScreen();
-    expect(screen.getByText('Vencimento 15/03/2026 · Pendente')).toBeOnTheScreen();
+    expect(await screen.findByText('Parcela 1 de 3')).toBeOnTheScreen();
+    expect(screen.getByText('Paga em 14/01/2026')).toBeOnTheScreen();
+    expect(screen.getByText('Parcela 3 de 3')).toBeOnTheScreen();
+    expect(screen.getByText('Venceu em 15/03/2026 · em atraso')).toBeOnTheScreen();
   });
 
   it('o título "Dívida" fica no header; a tela não o repete', async () => {
@@ -148,6 +150,43 @@ describe('DividaDetalheView — tablet (EIX-94)', () => {
     expect(estiloDoConteudo().paddingHorizontal).toBeUndefined();
     expect(estiloDaLista()).toMatchObject({ maxWidth: 720, alignSelf: 'center' });
     // O cartão da dívida é o cabeçalho da lista: fica na mesma coluna das parcelas.
-    expect(screen.getByText('Parcelas geradas')).toBeOnTheScreen();
+    expect(screen.getByText('Em aberto · 2')).toBeOnTheScreen();
   });
+
+describe('DividaDetalheView: saldo e grupos de parcelas', () => {
+  it('mostra o saldo pendente e separa as parcelas em aberto das pagas', async () => {
+    mockBuscar.mockResolvedValue({ ok: true, data: detalhe });
+    await render(<DividaDetalheView id="div-1" />);
+
+    expect(await screen.findByText('Saldo pendente')).toBeOnTheScreen();
+    expect(screen.getByText('R$ 3.000,00')).toBeOnTheScreen();
+    expect(screen.getByText('2 de 3 parcelas em aberto · R$ 1.500,00 por parcela')).toBeOnTheScreen();
+    expect(screen.getByText('Em aberto · 2')).toBeOnTheScreen();
+    expect(screen.getByText('Pagas · 1')).toBeOnTheScreen();
+    expect(screen.getByText('Parcela 2 de 3 · próxima')).toBeOnTheScreen();
+  });
+
+  it('parcela que ainda vai vencer diz "Vence em", com o ícone de relógio', async () => {
+    const futura: Parcela = { id: 'p9', numero: 1, dataVencimento: '2099-05-10', valorCentavos: 150000, status: 'Pendente', dataPagamento: null };
+    mockBuscar.mockResolvedValue({ ok: true, data: { ...detalhe, quantidadeParcelas: 1, parcelasPagas: 0, parcelas: [futura] } });
+    await render(<DividaDetalheView id="div-1" />);
+
+    expect(await screen.findByText('Vence em 10/05/2099')).toBeOnTheScreen();
+    expect(screen.getByTestId('icone-aguardando', { includeHiddenElements: true })).toBeOnTheScreen();
+    expect(screen.queryByText('Pagas · 0')).not.toBeOnTheScreen();
+  });
+
+  it('dívida quitada: o cartão diz "Dívida quitada" e não há grupo em aberto', async () => {
+    const pagas = detalhe.parcelas.map((parcela) => ({ ...parcela, status: 'Pago' as const, dataPagamento: parcela.dataVencimento }));
+    mockBuscar.mockResolvedValue({
+      ok: true,
+      data: { ...detalhe, parcelasPagas: 3, saldoPendenteCentavos: 0, proximaParcela: null, parcelas: pagas },
+    });
+    await render(<DividaDetalheView id="div-1" />);
+
+    expect(await screen.findByText('Dívida quitada')).toBeOnTheScreen();
+    expect(screen.getByText('Pagas · 3')).toBeOnTheScreen();
+    expect(screen.queryByText(/^Em aberto/)).not.toBeOnTheScreen();
+  });
+});
 });
