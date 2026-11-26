@@ -49,14 +49,14 @@ async function renderForm() {
 }
 
 async function salvar() {
-  await fireEvent.press(screen.getByRole('button', { name: 'Salvar' }));
+  await fireEvent.press(screen.getByRole('button', { name: 'Criar dívida e parcelas' }));
 }
 
 async function preencherValido() {
   await fireEvent.changeText(screen.getByLabelText('Descrição'), 'Financiamento do caminhão');
   await fireEvent.changeText(screen.getByLabelText('Quantidade de parcelas'), '12');
-  await fireEvent.changeText(screen.getByLabelText('Valor da parcela (R$)'), '350000');
-  await fireEvent.changeText(screen.getByLabelText('Vencimento da 1ª parcela'), '15012027');
+  await fireEvent.changeText(screen.getByLabelText('Valor por parcela'), '350000');
+  await fireEvent.changeText(screen.getByLabelText('Primeiro vencimento'), '15012027');
 }
 
 describe('DividaFormView — campos (EIX-50)', () => {
@@ -84,18 +84,18 @@ describe('DividaFormView — campos (EIX-50)', () => {
     expect(screen.queryByRole('button', { name: 'Frete' })).not.toBeOnTheScreen();
   });
 
-  it('Soma total é somente leitura e acompanha quantidade × valor da parcela', async () => {
+  it('o resumo mostra quantidade × valor da parcela e a soma total, atualizados enquanto digita', async () => {
     await renderForm();
-    const soma = screen.getByLabelText('Soma total');
-    expect(soma).toHaveProp('editable', false);
 
     await fireEvent.changeText(screen.getByLabelText('Quantidade de parcelas'), '12');
-    await fireEvent.changeText(screen.getByLabelText('Valor da parcela (R$)'), '350000');
+    await fireEvent.changeText(screen.getByLabelText('Valor por parcela'), '350000');
 
-    expect(screen.getByLabelText('Soma total')).toHaveDisplayValue('R$ 42.000,00');
+    expect(screen.getByText('Resumo do parcelamento')).toBeOnTheScreen();
+    expect(screen.getByText('12 × R$ 3.500,00')).toBeOnTheScreen();
+    expect(screen.getByText('Soma total: R$ 42.000,00')).toBeOnTheScreen();
 
     await fireEvent.changeText(screen.getByLabelText('Quantidade de parcelas'), '24');
-    expect(screen.getByLabelText('Soma total')).toHaveDisplayValue('R$ 84.000,00');
+    expect(screen.getByText('Soma total: R$ 84.000,00')).toBeOnTheScreen();
   });
 });
 
@@ -111,6 +111,18 @@ describe('DividaFormView — validação (EIX-50)', () => {
     expect(screen.getByText('Informe um valor maior que zero.')).toBeOnTheScreen();
     expect(screen.getByText('Data inválida. Use DD/MM/AAAA.')).toBeOnTheScreen();
     expect(mockCriar).not.toHaveBeenCalled();
+  });
+
+  it('a dica "De 1 a 120 parcelas." dá lugar ao erro quando ele aparece', async () => {
+    await renderForm();
+    expect(screen.getByText('De 1 a 120 parcelas.')).toBeOnTheScreen();
+
+    await preencherValido();
+    await fireEvent.changeText(screen.getByLabelText('Quantidade de parcelas'), '121');
+    await salvar();
+
+    expect(screen.getByText('O máximo é 120 parcelas.')).toBeOnTheScreen();
+    expect(screen.queryByText('De 1 a 120 parcelas.')).not.toBeOnTheScreen();
   });
 
   it('mais de 120 parcelas → "O máximo é 120 parcelas."', async () => {
@@ -188,7 +200,7 @@ describe('DividaFormView — salvar (EIX-50)', () => {
     await act(async () => salvar());
     await salvar();
 
-    expect(screen.getByRole('button', { name: 'Salvar' })).toBeBusy();
+    expect(screen.getByRole('button', { name: 'Criar dívida e parcelas' })).toBeBusy();
     expect(mockCriar).toHaveBeenCalledTimes(1);
   });
 
@@ -201,7 +213,7 @@ describe('DividaFormView — salvar (EIX-50)', () => {
 
     expect(screen.getByRole('alert')).toHaveTextContent('Categoria ou forma de pagamento inválida. Escolha outra.');
     expect(screen.getByLabelText('Descrição')).toHaveDisplayValue('Financiamento do caminhão');
-    expect(screen.getByRole('button', { name: 'Salvar' })).toBeEnabled();
+    expect(screen.getByRole('button', { name: 'Criar dívida e parcelas' })).toBeEnabled();
     expect(mockBack).not.toHaveBeenCalled();
   });
 });
