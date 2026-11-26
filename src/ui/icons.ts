@@ -22,6 +22,7 @@ import { GearSixIcon } from 'phosphor-react-native/src/icons/GearSix';
 import { HouseIcon } from 'phosphor-react-native/src/icons/House';
 import { InfoIcon } from 'phosphor-react-native/src/icons/Info';
 import { LockSimpleIcon } from 'phosphor-react-native/src/icons/LockSimple';
+import { MagnifyingGlassIcon } from 'phosphor-react-native/src/icons/MagnifyingGlass';
 import { MapTrifoldIcon } from 'phosphor-react-native/src/icons/MapTrifold';
 import { PathIcon } from 'phosphor-react-native/src/icons/Path';
 import { PlusIcon } from 'phosphor-react-native/src/icons/Plus';
@@ -73,6 +74,7 @@ export const icons = {
   maisOpcoes: DotsThreeVerticalIcon,
   calendario: CalendarBlankIcon,
   limpar: XIcon,
+  buscar: MagnifyingGlassIcon,
   alerta: WarningIcon,
   // Estado "tudo em dia" (Início sem nada pedindo atenção).
   sucesso: CheckCircleIcon,
