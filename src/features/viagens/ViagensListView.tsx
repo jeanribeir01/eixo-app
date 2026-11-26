@@ -1,21 +1,23 @@
-import { useCallback, useState } from 'react';
+import { memo, useCallback, useMemo, useState } from 'react';
 import { useRouter } from 'expo-router';
-import { ActivityIndicator, FlatList, RefreshControl, StyleSheet, View } from 'react-native';
+import { FlatList, RefreshControl, StyleSheet, View, type ListRenderItemInfo } from 'react-native';
 
 import { useProfile } from '@/features/auth/profileStore';
+import { dataLocalISO, horaLocal, isoParaDataBR } from '@/lib/datas';
 import { useDadosDaTela } from '@/lib/useDadosDaTela';
 import {
+  Aviso,
   Badge,
-  Button,
-  Card,
   ChipFiltro,
   Column,
   EmptyState,
   FAB,
   FAB_ALTURA_RESERVADA,
   LinhaDeFiltros,
+  ListItem,
   Screen,
   ScreenColumn,
+  Skeleton,
   Snackbar,
   Text,
   colors,
@@ -24,11 +26,11 @@ import {
   type TabOption,
 } from '@/ui';
 
-import { calcularKmRodado, distanciaUltrapassaEstimativa, formatarHodometro, formatarKm } from './calculo';
+import { calcularKmRodado, distanciaUltrapassaEstimativa, formatarKm } from './calculo';
 import { IndicadorSincronizacao } from './IndicadorSincronizacao';
 import { contarRevisoesPendentes } from './revisoesRepository';
 import { useSyncStore } from './syncStore';
-import { rotuloStatusViagem, type StatusViagem, type ViagemDetalhada } from './types';
+import type { StatusViagem, ViagemDetalhada } from './types';
 import { listarViagens } from './viagensRepository';
 
 type FiltroStatus = StatusViagem | 'Todos';
@@ -88,30 +90,26 @@ export function ViagensListView({ underHeader = false }: ViagensListViewProps) {
     await Promise.all([tela.puxarParaAtualizar(), revisoes.puxarParaAtualizar()]);
   }, [tela, revisoes]);
 
+  // Agrupadas por status, na ordem em que o gestor age: primeiro o que está na estrada.
+  const linhas = useMemo(() => agruparPorStatus(tela.dados ?? []), [tela.dados]);
+
   const cabecalho = (
     <Column gap="lg">
       <IndicadorSincronizacao />
 
       {ehAdminOuGestor && revisoesPendentes > 0 && (
-        <Card>
-          <Column gap="sm">
-            <Text variant="body" weight="medium">
-              {revisoesPendentes === 1
-                ? '1 viagem precisa de revisão'
-                : `${revisoesPendentes} viagens precisam de revisão`}
-            </Text>
-            <Text variant="bodySm" tone="muted">
-              O servidor recusou uma operação e o dado local foi preservado para você decidir.
-            </Text>
-            <View style={styles.acaoRevisao}>
-              <Button
-                variant="ghost"
-                label="Ver revisões"
-                onPress={() => router.push('/viagens/revisoes')}
-              />
-            </View>
-          </Column>
-        </Card>
+        <Aviso
+          tom="warning"
+          icone="alerta"
+          titulo={
+            revisoesPendentes === 1
+              ? '1 viagem precisa de revisão'
+              : `${revisoesPendentes} viagens precisam de revisão`
+          }
+          acao={{ label: 'Ver revisões', onPress: () => router.push('/viagens/revisoes') }}
+        >
+          O envio de um registro foi recusado. O que o motorista registrou ficou guardado para você decidir.
+        </Aviso>
       )}
     </Column>
   );
@@ -155,9 +153,11 @@ export function ViagensListView({ underHeader = false }: ViagensListViewProps) {
         </LinhaDeFiltros>
 
         {tela.status === 'carregando' && (
-          <View style={styles.centro}>
-            <ActivityIndicator size="large" color={colors.accent} accessibilityLabel="Carregando viagens" />
-          </View>
+          <Column gap="sm">
+            <Skeleton height="xxl" accessibilityLabel="Carregando viagens" />
+            <Skeleton height="xxl" />
+            <Skeleton height="xxl" />
+          </Column>
         )}
 
         {tela.status === 'erro' && (
@@ -173,11 +173,12 @@ export function ViagensListView({ underHeader = false }: ViagensListViewProps) {
 
       {tela.status === 'pronto' && (
         <FlatList
-          data={tela.dados ?? []}
-          keyExtractor={(item) => item.id}
+          data={linhas}
+          keyExtractor={chaveDaLinha}
           style={styles.lista}
           contentContainerStyle={[coluna, styles.conteudoLista]}
           ListHeaderComponent={cabecalho}
+          ListHeaderComponentStyle={styles.cabecalhoLista}
           refreshControl={
             <RefreshControl
               refreshing={tela.atualizando || sincronizando}
@@ -199,96 +200,107 @@ export function ViagensListView({ underHeader = false }: ViagensListViewProps) {
               onAction={filtroStatus !== 'Todos' ? () => setFiltroStatus('Todos') : undefined}
             />
           }
-          renderItem={({ item }) => <CartaoViagem viagem={item} />}
+          renderItem={renderLinha}
         />
       )}
     </Screen>
   );
 }
 
-function CartaoViagem({ viagem }: { viagem: ViagemDetalhada }) {
-  const router = useRouter();
-  // Passo 3.1: km_rodado ?? (hodometro_final - hodometro_inicial)
-  const kmRodado = calcularKmRodado(viagem);
-  // Passo 3.3: aviso visual se ultrapassar muito a estimativa da rota
-  const distanciaExcessiva = distanciaUltrapassaEstimativa(
-    kmRodado,
-    viagem.rota?.distancia_estimada_km,
-  );
+// A lista vira cabeçalhos e linhas numa FlatList só, como Movimentações por dia: com 90 viagens
+// concluídas, um bloco único por grupo desenharia todas de uma vez, sem a virtualização da lista.
+type Linha =
+  | { tipo: 'grupo'; id: string; rotulo: string }
+  | { tipo: 'viagem'; id: string; viagem: ViagemDetalhada };
 
-  return (
-    <Card>
-      <Column gap="sm">
-        <View style={styles.linhaTopo}>
-          <Text variant="body" weight="medium">
-            {viagem.veiculo ? `${viagem.veiculo.placa} • ${viagem.veiculo.modelo}` : 'Veículo'}
-          </Text>
-          <View style={styles.badges}>
-            {/* Verde/vermelho são só para entrada/saída financeira (CLAUDE.md §8): o status da
-                viagem é informado pelo rótulo, sempre no tom neutro. */}
-            {viagem.em_revisao && <Badge label="Em revisão" tone="neutral" />}
-            <Badge label={rotuloStatusViagem[viagem.status]} tone="neutral" />
-          </View>
-        </View>
+const ORDEM_DOS_GRUPOS: { status: StatusViagem; rotulo: string }[] = [
+  { status: 'EmAndamento', rotulo: 'Na estrada' },
+  { status: 'Finalizada', rotulo: 'Concluídas' },
+  { status: 'Cancelada', rotulo: 'Canceladas' },
+];
 
-        {viagem.rota && (
-          <Text variant="bodySm" tone="body">
-            {`${viagem.rota.cidade_origem}/${viagem.rota.uf_origem} → ${viagem.rota.cidade_destino}/${viagem.rota.uf_destino}`}
-            {viagem.rota.distancia_estimada_km
-              ? ` (est. ${viagem.rota.distancia_estimada_km} km)`
-              : ''}
-          </Text>
-        )}
+function agruparPorStatus(viagens: ViagemDetalhada[]): Linha[] {
+  const linhas: Linha[] = [];
+  for (const { status, rotulo } of ORDEM_DOS_GRUPOS) {
+    const doGrupo = viagens.filter((viagem) => viagem.status === status);
+    if (doGrupo.length === 0) continue;
+    linhas.push({ tipo: 'grupo', id: `grupo-${status}`, rotulo: `${rotulo} · ${doGrupo.length}` });
+    for (const viagem of doGrupo) linhas.push({ tipo: 'viagem', id: viagem.id, viagem });
+  }
+  return linhas;
+}
 
-        {viagem.motorista && (
-          <Text variant="bodySm" tone="muted">
-            {`Motorista: ${viagem.motorista.nome}`}
-          </Text>
-        )}
+function chaveDaLinha(linha: Linha): string {
+  return linha.id;
+}
 
-        <View style={styles.dadosHodometro}>
-          <Text variant="bodySm" tone="body">
-            {`Início: ${formatarHodometro(viagem.hodometro_inicial)} km`}
-          </Text>
-          {viagem.hodometro_final !== null && (
-            <Text variant="bodySm" tone="body">
-              {`Fim: ${formatarHodometro(viagem.hodometro_final)} km`}
-            </Text>
-          )}
-        </View>
-
-        {kmRodado !== null && (
-          <Text variant="body" weight="medium">
-            {`Distância rodada: ${formatarKm(kmRodado)}`}
-          </Text>
-        )}
-
-        {distanciaExcessiva && (
-          <Badge
-            tone="neutral"
-            label={`Km rodado (${formatarKm(kmRodado)}) acima da rota (${viagem.rota?.distancia_estimada_km} km)`}
-          />
-        )}
-
-        {viagem.em_revisao && (
-          <Text variant="caption" tone="muted">
-            Esta viagem tem uma operação aguardando revisão do gestor.
-          </Text>
-        )}
-
-        {viagem.status === 'EmAndamento' && (
-          <View style={styles.acaoRodape}>
-            <Button
-              variant="ghost"
-              label="Finalizar viagem"
-              onPress={() => router.push(`/viagens/${viagem.id}/fechar`)}
-            />
-          </View>
-        )}
-      </Column>
-    </Card>
+function renderLinha({ item }: ListRenderItemInfo<Linha>) {
+  return item.tipo === 'grupo' ? (
+    <View style={styles.grupo}>
+      <Text weight="semibold" accessibilityRole="header">
+        {item.rotulo}
+      </Text>
+    </View>
+  ) : (
+    <LinhaDaViagem viagem={item.viagem} />
   );
 }
+
+// "22/11" no fuso do aparelho: o banco guarda o instante em UTC.
+function diaLocal(iso: string): string {
+  return isoParaDataBR(dataLocalISO(new Date(iso))).slice(0, 5);
+}
+
+// "Carlos Almeida · saída às 10:00" na estrada; "Carlos Almeida · 21/11 · 432 km" depois de concluída.
+function resumoDaViagem(viagem: ViagemDetalhada): string {
+  const partes: string[] = [];
+  if (viagem.motorista) partes.push(viagem.motorista.nome);
+
+  if (viagem.status === 'EmAndamento' && viagem.data_inicio) {
+    const hoje = dataLocalISO(new Date()) === dataLocalISO(new Date(viagem.data_inicio));
+    partes.push(hoje ? `saída às ${horaLocal(viagem.data_inicio)}` : `saída em ${diaLocal(viagem.data_inicio)}`);
+  } else if (viagem.data_inicio) {
+    partes.push(diaLocal(viagem.data_inicio));
+  }
+
+  const km = calcularKmRodado(viagem);
+  if (viagem.status === 'Finalizada' && km !== null) partes.push(formatarKm(km));
+
+  return partes.join(' · ');
+}
+
+// Uma linha por viagem, no lugar do cartão com seis linhas de texto: placa e trecho no título, quem e
+// quando embaixo. O status vem do grupo; o selo à direita fica só para o que pede atenção.
+// Memoizada: um Snackbar ou o pull-to-refresh não redesenha as linhas que não mudaram (EIX-71).
+const LinhaDaViagem = memo(function LinhaDaViagem({ viagem }: { viagem: ViagemDetalhada }) {
+  const router = useRouter();
+  const placa = viagem.veiculo?.placa ?? 'Veículo';
+  const trecho = viagem.rota ? `${viagem.rota.cidade_origem} → ${viagem.rota.cidade_destino}` : 'Rota não informada';
+  // Passo 3.3: km bem acima da estimativa da rota costuma ser hodômetro digitado errado.
+  const distanciaExcessiva = distanciaUltrapassaEstimativa(calcularKmRodado(viagem), viagem.rota?.distancia_estimada_km);
+  const emAndamento = viagem.status === 'EmAndamento';
+
+  // Verde e vermelho ficam para dinheiro (DESIGN_CYAN): o que pede atenção usa o tom de alerta, sempre
+  // com o texto dizendo o porquê.
+  const selo = viagem.em_revisao ? (
+    <Badge label="Em revisão" tone="warning" />
+  ) : distanciaExcessiva ? (
+    <Badge label="Acima da rota" tone="warning" />
+  ) : undefined;
+
+  return (
+    <ListItem
+      icon={viagem.em_revisao ? 'alerta' : 'viagens'}
+      iconTone={viagem.em_revisao ? 'warning' : 'body'}
+      title={`${placa} · ${trecho}`}
+      subtitle={resumoDaViagem(viagem)}
+      trailing={selo}
+      // Na estrada, tocar na linha leva ao fechamento; a própria tela confirma antes de gravar.
+      onPress={emAndamento ? () => router.push(`/viagens/${viagem.id}/fechar`) : undefined}
+      accessibilityLabel={emAndamento ? `Finalizar viagem ${placa}, ${trecho}` : undefined}
+    />
+  );
+});
 
 const styles = StyleSheet.create({
   lista: {
@@ -297,36 +309,12 @@ const styles = StyleSheet.create({
   // O Screen só reserva o espaço do FAB quando ele mesmo rola; aqui quem rola é a FlatList.
   conteudoLista: {
     paddingBottom: FAB_ALTURA_RESERVADA,
-    gap: spacing.lg,
   },
-  centro: {
-    paddingVertical: spacing.xl,
-    alignItems: 'center',
-    justifyContent: 'center',
+  cabecalhoLista: {
+    paddingBottom: spacing.sm,
   },
-  linhaTopo: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    gap: spacing.sm,
-  },
-  badges: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    justifyContent: 'flex-end',
-    alignItems: 'center',
-    gap: spacing.xs,
-  },
-  dadosHodometro: {
-    flexDirection: 'row',
-    gap: spacing.base,
-    flexWrap: 'wrap',
-  },
-  acaoRodape: {
-    marginTop: spacing.xs,
-    alignSelf: 'flex-start',
-  },
-  acaoRevisao: {
-    alignSelf: 'flex-start',
+  grupo: {
+    paddingTop: spacing.lg,
+    paddingBottom: spacing.xs,
   },
 });
