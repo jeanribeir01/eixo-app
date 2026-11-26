@@ -1,11 +1,10 @@
 import { useEffect, useState } from 'react';
 import { useRouter } from 'expo-router';
-import { ActivityIndicator } from 'react-native';
 import { z } from 'zod';
 
 import { formatarPlaca } from '@/features/veiculos/placa';
 import { listarVeiculosSelecionaveis } from '@/features/veiculos/repository';
-import { Button, CampoData, CampoMoeda, Column, EmptyState, Input, Screen, Select, Snackbar, Tabs, Text, colors } from '@/ui';
+import { Aviso, Button, CampoData, CampoMoeda, Column, EmptyState, Input, Screen, Select, Skeleton, Snackbar, Tabs, Text } from '@/ui';
 
 import { listarFormasPagamentoAtivas, registrarManutencao } from './manutencaoRepository';
 import { manutencaoSchema, valoresIniciais, type ManutencaoFormValues } from './schema';
@@ -117,8 +116,13 @@ export function ManutencaoFormView() {
 
   if (status === 'carregando') {
     return (
-      <Screen align="center" underHeader>
-        <ActivityIndicator size="small" color={colors.accent} accessibilityLabel="Carregando formulário" />
+      <Screen underHeader>
+        {/* O formato do formulário aparece enquanto veículos e formas carregam: sem spinner no vazio. */}
+        <Column gap="lg">
+          <Skeleton height="xxl" accessibilityLabel="Carregando formulário" />
+          <Skeleton height="xxl" />
+          <Skeleton height="xxl" />
+        </Column>
       </Screen>
     );
   }
@@ -147,62 +151,76 @@ export function ManutencaoFormView() {
         )
       }
     >
-      <Column gap="md">
-        <Select
-          label="Veículo"
-          value={valores.veiculoId}
-          options={opcoes.veiculos.map((veiculo) => ({
-            value: veiculo.id,
-            label: `${formatarPlaca(veiculo.placa)} · ${veiculo.marca} ${veiculo.modelo}`,
-          }))}
-          onChange={(id) => alterar('veiculoId', id)}
-          placeholder="Escolha o veículo"
-          error={erros.veiculoId}
-        />
-        <CampoData
-          label="Data da manutenção"
-          value={valores.dataManutencao}
-          onChange={(texto) => alterar('dataManutencao', texto)}
-          error={erros.dataManutencao}
-        />
-        <Input
-          label="Descrição do serviço"
-          placeholder="Ex.: Troca de pneus"
-          value={valores.descricao}
-          onChangeText={(texto) => alterar('descricao', texto)}
-          maxLength={100}
-          error={erros.descricao}
-        />
-        <CampoMoeda
-          label="Valor total"
-          valorCentavos={valores.valorCentavos}
-          onChange={(centavos) => alterar('valorCentavos', centavos)}
-          error={erros.valorCentavos}
-        />
-        <Select
-          label="Forma de pagamento"
-          value={valores.formaPagamentoId}
-          options={opcoes.formas.map((forma) => ({ value: forma.id, label: forma.nome }))}
-          onChange={(id) => alterar('formaPagamentoId', id)}
-          placeholder="Escolha a forma de pagamento"
-          emptyMessage="Nenhuma forma de pagamento ativa."
-          error={erros.formaPagamentoId}
-        />
-        <Column gap="xs">
-          <Text variant="bodySm" tone="body" weight="medium">
-            Status do pagamento
-          </Text>
-          <Tabs
-            accessibilityLabel="Status do pagamento"
-            options={opcoesStatus}
-            value={valores.statusPagamento}
-            onChange={(opcao) => alterar('statusPagamento', opcao as StatusPagamento)}
+      <Column gap="lg">
+        <Text tone="body">Registre o serviço feito no caminhão.</Text>
+
+        <Column gap="md">
+          <Select
+            label="Veículo"
+            value={valores.veiculoId}
+            options={opcoes.veiculos.map((veiculo) => ({
+              value: veiculo.id,
+              label: `${formatarPlaca(veiculo.placa)} · ${veiculo.marca} ${veiculo.modelo}`,
+            }))}
+            onChange={(id) => alterar('veiculoId', id)}
+            placeholder="Escolha o veículo"
+            error={erros.veiculoId}
           />
+          <Input
+            label="Descrição do serviço"
+            icone="manutencoes"
+            placeholder="Ex.: Troca de pneus"
+            value={valores.descricao}
+            onChangeText={(texto) => alterar('descricao', texto)}
+            maxLength={100}
+            error={erros.descricao}
+          />
+          <CampoMoeda
+            label="Valor total"
+            valorCentavos={valores.valorCentavos}
+            onChange={(centavos) => alterar('valorCentavos', centavos)}
+            error={erros.valorCentavos}
+          />
+          <CampoData
+            label="Data da manutenção"
+            value={valores.dataManutencao}
+            onChange={(texto) => alterar('dataManutencao', texto)}
+            error={erros.dataManutencao}
+          />
+          <Select
+            label="Forma de pagamento"
+            value={valores.formaPagamentoId}
+            options={opcoes.formas.map((forma) => ({ value: forma.id, label: forma.nome }))}
+            onChange={(id) => alterar('formaPagamentoId', id)}
+            placeholder="Escolha a forma de pagamento"
+            emptyMessage="Nenhuma forma de pagamento ativa."
+            error={erros.formaPagamentoId}
+          />
+          <Column gap="xs">
+            <Text variant="bodySm" weight="medium">
+              Status do pagamento
+            </Text>
+            <Tabs
+              accessibilityLabel="Status do pagamento"
+              options={opcoesStatus}
+              value={valores.statusPagamento}
+              onChange={(opcao) => alterar('statusPagamento', opcao as StatusPagamento)}
+            />
+          </Column>
+        </Column>
+
+        {/* A RPC faz duas coisas que a pessoa não vê nesta tela (US06-b): avisa antes, não só no Snackbar. */}
+        <Aviso tom="info" icone="manutencoes" titulo="Manutenção e despesa juntas">
+          Ao registrar, o valor entra no caixa como despesa de Manutenção e o veículo fica em manutenção até o
+          serviço ser concluído.
+        </Aviso>
+
+        {/* Um botão preenchido só por tela (DESIGN_CYAN §7); o rótulo diz o que o toque faz. */}
+        <Column gap="sm">
+          <Button label="Registrar manutenção" onPress={handleSalvar} loading={salvando} />
+          <Button label="Cancelar" variant="ghost" disabled={salvando} onPress={() => router.back()} />
         </Column>
       </Column>
-
-      <Button label="Salvar" onPress={handleSalvar} loading={salvando} />
-      <Button label="Cancelar" variant="ghost" onPress={() => router.back()} />
     </Screen>
   );
 }
