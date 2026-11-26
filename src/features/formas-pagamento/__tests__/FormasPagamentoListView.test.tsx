@@ -213,14 +213,25 @@ describe('FormasPagamentoListView — filtros e FAB (LST-01)', () => {
     expect(screen.getByText('Desativada')).toBeOnTheScreen();
   });
 
+  it('com as desativadas à mostra, separa os grupos e explica o interruptor no fim', async () => {
+    await renderComLista();
+    expect(screen.queryByText(/^Desativadas · /)).not.toBeOnTheScreen();
+
+    await fireEvent(screen.getByRole('switch', { name: 'Mostrar desativadas' }), 'valueChange', true);
+
+    expect(screen.getByText(/^Disponíveis · \d+$/)).toBeOnTheScreen();
+    expect(screen.getByText('Desativadas · 1')).toBeOnTheScreen();
+    expect(screen.getByText(/^Desativar uma forma tira ela dos novos lançamentos/)).toBeOnTheScreen();
+  });
+
   it('filtra pela busca e mostra o vazio quando nada bate', async () => {
     await renderComLista();
 
-    await fireEvent.changeText(screen.getByLabelText('Buscar'), 'dinh');
+    await fireEvent.changeText(screen.getByLabelText('Buscar forma de pagamento'), 'dinh');
     expect(screen.getByText('Dinheiro')).toBeOnTheScreen();
     expect(screen.queryByText('Pix')).not.toBeOnTheScreen();
 
-    await fireEvent.changeText(screen.getByLabelText('Buscar'), 'zzz');
+    await fireEvent.changeText(screen.getByLabelText('Buscar forma de pagamento'), 'zzz');
     expect(screen.getByText('Nenhuma forma de pagamento encontrada')).toBeOnTheScreen();
   });
 
@@ -260,6 +271,6 @@ describe('FormasPagamentoListView — tablet (EIX-94)', () => {
     expect(estiloDaLista()).toMatchObject({ maxWidth: 720, alignSelf: 'center' });
     const coluna = screen.getByTestId('screen-coluna');
     expect(StyleSheet.flatten(coluna.props.style)).toMatchObject({ maxWidth: 720, alignSelf: 'center' });
-    expect(within(coluna).getByLabelText('Buscar')).toBeOnTheScreen();
+    expect(within(coluna).getByLabelText('Buscar forma de pagamento')).toBeOnTheScreen();
   });
 });

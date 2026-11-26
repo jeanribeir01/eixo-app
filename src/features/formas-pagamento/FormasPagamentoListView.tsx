@@ -1,6 +1,6 @@
 import { memo, useCallback, useMemo, useState } from 'react';
 import { useRouter } from 'expo-router';
-import { RefreshControl, StyleSheet, type ListRenderItemInfo } from 'react-native';
+import { RefreshControl, StyleSheet, View, type ListRenderItemInfo } from 'react-native';
 
 import { useDadosDaTela } from '@/lib/useDadosDaTela';
 import {
@@ -16,7 +16,9 @@ import {
   Skeleton,
   Snackbar,
   Switch,
+  Text,
   colors,
+  spacing,
   useScreenColumn,
 } from '@/ui';
 
@@ -50,6 +52,7 @@ const FormaPagamentoLinha = memo(function FormaPagamentoLinha({
   const fixa = isFormaFixa(forma.nome);
   return (
     <ListItem
+      icon="formasPagamento"
       title={forma.nome}
       subtitle={subtitulo(forma)}
       // A regra das fixas continua: sem edição e sem switch.
@@ -69,9 +72,27 @@ const FormaPagamentoLinha = memo(function FormaPagamentoLinha({
   );
 });
 
+// Cabeçalhos e formas numa FlatList só, como nas outras listas do redesign.
+type Linha = { tipo: 'grupo'; id: string; rotulo: string } | { tipo: 'forma'; id: string; forma: FormaPagamento };
+
+// Com as desativadas à mostra, elas ficam num grupo próprio, depois das disponíveis.
+function agruparPorSituacao(formas: FormaPagamento[]): Linha[] {
+  const grupos = [
+    { id: 'disponiveis', rotulo: 'Disponíveis', itens: formas.filter((forma) => forma.ativa) },
+    { id: 'desativadas', rotulo: 'Desativadas', itens: formas.filter((forma) => !forma.ativa) },
+  ];
+  const linhas: Linha[] = [];
+  for (const grupo of grupos) {
+    if (grupo.itens.length === 0) continue;
+    linhas.push({ tipo: 'grupo', id: `grupo-${grupo.id}`, rotulo: `${grupo.rotulo} · ${grupo.itens.length}` });
+    for (const forma of grupo.itens) linhas.push({ tipo: 'forma', id: forma.id, forma });
+  }
+  return linhas;
+}
+
 // Fora do componente: a mesma função em todo render, sem precisar de useCallback.
-function chaveDaForma(forma: FormaPagamento): string {
-  return forma.id;
+function chaveDaLinha(linha: Linha): string {
+  return linha.id;
 }
 
 export function FormasPagamentoListView() {
@@ -108,14 +129,21 @@ export function FormasPagamentoListView() {
   const abrir = useCallback((id: string) => router.push(`/formas-pagamento/${id}/editar`), [router]);
 
   const renderLinha = useCallback(
-    ({ item }: ListRenderItemInfo<FormaPagamento>) => (
-      <FormaPagamentoLinha
-        forma={item}
-        processando={processandoId === item.id}
-        onAbrir={abrir}
-        onAlternarAtiva={handleAlternarAtiva}
-      />
-    ),
+    ({ item }: ListRenderItemInfo<Linha>) =>
+      item.tipo === 'grupo' ? (
+        <View style={styles.grupo}>
+          <Text weight="semibold" accessibilityRole="header">
+            {item.rotulo}
+          </Text>
+        </View>
+      ) : (
+        <FormaPagamentoLinha
+          forma={item.forma}
+          processando={processandoId === item.forma.id}
+          onAbrir={abrir}
+          onAlternarAtiva={handleAlternarAtiva}
+        />
+      ),
     [processandoId, abrir, handleAlternarAtiva],
   );
 
@@ -130,6 +158,7 @@ export function FormasPagamentoListView() {
       }),
     [tela.dados, mostrarDesativadas, termo],
   );
+  const linhas = useMemo(() => agruparPorSituacao(filtradas), [filtradas]);
 
   // Um Snackbar só: o retorno da ação vem antes do aviso de recarga que falhou.
   const snackbar = feedback ?? (tela.feedbackErro ? { mensagem: tela.feedbackErro, tone: 'error' as const } : null);
@@ -152,7 +181,7 @@ export function FormasPagamentoListView() {
     >
       {/* Fora da lista, na coluna: no tablet fica alinhado com as linhas (EIX-94). */}
       <ScreenColumn>
-        <Input label="Buscar" placeholder="Buscar por nome" value={busca} onChangeText={setBusca} />
+        <Input label="Buscar forma de pagamento" icone="buscar" placeholder="Nome" value={busca} onChangeText={setBusca} />
 
         <Switch label="Mostrar desativadas" value={mostrarDesativadas} onValueChange={setMostrarDesativadas} />
 
@@ -176,8 +205,8 @@ export function FormasPagamentoListView() {
 
       {tela.status === 'pronto' && (
         <List
-          data={filtradas}
-          keyExtractor={chaveDaForma}
+          data={linhas}
+          keyExtractor={chaveDaLinha}
           style={styles.lista}
           contentContainerStyle={[coluna, styles.espacoDoFab]}
           refreshControl={
@@ -197,6 +226,15 @@ export function FormasPagamentoListView() {
             />
           }
           renderItem={renderLinha}
+          // O que o interruptor faz e por que as padrão não têm, dito uma vez no fim da lista.
+          ListFooterComponent={
+            linhas.length > 0 ? (
+              <Text variant="bodySm" tone="body" style={styles.rodape}>
+                Desativar uma forma tira ela dos novos lançamentos e preserva o histórico. As formas padrão do
+                sistema não podem ser desativadas nem renomeadas.
+              </Text>
+            ) : undefined
+          }
         />
       )}
     </Screen>
@@ -206,6 +244,13 @@ export function FormasPagamentoListView() {
 const styles = StyleSheet.create({
   lista: {
     flex: 1,
+  },
+  grupo: {
+    paddingTop: spacing.lg,
+    paddingBottom: spacing.xs,
+  },
+  rodape: {
+    paddingTop: spacing.lg,
   },
   // O Screen só reserva o espaço do FAB quando ele mesmo rola; aqui quem rola é a FlatList.
   espacoDoFab: {
