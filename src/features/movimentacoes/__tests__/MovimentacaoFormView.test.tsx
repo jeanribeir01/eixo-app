@@ -136,7 +136,7 @@ const existente: Movimentacao = {
 };
 
 async function salvar() {
-  await fireEvent.press(screen.getByRole('button', { name: 'Salvar' }));
+  await fireEvent.press(screen.getByRole('button', { name: /^Salvar/ }));
 }
 
 async function escolher(campo: string, opcao: string) {
@@ -144,10 +144,17 @@ async function escolher(campo: string, opcao: string) {
   await fireEvent.press(screen.getByRole('button', { name: opcao }));
 }
 
+// A categoria só aparece na aba do tipo dela (Saída ou Entrada): escolhe a aba antes, como a pessoa faria.
+const TIPO_DA_CATEGORIA: Record<string, 'Saída' | 'Entrada'> = { Frete: 'Entrada', 'Combustível': 'Saída' };
+async function escolherCategoria(titulo: string) {
+  await fireEvent.press(screen.getByRole('tab', { name: TIPO_DA_CATEGORIA[titulo] }));
+  await escolher('Categoria', titulo);
+}
+
 async function preencherValido() {
-  await fireEvent.changeText(screen.getByLabelText('Valor (R$)'), '150000');
+  await fireEvent.changeText(screen.getByLabelText('Valor'), '150000');
   await fireEvent.changeText(screen.getByLabelText('Descrição'), 'Frete Curitiba');
-  await escolher('Categoria', 'Frete');
+  await escolherCategoria('Frete');
   await escolher('Forma de pagamento', 'Pix');
 }
 
@@ -214,7 +221,7 @@ describe('MovimentacaoFormView — nova (MOV-01)', () => {
   it('mostra todos os campos e começa como Pendente, sem data de pagamento', async () => {
     await renderNova();
 
-    expect(screen.getByLabelText('Valor (R$)')).toBeOnTheScreen();
+    expect(screen.getByLabelText('Valor')).toBeOnTheScreen();
     expect(screen.getByLabelText('Descrição')).toBeOnTheScreen();
     expect(screen.getByRole('button', { name: 'Categoria' })).toBeOnTheScreen();
     expect(screen.getByRole('button', { name: 'Forma de pagamento' })).toBeOnTheScreen();
@@ -235,7 +242,7 @@ describe('MovimentacaoFormView — nova (MOV-01)', () => {
   it('status pago aparece como "Recebido" e pede "Data de recebimento" numa entrada', async () => {
     await renderNova();
 
-    await escolher('Categoria', 'Frete');
+    await escolherCategoria('Frete');
     await fireEvent.press(screen.getByRole('tab', { name: 'Recebido' }));
 
     expect(screen.getByLabelText('Data de recebimento')).toBeOnTheScreen();
@@ -244,7 +251,7 @@ describe('MovimentacaoFormView — nova (MOV-01)', () => {
   it('status pago aparece como "Pago" e pede "Data de pagamento" numa saída', async () => {
     await renderNova();
 
-    await escolher('Categoria', 'Combustível');
+    await escolherCategoria('Combustível');
     await fireEvent.press(screen.getByRole('tab', { name: 'Pago' }));
 
     expect(screen.getByLabelText('Data de pagamento')).toBeOnTheScreen();
@@ -323,7 +330,7 @@ describe('MovimentacaoFormView — salvar (MOV-02)', () => {
 
     expect(screen.getByRole('alert')).toHaveTextContent('Você não tem permissão para registrar movimentações.');
     expect(screen.getByLabelText('Descrição')).toHaveDisplayValue('Frete Curitiba');
-    expect(screen.getByRole('button', { name: 'Salvar' })).toBeEnabled();
+    expect(screen.getByRole('button', { name: /^Salvar/ })).toBeEnabled();
     expect(mockBack).not.toHaveBeenCalled();
   });
 
@@ -335,7 +342,7 @@ describe('MovimentacaoFormView — salvar (MOV-02)', () => {
 
     const toque1 = await dispararSemEsperar(() => salvar());
 
-    expect(screen.getByRole('button', { name: 'Salvar' })).toBeBusy();
+    expect(screen.getByRole('button', { name: /^Salvar/ })).toBeBusy();
     const toque2 = await dispararSemEsperar(() => salvar());
     expect(mockCriar).toHaveBeenCalledTimes(1);
 
@@ -354,7 +361,7 @@ describe('MovimentacaoFormView — editar (MOV-10)', () => {
 
     await screen.findByLabelText('Descrição');
     expect(screen.queryByText('Editar movimentação')).not.toBeOnTheScreen();
-    expect(screen.getByLabelText('Valor (R$)')).toHaveDisplayValue('R$ 80,00');
+    expect(screen.getByLabelText('Valor')).toHaveDisplayValue('R$ 80,00');
     expect(screen.getByLabelText('Descrição')).toHaveDisplayValue('Diesel');
     expect(screen.getByText('Categoria antiga')).toBeOnTheScreen();
     expect(screen.getByLabelText('Data de vencimento')).toHaveDisplayValue('10/10/2026');
@@ -387,13 +394,29 @@ describe('MovimentacaoFormView — editar (MOV-10)', () => {
 });
 
 describe('MovimentacaoFormView — opções (edge case)', () => {
-  it('sem categoria ativa o seletor mostra "Nenhuma opção cadastrada."', async () => {
+  it('sem categoria ativa do tipo escolhido, o seletor diz qual tipo falta', async () => {
     mockOpcoes.mockResolvedValue({ ok: true, data: { categorias: [], formasPagamento: [] } });
     await renderNova();
 
     await fireEvent.press(screen.getByRole('button', { name: 'Categoria' }));
 
-    expect(screen.getByText('Nenhuma opção cadastrada.')).toBeOnTheScreen();
+    expect(screen.getByText('Nenhuma categoria de saída cadastrada.')).toBeOnTheScreen();
+  });
+
+  it('o tipo no topo filtra as categorias e troca "Pago" por "Recebido"', async () => {
+    await renderNova();
+
+    // Saída é o padrão: só as categorias de saída aparecem.
+    expect(screen.getByRole('tab', { name: 'Saída' })).toBeSelected();
+    await fireEvent.press(screen.getByRole('button', { name: 'Categoria' }));
+    expect(screen.getByRole('button', { name: 'Combustível' })).toBeOnTheScreen();
+    expect(screen.queryByRole('button', { name: 'Frete' })).not.toBeOnTheScreen();
+    await fireEvent.press(screen.getByRole('button', { name: 'Combustível' }));
+
+    // Trocar para Entrada solta a categoria de saída e muda o texto da situação.
+    await fireEvent.press(screen.getByRole('tab', { name: 'Entrada' }));
+    expect(screen.getByRole('button', { name: 'Categoria' })).toHaveTextContent('Escolha a categoria de entrada');
+    expect(screen.getByRole('tab', { name: 'Recebido' })).toBeOnTheScreen();
   });
 });
 
@@ -491,17 +514,17 @@ describe('MovimentacaoFormView — vincular à viagem (US09)', () => {
   const vinculado: Movimentacao = { ...existente, viagem_id: 'v-1' };
 
   // PONTE-01
-  it('mostra o campo opcional "Vincular à viagem" com "Sem viagem"', async () => {
+  it('mostra o campo opcional "Viagem (opcional)" com "Sem viagem"', async () => {
     await renderNova();
 
-    expect(screen.getByRole('button', { name: 'Vincular à viagem' })).toHaveTextContent('Sem viagem');
+    expect(screen.getByRole('button', { name: 'Viagem (opcional)' })).toHaveTextContent('Sem viagem');
   });
 
   // PONTE-02
   it('o seletor lista as viagens vinculáveis com placa e rota', async () => {
     await renderNova();
 
-    await fireEvent.press(screen.getByRole('button', { name: 'Vincular à viagem' }));
+    await fireEvent.press(screen.getByRole('button', { name: 'Viagem (opcional)' }));
 
     expect(screen.getByRole('button', { name: ROTULO_SP })).toBeOnTheScreen();
     expect(screen.getByRole('button', { name: ROTULO_BH })).toBeOnTheScreen();
@@ -512,7 +535,7 @@ describe('MovimentacaoFormView — vincular à viagem (US09)', () => {
   it('a busca filtra pela rota sem acento', async () => {
     await renderNova();
 
-    await fireEvent.press(screen.getByRole('button', { name: 'Vincular à viagem' }));
+    await fireEvent.press(screen.getByRole('button', { name: 'Viagem (opcional)' }));
     await fireEvent.changeText(screen.getByLabelText('Buscar'), 'belo horizonte');
 
     expect(screen.getByRole('button', { name: ROTULO_BH })).toBeOnTheScreen();
@@ -523,7 +546,7 @@ describe('MovimentacaoFormView — vincular à viagem (US09)', () => {
   it('salva o lançamento com o viagemId escolhido', async () => {
     await renderNova();
     await preencherValido();
-    await escolher('Vincular à viagem', ROTULO_SP);
+    await escolher('Viagem (opcional)', ROTULO_SP);
 
     await act(async () => salvar());
 
@@ -534,7 +557,7 @@ describe('MovimentacaoFormView — vincular à viagem (US09)', () => {
   it('busca sem viagem correspondente mostra "Nenhuma viagem encontrada."', async () => {
     await renderNova();
 
-    await fireEvent.press(screen.getByRole('button', { name: 'Vincular à viagem' }));
+    await fireEvent.press(screen.getByRole('button', { name: 'Viagem (opcional)' }));
     await fireEvent.changeText(screen.getByLabelText('Buscar'), 'Manaus');
 
     expect(screen.getByText('Nenhuma viagem encontrada.')).toBeOnTheScreen();
@@ -545,7 +568,7 @@ describe('MovimentacaoFormView — vincular à viagem (US09)', () => {
     mockListarViagens.mockResolvedValue({ ok: true, data: [] });
     await renderNova();
 
-    await fireEvent.press(screen.getByRole('button', { name: 'Vincular à viagem' }));
+    await fireEvent.press(screen.getByRole('button', { name: 'Viagem (opcional)' }));
 
     expect(screen.getByLabelText('Sem viagem')).toBeOnTheScreen();
     expect(screen.getByText('Nenhuma viagem em andamento ou concluída nos últimos 30 dias.')).toBeOnTheScreen();
@@ -557,9 +580,9 @@ describe('MovimentacaoFormView — vincular à viagem (US09)', () => {
     mockAtualizar.mockResolvedValue({ ok: true, data: { ...vinculado, viagem_id: null } });
     await render(<MovimentacaoFormView movimentacaoId="mov-1" />);
     await screen.findByLabelText('Descrição');
-    expect(screen.getByRole('button', { name: 'Vincular à viagem' })).toHaveTextContent(ROTULO_SP);
+    expect(screen.getByRole('button', { name: 'Viagem (opcional)' })).toHaveTextContent(ROTULO_SP);
 
-    await fireEvent.press(screen.getByRole('button', { name: 'Vincular à viagem' }));
+    await fireEvent.press(screen.getByRole('button', { name: 'Viagem (opcional)' }));
     await fireEvent.press(screen.getByLabelText('Sem viagem'));
     await act(async () => salvar());
 
@@ -576,7 +599,7 @@ describe('MovimentacaoFormView — vincular à viagem (US09)', () => {
     await screen.findByLabelText('Descrição');
 
     expect(mockBuscarViagem).toHaveBeenCalledWith('v-velha');
-    expect(screen.getByRole('button', { name: 'Vincular à viagem' })).toHaveTextContent(
+    expect(screen.getByRole('button', { name: 'Viagem (opcional)' })).toHaveTextContent(
       'OLD1A11 · São Paulo/SP → Curitiba/PR',
     );
   });
@@ -587,7 +610,7 @@ describe('MovimentacaoFormView — vincular à viagem (US09)', () => {
     await render(<MovimentacaoFormView viagemIdInicial="v-2" />);
     await screen.findByLabelText('Descrição');
 
-    expect(screen.getByRole('button', { name: 'Vincular à viagem' })).toHaveTextContent(ROTULO_BH);
+    expect(screen.getByRole('button', { name: 'Viagem (opcional)' })).toHaveTextContent(ROTULO_BH);
     await preencherValido();
     await act(async () => salvar());
 
@@ -607,7 +630,7 @@ describe('MovimentacaoFormView — vincular à viagem (US09)', () => {
 
   it('lançamento novo, mesmo com viagem escolhida, não mostra "Ver viagem"', async () => {
     await renderNova();
-    await escolher('Vincular à viagem', ROTULO_SP);
+    await escolher('Viagem (opcional)', ROTULO_SP);
 
     expect(screen.queryByRole('button', { name: 'Ver viagem' })).not.toBeOnTheScreen();
   });
@@ -631,21 +654,21 @@ describe('MovimentacaoFormView — litros (US09)', () => {
   // LITROS-01 e LITROS-02
   it('o campo de litros aparece só com a categoria Combustível', async () => {
     await renderNova();
-    expect(screen.queryByLabelText('Quantidade em litros')).not.toBeOnTheScreen();
+    expect(screen.queryByLabelText('Litros abastecidos')).not.toBeOnTheScreen();
 
-    await escolher('Categoria', 'Combustível');
-    expect(screen.getByLabelText('Quantidade em litros')).toBeOnTheScreen();
+    await escolherCategoria('Combustível');
+    expect(screen.getByLabelText('Litros abastecidos')).toBeOnTheScreen();
 
-    await escolher('Categoria', 'Frete');
-    expect(screen.queryByLabelText('Quantidade em litros')).not.toBeOnTheScreen();
+    await escolherCategoria('Frete');
+    expect(screen.queryByLabelText('Litros abastecidos')).not.toBeOnTheScreen();
   });
 
   // LITROS-03
   it('Combustível vinculado sem litros mostra o erro e não salva', async () => {
     await renderNova();
     await preencherValido();
-    await escolher('Categoria', 'Combustível');
-    await escolher('Vincular à viagem', ROTULO_SP);
+    await escolherCategoria('Combustível');
+    await escolher('Viagem (opcional)', ROTULO_SP);
 
     await act(async () => salvar());
 
@@ -657,8 +680,8 @@ describe('MovimentacaoFormView — litros (US09)', () => {
   it('litros com três casas mostra a mensagem de formato e não salva', async () => {
     await renderNova();
     await preencherValido();
-    await escolher('Categoria', 'Combustível');
-    await fireEvent.changeText(screen.getByLabelText('Quantidade em litros'), '12,345');
+    await escolherCategoria('Combustível');
+    await fireEvent.changeText(screen.getByLabelText('Litros abastecidos'), '12,345');
 
     await act(async () => salvar());
 
@@ -669,9 +692,9 @@ describe('MovimentacaoFormView — litros (US09)', () => {
   it('Combustível vinculado com litros salva o número', async () => {
     await renderNova();
     await preencherValido();
-    await escolher('Categoria', 'Combustível');
-    await escolher('Vincular à viagem', ROTULO_SP);
-    await fireEvent.changeText(screen.getByLabelText('Quantidade em litros'), '412,5');
+    await escolherCategoria('Combustível');
+    await escolher('Viagem (opcional)', ROTULO_SP);
+    await fireEvent.changeText(screen.getByLabelText('Litros abastecidos'), '412,5');
 
     await act(async () => salvar());
 
@@ -684,9 +707,9 @@ describe('MovimentacaoFormView — litros (US09)', () => {
   it('litros digitados e depois categoria trocada para Frete salvam litros null', async () => {
     await renderNova();
     await preencherValido();
-    await escolher('Categoria', 'Combustível');
-    await fireEvent.changeText(screen.getByLabelText('Quantidade em litros'), '80');
-    await escolher('Categoria', 'Frete');
+    await escolherCategoria('Combustível');
+    await fireEvent.changeText(screen.getByLabelText('Litros abastecidos'), '80');
+    await escolherCategoria('Frete');
 
     await act(async () => salvar());
 
@@ -702,6 +725,6 @@ describe('MovimentacaoFormView — litros (US09)', () => {
     await render(<MovimentacaoFormView movimentacaoId="mov-1" />);
     await screen.findByLabelText('Descrição');
 
-    expect(screen.getByLabelText('Quantidade em litros')).toHaveDisplayValue('412,5');
+    expect(screen.getByLabelText('Litros abastecidos')).toHaveDisplayValue('412,5');
   });
 });
