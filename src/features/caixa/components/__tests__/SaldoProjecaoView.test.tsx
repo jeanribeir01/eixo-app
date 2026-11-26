@@ -66,9 +66,13 @@ describe('SaldoProjecaoView', () => {
     expect(screen.getAllByText('Saídas')).toHaveLength(4);
     expect(screen.getByText('− R$ 16.000,00')).toBeOnTheScreen();
 
-    expect(screen.getByText('Pendentes sem data de vencimento')).toBeOnTheScreen();
-    expect(screen.getByText('2 movimentações')).toBeOnTheScreen();
-    expect(screen.getByText('− R$ 1.200,00')).toBeOnTheScreen();
+    expect(screen.getByText('Pendentes sem data')).toBeOnTheScreen();
+    expect(
+      screen.getByText(
+        '2 movimentações pendentes não têm data de vencimento e ficam fora da projeção: − R$ 1.200,00 a pagar. Defina o vencimento para incluí-las.',
+      ),
+    ).toBeOnTheScreen();
+    expect(screen.getByTestId('grafico-saldo-projetado')).toBeOnTheScreen();
   });
 
   it('o título da tela fica no header nativo, não no conteúdo (NAV-02)', async () => {
@@ -88,8 +92,8 @@ describe('SaldoProjecaoView', () => {
 
     await render(<SaldoProjecaoView />);
 
-    // Só novembro fecha negativo no mock: exatamente um alerta.
-    expect(await screen.findAllByText('⚠ Saldo negativo')).toHaveLength(1);
+    // Só novembro fecha negativo no mock: o aviso do topo aponta para ele.
+    expect(await screen.findByText('O saldo fica negativo em novembro de 2026')).toBeOnTheScreen();
     expect(screen.getByText('− R$ 2.000,00')).toHaveStyle({ color: colors.danger });
   });
 
@@ -102,7 +106,7 @@ describe('SaldoProjecaoView', () => {
     await render(<SaldoProjecaoView />);
 
     await screen.findByText('Outubro de 2026');
-    expect(screen.queryByText('⚠ Saldo negativo')).not.toBeOnTheScreen();
+    expect(screen.queryByText(/^O saldo fica negativo/)).not.toBeOnTheScreen();
   });
 
   it('saldo atual negativo fica vermelho e com sinal de menos', async () => {
