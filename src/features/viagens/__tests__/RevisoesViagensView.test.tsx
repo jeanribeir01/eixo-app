@@ -1,5 +1,6 @@
 import { Alert, FlatList, StyleSheet, useWindowDimensions } from 'react-native';
 import { act, fireEvent, render, screen, waitFor } from '@testing-library/react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { porTipo } from '@/testing/componentes';
 import { spacing } from '@/ui';
@@ -80,6 +81,14 @@ describe('RevisoesViagensView', () => {
     expect(screen.getByLabelText('Carregando revisões')).toBeOnTheScreen();
   });
 
+  it('fica sob o header nativo sem repetir o inset de topo (NAV-04)', async () => {
+    mockListar.mockResolvedValue({ ok: true, data: [] });
+    await render(<RevisoesViagensView />);
+
+    await screen.findByText('Nenhuma revisão pendente');
+    expect(porTipo(SafeAreaView).props.edges).not.toContain('top');
+  });
+
   it('mostra o estado vazio quando não há revisão pendente', async () => {
     await render(<RevisoesViagensView />);
 
@@ -91,10 +100,13 @@ describe('RevisoesViagensView', () => {
 
     await render(<RevisoesViagensView />);
 
-    expect(await screen.findByText('BRA2E19 • Carlos Motorista')).toBeOnTheScreen();
+    expect(await screen.findByText('BRA2E19')).toBeOnTheScreen();
     expect(screen.getByText('São Paulo/SP → Campinas/SP')).toBeOnTheScreen();
     expect(screen.getByText('A viagem já foi encerrada no servidor.')).toBeOnTheScreen();
     expect(screen.getByText(/Código: VG005/)).toBeOnTheScreen();
+    // O motivo vem primeiro, num aviso; motorista e data numa linha só.
+    expect(screen.getByText('O servidor não aceitou esta viagem')).toBeOnTheScreen();
+    expect(screen.getByText(/^Carlos Motorista · registrada em \d{2}\/\d{2}\/2026 às \d{2}:\d{2}$/)).toBeOnTheScreen();
   });
 
   it('resolve a revisão com a observação e remove o cartão da fila', async () => {
@@ -103,14 +115,14 @@ describe('RevisoesViagensView', () => {
 
     await render(<RevisoesViagensView />);
 
-    await screen.findByText('BRA2E19 • Carlos Motorista');
+    await screen.findByText('BRA2E19');
     await fireEvent.changeText(
       screen.getByPlaceholderText('Ex.: hodômetro conferido com o motorista'),
       'Hodômetro conferido',
     );
 
     await act(async () => {
-      await fireEvent.press(screen.getByText('Resolver'));
+      await fireEvent.press(screen.getByText('Resolver revisão'));
     });
 
     await waitFor(() =>
@@ -120,7 +132,7 @@ describe('RevisoesViagensView', () => {
       }),
     );
     expect(await screen.findByText('Revisão marcada como resolvida.')).toBeOnTheScreen();
-    expect(screen.queryByText('BRA2E19 • Carlos Motorista')).not.toBeOnTheScreen();
+    expect(screen.queryByText('BRA2E19')).not.toBeOnTheScreen();
   });
 
   it('descarta a revisão com feedback de que a viagem local não foi alterada', async () => {
@@ -129,9 +141,9 @@ describe('RevisoesViagensView', () => {
 
     await render(<RevisoesViagensView />);
 
-    await screen.findByText('BRA2E19 • Carlos Motorista');
+    await screen.findByText('BRA2E19');
     await act(async () => {
-      await fireEvent.press(screen.getByText('Descartar'));
+      await fireEvent.press(screen.getByText('Descartar revisão'));
     });
 
     await waitFor(() =>
@@ -155,15 +167,15 @@ describe('RevisoesViagensView', () => {
 
     await render(<RevisoesViagensView />);
 
-    await screen.findByText('BRA2E19 • Carlos Motorista');
+    await screen.findByText('BRA2E19');
     await act(async () => {
-      await fireEvent.press(screen.getByText('Resolver'));
+      await fireEvent.press(screen.getByText('Resolver revisão'));
     });
 
     expect(
       await screen.findByText('Não foi possível salvar a decisão da revisão. Tente novamente.'),
     ).toBeOnTheScreen();
-    expect(screen.getByText('BRA2E19 • Carlos Motorista')).toBeOnTheScreen();
+    expect(screen.getByText('BRA2E19')).toBeOnTheScreen();
   });
 
   it('mostra o estado de erro quando a fila não carrega', async () => {
