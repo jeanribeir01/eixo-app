@@ -64,7 +64,7 @@ async function preencher({ origem = ' Curitiba ', destino = 'São  Paulo', dista
 // O fireEvent já roda dentro de act na Testing Library 14: um act a mais em volta dele quebra os testes
 // que disparam o salvar sem esperar (dispararSemEsperar).
 async function salvar() {
-  await fireEvent.press(screen.getByRole('button', { name: 'Salvar' }));
+  await fireEvent.press(screen.getByRole('button', { name: /^(Cadastrar rota|Salvar alterações)$/ }));
 }
 
 beforeEach(() => {
@@ -177,7 +177,7 @@ describe('RotaFormView — cadastro', () => {
     await preencher();
 
     const toque1 = await dispararSemEsperar(() => salvar());
-    expect(screen.getByRole('button', { name: 'Salvar' })).toBeDisabled();
+    expect(screen.getByRole('button', { name: /^(Cadastrar rota|Salvar alterações)$/ })).toBeDisabled();
     const toque2 = await dispararSemEsperar(() => salvar());
     expect(mockCriar).toHaveBeenCalledTimes(1);
 
@@ -185,7 +185,7 @@ describe('RotaFormView — cadastro', () => {
       concluir({ ok: true, data: curitibaSp });
       await Promise.all([toque1.terminou, toque2.terminou]);
     });
-    expect(screen.getByRole('button', { name: 'Salvar' })).not.toBeDisabled();
+    expect(screen.getByRole('button', { name: /^(Cadastrar rota|Salvar alterações)$/ })).not.toBeDisabled();
   });
 
   // ROTA-09
@@ -204,6 +204,17 @@ describe('RotaFormView — cadastro', () => {
   });
 });
 
+describe('RotaFormView — cadastro', () => {
+  it('separa origem e destino em grupos e o botão diz "Cadastrar rota"', async () => {
+    await render(<RotaFormView />);
+
+    expect(screen.getByText('Cadastre o trecho com a cidade de origem e a de destino.')).toBeOnTheScreen();
+    expect(screen.getByRole('header', { name: 'Origem' })).toBeOnTheScreen();
+    expect(screen.getByRole('header', { name: 'Destino' })).toBeOnTheScreen();
+    expect(screen.getByRole('button', { name: 'Cadastrar rota' })).toBeOnTheScreen();
+  });
+});
+
 describe('RotaFormView — rota duplicada', () => {
   // ROTA-10, ROTA-16
   it('duplicada ativa: mostra a mensagem no formulário, sem botão de reativar', async () => {
@@ -215,6 +226,8 @@ describe('RotaFormView — rota duplicada', () => {
 
     // Uma vez no formulário e outra no Snackbar de erro.
     expect(screen.getAllByText(MENSAGEM_DUPLICADA)).toHaveLength(2);
+    // No formulário, num aviso com título, e não em texto solto.
+    expect(screen.getByText('Esta rota já existe')).toBeOnTheScreen();
     expect(screen.queryByRole('button', { name: 'Reativar rota existente' })).not.toBeOnTheScreen();
     expect(mockBack).not.toHaveBeenCalled();
   });
