@@ -1,6 +1,7 @@
 import { Alert, FlatList, StyleSheet, useWindowDimensions } from 'react-native';
 import { act, fireEvent, render, screen, waitFor } from '@testing-library/react-native';
 
+import { porTipo } from '@/testing/componentes';
 import { spacing } from '@/ui';
 
 import { RevisoesViagensView } from '../RevisoesViagensView';
@@ -71,16 +72,16 @@ describe('RevisoesViagensView', () => {
     mockResolver.mockResolvedValue({ ok: true, data: revisao() });
   });
 
-  it('mostra o estado de carregando enquanto busca a fila', () => {
+  it('mostra o estado de carregando enquanto busca a fila', async () => {
     mockListar.mockReturnValue(new Promise(() => {}));
 
-    render(<RevisoesViagensView />);
+    await render(<RevisoesViagensView />);
 
     expect(screen.getByLabelText('Carregando revisões')).toBeOnTheScreen();
   });
 
   it('mostra o estado vazio quando não há revisão pendente', async () => {
-    render(<RevisoesViagensView />);
+    await render(<RevisoesViagensView />);
 
     expect(await screen.findByText('Nenhuma revisão pendente')).toBeOnTheScreen();
   });
@@ -88,7 +89,7 @@ describe('RevisoesViagensView', () => {
   it('lista a revisão com veículo, motorista, rota e código', async () => {
     mockListar.mockResolvedValue({ ok: true, data: [revisao()] });
 
-    render(<RevisoesViagensView />);
+    await render(<RevisoesViagensView />);
 
     expect(await screen.findByText('BRA2E19 • Carlos Motorista')).toBeOnTheScreen();
     expect(screen.getByText('São Paulo/SP → Campinas/SP')).toBeOnTheScreen();
@@ -100,16 +101,16 @@ describe('RevisoesViagensView', () => {
     mockListar.mockResolvedValue({ ok: true, data: [revisao()] });
     confirmarAlerta();
 
-    render(<RevisoesViagensView />);
+    await render(<RevisoesViagensView />);
 
     await screen.findByText('BRA2E19 • Carlos Motorista');
-    fireEvent.changeText(
+    await fireEvent.changeText(
       screen.getByPlaceholderText('Ex.: hodômetro conferido com o motorista'),
       'Hodômetro conferido',
     );
 
     await act(async () => {
-      fireEvent.press(screen.getByText('Resolver'));
+      await fireEvent.press(screen.getByText('Resolver'));
     });
 
     await waitFor(() =>
@@ -126,11 +127,11 @@ describe('RevisoesViagensView', () => {
     mockListar.mockResolvedValue({ ok: true, data: [revisao()] });
     confirmarAlerta();
 
-    render(<RevisoesViagensView />);
+    await render(<RevisoesViagensView />);
 
     await screen.findByText('BRA2E19 • Carlos Motorista');
     await act(async () => {
-      fireEvent.press(screen.getByText('Descartar'));
+      await fireEvent.press(screen.getByText('Descartar'));
     });
 
     await waitFor(() =>
@@ -152,11 +153,11 @@ describe('RevisoesViagensView', () => {
     });
     confirmarAlerta();
 
-    render(<RevisoesViagensView />);
+    await render(<RevisoesViagensView />);
 
     await screen.findByText('BRA2E19 • Carlos Motorista');
     await act(async () => {
-      fireEvent.press(screen.getByText('Resolver'));
+      await fireEvent.press(screen.getByText('Resolver'));
     });
 
     expect(
@@ -171,7 +172,7 @@ describe('RevisoesViagensView', () => {
       mensagem: 'Não foi possível carregar as revisões. Tente novamente.',
     });
 
-    render(<RevisoesViagensView />);
+    await render(<RevisoesViagensView />);
 
     expect(await screen.findByText('Não foi possível carregar as revisões')).toBeOnTheScreen();
     expect(
@@ -188,11 +189,11 @@ describe('RevisoesViagensView', () => {
     }
 
     function estiloDaLista() {
-      return StyleSheet.flatten(screen.UNSAFE_getByType(FlatList).props.contentContainerStyle);
+      return StyleSheet.flatten(porTipo(FlatList).props.contentContainerStyle);
     }
 
     it('412: nada muda, o respiro lateral continua no Screen e a lista não ganha coluna', async () => {
-      render(<RevisoesViagensView />);
+      await render(<RevisoesViagensView />);
       await screen.findByText('Nenhuma revisão pendente');
 
       expect(estiloDoConteudo()).toMatchObject({ paddingHorizontal: spacing.base });
@@ -201,7 +202,7 @@ describe('RevisoesViagensView', () => {
 
     it('800: a lista rola na largura toda e o conteúdo fica na coluna de 720', async () => {
       mockLargura(800);
-      render(<RevisoesViagensView />);
+      await render(<RevisoesViagensView />);
       await screen.findByText('Nenhuma revisão pendente');
 
       expect(estiloDoConteudo().maxWidth).toBeUndefined();

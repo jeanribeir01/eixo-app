@@ -136,8 +136,8 @@ async function entrarComo(perfil: PerfilNome, initialUrl = '/') {
     data: { id: 'user-1', nome: 'Ana', email: 'ana@empresa.com', status: 'Ativo', perfil: { nome: perfil } },
     error: null,
   });
-  const router = renderRouter(routes, { initialUrl });
-  act(() => emit('INITIAL_SESSION', session));
+  const router = await renderRouter(routes, { initialUrl });
+  await act(() => emit('INITIAL_SESSION', session));
   await screen.findByText('Conta');
   return router;
 }
@@ -194,7 +194,7 @@ describe('URL proibida digitada (EIX-31)', () => {
     const router = await entrarComo(perfil);
     await screen.findByText(telaInicial);
 
-    act(() => navegador.push(rotaDaAba[aba]));
+    await act(() => navegador.push(rotaDaAba[aba]));
 
     expect(await screen.findByText(telaInicial)).toBeOnTheScreen();
     expect(screen.queryByText(`Tela ${aba}`)).not.toBeOnTheScreen();
@@ -208,7 +208,7 @@ describe('telas internas seguem o módulo (EIX-31)', () => {
     const router = await entrarComo(perfil);
     await screen.findByText(telaInicial);
 
-    act(() => navegador.push('/categorias'));
+    await act(() => navegador.push('/categorias'));
 
     expect(await screen.findByText(telaInicial)).toBeOnTheScreen();
     expect(screen.queryByText('Tela Categorias')).not.toBeOnTheScreen();
@@ -218,7 +218,7 @@ describe('telas internas seguem o módulo (EIX-31)', () => {
   it.each(['Admin', 'Financeiro'] as const)('%s abre /categorias', async (perfil) => {
     await entrarComo(perfil);
 
-    act(() => navegador.push('/categorias'));
+    await act(() => navegador.push('/categorias'));
 
     expect(await screen.findByText('Tela Categorias')).toBeOnTheScreen();
   });
@@ -228,7 +228,7 @@ describe('telas internas seguem o módulo (EIX-31)', () => {
     const router = await entrarComo(perfil);
     await screen.findByText(telaInicial);
 
-    act(() => navegador.push('/frota/novo'));
+    await act(() => navegador.push('/frota/novo'));
 
     expect(await screen.findByText(telaInicial)).toBeOnTheScreen();
     expect(screen.queryByText('Tela Novo Veiculo')).not.toBeOnTheScreen();
@@ -238,7 +238,7 @@ describe('telas internas seguem o módulo (EIX-31)', () => {
   it('Gestor de Frota abre /frota/novo', async () => {
     await entrarComo('Gestor de Frota');
 
-    act(() => navegador.push('/frota/novo'));
+    await act(() => navegador.push('/frota/novo'));
 
     expect(await screen.findByText('Tela Novo Veiculo')).toBeOnTheScreen();
   });
@@ -249,7 +249,7 @@ describe('telas internas seguem o módulo (EIX-31)', () => {
     const router = await entrarComo(perfil);
     await screen.findByText(telaInicial);
 
-    act(() => navegador.push('/caixa'));
+    await act(() => navegador.push('/caixa'));
 
     expect(await screen.findByText(telaInicial)).toBeOnTheScreen();
     expect(screen.queryByText('Tela Saldo e Projecao')).not.toBeOnTheScreen();
@@ -259,7 +259,7 @@ describe('telas internas seguem o módulo (EIX-31)', () => {
   it.each(['Admin', 'Financeiro'] as const)('%s abre /caixa', async (perfil) => {
     await entrarComo(perfil);
 
-    act(() => navegador.push('/caixa'));
+    await act(() => navegador.push('/caixa'));
 
     expect(await screen.findByText('Tela Saldo e Projecao')).toBeOnTheScreen();
   });
@@ -268,7 +268,7 @@ describe('telas internas seguem o módulo (EIX-31)', () => {
   it('Admin abre a lista de viagens em /frota/viagens', async () => {
     const router = await entrarComo('Admin');
 
-    act(() => navegador.push('/frota/viagens'));
+    await act(() => navegador.push('/frota/viagens'));
 
     expect(await screen.findByText('Tela Viagens da Frota')).toBeOnTheScreen();
     expect(router.getPathname()).toBe('/frota/viagens');
@@ -281,7 +281,7 @@ describe('telas internas seguem o módulo (EIX-31)', () => {
       const router = await entrarComo(perfil);
       await screen.findByText(telaInicial);
 
-      act(() => navegador.push('/frota/viagens'));
+      await act(() => navegador.push('/frota/viagens'));
 
       expect(await screen.findByText(telaInicial)).toBeOnTheScreen();
       expect(screen.queryByText('Tela Viagens da Frota')).not.toBeOnTheScreen();
@@ -302,7 +302,7 @@ describe('telas internas seguem o módulo (EIX-31)', () => {
     const router = await entrarComo(perfil);
     await screen.findByText(telaInicial);
 
-    act(() => navegador.push(rota as Href));
+    await act(() => navegador.push(rota as Href));
 
     expect(await screen.findByText(telaInicial)).toBeOnTheScreen();
     expect(screen.queryByText(tela)).not.toBeOnTheScreen();
@@ -319,7 +319,7 @@ describe('telas internas seguem o módulo (EIX-31)', () => {
   )('$perfil abre $rota', async ({ perfil, rota, tela }) => {
     await entrarComo(perfil);
 
-    act(() => navegador.push(rota as Href));
+    await act(() => navegador.push(rota as Href));
 
     expect(await screen.findByText(tela)).toBeOnTheScreen();
   });
@@ -330,7 +330,7 @@ describe('telas internas seguem o módulo (EIX-31)', () => {
     const router = await entrarComo(perfil);
     await screen.findByText(telaInicial);
 
-    act(() => navegador.push('/dividas'));
+    await act(() => navegador.push('/dividas'));
 
     expect(await screen.findByText(telaInicial)).toBeOnTheScreen();
     expect(screen.queryByText('Tela Dividas')).not.toBeOnTheScreen();
@@ -340,7 +340,7 @@ describe('telas internas seguem o módulo (EIX-31)', () => {
   it.each(['Admin', 'Financeiro'] as const)('%s abre /dividas', async (perfil) => {
     await entrarComo(perfil);
 
-    act(() => navegador.push('/dividas'));
+    await act(() => navegador.push('/dividas'));
 
     expect(await screen.findByText('Tela Dividas')).toBeOnTheScreen();
   });
@@ -364,7 +364,7 @@ describe('telas internas seguem o módulo (EIX-31)', () => {
       const router = await entrarComo(perfil);
       await screen.findByText(telaInicial);
 
-      act(() => navegador.push(rota));
+      await act(() => navegador.push(rota));
 
       expect(await screen.findByText(telaInicial)).toBeOnTheScreen();
       expect(screen.queryByText(tela)).not.toBeOnTheScreen();
@@ -380,7 +380,7 @@ describe('telas internas seguem o módulo (EIX-31)', () => {
   ] as const)('Gestor de Frota abre %s (NAV5-08)', async (rota, tela) => {
     const router = await entrarComo('Gestor de Frota');
 
-    act(() => navegador.push(rota));
+    await act(() => navegador.push(rota));
 
     expect(await screen.findByText(tela)).toBeOnTheScreen();
     expect(router.getPathname()).toBe(rota);
@@ -390,7 +390,7 @@ describe('telas internas seguem o módulo (EIX-31)', () => {
   it('Motorista abre /viagens/nova (NAV5-09)', async () => {
     const router = await entrarComo('Motorista');
 
-    act(() => navegador.push('/viagens/nova'));
+    await act(() => navegador.push('/viagens/nova'));
 
     expect(await screen.findByText('Tela Abrir Viagem')).toBeOnTheScreen();
     expect(router.getPathname()).toBe('/viagens/nova');
@@ -403,7 +403,7 @@ describe('telas internas seguem o módulo (EIX-31)', () => {
     const router = await entrarComo('Financeiro');
     await screen.findByText('Tela Início');
 
-    act(() => navegador.push(rota));
+    await act(() => navegador.push(rota));
 
     expect(await screen.findByText('Tela Início')).toBeOnTheScreen();
     expect(screen.queryByText(tela)).not.toBeOnTheScreen();
@@ -466,7 +466,7 @@ describe('tab bar com ícones (NAV-01)', () => {
 
   it('aba ativa: ícone cheio em accentText; as outras em contorno textBody (DESIGN_CYAN 2.0)', async () => {
     await entrarComo('Admin');
-    act(() => navegador.push('/financeiro'));
+    await act(() => navegador.push('/financeiro'));
     await screen.findByText('Tela Caixa');
 
     for (const [aba, simbolo] of Object.entries(simboloDaAba)) {
@@ -480,7 +480,7 @@ describe('tab bar com ícones (NAV-01)', () => {
 
   it('rótulo da aba ativa em textPrimary; os outros em textBody (AC 2)', async () => {
     await entrarComo('Admin');
-    act(() => navegador.push('/financeiro'));
+    await act(() => navegador.push('/financeiro'));
     await screen.findByText('Tela Caixa');
 
     for (const aba of Object.keys(simboloDaAba)) {
@@ -500,8 +500,8 @@ describe('tab bar com ícones (NAV-01)', () => {
 // O header do Stack nativo é configurado pelo react-native-screens: no Jest ele aparece como o elemento
 // RNSScreenStackHeaderConfig, com o título e as flags nas props (a seta em si é desenhada pelo sistema).
 function headersVisiveis() {
-  return screen.root
-    .findAll((no) => (no.type as unknown) === 'RNSScreenStackHeaderConfig')
+  return screen.container
+    .queryAll((no) => (no.type as unknown) === 'RNSScreenStackHeaderConfig')
     .filter((header) => header.props.hidden === false);
 }
 
@@ -533,13 +533,13 @@ describe('header nativo nas telas internas (NAV-02)', () => {
     ['/manutencoes', 'Tela Manutencoes', 'Manutenções'],
     ['/manutencoes/nova', 'Tela Nova Manutencao', 'Nova manutenção'],
     ['/viagens/nova', 'Tela Abrir Viagem', 'Abrir viagem'],
-    ['/viagens/v1/fechar', 'Tela Fechar Viagem', 'Fechar viagem'],
+    ['/viagens/v1/fechar', 'Tela Fechar Viagem', 'Finalizar viagem'],
     // Detalhe do veículo (EIX-39)
     ['/frota/v1', 'Tela Detalhe Veiculo', 'Veículo'],
   ] as const)('%s abre %s com o header "%s" e o botão voltar', async (rota, tela, titulo) => {
     await entrarComo('Admin');
 
-    act(() => navegador.push(rota as Href));
+    await act(() => navegador.push(rota as Href));
     await screen.findByText(tela);
 
     const header = headersVisiveis().find((h) => h.props.title === titulo);
@@ -558,7 +558,7 @@ describe('header nativo nas telas internas (NAV-02)', () => {
 
   it('as abas não têm header nativo: o título delas fica no conteúdo', async () => {
     await entrarComo('Admin');
-    act(() => navegador.push('/financeiro'));
+    await act(() => navegador.push('/financeiro'));
     await screen.findByText('Tela Caixa');
 
     expect(headersVisiveis()).toHaveLength(0);
@@ -566,12 +566,12 @@ describe('header nativo nas telas internas (NAV-02)', () => {
 
   it('voltar de uma tela interna retorna para a aba de onde ela foi aberta', async () => {
     const router = await entrarComo('Admin');
-    act(() => navegador.push('/financeiro'));
+    await act(() => navegador.push('/financeiro'));
     await screen.findByText('Tela Caixa');
-    act(() => navegador.push('/categorias'));
+    await act(() => navegador.push('/categorias'));
     await screen.findByText('Tela Categorias');
 
-    act(() => navegador.back());
+    await act(() => navegador.back());
 
     expect(await screen.findByText('Tela Caixa')).toBeOnTheScreen();
     expect(router.getPathname()).toBe('/financeiro');
@@ -580,12 +580,12 @@ describe('header nativo nas telas internas (NAV-02)', () => {
   // NAV5-15: a lista de veículos abre por cima do hub de Frota e o voltar retorna a ele.
   it('voltar de /frota/veiculos retorna ao hub de Frota', async () => {
     const router = await entrarComo('Gestor de Frota');
-    act(() => navegador.push('/frota'));
+    await act(() => navegador.push('/frota'));
     await screen.findByText('Tela Frota');
-    act(() => navegador.push('/frota/veiculos'));
+    await act(() => navegador.push('/frota/veiculos'));
     await screen.findByText('Tela Veiculos');
 
-    act(() => navegador.back());
+    await act(() => navegador.back());
 
     expect(await screen.findByText('Tela Frota')).toBeOnTheScreen();
     expect(router.getPathname()).toBe('/frota');

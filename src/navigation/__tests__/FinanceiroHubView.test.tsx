@@ -38,13 +38,13 @@ beforeEach(() => {
 
 async function renderComSaldo() {
   mockBuscar.mockResolvedValue({ ok: true, data: resumoCaixaComDados });
-  render(<FinanceiroHubView />);
+  await render(<FinanceiroHubView />);
   await screen.findByRole('button', { name: NOME_DO_CARTAO });
 }
 
 async function renderComErro() {
   mockBuscar.mockResolvedValue({ ok: false, mensagem: 'Não foi possível carregar o saldo. Tente novamente.' });
-  render(<FinanceiroHubView />);
+  await render(<FinanceiroHubView />);
   await screen.findByText('Não foi possível carregar o saldo.');
 }
 
@@ -61,14 +61,14 @@ describe('FinanceiroHubView — saldo (FIN-02)', () => {
   it('tocar no cartão abre Saldo e projeção', async () => {
     await renderComSaldo();
 
-    fireEvent.press(screen.getByRole('button', { name: NOME_DO_CARTAO }));
+    await fireEvent.press(screen.getByRole('button', { name: NOME_DO_CARTAO }));
 
     expect(mockPush).toHaveBeenCalledWith('/caixa');
   });
 
-  it('carregando: skeleton no lugar do cartão', () => {
+  it('carregando: skeleton no lugar do cartão', async () => {
     mockBuscar.mockReturnValue(new Promise(() => {}));
-    render(<FinanceiroHubView />);
+    await render(<FinanceiroHubView />);
 
     expect(screen.getByLabelText('Carregando saldo')).toBeOnTheScreen();
     expect(screen.queryByText('Saldo atual')).not.toBeOnTheScreen();
@@ -78,7 +78,7 @@ describe('FinanceiroHubView — saldo (FIN-02)', () => {
     await renderComErro();
 
     expect(screen.getByRole('button', { name: 'Tentar novamente' })).toBeOnTheScreen();
-    fireEvent.press(screen.getByRole('button', { name: 'Movimentações' }));
+    await fireEvent.press(screen.getByRole('button', { name: 'Movimentações' }));
     expect(mockPush).toHaveBeenCalledWith('/movimentacoes');
   });
 
@@ -86,7 +86,7 @@ describe('FinanceiroHubView — saldo (FIN-02)', () => {
     await renderComErro();
     mockBuscar.mockResolvedValue({ ok: true, data: resumoCaixaComDados });
 
-    await act(async () => fireEvent.press(screen.getByRole('button', { name: 'Tentar novamente' })));
+    await act(async () => await fireEvent.press(screen.getByRole('button', { name: 'Tentar novamente' })));
 
     expect(mockBuscar).toHaveBeenCalledTimes(2);
     expect(screen.getByText('+ R$ 12.500,00')).toBeOnTheScreen();
@@ -107,7 +107,7 @@ describe('FinanceiroHubView — menu do módulo (FIN-03)', () => {
     } else {
       expect(atalhos).not.toHaveStyle({ flexDirection: 'row' });
     }
-    fireEvent.press(screen.getByRole('button', { name: 'Formas de pagamento' }));
+    await fireEvent.press(screen.getByRole('button', { name: 'Formas de pagamento' }));
     expect(mockPush).toHaveBeenCalledWith('/formas-pagamento');
   });
   it.each([
@@ -122,7 +122,7 @@ describe('FinanceiroHubView — menu do módulo (FIN-03)', () => {
     await renderComSaldo();
 
     expect(screen.getByText(descricao)).toBeOnTheScreen();
-    fireEvent.press(screen.getByRole('button', { name: titulo }));
+    await fireEvent.press(screen.getByRole('button', { name: titulo }));
 
     expect(mockPush).toHaveBeenCalledWith(rota);
   });
@@ -140,7 +140,7 @@ describe('FinanceiroHubView — menu do módulo (FIN-03)', () => {
   it('o FAB "Nova movimentação" abre o formulário', async () => {
     await renderComSaldo();
 
-    fireEvent.press(screen.getByRole('button', { name: 'Nova movimentação' }));
+    await fireEvent.press(screen.getByRole('button', { name: 'Nova movimentação' }));
 
     expect(mockPush).toHaveBeenCalledWith('/movimentacoes/nova');
   });

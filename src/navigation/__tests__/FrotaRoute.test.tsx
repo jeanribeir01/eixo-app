@@ -7,8 +7,8 @@ jest.mock('expo-router', () => ({ useRouter: () => ({ push: jest.fn() }) }));
 // A aba Frota abre o hub do módulo (EIX-77), não mais a lista de veículos. O comportamento do hub está
 // em FrotaHubView.test.
 describe('aba Frota', () => {
-  it('renderiza o hub: título e menu do módulo', () => {
-    render(<FrotaRoute />);
+  it('renderiza o hub: título e menu do módulo', async () => {
+    await render(<FrotaRoute />);
 
     expect(screen.getByText('Frota')).toBeOnTheScreen();
     expect(screen.getByRole('button', { name: 'Veículos' })).toBeOnTheScreen();

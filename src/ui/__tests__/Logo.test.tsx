@@ -4,42 +4,44 @@ import Svg, { Line, Path } from 'react-native-svg';
 import { Logo } from '../Logo';
 import { colors, spacing } from '../tokens';
 
+import { porTipo, todosPorTipo } from '@/testing/componentes';
+
 describe('Logo (MRC-02)', () => {
-  it('é uma imagem chamada "Eixo Certo" para o leitor de tela', () => {
-    render(<Logo />);
+  it('é uma imagem chamada "Eixo Certo" para o leitor de tela', async () => {
+    await render(<Logo />);
 
     const logo = screen.getByLabelText('Eixo Certo');
     expect(logo.props.accessibilityRole).toBe('image');
   });
 
-  it('sem withWordmark mostra só a marca, sem o nome escrito', () => {
-    render(<Logo />);
+  it('sem withWordmark mostra só a marca, sem o nome escrito', async () => {
+    await render(<Logo />);
 
     expect(screen.queryByText('Eixo Certo')).not.toBeOnTheScreen();
-    expect(screen.UNSAFE_getAllByType(Svg)).toHaveLength(1);
+    expect(todosPorTipo(Svg)).toHaveLength(1);
   });
 
-  it('com withWordmark mostra o nome abaixo da marca, os dois centralizados', () => {
-    render(<Logo withWordmark />);
+  it('com withWordmark mostra o nome abaixo da marca, os dois centralizados', async () => {
+    await render(<Logo withWordmark />);
 
     expect(screen.getByText('Eixo Certo')).toBeOnTheScreen();
     expect(screen.getByLabelText('Eixo Certo')).toHaveStyle({ alignItems: 'center', gap: spacing.sm });
   });
 
-  it('compacto: marca de 28pt com o nome ao lado, não embaixo (cabeçalho do Login)', () => {
-    render(<Logo withWordmark compacto />);
+  it('compacto: marca de 28pt com o nome ao lado, não embaixo (cabeçalho do Login)', async () => {
+    await render(<Logo withWordmark compacto />);
 
     expect(screen.getByLabelText('Eixo Certo')).toHaveStyle({ flexDirection: 'row' });
-    expect(screen.UNSAFE_getByType(Svg).props.width).toBe(spacing.lg + spacing.xs);
+    expect(porTipo(Svg).props.width).toBe(spacing.lg + spacing.xs);
     expect(screen.getByText('Eixo Certo')).toBeOnTheScreen();
   });
 
-  it('desenha as duas rodas e o eixo na cor accentEdge do design system', () => {
-    render(<Logo />);
+  it('desenha as duas rodas e o eixo na cor accentEdge do design system', async () => {
+    await render(<Logo />);
 
-    const rodas = screen.UNSAFE_getAllByType(Path);
+    const rodas = todosPorTipo(Path);
     expect(rodas).toHaveLength(2);
     rodas.forEach((roda) => expect(roda.props.fill).toBe(colors.accentEdge));
-    expect(screen.UNSAFE_getByType(Line).props.stroke).toBe(colors.accentEdge);
+    expect(porTipo(Line).props.stroke).toBe(colors.accentEdge);
   });
 });

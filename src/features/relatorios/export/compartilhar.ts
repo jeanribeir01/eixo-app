@@ -26,12 +26,14 @@ function arquivoNoCache(nome: string): File {
   return arquivo;
 }
 
-export function gerarArquivoCsv(nome: string, conteudo: string): Resultado<ArquivoGerado> {
+export async function gerarArquivoCsv(nome: string, conteudo: string): Promise<Resultado<ArquivoGerado>> {
   try {
     const arquivo = arquivoNoCache(nome);
     arquivo.create();
     // O texto é gravado em UTF-8; o BOM do começo vira os bytes EF BB BF que o Excel procura.
-    arquivo.write(conteudo);
+    // Desde o SDK 58 o write() é assíncrono: sem o await, o Share Sheet podia abrir com o arquivo
+    // ainda sendo gravado, e uma falha de disco escaparia deste try.
+    await arquivo.write(conteudo);
     return { ok: true, data: { uri: arquivo.uri, formato: 'csv' } };
   } catch {
     return { ok: false, mensagem: MENSAGEM_ERRO_RELATORIO };

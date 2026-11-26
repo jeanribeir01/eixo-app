@@ -46,8 +46,8 @@ const MESES: MesDoFluxo[] = [
 ];
 const FATIAS: FatiaDespesa[] = [{ categoria_id: 'c-1', titulo: 'Combustível', total_centavos: 20025, percentual: 100 }];
 
-function renderizar(periodo: Periodo = OUTUBRO, onErroAoAtualizar = jest.fn()) {
-  return render(<GraficosCaixa periodo={periodo} onErroAoAtualizar={onErroAoAtualizar} />);
+async function renderizar(periodo: Periodo = OUTUBRO, onErroAoAtualizar = jest.fn()) {
+  return await render(<GraficosCaixa periodo={periodo} onErroAoAtualizar={onErroAoAtualizar} />);
 }
 
 beforeEach(() => {
@@ -59,7 +59,7 @@ beforeEach(() => {
 
 describe('GraficosCaixa', () => {
   it('abre com "6 meses" até o mês final do filtro e a rosca no período do filtro (GRAF-06, GRAF-14)', async () => {
-    renderizar();
+    await renderizar();
 
     expect(await screen.findByText('+ R$ 1.001,63')).toBeOnTheScreen();
     expect(screen.getByRole('tab', { name: '6 meses' })).toBeSelected();
@@ -74,17 +74,17 @@ describe('GraficosCaixa', () => {
     ['2 anos', 24],
     ['Máximo', null],
   ])('a aba "%s" consulta as barras com %s meses (GRAF-06)', async (aba, meses) => {
-    renderizar();
+    await renderizar();
     await screen.findByText('+ R$ 1.001,63');
 
-    fireEvent.press(screen.getByRole('tab', { name: aba }));
+    await fireEvent.press(screen.getByRole('tab', { name: aba }));
 
     await screen.findByText('+ R$ 1.001,63');
     expect(mockFluxo).toHaveBeenLastCalledWith('2025-10-31', meses);
   });
 
   it('trocar o filtro consulta os dois gráficos com o período novo (GRAF-14)', async () => {
-    const { rerender } = renderizar();
+    const { rerender } = await renderizar();
     await screen.findByText('+ R$ 1.001,63');
 
     rerender(<GraficosCaixa periodo={SETEMBRO} onErroAoAtualizar={jest.fn()} />);
@@ -95,7 +95,7 @@ describe('GraficosCaixa', () => {
   });
 
   it('filtro que termina no futuro faz as barras pararem em hoje (GRAF-14)', async () => {
-    renderizar({ modo: 'ano', dataInicial: '2999-01-01', dataFinal: '2999-12-31' });
+    await renderizar({ modo: 'ano', dataInicial: '2999-01-01', dataFinal: '2999-12-31' });
     await screen.findByText('+ R$ 1.001,63');
 
     expect(mockFluxo).toHaveBeenLastCalledWith(hojeISO(), 6);
@@ -105,7 +105,7 @@ describe('GraficosCaixa', () => {
     mockFluxo.mockReturnValue(new Promise(() => {}));
     mockDespesas.mockReturnValue(new Promise(() => {}));
 
-    renderizar();
+    await renderizar();
 
     expect(screen.getByLabelText('Carregando gráfico de entradas e saídas')).toBeOnTheScreen();
     expect(screen.getByLabelText('Carregando despesas por categoria')).toBeOnTheScreen();
@@ -114,12 +114,12 @@ describe('GraficosCaixa', () => {
   it('um gráfico com erro mostra a mensagem e "Tentar novamente", e o outro continua (GRAF-16)', async () => {
     mockFluxo.mockResolvedValueOnce({ ok: false, mensagem: 'Não foi possível carregar o gráfico. Tente novamente.' });
 
-    renderizar();
+    await renderizar();
 
     expect(await screen.findByText('Não foi possível carregar o gráfico. Tente novamente.')).toBeOnTheScreen();
     expect(screen.getByRole('button', { name: /^Combustível/ })).toBeOnTheScreen();
 
-    fireEvent.press(screen.getByRole('button', { name: 'Tentar novamente' }));
+    await fireEvent.press(screen.getByRole('button', { name: 'Tentar novamente' }));
 
     expect(await screen.findByText('+ R$ 1.001,63')).toBeOnTheScreen();
   });
@@ -127,12 +127,12 @@ describe('GraficosCaixa', () => {
   it('a rosca com erro mostra a mensagem e "Tentar novamente", e as barras continuam (GRAF-16)', async () => {
     mockDespesas.mockResolvedValueOnce({ ok: false, mensagem: 'Não foi possível carregar o gráfico. Tente novamente.' });
 
-    renderizar();
+    await renderizar();
 
     expect(await screen.findByText('Não foi possível carregar o gráfico. Tente novamente.')).toBeOnTheScreen();
     expect(screen.getByText('+ R$ 1.001,63')).toBeOnTheScreen();
 
-    fireEvent.press(screen.getByRole('button', { name: 'Tentar novamente' }));
+    await fireEvent.press(screen.getByRole('button', { name: 'Tentar novamente' }));
 
     expect(await screen.findByRole('button', { name: /^Combustível/ })).toBeOnTheScreen();
   });
@@ -141,7 +141,7 @@ describe('GraficosCaixa', () => {
     mockFluxo.mockResolvedValue({ ok: true, data: [{ mes: '2025-10', entradas_centavos: 0, saidas_centavos: 0 }] });
     mockDespesas.mockResolvedValue({ ok: true, data: [] });
 
-    renderizar();
+    await renderizar();
 
     expect(await screen.findByText('Nada pago nesses meses')).toBeOnTheScreen();
     expect(await screen.findByText('Nenhuma despesa paga no período')).toBeOnTheScreen();
@@ -150,14 +150,14 @@ describe('GraficosCaixa', () => {
   it('"Máximo" sem nenhum pagamento (lista vazia) também mostra o vazio (GRAF-17)', async () => {
     mockFluxo.mockResolvedValue({ ok: true, data: [] });
 
-    renderizar();
+    await renderizar();
 
     expect(await screen.findByText('Nada pago nesses meses')).toBeOnTheScreen();
   });
 
   it('erro ao recarregar com o gráfico na tela avisa a tela e mantém o gráfico (GRAF-16)', async () => {
     const onErro = jest.fn();
-    renderizar(OUTUBRO, onErro);
+    await renderizar(OUTUBRO, onErro);
     await screen.findByText('+ R$ 1.001,63');
 
     mockFluxo.mockResolvedValueOnce({ ok: false, mensagem: 'Sem conexão.' });

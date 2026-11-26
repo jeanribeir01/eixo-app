@@ -2,6 +2,7 @@ import { act, fireEvent, render, screen } from '@testing-library/react-native';
 import { FlatList, StyleSheet, useWindowDimensions } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
+import { porTipo } from '@/testing/componentes';
 import { FAB_ALTURA_RESERVADA, spacing } from '@/ui';
 
 import { DividasListView } from '../components/DividasListView';
@@ -57,16 +58,16 @@ beforeEach(() => {
 });
 
 describe('DividasListView (EIX-50)', () => {
-  it('carregando: indicador enquanto a lista não chega', () => {
+  it('carregando: indicador enquanto a lista não chega', async () => {
     mockListar.mockReturnValue(new Promise(() => {}));
-    render(<DividasListView />);
+    await render(<DividasListView />);
 
     expect(screen.getByLabelText('Carregando dívidas')).toBeOnTheScreen();
   });
 
   it('mostra descrição, total e parcelas pagas de cada dívida', async () => {
     mockListar.mockResolvedValue({ ok: true, data: [divida()] });
-    render(<DividasListView />);
+    await render(<DividasListView />);
 
     expect(await screen.findByText('Financiamento do caminhão')).toBeOnTheScreen();
     expect(screen.getByText('R$ 72.000,00')).toBeOnTheScreen();
@@ -75,19 +76,19 @@ describe('DividasListView (EIX-50)', () => {
 
   it('título no header nativo: a tela não repete "Dívidas" nem "Eixo Certo" (NAV-02)', async () => {
     mockListar.mockResolvedValue({ ok: true, data: [divida()] });
-    render(<DividasListView />);
+    await render(<DividasListView />);
     await screen.findByText('Financiamento do caminhão');
 
     expect(screen.queryByText('Dívidas')).not.toBeOnTheScreen();
     expect(screen.queryByText('Eixo Certo')).not.toBeOnTheScreen();
-    expect(screen.UNSAFE_getByType(SafeAreaView).props.edges).not.toContain('top');
+    expect(porTipo(SafeAreaView).props.edges).not.toContain('top');
   });
 
   it('tocar na dívida abre o detalhe dela', async () => {
     mockListar.mockResolvedValue({ ok: true, data: [divida()] });
-    render(<DividasListView />);
+    await render(<DividasListView />);
 
-    fireEvent.press(
+    await fireEvent.press(
       await screen.findByRole('button', { name: 'Financiamento do caminhão, total R$ 72.000,00, 2 de 48 parcelas pagas' }),
     );
 
@@ -96,26 +97,26 @@ describe('DividasListView (EIX-50)', () => {
 
   it('o FAB "Nova dívida" abre o cadastro', async () => {
     mockListar.mockResolvedValue({ ok: true, data: [divida()] });
-    render(<DividasListView />);
+    await render(<DividasListView />);
 
-    fireEvent.press(await screen.findByRole('button', { name: 'Nova dívida' }));
+    await fireEvent.press(await screen.findByRole('button', { name: 'Nova dívida' }));
 
     expect(mockPush).toHaveBeenCalledWith('/dividas/nova');
   });
 
   it('a lista reserva o espaço do FAB no fim, para ele não cobrir a última dívida', async () => {
     mockListar.mockResolvedValue({ ok: true, data: [divida()] });
-    render(<DividasListView />);
+    await render(<DividasListView />);
     await screen.findByText('Financiamento do caminhão');
 
-    expect(StyleSheet.flatten(screen.UNSAFE_getByType(FlatList).props.contentContainerStyle)).toMatchObject({
+    expect(StyleSheet.flatten(porTipo(FlatList).props.contentContainerStyle)).toMatchObject({
       paddingBottom: FAB_ALTURA_RESERVADA,
     });
   });
 
   it('vazio: explica o que fazer, e o FAB continua na tela', async () => {
     mockListar.mockResolvedValue({ ok: true, data: [] });
-    render(<DividasListView />);
+    await render(<DividasListView />);
 
     expect(await screen.findByText('Nenhuma dívida cadastrada')).toBeOnTheScreen();
     expect(screen.getByRole('button', { name: 'Nova dívida' })).toBeOnTheScreen();
@@ -125,10 +126,10 @@ describe('DividasListView (EIX-50)', () => {
     mockListar
       .mockResolvedValueOnce({ ok: false, mensagem: 'Não foi possível carregar as dívidas. Tente novamente.' })
       .mockResolvedValueOnce({ ok: true, data: [divida()] });
-    render(<DividasListView />);
+    await render(<DividasListView />);
 
     expect(await screen.findByText('Não foi possível carregar as dívidas. Tente novamente.')).toBeOnTheScreen();
-    await act(async () => fireEvent.press(screen.getByRole('button', { name: 'Tentar novamente' })));
+    await act(async () => await fireEvent.press(screen.getByRole('button', { name: 'Tentar novamente' })));
 
     expect(mockListar).toHaveBeenCalledTimes(2);
     expect(screen.getByText('Financiamento do caminhão')).toBeOnTheScreen();
@@ -143,12 +144,12 @@ describe('DividasListView — tablet (EIX-94)', () => {
   }
 
   function estiloDaLista() {
-    return StyleSheet.flatten(screen.UNSAFE_getByType(FlatList).props.contentContainerStyle);
+    return StyleSheet.flatten(porTipo(FlatList).props.contentContainerStyle);
   }
 
   it('412: nada muda, o respiro lateral continua no Screen e a lista não ganha coluna', async () => {
     mockListar.mockResolvedValue({ ok: true, data: [divida()] });
-    render(<DividasListView />);
+    await render(<DividasListView />);
     await screen.findByText('Financiamento do caminhão');
 
     expect(estiloDoConteudo()).toMatchObject({ paddingHorizontal: spacing.base });
@@ -158,7 +159,7 @@ describe('DividasListView — tablet (EIX-94)', () => {
   it('800: a lista rola na largura toda e o conteúdo fica na coluna de 720', async () => {
     mockLargura(800);
     mockListar.mockResolvedValue({ ok: true, data: [divida()] });
-    render(<DividasListView />);
+    await render(<DividasListView />);
     await screen.findByText('Financiamento do caminhão');
 
     expect(estiloDoConteudo().maxWidth).toBeUndefined();

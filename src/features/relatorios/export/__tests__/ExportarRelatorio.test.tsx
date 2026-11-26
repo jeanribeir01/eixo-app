@@ -58,8 +58,8 @@ async function tocarNoAlerta(texto: string) {
   });
 }
 
-function renderizar() {
-  render(<ExportarRelatorio periodo={NOVEMBRO} onFeedback={onFeedback} />);
+async function renderizar() {
+  await render(<ExportarRelatorio periodo={NOVEMBRO} onFeedback={onFeedback} />);
 }
 
 function botaoExportar() {
@@ -70,7 +70,7 @@ beforeEach(() => {
   alerta = jest.spyOn(Alert, 'alert').mockImplementation(() => {});
   onFeedback.mockReset();
   mockBuscar.mockReset().mockResolvedValue({ ok: true, data: TRANSACOES });
-  mockCsv.mockReset().mockReturnValue({ ok: true, data: { uri: 'file:///cache/eixo-certo-2026-11.csv', formato: 'csv' } });
+  mockCsv.mockReset().mockResolvedValue({ ok: true, data: { uri: 'file:///cache/eixo-certo-2026-11.csv', formato: 'csv' } });
   mockPdf.mockReset().mockResolvedValue({ ok: true, data: { uri: 'file:///cache/eixo-certo-2026-11.pdf', formato: 'pdf' } });
   mockCompartilhar.mockReset().mockResolvedValue({ ok: true, data: null });
 });
@@ -78,8 +78,8 @@ beforeEach(() => {
 afterEach(() => alerta.mockRestore());
 
 describe('ExportarRelatorio', () => {
-  it('mostra o botão Exportar primário (accentStrong, DESIGN-CYAN 2.0) com o período no nome acessível (EXP-01)', () => {
-    renderizar();
+  it('mostra o botão Exportar primário (accentStrong, DESIGN-CYAN 2.0) com o período no nome acessível (EXP-01)', async () => {
+    await renderizar();
 
     expect(screen.getByText('Exportar')).toBeTruthy();
     expect(botaoExportar()).toHaveStyle({ backgroundColor: colors.accentStrong });
@@ -89,8 +89,8 @@ describe('ExportarRelatorio', () => {
   it('PDF usa o nome da empresa do .env no cabeçalho (EXP-10)', async () => {
     process.env.EXPO_PUBLIC_NOME_EMPRESA = 'Transportes Silva';
     try {
-      renderizar();
-      fireEvent.press(botaoExportar());
+      await renderizar();
+      await fireEvent.press(botaoExportar());
 
       await tocarNoAlerta('PDF');
 
@@ -102,11 +102,9 @@ describe('ExportarRelatorio', () => {
   });
 
   it('erro inesperado ao montar o arquivo vira Snackbar de erro e devolve o botão (EXP-18)', async () => {
-    mockCsv.mockImplementation(() => {
-      throw new Error('inesperado');
-    });
-    renderizar();
-    fireEvent.press(botaoExportar());
+    mockCsv.mockRejectedValue(new Error('inesperado'));
+    await renderizar();
+    await fireEvent.press(botaoExportar());
 
     await tocarNoAlerta('Planilha (CSV)');
 
@@ -115,10 +113,10 @@ describe('ExportarRelatorio', () => {
     expect(botaoExportar().props.accessibilityState).toMatchObject({ disabled: false, busy: false });
   });
 
-  it('tocar em Exportar pergunta o formato e não consulta nada antes (EXP-03)', () => {
-    renderizar();
+  it('tocar em Exportar pergunta o formato e não consulta nada antes (EXP-03)', async () => {
+    await renderizar();
 
-    fireEvent.press(botaoExportar());
+    await fireEvent.press(botaoExportar());
 
     const { titulo, botoes } = ultimoAlerta();
     expect(titulo).toBe('Exportar relatório');
@@ -128,8 +126,8 @@ describe('ExportarRelatorio', () => {
   });
 
   it('CSV: busca o período, grava o CSV com o nome do período, compartilha e avisa (EXP-15)', async () => {
-    renderizar();
-    fireEvent.press(botaoExportar());
+    await renderizar();
+    await fireEvent.press(botaoExportar());
 
     await tocarNoAlerta('Planilha (CSV)');
 
@@ -144,8 +142,8 @@ describe('ExportarRelatorio', () => {
   });
 
   it('PDF: monta o HTML com empresa, período e linhas, gera o PDF e compartilha (EXP-10, EXP-15)', async () => {
-    renderizar();
-    fireEvent.press(botaoExportar());
+    await renderizar();
+    await fireEvent.press(botaoExportar());
 
     await tocarNoAlerta('PDF');
 
@@ -163,14 +161,14 @@ describe('ExportarRelatorio', () => {
   it('fica em loading e ignora toques enquanto exporta, e volta ao fim (EXP-16)', async () => {
     let terminarEnvio: (valor: { ok: true; data: null }) => void = () => {};
     mockCompartilhar.mockReturnValue(new Promise((resolver) => (terminarEnvio = resolver)));
-    renderizar();
-    fireEvent.press(botaoExportar());
+    await renderizar();
+    await fireEvent.press(botaoExportar());
 
     await tocarNoAlerta('PDF');
 
     expect(botaoExportar().props.accessibilityState).toMatchObject({ disabled: true, busy: true });
     const alertasAntes = alerta.mock.calls.length;
-    fireEvent.press(botaoExportar());
+    await fireEvent.press(botaoExportar());
     expect(alerta.mock.calls.length).toBe(alertasAntes);
     expect(onFeedback).not.toHaveBeenCalled();
 
@@ -185,8 +183,8 @@ describe('ExportarRelatorio', () => {
     [ERRO],
   ])('erro na busca mostra "%s" e não gera nem compartilha (EXP-17)', async (mensagem) => {
     mockBuscar.mockResolvedValue({ ok: false, mensagem });
-    renderizar();
-    fireEvent.press(botaoExportar());
+    await renderizar();
+    await fireEvent.press(botaoExportar());
 
     await tocarNoAlerta('Planilha (CSV)');
 
@@ -197,9 +195,9 @@ describe('ExportarRelatorio', () => {
   });
 
   it('erro ao gravar o CSV mostra a mensagem e não compartilha (EXP-18)', async () => {
-    mockCsv.mockReturnValue({ ok: false, mensagem: ERRO });
-    renderizar();
-    fireEvent.press(botaoExportar());
+    mockCsv.mockResolvedValue({ ok: false, mensagem: ERRO });
+    await renderizar();
+    await fireEvent.press(botaoExportar());
 
     await tocarNoAlerta('Planilha (CSV)');
 
@@ -210,8 +208,8 @@ describe('ExportarRelatorio', () => {
 
   it('erro ao gerar o PDF mostra a mensagem e não compartilha (EXP-18)', async () => {
     mockPdf.mockResolvedValue({ ok: false, mensagem: ERRO });
-    renderizar();
-    fireEvent.press(botaoExportar());
+    await renderizar();
+    await fireEvent.press(botaoExportar());
 
     await tocarNoAlerta('PDF');
 
@@ -221,8 +219,8 @@ describe('ExportarRelatorio', () => {
 
   it('sem compartilhamento no aparelho, mostra a mensagem dele e não o sucesso (EXP-19)', async () => {
     mockCompartilhar.mockResolvedValue({ ok: false, mensagem: 'O compartilhamento não está disponível neste aparelho.' });
-    renderizar();
-    fireEvent.press(botaoExportar());
+    await renderizar();
+    await fireEvent.press(botaoExportar());
 
     await tocarNoAlerta('PDF');
 
@@ -237,8 +235,8 @@ describe('ExportarRelatorio', () => {
     });
 
     it('avisa antes de gerar o arquivo (EXP-20)', async () => {
-      renderizar();
-      fireEvent.press(botaoExportar());
+      await renderizar();
+      await fireEvent.press(botaoExportar());
 
       await tocarNoAlerta('PDF');
 
@@ -251,8 +249,8 @@ describe('ExportarRelatorio', () => {
     });
 
     it('Cancelar não gera arquivo, não compartilha e devolve o botão (EXP-21)', async () => {
-      renderizar();
-      fireEvent.press(botaoExportar());
+      await renderizar();
+      await fireEvent.press(botaoExportar());
       await tocarNoAlerta('Planilha (CSV)');
 
       await tocarNoAlerta('Cancelar');
@@ -264,8 +262,8 @@ describe('ExportarRelatorio', () => {
     });
 
     it('fechar o aviso pelo voltar do Android conta como cancelar (EXP-21)', async () => {
-      renderizar();
-      fireEvent.press(botaoExportar());
+      await renderizar();
+      await fireEvent.press(botaoExportar());
       await tocarNoAlerta('Planilha (CSV)');
 
       const opcoes = alerta.mock.calls[alerta.mock.calls.length - 1][3];
@@ -276,8 +274,8 @@ describe('ExportarRelatorio', () => {
     });
 
     it('Gerar mesmo assim gera o CSV só com o cabeçalho e compartilha (EXP-22)', async () => {
-      renderizar();
-      fireEvent.press(botaoExportar());
+      await renderizar();
+      await fireEvent.press(botaoExportar());
       await tocarNoAlerta('Planilha (CSV)');
 
       await tocarNoAlerta('Gerar mesmo assim');
@@ -288,8 +286,8 @@ describe('ExportarRelatorio', () => {
     });
 
     it('Gerar mesmo assim no PDF sai com os totais zerados (EXP-22)', async () => {
-      renderizar();
-      fireEvent.press(botaoExportar());
+      await renderizar();
+      await fireEvent.press(botaoExportar());
       await tocarNoAlerta('PDF');
 
       await tocarNoAlerta('Gerar mesmo assim');

@@ -100,17 +100,17 @@ beforeEach(() => {
 });
 
 describe('proteção de rotas por sessão', () => {
-  it('enquanto a sessão salva é lida, não renderiza Login nem Home (AUTH-09)', () => {
-    renderRouter(routes, { initialUrl: '/' });
+  it('enquanto a sessão salva é lida, não renderiza Login nem Home (AUTH-09)', async () => {
+    await renderRouter(routes, { initialUrl: '/' });
 
     expect(screen.queryByText('Tela Login')).not.toBeOnTheScreen();
     expect(screen.queryByText('Tela Home')).not.toBeOnTheScreen();
   });
 
   it('sem sessão salva, abre no Login (AUTH-01)', async () => {
-    const router = renderRouter(routes, { initialUrl: '/' });
+    const router = await renderRouter(routes, { initialUrl: '/' });
 
-    act(() => emit('INITIAL_SESSION', null));
+    await act(() => emit('INITIAL_SESSION', null));
 
     expect(await screen.findByText('Tela Login')).toBeOnTheScreen();
     expect(screen.queryByText('Tela Home')).not.toBeOnTheScreen();
@@ -118,9 +118,9 @@ describe('proteção de rotas por sessão', () => {
   });
 
   it('com sessão salva, abre direto na Home (AUTH-08)', async () => {
-    const router = renderRouter(routes, { initialUrl: '/' });
+    const router = await renderRouter(routes, { initialUrl: '/' });
 
-    act(() => emit('INITIAL_SESSION', session));
+    await act(() => emit('INITIAL_SESSION', session));
 
     expect(await screen.findByText('Tela Home')).toBeOnTheScreen();
     expect(screen.queryByText('Tela Login')).not.toBeOnTheScreen();
@@ -129,22 +129,22 @@ describe('proteção de rotas por sessão', () => {
   });
 
   it('ao receber a sessão do login, sai do Login e vai para a Home (AUTH-02)', async () => {
-    renderRouter(routes, { initialUrl: '/' });
-    act(() => emit('INITIAL_SESSION', null));
+    await renderRouter(routes, { initialUrl: '/' });
+    await act(() => emit('INITIAL_SESSION', null));
     await screen.findByText('Tela Login');
 
-    act(() => emit('SIGNED_IN', session));
+    await act(() => emit('SIGNED_IN', session));
 
     expect(await screen.findByText('Tela Home')).toBeOnTheScreen();
     expect(screen.queryByText('Tela Login')).not.toBeOnTheScreen();
   });
 
   it('SIGNED_OUT (Sair ou refresh falho) volta ao Login (AUTH-15)', async () => {
-    renderRouter(routes, { initialUrl: '/' });
-    act(() => emit('INITIAL_SESSION', session));
+    await renderRouter(routes, { initialUrl: '/' });
+    await act(() => emit('INITIAL_SESSION', session));
     await screen.findByText('Tela Home');
 
-    act(() => emit('SIGNED_OUT', null));
+    await act(() => emit('SIGNED_OUT', null));
 
     expect(await screen.findByText('Tela Login')).toBeOnTheScreen();
     expect(screen.queryByText('Tela Home')).not.toBeOnTheScreen();
@@ -156,9 +156,9 @@ describe('proteção de rotas por aprovação do perfil (EIX-30)', () => {
     'usuário com status %s vai para a tela de aguardando e não vê a Home (RBAC-02)',
     async (status) => {
       mockLinhaUsuario.mockResolvedValue({ data: linhaUsuario(status), error: null });
-      const router = renderRouter(routes, { initialUrl: '/' });
+      const router = await renderRouter(routes, { initialUrl: '/' });
 
-      act(() => emit('INITIAL_SESSION', session));
+      await act(() => emit('INITIAL_SESSION', session));
 
       expect(await screen.findByText('Tela Aguardando')).toBeOnTheScreen();
       expect(screen.queryByText('Tela Home')).not.toBeOnTheScreen();
@@ -168,29 +168,29 @@ describe('proteção de rotas por aprovação do perfil (EIX-30)', () => {
 
   it('falha ao carregar o perfil também fica fora da Home (RBAC-02)', async () => {
     mockLinhaUsuario.mockResolvedValue({ data: null, error: { code: '500', message: 'x' } });
-    renderRouter(routes, { initialUrl: '/' });
+    await renderRouter(routes, { initialUrl: '/' });
 
-    act(() => emit('INITIAL_SESSION', session));
+    await act(() => emit('INITIAL_SESSION', session));
 
     expect(await screen.findByText('Tela Aguardando')).toBeOnTheScreen();
     expect(screen.queryByText('Tela Home')).not.toBeOnTheScreen();
   });
 
   it('usuário aprovado entra na Home', async () => {
-    renderRouter(routes, { initialUrl: '/' });
+    await renderRouter(routes, { initialUrl: '/' });
 
-    act(() => emit('INITIAL_SESSION', session));
+    await act(() => emit('INITIAL_SESSION', session));
 
     expect(await screen.findByText('Tela Home')).toBeOnTheScreen();
     expect(screen.queryByText('Tela Aguardando')).not.toBeOnTheScreen();
   });
 
   it('logout descarta o perfil carregado (edge case da spec)', async () => {
-    renderRouter(routes, { initialUrl: '/' });
-    act(() => emit('INITIAL_SESSION', session));
+    await renderRouter(routes, { initialUrl: '/' });
+    await act(() => emit('INITIAL_SESSION', session));
     await screen.findByText('Tela Home');
 
-    act(() => emit('SIGNED_OUT', null));
+    await act(() => emit('SIGNED_OUT', null));
 
     expect(await screen.findByText('Tela Login')).toBeOnTheScreen();
     expect(useProfileStore.getState().usuario).toBeNull();
@@ -200,22 +200,22 @@ describe('proteção de rotas por aprovação do perfil (EIX-30)', () => {
 describe('rota de usuários só existe para Admin (EIX-30, RBAC-03 AC1)', () => {
   it('Admin aprovado abre /usuarios', async () => {
     mockLinhaUsuario.mockResolvedValue({ data: linhaUsuario('Ativo', 'Admin'), error: null });
-    renderRouter(routes, { initialUrl: '/' });
-    act(() => emit('INITIAL_SESSION', session));
+    await renderRouter(routes, { initialUrl: '/' });
+    await act(() => emit('INITIAL_SESSION', session));
     await screen.findByText('Tela Home');
 
-    act(() => navegador.push('/usuarios'));
+    await act(() => navegador.push('/usuarios'));
 
     expect(await screen.findByText('Tela Usuarios')).toBeOnTheScreen();
   });
 
   it.each(['Gestor de Frota', 'Financeiro', 'Motorista'])('perfil %s aprovado não chega em /usuarios', async (perfil) => {
     mockLinhaUsuario.mockResolvedValue({ data: linhaUsuario('Ativo', perfil), error: null });
-    renderRouter(routes, { initialUrl: '/' });
-    act(() => emit('INITIAL_SESSION', session));
+    await renderRouter(routes, { initialUrl: '/' });
+    await act(() => emit('INITIAL_SESSION', session));
     await screen.findByText('Tela Home');
 
-    act(() => navegador.push('/usuarios'));
+    await act(() => navegador.push('/usuarios'));
 
     expect(await screen.findByText('Tela Home')).toBeOnTheScreen();
     expect(screen.queryByText('Tela Usuarios')).not.toBeOnTheScreen();

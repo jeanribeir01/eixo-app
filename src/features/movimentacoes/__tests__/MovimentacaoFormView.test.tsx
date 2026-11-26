@@ -9,6 +9,8 @@ import {
   listarViagensVinculaveis,
   type ViagemVinculavel,
 } from '@/features/ponte-viagem/ponteRepository';
+import { dispararSemEsperar } from '@/testing/eventos';
+import { porTipo } from '@/testing/componentes';
 import { removerComprovante, uploadComprovante, urlDoComprovante } from '@/lib/storage';
 
 import { MovimentacaoFormView } from '../MovimentacaoFormView';
@@ -133,24 +135,24 @@ const existente: Movimentacao = {
   formaPagamento: { nome: 'Pix', ativa: true },
 };
 
-function salvar() {
-  fireEvent.press(screen.getByRole('button', { name: 'Salvar' }));
+async function salvar() {
+  await fireEvent.press(screen.getByRole('button', { name: 'Salvar' }));
 }
 
-function escolher(campo: string, opcao: string) {
-  fireEvent.press(screen.getByRole('button', { name: campo }));
-  fireEvent.press(screen.getByRole('button', { name: opcao }));
+async function escolher(campo: string, opcao: string) {
+  await fireEvent.press(screen.getByRole('button', { name: campo }));
+  await fireEvent.press(screen.getByRole('button', { name: opcao }));
 }
 
 async function preencherValido() {
-  fireEvent.changeText(screen.getByLabelText('Valor (R$)'), '150000');
-  fireEvent.changeText(screen.getByLabelText('Descrição'), 'Frete Curitiba');
-  escolher('Categoria', 'Frete');
-  escolher('Forma de pagamento', 'Pix');
+  await fireEvent.changeText(screen.getByLabelText('Valor (R$)'), '150000');
+  await fireEvent.changeText(screen.getByLabelText('Descrição'), 'Frete Curitiba');
+  await escolher('Categoria', 'Frete');
+  await escolher('Forma de pagamento', 'Pix');
 }
 
 async function renderNova() {
-  render(<MovimentacaoFormView />);
+  await render(<MovimentacaoFormView />);
   await screen.findByLabelText('Descrição');
 }
 
@@ -187,13 +189,13 @@ async function escolherNoAlerta(opcao: string) {
 }
 
 async function anexarDaGaleria() {
-  fireEvent.press(screen.getByRole('button', { name: 'Anexar comprovante' }));
+  await fireEvent.press(screen.getByRole('button', { name: 'Anexar comprovante' }));
   await escolherNoAlerta('Galeria');
 }
 
 async function removerAnexo() {
   await waitFor(() => expect(screen.getByRole('imagebutton', { name: 'Ver comprovante em tela cheia' })).toBeEnabled());
-  fireEvent.press(screen.getByRole('button', { name: 'Remover' }));
+  await fireEvent.press(screen.getByRole('button', { name: 'Remover' }));
   await escolherNoAlerta('Remover');
 }
 
@@ -204,9 +206,9 @@ describe('MovimentacaoFormView — nova (MOV-01)', () => {
     expect(screen.queryByText('Nova movimentação')).not.toBeOnTheScreen();
     expect(screen.queryByText('Eixo Certo')).not.toBeOnTheScreen();
     // Tela interna: o header nativo protege o topo, o Screen não repete o inset (NAV-04, AC 11).
-    expect(screen.UNSAFE_getByType(SafeAreaView).props.edges).not.toContain('top');
+    expect(porTipo(SafeAreaView).props.edges).not.toContain('top');
     // Formulário rola e sobe com o teclado (NAV-04, AC 9 e 10).
-    expect(screen.UNSAFE_getByType(KeyboardAvoidingView).findByType(ScrollView).props.keyboardShouldPersistTaps).toBe('handled');
+    expect(porTipo(KeyboardAvoidingView).porTipo(ScrollView).props.keyboardShouldPersistTaps).toBe('handled');
   });
 
   it('mostra todos os campos e começa como Pendente, sem data de pagamento', async () => {
@@ -224,7 +226,7 @@ describe('MovimentacaoFormView — nova (MOV-01)', () => {
   it('a lista de categorias mostra o tipo de cada uma', async () => {
     await renderNova();
 
-    fireEvent.press(screen.getByRole('button', { name: 'Categoria' }));
+    await fireEvent.press(screen.getByRole('button', { name: 'Categoria' }));
 
     expect(screen.getByText('Entrada')).toBeOnTheScreen();
     expect(screen.getByText('Saída')).toBeOnTheScreen();
@@ -233,8 +235,8 @@ describe('MovimentacaoFormView — nova (MOV-01)', () => {
   it('status pago aparece como "Recebido" e pede "Data de recebimento" numa entrada', async () => {
     await renderNova();
 
-    escolher('Categoria', 'Frete');
-    fireEvent.press(screen.getByRole('tab', { name: 'Recebido' }));
+    await escolher('Categoria', 'Frete');
+    await fireEvent.press(screen.getByRole('tab', { name: 'Recebido' }));
 
     expect(screen.getByLabelText('Data de recebimento')).toBeOnTheScreen();
   });
@@ -242,8 +244,8 @@ describe('MovimentacaoFormView — nova (MOV-01)', () => {
   it('status pago aparece como "Pago" e pede "Data de pagamento" numa saída', async () => {
     await renderNova();
 
-    escolher('Categoria', 'Combustível');
-    fireEvent.press(screen.getByRole('tab', { name: 'Pago' }));
+    await escolher('Categoria', 'Combustível');
+    await fireEvent.press(screen.getByRole('tab', { name: 'Pago' }));
 
     expect(screen.getByLabelText('Data de pagamento')).toBeOnTheScreen();
   });
@@ -253,7 +255,7 @@ describe('MovimentacaoFormView — validação (MOV-04, MOV-05)', () => {
   it('form vazio mostra as mensagens de cada campo e não chama o repositório', async () => {
     await renderNova();
 
-    salvar();
+    await salvar();
 
     expect(screen.getByText('Informe um valor maior que zero.')).toBeOnTheScreen();
     expect(screen.getByText('Informe a descrição.')).toBeOnTheScreen();
@@ -266,8 +268,8 @@ describe('MovimentacaoFormView — validação (MOV-04, MOV-05)', () => {
     await renderNova();
     await preencherValido();
 
-    fireEvent.press(screen.getByRole('tab', { name: 'Recebido' }));
-    salvar();
+    await fireEvent.press(screen.getByRole('tab', { name: 'Recebido' }));
+    await salvar();
 
     expect(screen.getByText('Informe a data de pagamento.')).toBeOnTheScreen();
     expect(mockCriar).not.toHaveBeenCalled();
@@ -277,8 +279,8 @@ describe('MovimentacaoFormView — validação (MOV-04, MOV-05)', () => {
     await renderNova();
     await preencherValido();
 
-    fireEvent.changeText(screen.getByLabelText('Data de vencimento'), '31022026');
-    salvar();
+    await fireEvent.changeText(screen.getByLabelText('Data de vencimento'), '31022026');
+    await salvar();
 
     expect(screen.getByText('Data inválida. Use DD/MM/AAAA.')).toBeOnTheScreen();
     expect(mockCriar).not.toHaveBeenCalled();
@@ -290,8 +292,8 @@ describe('MovimentacaoFormView — salvar (MOV-02)', () => {
     mockCriar.mockResolvedValue({ ok: true, data: existente });
     await renderNova();
     await preencherValido();
-    fireEvent.press(screen.getByRole('tab', { name: 'Recebido' }));
-    fireEvent.changeText(screen.getByLabelText('Data de recebimento'), '05102026');
+    await fireEvent.press(screen.getByRole('tab', { name: 'Recebido' }));
+    await fireEvent.changeText(screen.getByLabelText('Data de recebimento'), '05102026');
 
     await act(async () => salvar());
 
@@ -331,13 +333,16 @@ describe('MovimentacaoFormView — salvar (MOV-02)', () => {
     await renderNova();
     await preencherValido();
 
-    salvar();
+    const toque1 = await dispararSemEsperar(() => salvar());
 
     expect(screen.getByRole('button', { name: 'Salvar' })).toBeBusy();
-    salvar();
+    const toque2 = await dispararSemEsperar(() => salvar());
     expect(mockCriar).toHaveBeenCalledTimes(1);
 
-    await act(async () => concluir({ ok: true, data: existente }));
+    await act(async () => {
+      concluir({ ok: true, data: existente });
+      await Promise.all([toque1.terminou, toque2.terminou]);
+    });
   });
 });
 
@@ -345,7 +350,7 @@ describe('MovimentacaoFormView — editar (MOV-10)', () => {
   it('carrega os dados, mantém a categoria inativa e salva "Movimentação atualizada."', async () => {
     mockBuscar.mockResolvedValue({ ok: true, data: existente });
     mockAtualizar.mockResolvedValue({ ok: true, data: existente });
-    render(<MovimentacaoFormView movimentacaoId="mov-1" />);
+    await render(<MovimentacaoFormView movimentacaoId="mov-1" />);
 
     await screen.findByLabelText('Descrição');
     expect(screen.queryByText('Editar movimentação')).not.toBeOnTheScreen();
@@ -373,10 +378,10 @@ describe('MovimentacaoFormView — editar (MOV-10)', () => {
 
   it('id inexistente mostra "Movimentação não encontrada." com Voltar', async () => {
     mockBuscar.mockResolvedValue({ ok: false, mensagem: 'Movimentação não encontrada.' });
-    render(<MovimentacaoFormView movimentacaoId="x" />);
+    await render(<MovimentacaoFormView movimentacaoId="x" />);
 
     expect(await screen.findByText('Movimentação não encontrada.')).toBeOnTheScreen();
-    fireEvent.press(screen.getByRole('button', { name: 'Voltar' }));
+    await fireEvent.press(screen.getByRole('button', { name: 'Voltar' }));
     expect(mockBack).toHaveBeenCalled();
   });
 });
@@ -386,7 +391,7 @@ describe('MovimentacaoFormView — opções (edge case)', () => {
     mockOpcoes.mockResolvedValue({ ok: true, data: { categorias: [], formasPagamento: [] } });
     await renderNova();
 
-    fireEvent.press(screen.getByRole('button', { name: 'Categoria' }));
+    await fireEvent.press(screen.getByRole('button', { name: 'Categoria' }));
 
     expect(screen.getByText('Nenhuma opção cadastrada.')).toBeOnTheScreen();
   });
@@ -394,21 +399,21 @@ describe('MovimentacaoFormView — opções (edge case)', () => {
 
 // Carregando e erro de carga também abrem sob o header nativo: sem inset de topo duplicado (NAV-04, AC 11).
 describe('MovimentacaoFormView — estados de carga sob o header (NAV-04)', () => {
-  it('carregando: sem o inset de topo', () => {
+  it('carregando: sem o inset de topo', async () => {
     mockOpcoes.mockReturnValue(new Promise(() => {}));
-    render(<MovimentacaoFormView movimentacaoId="x" />);
+    await render(<MovimentacaoFormView movimentacaoId="x" />);
 
     expect(screen.getByLabelText('Carregando formulário')).toBeOnTheScreen();
-    expect(screen.UNSAFE_getByType(SafeAreaView).props.edges).not.toContain('top');
+    expect(porTipo(SafeAreaView).props.edges).not.toContain('top');
   });
 
   it('erro ao carregar: sem o inset de topo', async () => {
     mockOpcoes.mockResolvedValue({ ok: true, data: { categorias: [], formasPagamento: [] } });
     mockBuscar.mockResolvedValue({ ok: false, mensagem: 'Movimentação não encontrada.' });
-    render(<MovimentacaoFormView movimentacaoId="x" />);
+    await render(<MovimentacaoFormView movimentacaoId="x" />);
 
     expect(await screen.findByText('Movimentação não encontrada.')).toBeOnTheScreen();
-    expect(screen.UNSAFE_getByType(SafeAreaView).props.edges).not.toContain('top');
+    expect(porTipo(SafeAreaView).props.edges).not.toContain('top');
   });
 });
 
@@ -430,7 +435,7 @@ describe('MovimentacaoFormView — comprovante (EIX-34)', () => {
   it('salvar sem o anexo que estava gravado apaga o arquivo, só depois do update (AC 6)', async () => {
     mockBuscar.mockResolvedValue({ ok: true, data: comAnexo });
     mockAtualizar.mockResolvedValue({ ok: true, data: existente });
-    render(<MovimentacaoFormView movimentacaoId="mov-1" />);
+    await render(<MovimentacaoFormView movimentacaoId="mov-1" />);
     await screen.findByLabelText('Descrição');
 
     await removerAnexo();
@@ -447,7 +452,7 @@ describe('MovimentacaoFormView — comprovante (EIX-34)', () => {
   it('se o update falha, o arquivo gravado continua no bucket', async () => {
     mockBuscar.mockResolvedValue({ ok: true, data: comAnexo });
     mockAtualizar.mockResolvedValue({ ok: false, mensagem: 'Não foi possível atualizar a movimentação. Tente novamente.' });
-    render(<MovimentacaoFormView movimentacaoId="mov-1" />);
+    await render(<MovimentacaoFormView movimentacaoId="mov-1" />);
     await screen.findByLabelText('Descrição');
 
     await removerAnexo();
@@ -496,7 +501,7 @@ describe('MovimentacaoFormView — vincular à viagem (US09)', () => {
   it('o seletor lista as viagens vinculáveis com placa e rota', async () => {
     await renderNova();
 
-    fireEvent.press(screen.getByRole('button', { name: 'Vincular à viagem' }));
+    await fireEvent.press(screen.getByRole('button', { name: 'Vincular à viagem' }));
 
     expect(screen.getByRole('button', { name: ROTULO_SP })).toBeOnTheScreen();
     expect(screen.getByRole('button', { name: ROTULO_BH })).toBeOnTheScreen();
@@ -507,8 +512,8 @@ describe('MovimentacaoFormView — vincular à viagem (US09)', () => {
   it('a busca filtra pela rota sem acento', async () => {
     await renderNova();
 
-    fireEvent.press(screen.getByRole('button', { name: 'Vincular à viagem' }));
-    fireEvent.changeText(screen.getByLabelText('Buscar'), 'belo horizonte');
+    await fireEvent.press(screen.getByRole('button', { name: 'Vincular à viagem' }));
+    await fireEvent.changeText(screen.getByLabelText('Buscar'), 'belo horizonte');
 
     expect(screen.getByRole('button', { name: ROTULO_BH })).toBeOnTheScreen();
     expect(screen.queryByRole('button', { name: ROTULO_SP })).not.toBeOnTheScreen();
@@ -518,7 +523,7 @@ describe('MovimentacaoFormView — vincular à viagem (US09)', () => {
   it('salva o lançamento com o viagemId escolhido', async () => {
     await renderNova();
     await preencherValido();
-    escolher('Vincular à viagem', ROTULO_SP);
+    await escolher('Vincular à viagem', ROTULO_SP);
 
     await act(async () => salvar());
 
@@ -529,8 +534,8 @@ describe('MovimentacaoFormView — vincular à viagem (US09)', () => {
   it('busca sem viagem correspondente mostra "Nenhuma viagem encontrada."', async () => {
     await renderNova();
 
-    fireEvent.press(screen.getByRole('button', { name: 'Vincular à viagem' }));
-    fireEvent.changeText(screen.getByLabelText('Buscar'), 'Manaus');
+    await fireEvent.press(screen.getByRole('button', { name: 'Vincular à viagem' }));
+    await fireEvent.changeText(screen.getByLabelText('Buscar'), 'Manaus');
 
     expect(screen.getByText('Nenhuma viagem encontrada.')).toBeOnTheScreen();
   });
@@ -540,7 +545,7 @@ describe('MovimentacaoFormView — vincular à viagem (US09)', () => {
     mockListarViagens.mockResolvedValue({ ok: true, data: [] });
     await renderNova();
 
-    fireEvent.press(screen.getByRole('button', { name: 'Vincular à viagem' }));
+    await fireEvent.press(screen.getByRole('button', { name: 'Vincular à viagem' }));
 
     expect(screen.getByLabelText('Sem viagem')).toBeOnTheScreen();
     expect(screen.getByText('Nenhuma viagem em andamento ou concluída nos últimos 30 dias.')).toBeOnTheScreen();
@@ -550,12 +555,12 @@ describe('MovimentacaoFormView — vincular à viagem (US09)', () => {
   it('"Sem viagem" num lançamento vinculado salva viagemId null', async () => {
     mockBuscar.mockResolvedValue({ ok: true, data: vinculado });
     mockAtualizar.mockResolvedValue({ ok: true, data: { ...vinculado, viagem_id: null } });
-    render(<MovimentacaoFormView movimentacaoId="mov-1" />);
+    await render(<MovimentacaoFormView movimentacaoId="mov-1" />);
     await screen.findByLabelText('Descrição');
     expect(screen.getByRole('button', { name: 'Vincular à viagem' })).toHaveTextContent(ROTULO_SP);
 
-    fireEvent.press(screen.getByRole('button', { name: 'Vincular à viagem' }));
-    fireEvent.press(screen.getByLabelText('Sem viagem'));
+    await fireEvent.press(screen.getByRole('button', { name: 'Vincular à viagem' }));
+    await fireEvent.press(screen.getByLabelText('Sem viagem'));
     await act(async () => salvar());
 
     expect(mockAtualizar).toHaveBeenCalledWith('mov-1', expect.objectContaining({ viagemId: null }));
@@ -567,7 +572,7 @@ describe('MovimentacaoFormView — vincular à viagem (US09)', () => {
     mockBuscar.mockResolvedValue({ ok: true, data: { ...existente, viagem_id: 'v-velha' } });
     mockBuscarViagem.mockResolvedValue({ ok: true, data: antiga });
 
-    render(<MovimentacaoFormView movimentacaoId="mov-1" />);
+    await render(<MovimentacaoFormView movimentacaoId="mov-1" />);
     await screen.findByLabelText('Descrição');
 
     expect(mockBuscarViagem).toHaveBeenCalledWith('v-velha');
@@ -579,7 +584,7 @@ describe('MovimentacaoFormView — vincular à viagem (US09)', () => {
   // PONTE-08
   it('abre com a viagem do parâmetro já escolhida e salva com ela', async () => {
     mockCriar.mockResolvedValue({ ok: true, data: existente });
-    render(<MovimentacaoFormView viagemIdInicial="v-2" />);
+    await render(<MovimentacaoFormView viagemIdInicial="v-2" />);
     await screen.findByLabelText('Descrição');
 
     expect(screen.getByRole('button', { name: 'Vincular à viagem' })).toHaveTextContent(ROTULO_BH);
@@ -592,17 +597,17 @@ describe('MovimentacaoFormView — vincular à viagem (US09)', () => {
   // DETALHE-09
   it('lançamento salvo com viagem mostra "Ver viagem", que abre o detalhe dela', async () => {
     mockBuscar.mockResolvedValue({ ok: true, data: vinculado });
-    render(<MovimentacaoFormView movimentacaoId="mov-1" />);
+    await render(<MovimentacaoFormView movimentacaoId="mov-1" />);
     await screen.findByLabelText('Descrição');
 
-    fireEvent.press(screen.getByRole('button', { name: 'Ver viagem' }));
+    await fireEvent.press(screen.getByRole('button', { name: 'Ver viagem' }));
 
     expect(mockPush).toHaveBeenCalledWith('/viagens/v-1');
   });
 
   it('lançamento novo, mesmo com viagem escolhida, não mostra "Ver viagem"', async () => {
     await renderNova();
-    escolher('Vincular à viagem', ROTULO_SP);
+    await escolher('Vincular à viagem', ROTULO_SP);
 
     expect(screen.queryByRole('button', { name: 'Ver viagem' })).not.toBeOnTheScreen();
   });
@@ -611,7 +616,7 @@ describe('MovimentacaoFormView — vincular à viagem (US09)', () => {
   it('falha ao carregar as viagens mostra o erro de carga com Voltar', async () => {
     mockListarViagens.mockResolvedValue({ ok: false, mensagem: 'Não foi possível carregar as viagens. Tente novamente.' });
 
-    render(<MovimentacaoFormView />);
+    await render(<MovimentacaoFormView />);
 
     expect(await screen.findByText('Não foi possível carregar as viagens. Tente novamente.')).toBeOnTheScreen();
     expect(screen.getByRole('button', { name: 'Voltar' })).toBeOnTheScreen();
@@ -628,10 +633,10 @@ describe('MovimentacaoFormView — litros (US09)', () => {
     await renderNova();
     expect(screen.queryByLabelText('Quantidade em litros')).not.toBeOnTheScreen();
 
-    escolher('Categoria', 'Combustível');
+    await escolher('Categoria', 'Combustível');
     expect(screen.getByLabelText('Quantidade em litros')).toBeOnTheScreen();
 
-    escolher('Categoria', 'Frete');
+    await escolher('Categoria', 'Frete');
     expect(screen.queryByLabelText('Quantidade em litros')).not.toBeOnTheScreen();
   });
 
@@ -639,8 +644,8 @@ describe('MovimentacaoFormView — litros (US09)', () => {
   it('Combustível vinculado sem litros mostra o erro e não salva', async () => {
     await renderNova();
     await preencherValido();
-    escolher('Categoria', 'Combustível');
-    escolher('Vincular à viagem', ROTULO_SP);
+    await escolher('Categoria', 'Combustível');
+    await escolher('Vincular à viagem', ROTULO_SP);
 
     await act(async () => salvar());
 
@@ -652,8 +657,8 @@ describe('MovimentacaoFormView — litros (US09)', () => {
   it('litros com três casas mostra a mensagem de formato e não salva', async () => {
     await renderNova();
     await preencherValido();
-    escolher('Categoria', 'Combustível');
-    fireEvent.changeText(screen.getByLabelText('Quantidade em litros'), '12,345');
+    await escolher('Categoria', 'Combustível');
+    await fireEvent.changeText(screen.getByLabelText('Quantidade em litros'), '12,345');
 
     await act(async () => salvar());
 
@@ -664,9 +669,9 @@ describe('MovimentacaoFormView — litros (US09)', () => {
   it('Combustível vinculado com litros salva o número', async () => {
     await renderNova();
     await preencherValido();
-    escolher('Categoria', 'Combustível');
-    escolher('Vincular à viagem', ROTULO_SP);
-    fireEvent.changeText(screen.getByLabelText('Quantidade em litros'), '412,5');
+    await escolher('Categoria', 'Combustível');
+    await escolher('Vincular à viagem', ROTULO_SP);
+    await fireEvent.changeText(screen.getByLabelText('Quantidade em litros'), '412,5');
 
     await act(async () => salvar());
 
@@ -679,9 +684,9 @@ describe('MovimentacaoFormView — litros (US09)', () => {
   it('litros digitados e depois categoria trocada para Frete salvam litros null', async () => {
     await renderNova();
     await preencherValido();
-    escolher('Categoria', 'Combustível');
-    fireEvent.changeText(screen.getByLabelText('Quantidade em litros'), '80');
-    escolher('Categoria', 'Frete');
+    await escolher('Categoria', 'Combustível');
+    await fireEvent.changeText(screen.getByLabelText('Quantidade em litros'), '80');
+    await escolher('Categoria', 'Frete');
 
     await act(async () => salvar());
 
@@ -694,7 +699,7 @@ describe('MovimentacaoFormView — litros (US09)', () => {
       data: { ...existente, categoria_id: 'cat-comb', litros: 412.5, categoria: { titulo: 'Combustível', tipo: 'Saida', ativa: true } },
     });
 
-    render(<MovimentacaoFormView movimentacaoId="mov-1" />);
+    await render(<MovimentacaoFormView movimentacaoId="mov-1" />);
     await screen.findByLabelText('Descrição');
 
     expect(screen.getByLabelText('Quantidade em litros')).toHaveDisplayValue('412,5');

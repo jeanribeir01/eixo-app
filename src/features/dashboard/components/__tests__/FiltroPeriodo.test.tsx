@@ -25,12 +25,12 @@ function Controlado({ inicial }: { inicial: Periodo }) {
   );
 }
 
-function tocarAba(nome: string) {
-  fireEvent.press(screen.getByRole('tab', { name: nome }));
+async function tocarAba(nome: string) {
+  await fireEvent.press(screen.getByRole('tab', { name: nome }));
 }
 
-function aplicar() {
-  fireEvent.press(screen.getByRole('button', { name: 'Aplicar período' }));
+async function aplicar() {
+  await fireEvent.press(screen.getByRole('button', { name: 'Aplicar período' }));
 }
 
 beforeEach(() => {
@@ -51,12 +51,12 @@ describe('FiltroPeriodo', () => {
     jest.replaceProperty(Platform, 'OS', 'ios');
   });
 
-  function preencher(rotulo: string, digitos: string) {
-    fireEvent.changeText(screen.getByLabelText(rotulo), digitos);
+  async function preencher(rotulo: string, digitos: string) {
+    await fireEvent.changeText(screen.getByLabelText(rotulo), digitos);
   }
 
-  it('mostra as três opções e o mês selecionado', () => {
-    render(<Controlado inicial={periodoDoMes(2026, 11)} />);
+  it('mostra as três opções e o mês selecionado', async () => {
+    await render(<Controlado inicial={periodoDoMes(2026, 11)} />);
 
     expect(screen.getByRole('tab', { name: 'Mês' })).toBeSelected();
     expect(screen.getByRole('tab', { name: 'Ano' })).toBeOnTheScreen();
@@ -64,63 +64,63 @@ describe('FiltroPeriodo', () => {
     expect(screen.getByText('Novembro 2026')).toBeOnTheScreen();
   });
 
-  it('as setas trocam o mês, inclusive na virada do ano', () => {
-    render(<Controlado inicial={periodoDoMes(2026, 12)} />);
+  it('as setas trocam o mês, inclusive na virada do ano', async () => {
+    await render(<Controlado inicial={periodoDoMes(2026, 12)} />);
 
-    fireEvent.press(screen.getByRole('button', { name: 'Próximo mês' }));
+    await fireEvent.press(screen.getByRole('button', { name: 'Próximo mês' }));
 
     expect(onChange).toHaveBeenLastCalledWith(periodoDoMes(2027, 1));
     expect(screen.getByText('Janeiro 2027')).toBeOnTheScreen();
 
-    fireEvent.press(screen.getByRole('button', { name: 'Mês anterior' }));
+    await fireEvent.press(screen.getByRole('button', { name: 'Mês anterior' }));
 
     expect(onChange).toHaveBeenLastCalledWith(periodoDoMes(2026, 12));
   });
 
-  it('aba Ano usa o ano do mês em uso e as setas trocam o ano', () => {
-    render(<Controlado inicial={periodoDoMes(2026, 3)} />);
+  it('aba Ano usa o ano do mês em uso e as setas trocam o ano', async () => {
+    await render(<Controlado inicial={periodoDoMes(2026, 3)} />);
 
-    tocarAba('Ano');
+    await tocarAba('Ano');
 
     expect(onChange).toHaveBeenLastCalledWith(periodoDoAno(2026));
     expect(screen.getByText('2026')).toBeOnTheScreen();
 
-    fireEvent.press(screen.getByRole('button', { name: 'Ano anterior' }));
+    await fireEvent.press(screen.getByRole('button', { name: 'Ano anterior' }));
 
     expect(onChange).toHaveBeenLastCalledWith(periodoDoAno(2025));
   });
 
-  it('trocar entre Mês e Ano mantém o período navegado, não volta para hoje', () => {
-    render(<Controlado inicial={periodoDoMes(2024, 3)} />);
+  it('trocar entre Mês e Ano mantém o período navegado, não volta para hoje', async () => {
+    await render(<Controlado inicial={periodoDoMes(2024, 3)} />);
 
-    tocarAba('Ano');
+    await tocarAba('Ano');
 
     expect(onChange).toHaveBeenLastCalledWith(periodoDoAno(2024));
 
-    tocarAba('Mês');
+    await tocarAba('Mês');
 
     // O mês de hoje (novembro) dentro do ano navegado.
     expect(onChange).toHaveBeenLastCalledWith(periodoDoMes(2024, 11));
     expect(screen.getByText('Novembro 2024')).toBeOnTheScreen();
   });
 
-  it('acompanha o período quando a tela o troca por conta própria', () => {
-    const { rerender } = render(<FiltroPeriodo value={periodoDoMes(2026, 11)} onChange={onChange} />);
+  it('acompanha o período quando a tela o troca por conta própria', async () => {
+    const { rerender } = await render(<FiltroPeriodo value={periodoDoMes(2026, 11)} onChange={onChange} />);
 
-    rerender(<FiltroPeriodo value={periodoDoAno(2026)} onChange={onChange} />);
+    await rerender(<FiltroPeriodo value={periodoDoAno(2026)} onChange={onChange} />);
 
     expect(screen.getByRole('tab', { name: 'Ano' })).toBeSelected();
     expect(screen.getByText('2026')).toBeOnTheScreen();
 
-    fireEvent.press(screen.getByRole('button', { name: 'Ano anterior' }));
+    await fireEvent.press(screen.getByRole('button', { name: 'Ano anterior' }));
 
     expect(onChange).toHaveBeenLastCalledWith(periodoDoAno(2025));
   });
 
-  it('abrir a aba Período não muda o filtro, traz as datas em uso e avisa qual período vale', () => {
-    render(<Controlado inicial={periodoDoMes(2026, 11)} />);
+  it('abrir a aba Período não muda o filtro, traz as datas em uso e avisa qual período vale', async () => {
+    await render(<Controlado inicial={periodoDoMes(2026, 11)} />);
 
-    tocarAba('Período');
+    await tocarAba('Período');
 
     expect(onChange).not.toHaveBeenCalled();
     expect(screen.getByLabelText('Data inicial')).toHaveDisplayValue('01/11/2026');
@@ -128,92 +128,92 @@ describe('FiltroPeriodo', () => {
     expect(screen.getByText('Em uso: Novembro 2026. Toque em "Aplicar período" para trocar.')).toBeOnTheScreen();
   });
 
-  it('tocar de novo na aba Período não apaga as datas digitadas', () => {
-    render(<Controlado inicial={periodoDoMes(2026, 11)} />);
-    tocarAba('Período');
-    preencher('Data inicial', '01102026');
+  it('tocar de novo na aba Período não apaga as datas digitadas', async () => {
+    await render(<Controlado inicial={periodoDoMes(2026, 11)} />);
+    await tocarAba('Período');
+    await preencher('Data inicial', '01102026');
 
-    tocarAba('Período');
+    await tocarAba('Período');
 
     expect(screen.getByLabelText('Data inicial')).toHaveDisplayValue('01/10/2026');
   });
 
-  it('voltar da aba Período sem aplicar mantém o mês navegado', () => {
-    render(<Controlado inicial={periodoDoMes(2026, 3)} />);
+  it('voltar da aba Período sem aplicar mantém o mês navegado', async () => {
+    await render(<Controlado inicial={periodoDoMes(2026, 3)} />);
 
-    tocarAba('Período');
-    tocarAba('Mês');
+    await tocarAba('Período');
+    await tocarAba('Mês');
 
     expect(onChange).not.toHaveBeenCalled();
     expect(screen.getByText('Março 2026')).toBeOnTheScreen();
   });
 
-  it('aplicar um período válido devolve as datas em ISO e tira o aviso', () => {
-    render(<Controlado inicial={periodoDoMes(2026, 11)} />);
-    tocarAba('Período');
+  it('aplicar um período válido devolve as datas em ISO e tira o aviso', async () => {
+    await render(<Controlado inicial={periodoDoMes(2026, 11)} />);
+    await tocarAba('Período');
 
-    preencher('Data inicial', '01102026');
-    preencher('Data final', '15102026');
-    aplicar();
+    await preencher('Data inicial', '01102026');
+    await preencher('Data final', '15102026');
+    await aplicar();
 
     expect(onChange).toHaveBeenCalledWith({ modo: 'customizado', dataInicial: '2026-10-01', dataFinal: '2026-10-15' });
     expect(screen.getByRole('tab', { name: 'Período' })).toBeSelected();
     expect(screen.queryByText(/^Em uso:/)).not.toBeOnTheScreen();
   });
 
-  it('editar um período já aplicado avisa até aplicar de novo', () => {
-    render(<Controlado inicial={{ modo: 'customizado', dataInicial: '2026-10-01', dataFinal: '2026-10-15' }} />);
+  it('editar um período já aplicado avisa até aplicar de novo', async () => {
+    await render(<Controlado inicial={{ modo: 'customizado', dataInicial: '2026-10-01', dataFinal: '2026-10-15' }} />);
 
-    preencher('Data final', '20102026');
+    await preencher('Data final', '20102026');
 
     expect(
       screen.getByText('Em uso: 01/10/2026 a 15/10/2026. Toque em "Aplicar período" para trocar.'),
     ).toBeOnTheScreen();
   });
 
-  it('data final anterior à inicial mostra o erro e não aplica', () => {
-    render(<Controlado inicial={periodoDoMes(2026, 11)} />);
-    tocarAba('Período');
+  it('data final anterior à inicial mostra o erro e não aplica', async () => {
+    await render(<Controlado inicial={periodoDoMes(2026, 11)} />);
+    await tocarAba('Período');
 
-    preencher('Data inicial', '15102026');
-    preencher('Data final', '01102026');
-    aplicar();
+    await preencher('Data inicial', '15102026');
+    await preencher('Data final', '01102026');
+    await aplicar();
 
     expect(screen.getByRole('alert')).toHaveTextContent('A data final não pode ser anterior à data inicial.');
     expect(onChange).not.toHaveBeenCalled();
   });
 
-  it('período maior que 366 dias mostra o erro e não aplica', () => {
-    render(<Controlado inicial={periodoDoMes(2026, 11)} />);
-    tocarAba('Período');
+  it('período maior que 366 dias mostra o erro e não aplica', async () => {
+    await render(<Controlado inicial={periodoDoMes(2026, 11)} />);
+    await tocarAba('Período');
 
-    preencher('Data inicial', '01011900');
-    preencher('Data final', '31129999');
-    aplicar();
+    await preencher('Data inicial', '01011900');
+    await preencher('Data final', '31129999');
+    await aplicar();
 
     expect(screen.getByRole('alert')).toHaveTextContent('O período pode ter no máximo 366 dias.');
     expect(onChange).not.toHaveBeenCalled();
   });
 
-  it('data vazia mostra o erro em português e não aplica', () => {
-    render(<Controlado inicial={periodoDoMes(2026, 11)} />);
-    tocarAba('Período');
+  it('data vazia mostra o erro em português e não aplica', async () => {
+    await render(<Controlado inicial={periodoDoMes(2026, 11)} />);
+    await tocarAba('Período');
 
-    preencher('Data inicial', '');
-    aplicar();
+    await preencher('Data inicial', '');
+    await aplicar();
 
     expect(screen.getByRole('alert')).toHaveTextContent('Informe a data inicial.');
     expect(onChange).not.toHaveBeenCalled();
   });
 
-  it('sair da aba Período limpa os erros', () => {
-    render(<Controlado inicial={periodoDoMes(2026, 11)} />);
-    tocarAba('Período');
-    preencher('Data inicial', '');
-    aplicar();
+  it('sair da aba Período limpa os erros', async () => {
+    await render(<Controlado inicial={periodoDoMes(2026, 11)} />);
+    await tocarAba('Período');
+    await preencher('Data inicial', '');
+    await aplicar();
 
-    tocarAba('Mês');
-    tocarAba('Período');
+    await tocarAba('Mês');
+    await tocarAba('Período');
 
     expect(screen.queryByRole('alert')).not.toBeOnTheScreen();
   });
@@ -225,40 +225,40 @@ describe('FiltroPeriodo no Android — calendário nativo', () => {
   });
 
   // Toca no campo e confirma a data no calendário nativo, como o usuário faz no aparelho.
-  function escolherNoCalendario(rotulo: string, data: Date) {
-    fireEvent.press(screen.getByRole('button', { name: rotulo }));
+  async function escolherNoCalendario(rotulo: string, data: Date) {
+    await fireEvent.press(screen.getByRole('button', { name: rotulo }));
     const abertura: AndroidNativeProps = mockOpen.mock.calls[mockOpen.mock.calls.length - 1][0];
     // Fora de um toque, a atualização de estado precisa do act para chegar à tela.
-    act(() => abertura.onChange?.({ type: 'set', nativeEvent: { timestamp: data.getTime(), utcOffset: 0 } }, data));
+    await act(() => abertura.onChange?.({ type: 'set', nativeEvent: { timestamp: data.getTime(), utcOffset: 0 } }, data));
   }
 
-  it('aplica o período escolhido no calendário', () => {
-    render(<Controlado inicial={periodoDoMes(2026, 11)} />);
-    tocarAba('Período');
+  it('aplica o período escolhido no calendário', async () => {
+    await render(<Controlado inicial={periodoDoMes(2026, 11)} />);
+    await tocarAba('Período');
 
-    escolherNoCalendario('Data inicial', new Date(2026, 9, 1));
-    escolherNoCalendario('Data final', new Date(2026, 9, 15));
-    aplicar();
+    await escolherNoCalendario('Data inicial', new Date(2026, 9, 1));
+    await escolherNoCalendario('Data final', new Date(2026, 9, 15));
+    await aplicar();
 
     expect(onChange).toHaveBeenCalledWith({ modo: 'customizado', dataInicial: '2026-10-01', dataFinal: '2026-10-15' });
   });
 
-  it('o calendário abre na data em uso do campo', () => {
-    render(<Controlado inicial={periodoDoMes(2026, 11)} />);
-    tocarAba('Período');
+  it('o calendário abre na data em uso do campo', async () => {
+    await render(<Controlado inicial={periodoDoMes(2026, 11)} />);
+    await tocarAba('Período');
 
-    fireEvent.press(screen.getByRole('button', { name: 'Data final' }));
+    await fireEvent.press(screen.getByRole('button', { name: 'Data final' }));
 
     expect(mockOpen.mock.calls[0][0].value).toEqual(new Date(2026, 10, 30));
   });
 
-  it('"Limpar data" e aplicar mostra o erro de campo vazio e não aplica', () => {
-    render(<Controlado inicial={periodoDoMes(2026, 11)} />);
-    tocarAba('Período');
+  it('"Limpar data" e aplicar mostra o erro de campo vazio e não aplica', async () => {
+    await render(<Controlado inicial={periodoDoMes(2026, 11)} />);
+    await tocarAba('Período');
 
     // Os dois campos já vêm preenchidos; o primeiro "Limpar data" é o da data inicial.
-    fireEvent.press(screen.getAllByRole('button', { name: 'Limpar data' })[0]);
-    aplicar();
+    await fireEvent.press(screen.getAllByRole('button', { name: 'Limpar data' })[0]);
+    await aplicar();
 
     expect(screen.getByRole('alert')).toHaveTextContent('Informe a data inicial.');
     expect(onChange).not.toHaveBeenCalled();

@@ -22,18 +22,18 @@ jest.mock('@/features/movimentacoes/MovimentacaoFormView', () => {
 });
 
 describe('rota /movimentacoes/nova', () => {
-  it('passa o viagemId da URL para o formulário', () => {
+  it('passa o viagemId da URL para o formulário', async () => {
     mockParametros.mockReturnValue({ viagemId: 'v-2' });
 
-    render(<NovaMovimentacaoRoute />);
+    await render(<NovaMovimentacaoRoute />);
 
     expect(screen.getByText('viagemIdInicial=v-2')).toBeOnTheScreen();
   });
 
-  it('sem viagemId na URL, o formulário abre sem viagem', () => {
+  it('sem viagemId na URL, o formulário abre sem viagem', async () => {
     mockParametros.mockReturnValue({});
 
-    render(<NovaMovimentacaoRoute />);
+    await render(<NovaMovimentacaoRoute />);
 
     expect(screen.getByText('viagemIdInicial=nenhuma')).toBeOnTheScreen();
   });

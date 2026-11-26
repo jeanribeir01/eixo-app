@@ -12,12 +12,14 @@ export default function AppLayout() {
 
   // Rota fora do perfil nem existe na árvore: digitar a URL cai de volta nas abas, que abrem
   // na tela inicial do perfil. O RLS é quem garante de fato — esconder rota é usabilidade.
+  // O `redirectTo="/"` leva às abas, que abrem na aba inicial do perfil (desde o SDK 58 o destino
+  // precisa ser explícito).
   return (
     <Stack screenOptions={stackOptions}>
       {/* Abas declaradas primeiro: o Stack abre na primeira tela listada. */}
       {/* As abas não têm header nativo: cada aba mostra o próprio título no conteúdo. */}
       <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-      <Stack.Protected guard={podeVerCategorias}>
+      <Stack.Protected guard={podeVerCategorias} redirectTo="/">
         <Stack.Screen name="categorias/index" options={{ title: 'Categorias' }} />
         <Stack.Screen name="categorias/nova" options={{ title: 'Nova categoria' }} />
         <Stack.Screen name="categorias/[id]/editar" options={{ title: 'Editar categoria' }} />
@@ -38,7 +40,7 @@ export default function AppLayout() {
         <Stack.Screen name="viagens/lancamentos" options={{ title: 'Lançamentos por viagem' }} />
         <Stack.Screen name="viagens/[id]/index" options={{ title: 'Viagem' }} />
       </Stack.Protected>
-      <Stack.Protected guard={podeVerFrota}>
+      <Stack.Protected guard={podeVerFrota} redirectTo="/">
         {/* Lista em `frota/veiculos`, não em `frota/index`: esse teria a URL da aba Frota (`/frota`). */}
         <Stack.Screen name="frota/veiculos" options={{ title: 'Veículos' }} />
         <Stack.Screen name="frota/novo" options={{ title: 'Novo veículo' }} />
@@ -55,15 +57,15 @@ export default function AppLayout() {
         <Stack.Screen name="viagens/revisoes" options={{ title: 'Revisões de viagens' }} />
       </Stack.Protected>
       {/* Viagens (US08) seguem a aba: o Motorista também abre e fecha. A lista é a própria aba. */}
-      <Stack.Protected guard={podeVerViagens}>
+      <Stack.Protected guard={podeVerViagens} redirectTo="/">
         <Stack.Screen name="viagens/nova" options={{ title: 'Abrir viagem' }} />
-        <Stack.Screen name="viagens/[id]/fechar" options={{ title: 'Fechar viagem' }} />
+        <Stack.Screen name="viagens/[id]/fechar" options={{ title: 'Finalizar viagem' }} />
       </Stack.Protected>
       {/* A lista de viagens fora da aba: só para quem vê viagens e não tem a aba (Admin). */}
-      <Stack.Protected guard={viagensForaDaAba}>
+      <Stack.Protected guard={viagensForaDaAba} redirectTo="/">
         <Stack.Screen name="frota/viagens" options={{ title: 'Viagens' }} />
       </Stack.Protected>
-      <Stack.Protected guard={podeVerUsuarios}>
+      <Stack.Protected guard={podeVerUsuarios} redirectTo="/">
         <Stack.Screen name="usuarios/index" options={{ title: 'Usuários' }} />
         <Stack.Screen name="usuarios/[id]" options={{ title: 'Usuário' }} />
       </Stack.Protected>

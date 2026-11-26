@@ -1,6 +1,8 @@
 import { act, fireEvent, render, screen, within } from '@testing-library/react-native';
 import { FlatList, RefreshControl, StyleSheet, useWindowDimensions } from 'react-native';
 
+import { dispararSemEsperar, segurarPrimeiraCarga } from '@/testing/eventos';
+import { porTipo, todosPorTipo } from '@/testing/componentes';
 import { ListItem, Skeleton, spacing } from '@/ui';
 
 import { ManutencoesListView } from '../ManutencoesListView';
@@ -75,14 +77,14 @@ const TITULO_OLEO = 'BRA2E19 · Troca de óleo';
 const TITULO_FREIOS = 'ABC-1234 · Revisão dos freios';
 
 function linha(titulo: string) {
-  const encontrada = screen.UNSAFE_getAllByType(ListItem).find((item) => item.props.title === titulo);
+  const encontrada = todosPorTipo(ListItem).find((item) => item.props.title === titulo);
   if (!encontrada) throw new Error(`linha "${titulo}" não encontrada`);
   return encontrada;
 }
 
 async function renderComLista() {
   mockListar.mockResolvedValue({ ok: true, data: manutencoes });
-  render(<ManutencoesListView />);
+  await render(<ManutencoesListView />);
   await screen.findByText(TITULO_PNEUS);
 }
 
@@ -96,10 +98,13 @@ describe('ManutencoesListView — carga', () => {
   // MAN-25
   it('primeira carga: três skeletons, depois a lista', async () => {
     mockListar.mockResolvedValue({ ok: true, data: manutencoes });
-    render(<ManutencoesListView />);
+    // Segura a primeira carga: o render async esperaria a resposta e pularia o "carregando".
+    const liberarCarga = segurarPrimeiraCarga(mockListar);
+    await render(<ManutencoesListView />);
 
     expect(screen.getByLabelText('Carregando manutenções')).toBeOnTheScreen();
-    expect(screen.UNSAFE_getAllByType(Skeleton)).toHaveLength(3);
+    expect(todosPorTipo(Skeleton)).toHaveLength(3);
+    await liberarCarga();
     expect(await screen.findByText(TITULO_PNEUS)).toBeOnTheScreen();
   });
 
@@ -115,7 +120,7 @@ describe('ManutencoesListView — carga', () => {
   it('mantém a ordem recebida: abertas antes das concluídas', async () => {
     await renderComLista();
 
-    expect(screen.UNSAFE_getAllByType(ListItem).map((item) => item.props.title)).toEqual([
+    expect(todosPorTipo(ListItem).map((item) => item.props.title)).toEqual([
       TITULO_PNEUS,
       TITULO_OLEO,
       TITULO_FREIOS,
@@ -127,10 +132,10 @@ describe('ManutencoesListView — carga', () => {
     mockListar
       .mockResolvedValueOnce({ ok: false, mensagem: 'Não foi possível carregar as manutenções. Tente novamente.' })
       .mockResolvedValueOnce({ ok: true, data: manutencoes });
-    render(<ManutencoesListView />);
+    await render(<ManutencoesListView />);
 
     expect(await screen.findByText('Não foi possível carregar as manutenções. Tente novamente.')).toBeOnTheScreen();
-    fireEvent.press(screen.getByRole('button', { name: 'Tentar novamente' }));
+    await fireEvent.press(screen.getByRole('button', { name: 'Tentar novamente' }));
 
     expect(await screen.findByText(TITULO_PNEUS)).toBeOnTheScreen();
   });
@@ -138,7 +143,7 @@ describe('ManutencoesListView — carga', () => {
   // MAN-27
   it('sem manutenção mostra "Nenhuma manutenção registrada"', async () => {
     mockListar.mockResolvedValue({ ok: true, data: [] });
-    render(<ManutencoesListView />);
+    await render(<ManutencoesListView />);
 
     expect(await screen.findByText('Nenhuma manutenção registrada')).toBeOnTheScreen();
   });
@@ -149,9 +154,9 @@ describe('ManutencoesListView — concluir', () => {
   it('só as manutenções em aberto têm "Concluir"', async () => {
     await renderComLista();
 
-    expect(within(linha(TITULO_PNEUS)).getByRole('button', { name: 'Concluir' })).toBeOnTheScreen();
-    expect(within(linha(TITULO_OLEO)).getByRole('button', { name: 'Concluir' })).toBeOnTheScreen();
-    expect(within(linha(TITULO_FREIOS)).queryByRole('button', { name: 'Concluir' })).not.toBeOnTheScreen();
+    expect(within(linha(TITULO_PNEUS).elementoNativo()).getByRole('button', { name: 'Concluir' })).toBeOnTheScreen();
+    expect(within(linha(TITULO_OLEO).elementoNativo()).getByRole('button', { name: 'Concluir' })).toBeOnTheScreen();
+    expect(within(linha(TITULO_FREIOS).elementoNativo()).queryByRole('button', { name: 'Concluir' })).not.toBeOnTheScreen();
   });
 
   // MAN-20
@@ -160,13 +165,13 @@ describe('ManutencoesListView — concluir', () => {
     await renderComLista();
 
     await act(async () => {
-      fireEvent.press(within(linha(TITULO_OLEO)).getByRole('button', { name: 'Concluir' }));
+      await fireEvent.press(within(linha(TITULO_OLEO).elementoNativo()).getByRole('button', { name: 'Concluir' }));
     });
 
     expect(mockConcluir).toHaveBeenCalledWith('m2');
     expect(screen.getByRole('alert')).toHaveTextContent('Manutenção concluída. Veículo disponível.');
     expect(linha(TITULO_OLEO).props.subtitle).toBe('05/10/2026 · R$ 450,00 · Concluída');
-    expect(within(linha(TITULO_OLEO)).queryByRole('button', { name: 'Concluir' })).not.toBeOnTheScreen();
+    expect(within(linha(TITULO_OLEO).elementoNativo()).queryByRole('button', { name: 'Concluir' })).not.toBeOnTheScreen();
   });
 
   // MAN-21
@@ -175,7 +180,7 @@ describe('ManutencoesListView — concluir', () => {
     await renderComLista();
 
     await act(async () => {
-      fireEvent.press(within(linha(TITULO_PNEUS)).getByRole('button', { name: 'Concluir' }));
+      await fireEvent.press(within(linha(TITULO_PNEUS).elementoNativo()).getByRole('button', { name: 'Concluir' }));
     });
 
     expect(screen.getByRole('alert')).toHaveTextContent(
@@ -190,15 +195,18 @@ describe('ManutencoesListView — concluir', () => {
     mockConcluir.mockReturnValue(new Promise((resolve) => (terminar = resolve)));
     await renderComLista();
 
-    const botao = () => within(linha(TITULO_PNEUS)).getByRole('button', { name: 'Concluir' });
-    fireEvent.press(botao());
+    const botao = () => within(linha(TITULO_PNEUS).elementoNativo()).getByRole('button', { name: 'Concluir' });
+    const toque1 = await dispararSemEsperar(() => fireEvent.press(botao()));
     expect(botao()).toBeDisabled();
-    fireEvent.press(botao());
+    const toque2 = await dispararSemEsperar(() => fireEvent.press(botao()));
     expect(mockConcluir).toHaveBeenCalledTimes(1);
     // O "Concluir" da outra linha continua disponível.
-    expect(within(linha(TITULO_OLEO)).getByRole('button', { name: 'Concluir' })).not.toBeDisabled();
+    expect(within(linha(TITULO_OLEO).elementoNativo()).getByRole('button', { name: 'Concluir' })).not.toBeDisabled();
 
-    await act(async () => terminar({ ok: true, data: 'Disponivel' }));
+    await act(async () => {
+      terminar({ ok: true, data: 'Disponivel' });
+      await Promise.all([toque1.terminou, toque2.terminou]);
+    });
   });
 
   // MAN-22: cada linha tem o próprio loading. A resposta de uma não libera o botão da outra.
@@ -208,21 +216,24 @@ describe('ManutencoesListView — concluir', () => {
     mockConcluir.mockImplementation((id) => new Promise((resolve) => (terminar[id] = resolve)));
     await renderComLista();
 
-    const concluir = (titulo: string) => within(linha(titulo)).getByRole('button', { name: 'Concluir' });
-    fireEvent.press(concluir(TITULO_PNEUS));
-    fireEvent.press(concluir(TITULO_OLEO));
+    const concluir = (titulo: string) => within(linha(titulo).elementoNativo()).getByRole('button', { name: 'Concluir' });
+    const toque1 = await dispararSemEsperar(() => fireEvent.press(concluir(TITULO_PNEUS)));
+    const toque2 = await dispararSemEsperar(() => fireEvent.press(concluir(TITULO_OLEO)));
     expect(concluir(TITULO_PNEUS)).toBeDisabled();
     expect(concluir(TITULO_OLEO)).toBeDisabled();
 
     await act(async () => terminar.m2({ ok: true, data: 'Disponivel' }));
 
-    expect(within(linha(TITULO_OLEO)).queryByRole('button', { name: 'Concluir' })).not.toBeOnTheScreen();
+    expect(within(linha(TITULO_OLEO).elementoNativo()).queryByRole('button', { name: 'Concluir' })).not.toBeOnTheScreen();
     // Pneus ainda espera a RPC: continua em loading e ignora o toque.
     expect(concluir(TITULO_PNEUS)).toBeDisabled();
-    fireEvent.press(concluir(TITULO_PNEUS));
+    await fireEvent.press(concluir(TITULO_PNEUS));
     expect(mockConcluir).toHaveBeenCalledTimes(2);
 
-    await act(async () => terminar.m1({ ok: true, data: 'Disponivel' }));
+    await act(async () => {
+      terminar.m1({ ok: true, data: 'Disponivel' });
+      await Promise.all([toque1.terminou, toque2.terminou]);
+    });
     expect(linha(TITULO_PNEUS).props.subtitle).toBe('16/10/2026 · R$ 1,13 · Concluída');
   });
 
@@ -234,11 +245,12 @@ describe('ManutencoesListView — concluir', () => {
     mockConcluir.mockResolvedValue({ ok: true, data: 'Disponivel' });
 
     let recarga: Promise<void> = Promise.resolve();
-    act(() => {
-      recarga = screen.UNSAFE_getByType(RefreshControl).props.onRefresh();
+    await act(() => {
+      // O onRefresh da tela é async, mas o tipo do RefreshControl diz `void`: o Promise.resolve devolve a mesma promessa.
+      recarga = Promise.resolve(porTipo(RefreshControl).props.onRefresh!());
     });
     await act(async () => {
-      fireEvent.press(within(linha(TITULO_OLEO)).getByRole('button', { name: 'Concluir' }));
+      await fireEvent.press(within(linha(TITULO_OLEO).elementoNativo()).getByRole('button', { name: 'Concluir' }));
     });
     await act(async () => {
       terminarRecarga({ ok: true, data: manutencoes });
@@ -246,7 +258,7 @@ describe('ManutencoesListView — concluir', () => {
     });
 
     expect(linha(TITULO_OLEO).props.subtitle).toBe('05/10/2026 · R$ 450,00 · Concluída');
-    expect(within(linha(TITULO_OLEO)).queryByRole('button', { name: 'Concluir' })).not.toBeOnTheScreen();
+    expect(within(linha(TITULO_OLEO).elementoNativo()).queryByRole('button', { name: 'Concluir' })).not.toBeOnTheScreen();
   });
 
   // MAN-23
@@ -255,12 +267,12 @@ describe('ManutencoesListView — concluir', () => {
     await renderComLista();
 
     await act(async () => {
-      fireEvent.press(within(linha(TITULO_PNEUS)).getByRole('button', { name: 'Concluir' }));
+      await fireEvent.press(within(linha(TITULO_PNEUS).elementoNativo()).getByRole('button', { name: 'Concluir' }));
     });
 
     expect(screen.getByRole('alert')).toHaveTextContent('Manutenção não encontrada ou já concluída.');
     expect(linha(TITULO_PNEUS).props.subtitle).toBe('16/10/2026 · R$ 1,13 · Em aberto');
-    expect(within(linha(TITULO_PNEUS)).getByRole('button', { name: 'Concluir' })).toBeOnTheScreen();
+    expect(within(linha(TITULO_PNEUS).elementoNativo()).getByRole('button', { name: 'Concluir' })).toBeOnTheScreen();
   });
 });
 
@@ -269,7 +281,7 @@ describe('ManutencoesListView — navegação', () => {
   it('"Ver veículo" abre o detalhe do veículo daquela manutenção', async () => {
     await renderComLista();
 
-    fireEvent.press(within(linha(TITULO_OLEO)).getByRole('button', { name: 'Ver veículo' }));
+    await fireEvent.press(within(linha(TITULO_OLEO).elementoNativo()).getByRole('button', { name: 'Ver veículo' }));
 
     expect(mockPush).toHaveBeenCalledWith('/frota/v2');
   });
@@ -277,7 +289,7 @@ describe('ManutencoesListView — navegação', () => {
   it('"Ver veículo" também aparece nas concluídas', async () => {
     await renderComLista();
 
-    fireEvent.press(within(linha(TITULO_FREIOS)).getByRole('button', { name: 'Ver veículo' }));
+    await fireEvent.press(within(linha(TITULO_FREIOS).elementoNativo()).getByRole('button', { name: 'Ver veículo' }));
 
     expect(mockPush).toHaveBeenCalledWith('/frota/v1');
   });
@@ -286,7 +298,7 @@ describe('ManutencoesListView — navegação', () => {
   it('o FAB "Nova manutenção" abre o cadastro', async () => {
     await renderComLista();
 
-    fireEvent.press(screen.getByRole('button', { name: 'Nova manutenção' }));
+    await fireEvent.press(screen.getByRole('button', { name: 'Nova manutenção' }));
 
     expect(mockPush).toHaveBeenCalledWith('/manutencoes/nova');
   });
@@ -300,7 +312,7 @@ describe('ManutencoesListView — tablet (EIX-94)', () => {
   }
 
   function estiloDaLista() {
-    return StyleSheet.flatten(screen.UNSAFE_getByType(FlatList).props.contentContainerStyle);
+    return StyleSheet.flatten(porTipo(FlatList).props.contentContainerStyle);
   }
 
   it('412: nada muda, o respiro lateral continua no Screen e a lista não ganha coluna', async () => {

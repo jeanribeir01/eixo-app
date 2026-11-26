@@ -1,4 +1,5 @@
 import { act, fireEvent, render, screen, within } from '@testing-library/react-native';
+import { dispararSemEsperar } from '@/testing/eventos';
 
 import { ViagemLancamentosView } from '../ViagemLancamentosView';
 import {
@@ -73,7 +74,7 @@ const PEDAGIO: LancamentoDaViagem = {
 };
 
 async function renderDetalhe() {
-  render(<ViagemLancamentosView viagemId="v-1" />);
+  await render(<ViagemLancamentosView viagemId="v-1" />);
   await screen.findByText('ABC1D23');
 }
 
@@ -129,7 +130,7 @@ describe('ViagemLancamentosView', () => {
 
     const botoes = screen.getAllByRole('button', { name: 'Desvincular' });
     // Ordem na tela: Frete (Entradas), Diesel e Pedágio (Saídas).
-    await act(async () => fireEvent.press(botoes[2]!));
+    await act(async () => await fireEvent.press(botoes[2]!));
 
     expect(mockDesvincular).toHaveBeenCalledWith('m-pedagio');
     expect(screen.queryByText('Pedágio Régis')).not.toBeOnTheScreen();
@@ -143,13 +144,14 @@ describe('ViagemLancamentosView', () => {
     mockDesvincular.mockReturnValue(new Promise((resolver) => (concluir = resolver)));
     await renderDetalhe();
 
-    // act síncrono: o toque dispara a gravação, que fica pendente até `concluir`.
-    act(() => {
-      fireEvent.press(screen.getAllByRole('button', { name: 'Desvincular' })[0]!);
-    });
+    // O toque dispara a gravação, que fica pendente até `concluir`.
+    const toque1 = await dispararSemEsperar(() => fireEvent.press(screen.getAllByRole('button', { name: 'Desvincular' })[0]!));
 
     expect(screen.getAllByRole('button', { name: 'Desvincular' })[0]).toBeBusy();
-    await act(async () => concluir({ ok: true, data: 'm-frete' }));
+    await act(async () => {
+      concluir({ ok: true, data: 'm-frete' });
+      await toque1.terminou;
+    });
   });
 
   // DETALHE-05
@@ -157,7 +159,7 @@ describe('ViagemLancamentosView', () => {
     mockDesvincular.mockResolvedValue({ ok: false, mensagem: 'Não foi possível desvincular. Tente novamente.' });
     await renderDetalhe();
 
-    await act(async () => fireEvent.press(screen.getAllByRole('button', { name: 'Desvincular' })[0]!));
+    await act(async () => await fireEvent.press(screen.getAllByRole('button', { name: 'Desvincular' })[0]!));
 
     expect(screen.getByText('Frete SP–Curitiba')).toBeOnTheScreen();
     expect(screen.getByText('Não foi possível desvincular. Tente novamente.')).toBeOnTheScreen();
@@ -169,16 +171,16 @@ describe('ViagemLancamentosView', () => {
     await renderDetalhe();
 
     expect(screen.getByText('Nenhum lançamento vinculado')).toBeOnTheScreen();
-    fireEvent.press(screen.getByRole('button', { name: 'Nova movimentação' }));
+    await fireEvent.press(screen.getByRole('button', { name: 'Nova movimentação' }));
 
     expect(mockPush).toHaveBeenCalledWith({ pathname: '/movimentacoes/nova', params: { viagemId: 'v-1' } });
   });
 
   // DETALHE-07
-  it('mostra o carregando enquanto busca', () => {
+  it('mostra o carregando enquanto busca', async () => {
     mockBuscarViagem.mockReturnValue(new Promise(() => undefined));
 
-    render(<ViagemLancamentosView viagemId="v-1" />);
+    await render(<ViagemLancamentosView viagemId="v-1" />);
 
     expect(screen.getByLabelText('Carregando viagem')).toBeOnTheScreen();
   });
@@ -186,10 +188,10 @@ describe('ViagemLancamentosView', () => {
   // DETALHE-07
   it('erro na carga mostra a mensagem e "Tentar novamente" busca de novo', async () => {
     mockListar.mockResolvedValueOnce({ ok: false, mensagem: 'Não foi possível carregar os lançamentos. Tente novamente.' });
-    render(<ViagemLancamentosView viagemId="v-1" />);
+    await render(<ViagemLancamentosView viagemId="v-1" />);
 
     expect(await screen.findByText('Não foi possível carregar os lançamentos. Tente novamente.')).toBeOnTheScreen();
-    await act(async () => fireEvent.press(screen.getByRole('button', { name: 'Tentar novamente' })));
+    await act(async () => await fireEvent.press(screen.getByRole('button', { name: 'Tentar novamente' })));
 
     expect(await screen.findByText('ABC1D23')).toBeOnTheScreen();
     expect(mockListar).toHaveBeenCalledTimes(2);
@@ -199,7 +201,7 @@ describe('ViagemLancamentosView', () => {
   it('tocar numa linha abre a edição do lançamento', async () => {
     await renderDetalhe();
 
-    fireEvent.press(screen.getByRole('button', { name: 'Editar Diesel Registro' }));
+    await fireEvent.press(screen.getByRole('button', { name: 'Editar Diesel Registro' }));
 
     expect(mockPush).toHaveBeenCalledWith('/movimentacoes/m-diesel/editar');
   });

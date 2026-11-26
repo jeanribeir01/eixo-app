@@ -2,6 +2,8 @@ import { act, fireEvent, render, screen } from '@testing-library/react-native';
 import { KeyboardAvoidingView, ScrollView } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
+import { dispararSemEsperar, segurarPrimeiraCarga } from '@/testing/eventos';
+import { porTipo } from '@/testing/componentes';
 import { listarVeiculosSelecionaveis } from '@/features/veiculos/repository';
 import type { Veiculo } from '@/features/veiculos/types';
 
@@ -60,26 +62,26 @@ const formas: FormaPagamentoOpcao[] = [
   { id: 'f2', nome: 'Pix' },
 ];
 
-function escolher(campo: string, opcao: string) {
-  fireEvent.press(screen.getByRole('button', { name: campo }));
-  fireEvent.press(screen.getByRole('button', { name: opcao }));
+async function escolher(campo: string, opcao: string) {
+  await fireEvent.press(screen.getByRole('button', { name: campo }));
+  await fireEvent.press(screen.getByRole('button', { name: opcao }));
 }
 
-function preencher() {
-  escolher('Veículo', 'ABC-1234 · Volvo FH 540');
-  fireEvent.changeText(screen.getByLabelText('Descrição do serviço'), '  Troca de pneus  ');
-  fireEvent.changeText(screen.getByLabelText('Valor total'), '113');
-  escolher('Forma de pagamento', 'Pix');
+async function preencher() {
+  await escolher('Veículo', 'ABC-1234 · Volvo FH 540');
+  await fireEvent.changeText(screen.getByLabelText('Descrição do serviço'), '  Troca de pneus  ');
+  await fireEvent.changeText(screen.getByLabelText('Valor total'), '113');
+  await escolher('Forma de pagamento', 'Pix');
 }
 
+// O fireEvent já roda dentro de act na Testing Library 14: um act a mais em volta dele quebra os testes
+// que disparam o salvar sem esperar (dispararSemEsperar).
 async function salvar() {
-  await act(async () => {
-    fireEvent.press(screen.getByRole('button', { name: 'Salvar' }));
-  });
+  await fireEvent.press(screen.getByRole('button', { name: 'Salvar' }));
 }
 
 async function renderPronto() {
-  render(<ManutencaoFormView />);
+  await render(<ManutencaoFormView />);
   await screen.findByLabelText('Descrição do serviço');
 }
 
@@ -98,9 +100,12 @@ afterEach(() => {
 describe('ManutencaoFormView — campos', () => {
   // MAN-01, MAN-04
   it('mostra os seis campos, com a data de hoje e o status Pendente', async () => {
-    render(<ManutencaoFormView />);
+    // Segura a primeira carga: o render async esperaria a resposta e pularia o "carregando".
+    const liberarCarga = segurarPrimeiraCarga(mockVeiculos);
+    await render(<ManutencaoFormView />);
 
     expect(screen.getByLabelText('Carregando formulário')).toBeOnTheScreen();
+    await liberarCarga();
     expect(await screen.findByRole('button', { name: 'Veículo' })).toBeOnTheScreen();
     expect(screen.getByLabelText('Data da manutenção')).toHaveProp('value', '18/10/2026');
     expect(screen.getByLabelText('Descrição do serviço')).toBeOnTheScreen();
@@ -109,8 +114,8 @@ describe('ManutencaoFormView — campos', () => {
     expect(screen.getByRole('tab', { name: 'Pendente' })).toBeSelected();
     expect(screen.getByRole('tab', { name: 'Pago' })).not.toBeSelected();
     // Tela interna: header nativo, formulário rola e sobe com o teclado.
-    expect(screen.UNSAFE_getByType(SafeAreaView).props.edges).not.toContain('top');
-    expect(screen.UNSAFE_getByType(KeyboardAvoidingView).findByType(ScrollView).props.keyboardShouldPersistTaps).toBe(
+    expect(porTipo(SafeAreaView).props.edges).not.toContain('top');
+    expect(porTipo(KeyboardAvoidingView).porTipo(ScrollView).props.keyboardShouldPersistTaps).toBe(
       'handled',
     );
   });
@@ -119,7 +124,7 @@ describe('ManutencaoFormView — campos', () => {
   it('o seletor de Veículo mostra "PLACA · Marca Modelo" dos veículos selecionáveis para manutenção', async () => {
     await renderPronto();
 
-    fireEvent.press(screen.getByRole('button', { name: 'Veículo' }));
+    await fireEvent.press(screen.getByRole('button', { name: 'Veículo' }));
 
     // 'manutencao' = Disponível e Em Manutenção; veículo em viagem não chega ao seletor.
     expect(mockVeiculos).toHaveBeenCalledTimes(1);
@@ -132,7 +137,7 @@ describe('ManutencaoFormView — campos', () => {
   it('o seletor de Forma de pagamento mostra as formas ativas', async () => {
     await renderPronto();
 
-    fireEvent.press(screen.getByRole('button', { name: 'Forma de pagamento' }));
+    await fireEvent.press(screen.getByRole('button', { name: 'Forma de pagamento' }));
 
     expect(mockFormas).toHaveBeenCalledTimes(1);
     expect(screen.getByRole('button', { name: 'Boleto' })).toBeOnTheScreen();
@@ -146,8 +151,8 @@ describe('ManutencaoFormView — salvar', () => {
     mockRegistrar.mockResolvedValue({ ok: true, data: 'm1' });
     await renderPronto();
 
-    preencher();
-    fireEvent.press(screen.getByRole('tab', { name: 'Pago' }));
+    await preencher();
+    await fireEvent.press(screen.getByRole('tab', { name: 'Pago' }));
     await salvar();
 
     expect(mockRegistrar).toHaveBeenCalledWith({
@@ -160,7 +165,7 @@ describe('ManutencaoFormView — salvar', () => {
     });
     expect(screen.getByRole('alert')).toHaveTextContent('Manutenção registrada. O veículo está em manutenção.');
 
-    act(() => {
+    await act(() => {
       jest.advanceTimersByTime(1200);
     });
     expect(mockBack).toHaveBeenCalledTimes(1);
@@ -170,7 +175,7 @@ describe('ManutencaoFormView — salvar', () => {
   it('campos vazios bloqueiam o envio com a mensagem de cada campo', async () => {
     await renderPronto();
 
-    fireEvent.changeText(screen.getByLabelText('Data da manutenção'), '');
+    await fireEvent.changeText(screen.getByLabelText('Data da manutenção'), '');
     await salvar();
 
     expect(screen.getByText('Escolha o veículo.')).toBeOnTheScreen();
@@ -185,8 +190,8 @@ describe('ManutencaoFormView — salvar', () => {
   it('data futura bloqueia o envio', async () => {
     await renderPronto();
 
-    preencher();
-    fireEvent.changeText(screen.getByLabelText('Data da manutenção'), '19102026');
+    await preencher();
+    await fireEvent.changeText(screen.getByLabelText('Data da manutenção'), '19102026');
     await salvar();
 
     expect(screen.getByText('A data da manutenção não pode ser futura.')).toBeOnTheScreen();
@@ -197,9 +202,9 @@ describe('ManutencaoFormView — salvar', () => {
   it('descrição com mais de 100 caracteres bloqueia o envio', async () => {
     await renderPronto();
 
-    preencher();
+    await preencher();
     expect(screen.getByLabelText('Descrição do serviço')).toHaveProp('maxLength', 100);
-    fireEvent.changeText(screen.getByLabelText('Descrição do serviço'), 'a'.repeat(101));
+    await fireEvent.changeText(screen.getByLabelText('Descrição do serviço'), 'a'.repeat(101));
     await salvar();
 
     expect(screen.getByText('A descrição pode ter no máximo 100 caracteres.')).toBeOnTheScreen();
@@ -214,13 +219,13 @@ describe('ManutencaoFormView — salvar', () => {
     mockRegistrar.mockResolvedValue({ ok: false, mensagem });
     await renderPronto();
 
-    preencher();
+    await preencher();
     await salvar();
 
     expect(screen.getByRole('alert')).toHaveTextContent(mensagem);
     // Depois da recusa o usuário corrige e tenta de novo.
     expect(screen.getByRole('button', { name: 'Salvar' })).not.toBeDisabled();
-    act(() => {
+    await act(() => {
       jest.advanceTimersByTime(1200);
     });
     expect(mockBack).not.toHaveBeenCalled();
@@ -231,16 +236,19 @@ describe('ManutencaoFormView — salvar', () => {
     let concluir: (valor: Awaited<ReturnType<typeof registrarManutencao>>) => void = () => undefined;
     mockRegistrar.mockReturnValue(new Promise((resolve) => (concluir = resolve)));
     await renderPronto();
-    preencher();
+    await preencher();
 
-    await salvar();
+    const toque1 = await dispararSemEsperar(() => salvar());
     expect(screen.getByRole('button', { name: 'Salvar' })).toBeDisabled();
-    await salvar();
+    const toque2 = await dispararSemEsperar(() => salvar());
     expect(mockRegistrar).toHaveBeenCalledTimes(1);
 
     // Depois do sucesso o botão continua em loading até a tela fechar: um segundo toque gravaria
     // outra manutenção e outra despesa, porque o banco aceita duas ordens abertas no mesmo veículo.
-    await act(async () => concluir({ ok: true, data: 'm1' }));
+    await act(async () => {
+      concluir({ ok: true, data: 'm1' });
+      await Promise.all([toque1.terminou, toque2.terminou]);
+    });
     expect(screen.getByRole('alert')).toHaveTextContent('Manutenção registrada. O veículo está em manutenção.');
     expect(screen.getByRole('button', { name: 'Salvar' })).toBeDisabled();
     await salvar();
@@ -272,12 +280,12 @@ describe('ManutencaoFormView — carga das opções', () => {
     ],
   ])('falha na carga %s mostra o erro em português e "Tentar novamente" carrega de novo', async (_fonte, falhar, mensagem, fonte) => {
     falhar();
-    render(<ManutencaoFormView />);
+    await render(<ManutencaoFormView />);
 
     expect(await screen.findByText(mensagem)).toBeOnTheScreen();
     expect(screen.queryByLabelText('Descrição do serviço')).not.toBeOnTheScreen();
     await act(async () => {
-      fireEvent.press(screen.getByRole('button', { name: 'Tentar novamente' }));
+      await fireEvent.press(screen.getByRole('button', { name: 'Tentar novamente' }));
     });
 
     expect(await screen.findByLabelText('Descrição do serviço')).toBeOnTheScreen();
@@ -289,7 +297,7 @@ describe('ManutencaoFormView — carga das opções', () => {
     mockFormas.mockResolvedValue({ ok: true, data: [] });
     await renderPronto();
 
-    fireEvent.press(screen.getByRole('button', { name: 'Forma de pagamento' }));
+    await fireEvent.press(screen.getByRole('button', { name: 'Forma de pagamento' }));
 
     expect(screen.getByText('Nenhuma forma de pagamento ativa.')).toBeOnTheScreen();
   });
