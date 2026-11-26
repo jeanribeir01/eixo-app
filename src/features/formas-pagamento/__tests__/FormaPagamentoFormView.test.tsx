@@ -43,13 +43,26 @@ describe('FormaPagamentoFormView', () => {
     expect(screen.getByPlaceholderText('Ex.: Dinheiro')).toBeOnTheScreen();
   });
 
+  it('mostra como a forma vai aparecer nos seletores, acompanhando o nome digitado', async () => {
+    await render(<FormaPagamentoFormView />);
+
+    expect(screen.getByText('Assim aparece nos seletores')).toBeOnTheScreen();
+    expect(screen.getByText('Nome da forma')).toBeOnTheScreen();
+
+    await fireEvent.changeText(screen.getByPlaceholderText('Ex.: Dinheiro'), 'Vale-pedágio');
+
+    expect(screen.getByText('Vale-pedágio')).toBeOnTheScreen();
+    expect(screen.queryByText('Nome da forma')).not.toBeOnTheScreen();
+    expect(screen.getByRole('button', { name: 'Criar forma de pagamento' })).toBeOnTheScreen();
+  });
+
   it('cria a forma de pagamento e volta com feedback de sucesso', async () => {
     (criarFormaPagamento as jest.Mock).mockResolvedValue({ ok: true, data: dinheiro });
 
     await render(<FormaPagamentoFormView />);
 
     await fireEvent.changeText(screen.getByPlaceholderText('Ex.: Dinheiro'), 'Dinheiro');
-    await fireEvent.press(screen.getByRole('button', { name: 'Salvar' }));
+    await fireEvent.press(screen.getByRole('button', { name: /^(Criar forma de pagamento|Salvar alterações)$/ }));
 
     await waitFor(() => {
       expect(criarFormaPagamento).toHaveBeenCalledWith({ nome: 'Dinheiro' });
@@ -70,7 +83,7 @@ describe('FormaPagamentoFormView', () => {
     await render(<FormaPagamentoFormView />);
 
     await fireEvent.changeText(screen.getByPlaceholderText('Ex.: Dinheiro'), 'Pix');
-    await fireEvent.press(screen.getByRole('button', { name: 'Salvar' }));
+    await fireEvent.press(screen.getByRole('button', { name: /^(Criar forma de pagamento|Salvar alterações)$/ }));
 
     await waitFor(() => {
       expect(screen.getAllByText('Já existe uma forma de pagamento com esse nome.')).toHaveLength(2); // input error e snackbar
@@ -87,7 +100,7 @@ describe('FormaPagamentoFormView', () => {
     expect(await screen.findByDisplayValue('Dinheiro')).toBeOnTheScreen();
 
     await fireEvent.changeText(screen.getByDisplayValue('Dinheiro'), 'Dinheiro em espécie');
-    await fireEvent.press(screen.getByRole('button', { name: 'Salvar' }));
+    await fireEvent.press(screen.getByRole('button', { name: /^(Criar forma de pagamento|Salvar alterações)$/ }));
 
     await waitFor(() => {
       expect(atualizarFormaPagamento).toHaveBeenCalledWith('1', { nome: 'Dinheiro em espécie' });
@@ -103,7 +116,7 @@ describe('FormaPagamentoFormView', () => {
     expect(await screen.findByDisplayValue('Pix')).toBeOnTheScreen();
     expect(screen.getByText('Formas de pagamento padrão não podem ter o nome alterado.')).toBeOnTheScreen();
 
-    expect(screen.queryByRole('button', { name: 'Salvar' })).not.toBeOnTheScreen();
+    expect(screen.queryByRole('button', { name: /^(Criar forma de pagamento|Salvar alterações)$/ })).not.toBeOnTheScreen();
     expect(screen.getByRole('button', { name: 'Voltar' })).toBeOnTheScreen();
 
     const input = screen.getByDisplayValue('Pix');
@@ -113,7 +126,7 @@ describe('FormaPagamentoFormView', () => {
   it('exibe erro do Zod para campo vazio', async () => {
     await render(<FormaPagamentoFormView />);
     
-    await fireEvent.press(screen.getByRole('button', { name: 'Salvar' }));
+    await fireEvent.press(screen.getByRole('button', { name: /^(Criar forma de pagamento|Salvar alterações)$/ }));
 
     await waitFor(() => {
       expect(screen.getByText('Informe o nome da forma de pagamento.')).toBeOnTheScreen();
