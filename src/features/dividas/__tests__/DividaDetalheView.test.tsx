@@ -1,12 +1,12 @@
-import { act, fireEvent, render, screen } from '@testing-library/react-native';
-import { FlatList, StyleSheet, useWindowDimensions } from 'react-native';
+import { act, fireEvent, render, screen, waitFor } from '@testing-library/react-native';
+import { Alert, Animated, FlatList, StyleSheet, useWindowDimensions } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { porTipo } from '@/testing/componentes';
 import { spacing } from '@/ui';
 
 import { DividaDetalheView } from '../components/DividaDetalheView';
-import { buscarDivida } from '../dividasRepository';
+import { buscarDivida, excluirDivida } from '../dividasRepository';
 import type { DividaDetalhe, Parcela } from '../types';
 
 // Largura da janela controlada pelo teste: 412 é celular, 800 é tablet (EIX-94).
@@ -21,9 +21,13 @@ function mockLargura(width: number) {
 
 jest.setTimeout(15000);
 
-jest.mock('../dividasRepository', () => ({ buscarDivida: jest.fn() }));
+jest.mock('../dividasRepository', () => ({ buscarDivida: jest.fn(), excluirDivida: jest.fn() }));
+
+const mockBack = jest.fn();
+jest.mock('expo-router', () => ({ useRouter: () => ({ back: mockBack }) }));
 
 const mockBuscar = buscarDivida as jest.MockedFunction<typeof buscarDivida>;
+const mockExcluir = excluirDivida as jest.MockedFunction<typeof excluirDivida>;
 
 const detalhe: DividaDetalhe = {
   id: 'div-1',
@@ -48,6 +52,8 @@ const detalhe: DividaDetalhe = {
 
 beforeEach(() => {
   mockBuscar.mockReset();
+  mockExcluir.mockReset();
+  mockBack.mockReset();
 });
 
 describe('DividaDetalheView (EIX-50)', () => {
@@ -189,4 +195,115 @@ describe('DividaDetalheView: saldo e grupos de parcelas', () => {
     expect(screen.queryByText(/^Em aberto/)).not.toBeOnTheScreen();
   });
 });
+});
+
+type BotaoAlerta = { text?: string; onPress?: () => void };
+
+// O Alert do sistema não renderiza na árvore de teste: pega o botão pelo texto e toca nele, como a pessoa faria.
+function botaoDoAlerta(texto: string): BotaoAlerta | undefined {
+  const botoes = (Alert.alert as jest.Mock).mock.calls[0]?.[2] as BotaoAlerta[] | undefined;
+  return botoes?.find((botao) => botao.text === texto);
+}
+
+describe('DividaDetalheView: excluir dívida (DIV-05)', () => {
+  beforeEach(() => {
+    jest.spyOn(Alert, 'alert').mockImplementation(() => {});
+    mockBuscar.mockResolvedValue({ ok: true, data: detalhe });
+  });
+
+  afterEach(() => {
+    jest.useRealTimers();
+    jest.restoreAllMocks();
+  });
+
+  it('avisa antes o que a exclusão faz com as parcelas em aberto e as pagas', async () => {
+    await render(<DividaDetalheView id="div-1" />);
+
+    expect(await screen.findByText('Ao excluir esta dívida')).toBeOnTheScreen();
+    expect(screen.getByText('2 parcelas em aberto saem do caixa. A paga continua no histórico.')).toBeOnTheScreen();
+    expect(screen.getByRole('button', { name: 'Excluir dívida' })).toBeOnTheScreen();
+  });
+
+  it('confirma no Alert do sistema e não exclui se a pessoa cancelar', async () => {
+    await render(<DividaDetalheView id="div-1" />);
+
+    await fireEvent.press(await screen.findByRole('button', { name: 'Excluir dívida' }));
+
+    expect(Alert.alert).toHaveBeenCalledWith(
+      'Excluir dívida?',
+      'Financiamento do caminhão\n\n2 parcelas em aberto saem do caixa. A paga continua no histórico.',
+      expect.any(Array),
+    );
+    expect(botaoDoAlerta('Cancelar')).toBeDefined();
+    expect(mockExcluir).not.toHaveBeenCalled();
+  });
+
+  it('exclui, mostra o que aconteceu e volta para a lista quando o Snackbar fecha', async () => {
+    jest.useFakeTimers();
+    jest.spyOn(Animated, 'timing');
+    mockExcluir.mockResolvedValue({ ok: true, data: { parcelasRemovidas: 2, parcelasPreservadas: 1 } });
+    await render(<DividaDetalheView id="div-1" />);
+
+    await fireEvent.press(await screen.findByRole('button', { name: 'Excluir dívida' }));
+    await act(async () => {
+      botaoDoAlerta('Excluir')?.onPress?.();
+    });
+
+    expect(mockExcluir).toHaveBeenCalledWith('div-1');
+    expect(screen.getByRole('alert')).toHaveTextContent(
+      'Dívida excluída. 2 parcelas em aberto removidas. 1 paga continua no caixa.',
+    );
+    // Segue em loading até sair da tela: um segundo toque não chama a RPC de novo.
+    expect(screen.getByRole('button', { name: 'Excluir dívida' })).toBeDisabled();
+    await waitFor(() => expect(Animated.timing).toHaveBeenCalled());
+    expect(mockBack).not.toHaveBeenCalled();
+
+    await act(async () => {
+      jest.advanceTimersByTime(3000);
+    });
+
+    expect(mockBack).toHaveBeenCalledTimes(1);
+  });
+
+  it('erro da RPC: mostra a mensagem, reabilita o botão e fica na tela', async () => {
+    mockExcluir.mockResolvedValue({ ok: false, mensagem: 'Dívida não encontrada ou já excluída.' });
+    await render(<DividaDetalheView id="div-1" />);
+
+    await fireEvent.press(await screen.findByRole('button', { name: 'Excluir dívida' }));
+    await act(async () => {
+      botaoDoAlerta('Excluir')?.onPress?.();
+    });
+
+    expect(screen.getByRole('alert')).toHaveTextContent('Dívida não encontrada ou já excluída.');
+    expect(screen.getByRole('button', { name: 'Excluir dívida' })).not.toBeDisabled();
+    expect(mockBack).not.toHaveBeenCalled();
+  });
+
+  it('toque duplo em "Excluir" chama a RPC uma vez só', async () => {
+    let resolver: (valor: Awaited<ReturnType<typeof excluirDivida>>) => void = () => {};
+    mockExcluir.mockReturnValue(new Promise((resolve) => (resolver = resolve)));
+    await render(<DividaDetalheView id="div-1" />);
+
+    await fireEvent.press(await screen.findByRole('button', { name: 'Excluir dívida' }));
+    await act(async () => {
+      botaoDoAlerta('Excluir')?.onPress?.();
+      botaoDoAlerta('Excluir')?.onPress?.();
+    });
+
+    expect(mockExcluir).toHaveBeenCalledTimes(1);
+    await act(async () => resolver({ ok: true, data: { parcelasRemovidas: 2, parcelasPreservadas: 1 } }));
+  });
+
+  it('dívida quitada: avisa que só sai da lista', async () => {
+    const pagas = detalhe.parcelas.map((parcela) => ({ ...parcela, status: 'Pago' as const }));
+    mockBuscar.mockResolvedValue({
+      ok: true,
+      data: { ...detalhe, parcelasPagas: 3, saldoPendenteCentavos: 0, proximaParcela: null, parcelas: pagas },
+    });
+    await render(<DividaDetalheView id="div-1" />);
+
+    expect(
+      await screen.findByText('Nenhuma parcela em aberto: a dívida só sai da lista, e as pagas continuam no caixa.'),
+    ).toBeOnTheScreen();
+  });
 });
