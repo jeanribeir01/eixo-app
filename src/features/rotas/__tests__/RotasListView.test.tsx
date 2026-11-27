@@ -256,11 +256,24 @@ describe('RotasListView — filtros e FAB', () => {
     expect(screen.getByRole('switch', { name: `Ativa: ${TITULO_JOINVILLE}` })).not.toBeChecked();
   });
 
+  it('com as inativas à mostra, separa "Ativas" e "Inativas" e explica o interruptor no fim', async () => {
+    await renderComLista();
+    expect(screen.queryByText(/^Inativas · /)).not.toBeOnTheScreen();
+
+    await fireEvent(screen.getByRole('switch', { name: 'Mostrar inativas' }), 'valueChange', true);
+
+    expect(screen.getByText(/^Ativas · \d+$/)).toBeOnTheScreen();
+    expect(screen.getByText('Inativas · 1')).toBeOnTheScreen();
+    expect(
+      screen.getByText('Inativar uma rota tira o trecho das novas viagens e preserva o histórico.'),
+    ).toBeOnTheScreen();
+  });
+
   // ROTA-19
   it('busca pela cidade de destino ignorando acento e maiúscula', async () => {
     await renderComLista();
 
-    await fireEvent.changeText(screen.getByLabelText('Buscar'), ' SAO ');
+    await fireEvent.changeText(screen.getByLabelText('Buscar rota'), ' SAO ');
 
     expect(screen.getByText(TITULO_CURITIBA)).toBeOnTheScreen();
     expect(screen.queryByText(TITULO_LONDRINA)).not.toBeOnTheScreen();
@@ -269,11 +282,11 @@ describe('RotasListView — filtros e FAB', () => {
   it('busca também pela cidade de origem e acha nome digitado sem acento', async () => {
     await renderComLista();
 
-    await fireEvent.changeText(screen.getByLabelText('Buscar'), 'londrina');
+    await fireEvent.changeText(screen.getByLabelText('Buscar rota'), 'londrina');
     expect(screen.getByText(TITULO_LONDRINA)).toBeOnTheScreen();
     expect(screen.queryByText(TITULO_CURITIBA)).not.toBeOnTheScreen();
 
-    await fireEvent.changeText(screen.getByLabelText('Buscar'), 'maringa');
+    await fireEvent.changeText(screen.getByLabelText('Buscar rota'), 'maringa');
     expect(screen.getByText(TITULO_LONDRINA)).toBeOnTheScreen();
   });
 
@@ -281,7 +294,7 @@ describe('RotasListView — filtros e FAB', () => {
   it('busca sem resultado mostra "Nenhuma rota encontrada"', async () => {
     await renderComLista();
 
-    await fireEvent.changeText(screen.getByLabelText('Buscar'), 'Manaus');
+    await fireEvent.changeText(screen.getByLabelText('Buscar rota'), 'Manaus');
 
     expect(screen.getByText('Nenhuma rota encontrada')).toBeOnTheScreen();
     expect(screen.queryByText('Nenhuma rota cadastrada')).not.toBeOnTheScreen();
@@ -324,6 +337,6 @@ describe('RotasListView — tablet (EIX-94)', () => {
     expect(estiloDaLista()).toMatchObject({ maxWidth: 720, alignSelf: 'center' });
     const coluna = screen.getByTestId('screen-coluna');
     expect(StyleSheet.flatten(coluna.props.style)).toMatchObject({ maxWidth: 720, alignSelf: 'center' });
-    expect(within(coluna).getByLabelText('Buscar')).toBeOnTheScreen();
+    expect(within(coluna).getByLabelText('Buscar rota')).toBeOnTheScreen();
   });
 });

@@ -1,6 +1,6 @@
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { useRouter } from 'expo-router';
-import { RefreshControl, StyleSheet } from 'react-native';
+import { RefreshControl, StyleSheet, View } from 'react-native';
 
 import { useDadosDaTela } from '@/lib/useDadosDaTela';
 import {
@@ -16,7 +16,9 @@ import {
   Skeleton,
   Snackbar,
   Switch,
+  Text,
   colors,
+  spacing,
   useScreenColumn,
 } from '@/ui';
 
@@ -37,6 +39,24 @@ function subtitulo(rota: RotaComViagens): string {
     rota.viagens_finalizadas === 1 ? '1 viagem finalizada' : `${rota.viagens_finalizadas} viagens finalizadas`;
   const texto = `${distancia} · ${viagens}`;
   return rota.ativa ? texto : `${texto} · Inativa`;
+}
+
+// Cabeçalhos e rotas numa FlatList só, como nas outras listas do redesign.
+type Linha = { tipo: 'grupo'; id: string; rotulo: string } | { tipo: 'rota'; id: string; rota: RotaComViagens };
+
+// Com as inativas à mostra, elas ficam num grupo próprio, depois das ativas; sem elas, um grupo só.
+function agruparPorSituacao(rotas: RotaComViagens[]): Linha[] {
+  const grupos = [
+    { id: 'ativas', rotulo: 'Ativas', itens: rotas.filter((rota) => rota.ativa) },
+    { id: 'inativas', rotulo: 'Inativas', itens: rotas.filter((rota) => !rota.ativa) },
+  ];
+  const linhas: Linha[] = [];
+  for (const grupo of grupos) {
+    if (grupo.itens.length === 0) continue;
+    linhas.push({ tipo: 'grupo', id: `grupo-${grupo.id}`, rotulo: `${grupo.rotulo} · ${grupo.itens.length}` });
+    for (const rota of grupo.itens) linhas.push({ tipo: 'rota', id: rota.id, rota });
+  }
+  return linhas;
 }
 
 export function RotasListView() {
@@ -75,6 +95,8 @@ export function RotasListView() {
     return chaveCidade(rota.cidade_origem).includes(termo) || chaveCidade(rota.cidade_destino).includes(termo);
   });
 
+  const linhas = useMemo(() => agruparPorSituacao(rotasFiltradas), [rotasFiltradas]);
+
   // Um Snackbar só: o retorno da ação vem antes do aviso de recarga que falhou.
   const snackbar = feedback ?? (tela.feedbackErro ? { mensagem: tela.feedbackErro, tone: 'error' as const } : null);
 
@@ -96,7 +118,7 @@ export function RotasListView() {
     >
       {/* Fora da lista, na coluna: no tablet fica alinhado com as linhas (EIX-94). */}
       <ScreenColumn>
-        <Input label="Buscar" placeholder="Buscar por cidade" value={busca} onChangeText={setBusca} />
+        <Input label="Buscar rota" icone="buscar" placeholder="Cidade de origem ou destino" value={busca} onChangeText={setBusca} />
 
         <Switch label="Mostrar inativas" value={mostrarInativas} onValueChange={setMostrarInativas} />
 
@@ -120,8 +142,8 @@ export function RotasListView() {
 
       {tela.status === 'pronto' && (
         <List
-          data={rotasFiltradas}
-          keyExtractor={(item) => item.id}
+          data={linhas}
+          keyExtractor={(linha) => linha.id}
           style={styles.lista}
           contentContainerStyle={[coluna, styles.espacoDoFab]}
           refreshControl={
@@ -141,22 +163,39 @@ export function RotasListView() {
               description={termo ? 'Tente buscar por outra cidade.' : 'Cadastre o primeiro trecho para começar.'}
             />
           }
-          renderItem={({ item }) => (
-            <ListItem
-              title={trecho(item)}
-              subtitle={subtitulo(item)}
-              onPress={() => router.push(`/rotas/${item.id}/editar`)}
-              control={
-                <Switch
-                  label="Ativa"
-                  accessibilityLabel={`Ativa: ${trecho(item)}`}
-                  value={item.ativa}
-                  disabled={processandoId === item.id}
-                  onValueChange={() => handleAlternarAtiva(item)}
-                />
-              }
-            />
-          )}
+          renderItem={({ item }) =>
+            item.tipo === 'grupo' ? (
+              <View style={styles.grupo}>
+                <Text weight="semibold" accessibilityRole="header">
+                  {item.rotulo}
+                </Text>
+              </View>
+            ) : (
+              <ListItem
+                icon="rotas"
+                title={trecho(item.rota)}
+                subtitle={subtitulo(item.rota)}
+                onPress={() => router.push(`/rotas/${item.rota.id}/editar`)}
+                control={
+                  <Switch
+                    label="Ativa"
+                    accessibilityLabel={`Ativa: ${trecho(item.rota)}`}
+                    value={item.rota.ativa}
+                    disabled={processandoId === item.rota.id}
+                    onValueChange={() => handleAlternarAtiva(item.rota)}
+                  />
+                }
+              />
+            )
+          }
+          // O que o interruptor "Ativa" faz, dito uma vez no fim da lista e não em cada linha.
+          ListFooterComponent={
+            linhas.length > 0 ? (
+              <Text variant="bodySm" tone="body" style={styles.rodape}>
+                Inativar uma rota tira o trecho das novas viagens e preserva o histórico.
+              </Text>
+            ) : undefined
+          }
         />
       )}
     </Screen>
@@ -166,6 +205,13 @@ export function RotasListView() {
 const styles = StyleSheet.create({
   lista: {
     flex: 1,
+  },
+  grupo: {
+    paddingTop: spacing.lg,
+    paddingBottom: spacing.xs,
+  },
+  rodape: {
+    paddingTop: spacing.lg,
   },
   // O Screen só reserva o espaço do FAB quando ele mesmo rola; aqui quem rola é a FlatList.
   espacoDoFab: {
