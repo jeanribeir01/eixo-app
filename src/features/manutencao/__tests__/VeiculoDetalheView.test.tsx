@@ -24,13 +24,14 @@ function mockLargura(width: number) {
 jest.setTimeout(15000);
 
 const mockBack = jest.fn();
+const mockPush = jest.fn();
 
 // Jest hoista jest.mock() acima dos imports: a fábrica só pode usar variáveis com prefixo "mock".
 jest.mock('expo-router', () => {
   // eslint-disable-next-line @typescript-eslint/no-require-imports
   const react = require('react');
   return {
-    useRouter: () => ({ push: jest.fn(), back: mockBack }),
+    useRouter: () => ({ push: mockPush, back: mockBack }),
     useFocusEffect: (callback: () => void) => react.useEffect(callback, [callback]),
   };
 });
@@ -70,6 +71,7 @@ const volvo: VeiculoComHistorico = {
 
 beforeEach(() => {
   mockBack.mockReset();
+  mockPush.mockReset();
   mockBuscar.mockReset();
 });
 
@@ -100,12 +102,29 @@ describe('VeiculoDetalheView', () => {
 
     const linhas = todosPorTipo(ListItem);
     expect(linhas.map((linha) => linha.props.title)).toEqual(['Troca de pneus', 'Revisão dos freios']);
-    expect(linhas.map((linha) => linha.props.subtitle)).toEqual(['16/10/2026 · Em aberto', '01/09/2026 · Concluída']);
+    // A data da conclusão é um instante: aparece no fuso do aparelho (02/09 em Brasília).
+    expect(linhas.map((linha) => linha.props.subtitle)).toEqual([
+      '16/10/2026 · Em aberto',
+      '01/09/2026 · Concluída em 02/09',
+    ]);
+    // Em aberto antes das concluídas, cada grupo com a contagem.
+    expect(screen.getByText('Em aberto · 1')).toBeOnTheScreen();
+    expect(screen.getByText('Concluídas · 1')).toBeOnTheScreen();
+    expect(screen.getByText('2 manutenções registradas · 1 em aberto')).toBeOnTheScreen();
     expect(screen.getByText('R$ 1,13')).toBeOnTheScreen();
     expect(screen.getByText('R$ 2.500,00')).toBeOnTheScreen();
   });
 
   // MAN-36
+  it('"Editar veículo" abre a edição', async () => {
+    mockBuscar.mockResolvedValue({ ok: true, data: volvo });
+    await render(<VeiculoDetalheView veiculoId="v1" />);
+
+    await fireEvent.press(await screen.findByRole('button', { name: 'Editar veículo' }));
+
+    expect(mockPush).toHaveBeenCalledWith('/frota/v1/editar');
+  });
+
   it('veículo sem manutenção mostra o aviso de histórico vazio', async () => {
     mockBuscar.mockResolvedValue({ ok: true, data: { ...volvo, status: 'Disponivel', manutencoes: [] } });
     await render(<VeiculoDetalheView veiculoId="v1" />);
