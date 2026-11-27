@@ -625,7 +625,7 @@ describe('MovimentacaoFormView — vincular à viagem (US09)', () => {
 
     await fireEvent.press(screen.getByRole('button', { name: 'Ver viagem' }));
 
-    expect(mockPush).toHaveBeenCalledWith('/viagens/v-1');
+    expect(mockPush).toHaveBeenCalledWith('/viagens/v-1/lancamentos');
   });
 
   it('lançamento novo, mesmo com viagem escolhida, não mostra "Ver viagem"', async () => {

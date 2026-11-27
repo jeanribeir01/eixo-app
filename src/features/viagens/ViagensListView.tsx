@@ -278,7 +278,6 @@ const LinhaDaViagem = memo(function LinhaDaViagem({ viagem }: { viagem: ViagemDe
   const trecho = viagem.rota ? `${viagem.rota.cidade_origem} → ${viagem.rota.cidade_destino}` : 'Rota não informada';
   // Passo 3.3: km bem acima da estimativa da rota costuma ser hodômetro digitado errado.
   const distanciaExcessiva = distanciaUltrapassaEstimativa(calcularKmRodado(viagem), viagem.rota?.distancia_estimada_km);
-  const emAndamento = viagem.status === 'EmAndamento';
 
   // Verde e vermelho ficam para dinheiro (DESIGN_CYAN): o que pede atenção usa o tom de alerta, sempre
   // com o texto dizendo o porquê.
@@ -295,9 +294,8 @@ const LinhaDaViagem = memo(function LinhaDaViagem({ viagem }: { viagem: ViagemDe
       title={`${placa} · ${trecho}`}
       subtitle={resumoDaViagem(viagem)}
       trailing={selo}
-      // Na estrada, tocar na linha leva ao fechamento; a própria tela confirma antes de gravar.
-      onPress={emAndamento ? () => router.push(`/viagens/${viagem.id}/fechar`) : undefined}
-      accessibilityLabel={emAndamento ? `Finalizar viagem ${placa}, ${trecho}` : undefined}
+      // Toda viagem abre o Detalhe, em qualquer status; "Finalizar viagem" fica lá, para a que está na estrada.
+      onPress={() => router.push(`/viagens/${viagem.id}`)}
     />
   );
 });

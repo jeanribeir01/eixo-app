@@ -115,7 +115,8 @@ export function VeiculosListView() {
   const filtrando = buscaAplicada.trim() !== '' || filtroStatus !== TODOS;
   const linhas = useMemo(() => agruparPorStatus(veiculos), [veiculos]);
   const desativados = useMemo(() => veiculos.filter((veiculo) => veiculo.status === 'Inativo'), [veiculos]);
-  const editar = (id: string) => router.push(`/frota/${id}/editar`);
+  // Tocar abre o Detalhe do veículo, como toda linha de lista; o Editar fica no rodapé do Detalhe.
+  const abrir = (id: string) => router.push(`/frota/${id}`);
 
   return (
     // Tela interna, aberta pelo hub de Frota (EIX-77): o título "Veículos" vem do header nativo.
@@ -171,7 +172,7 @@ export function VeiculosListView() {
                 </Text>
               </View>
             ) : (
-              <LinhaDoVeiculo veiculo={item.veiculo} onEditar={() => editar(item.veiculo.id)} />
+              <LinhaDoVeiculo veiculo={item.veiculo} onAbrir={() => abrir(item.veiculo.id)} />
             )
           }
           // Desativados no fim, recolhidos: continuam no histórico de viagens e abrem para reativar.
@@ -183,7 +184,7 @@ export function VeiculosListView() {
                 resumo={desativados.map((veiculo) => formatarPlaca(veiculo.placa)).join(', ')}
               >
                 {desativados.map((veiculo) => (
-                  <LinhaDoVeiculo key={veiculo.id} veiculo={veiculo} onEditar={() => editar(veiculo.id)} />
+                  <LinhaDoVeiculo key={veiculo.id} veiculo={veiculo} onAbrir={() => abrir(veiculo.id)} />
                 ))}
               </GrupoRecolhivel>
             ) : undefined
@@ -196,12 +197,12 @@ export function VeiculosListView() {
 
 type LinhaDoVeiculoProps = {
   veiculo: Veiculo;
-  onEditar: () => void;
+  onAbrir: () => void;
 };
 
-// Uma linha por veículo: tocar edita. Desativar e reativar ficam no Editar, como nas outras listas de
-// cadastro (antes era um "Mais opções" na linha, com o Alert do sistema).
-function LinhaDoVeiculo({ veiculo, onEditar }: LinhaDoVeiculoProps) {
+// Uma linha por veículo: tocar abre o Detalhe (histórico de manutenções e o botão Editar). Desativar e
+// reativar ficam no Editar, como nas outras listas de cadastro.
+function LinhaDoVeiculo({ veiculo, onAbrir }: LinhaDoVeiculoProps) {
   const placa = formatarPlaca(veiculo.placa);
   const icone = GRUPOS.find((grupo) => grupo.status === veiculo.status)?.icone ?? 'bloqueado';
 
@@ -211,8 +212,7 @@ function LinhaDoVeiculo({ veiculo, onEditar }: LinhaDoVeiculoProps) {
       // A máscara com hífen da placa antiga é só visual; o banco guarda sem hífen.
       title={placa}
       subtitle={`${veiculo.marca} ${veiculo.modelo} · ${formatarCapacidade(veiculo.capacidade_carga)}`}
-      onPress={onEditar}
-      accessibilityLabel={`Editar ${placa}`}
+      onPress={onAbrir}
     />
   );
 }

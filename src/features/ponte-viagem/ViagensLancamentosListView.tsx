@@ -72,7 +72,7 @@ export function ViagensLancamentosListView() {
             icon="viagens"
             title={rotuloViagem(item)}
             subtitle={descricaoViagem(item)}
-            onPress={() => router.push(`/viagens/${item.id}`)}
+            onPress={() => router.push(`/viagens/${item.id}/lancamentos`)}
           />
         )}
       />

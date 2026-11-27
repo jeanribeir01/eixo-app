@@ -35,17 +35,17 @@ export default function AppLayout() {
         <Stack.Screen name="dividas/index" options={{ title: 'Dívidas' }} />
         <Stack.Screen name="dividas/nova" options={{ title: 'Nova dívida' }} />
         <Stack.Screen name="dividas/[id]" options={{ title: 'Dívida' }} />
-        {/* Ponte Caixa ↔ Viagens (US09): detalhe da viagem com os lançamentos. O Financeiro não lê
-            `viagem` direto; a tela usa as RPCs da ponte. Gestor e Motorista não leem movimentação. */}
+        {/* Ponte Caixa ↔ Viagens (US09): os lançamentos de cada viagem. O Financeiro não lê `viagem`
+            direto; a tela usa as RPCs da ponte. Gestor e Motorista não leem movimentação. */}
         <Stack.Screen name="viagens/lancamentos" options={{ title: 'Lançamentos por viagem' }} />
-        <Stack.Screen name="viagens/[id]/index" options={{ title: 'Viagem' }} />
+        <Stack.Screen name="viagens/[id]/lancamentos" options={{ title: 'Lançamentos da viagem' }} />
       </Stack.Protected>
       <Stack.Protected guard={podeVerFrota} redirectTo="/">
         {/* Lista em `frota/veiculos`, não em `frota/index`: esse teria a URL da aba Frota (`/frota`). */}
         <Stack.Screen name="frota/veiculos" options={{ title: 'Veículos' }} />
         <Stack.Screen name="frota/novo" options={{ title: 'Novo veículo' }} />
         <Stack.Screen name="frota/[id]/editar" options={{ title: 'Editar veículo' }} />
-        {/* Detalhe com o histórico de manutenções (US06-b): aberto pelo "Ver veículo" da lista de manutenções. */}
+        {/* Detalhe com o histórico de manutenções (US06-b): aberto pela lista de Veículos e pela aba Frota. */}
         <Stack.Screen name="frota/[id]/index" options={{ title: 'Veículo' }} />
         {/* Rotas (US07) e Manutenções (US06-b): mesmos perfis do RLS de `rota` e da RPC de manutenção. */}
         <Stack.Screen name="rotas/index" options={{ title: 'Rotas' }} />
@@ -59,6 +59,7 @@ export default function AppLayout() {
       {/* Viagens (US08) seguem a aba: o Motorista também abre e fecha. A lista é a própria aba. */}
       <Stack.Protected guard={podeVerViagens} redirectTo="/">
         <Stack.Screen name="viagens/nova" options={{ title: 'Abrir viagem' }} />
+        <Stack.Screen name="viagens/[id]/index" options={{ title: 'Viagem' }} />
         <Stack.Screen name="viagens/[id]/fechar" options={{ title: 'Finalizar viagem' }} />
       </Stack.Protected>
       {/* A lista de viagens fora da aba: só para quem vê viagens e não tem a aba (Admin). */}

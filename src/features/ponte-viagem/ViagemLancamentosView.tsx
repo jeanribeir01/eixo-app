@@ -50,7 +50,7 @@ export type ViagemLancamentosViewProps = {
   viagemId: string;
 };
 
-// Detalhe da viagem para o Financeiro (US09): quem é a viagem e o que foi lançado nela, separado
+// Lançamentos da viagem (US09), para o Financeiro e o Admin: quem é a viagem e o que foi lançado nela, separado
 // em entradas e saídas. Os totais e o custo por KM ficam para a US10, calculados no banco (RNF06).
 export function ViagemLancamentosView({ viagemId }: ViagemLancamentosViewProps) {
   const router = useRouter();
@@ -130,7 +130,7 @@ export function ViagemLancamentosView({ viagemId }: ViagemLancamentosViewProps) 
   }
 
   return (
-    // O título "Viagem" fica no header; placa e rota aparecem no cartão porque são dado.
+    // O título "Lançamentos da viagem" fica no header; placa e rota aparecem no cartão porque são dado.
     <Screen
       underHeader
       scroll
