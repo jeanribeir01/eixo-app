@@ -1,15 +1,22 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useRouter } from 'expo-router';
+import { StyleSheet, View } from 'react-native';
 import { z } from 'zod';
 
-import { Aviso, Button, Column, EmptyState, Input, ListItem, ListSection, Screen, Skeleton, Snackbar, Text } from '@/ui';
+import { Aviso, Button, Column, EmptyState, Input, Screen, Skeleton, Snackbar, Text, spacing } from '@/ui';
 
-import { atualizarFormaPagamento, buscarFormaPagamentoPorId, criarFormaPagamento } from './formasPagamentoRepository';
+import {
+  atualizarFormaPagamento,
+  buscarFormaPagamentoPorId,
+  criarFormaPagamento,
+  definirAtivaFormaPagamento,
+} from './formasPagamentoRepository';
 import { formaPagamentoSchema } from './schema';
 import { isFormaFixa } from './types';
 
 type Erros = Partial<Record<'nome', string>>;
-type Feedback = { mensagem: string; tone: 'success' | 'error' };
+// `desfazer`: depois de desativar, o Snackbar oferece "Desfazer" (reativa na hora).
+type Feedback = { mensagem: string; tone: 'success' | 'error'; desfazer?: boolean };
 type StatusCarga = 'carregando' | 'pronto' | 'erro';
 
 export type FormaPagamentoFormViewProps = {
@@ -26,7 +33,12 @@ export function FormaPagamentoFormView({ formaPagamentoId }: FormaPagamentoFormV
   const [nomeOriginal, setNomeOriginal] = useState('');
   const [erros, setErros] = useState<Erros>({});
   const [salvando, setSalvando] = useState(false);
+  const [ativa, setAtiva] = useState(true);
+  const [alterandoAtiva, setAlterandoAtiva] = useState(false);
   const [feedback, setFeedback] = useState<Feedback | null>(null);
+  // O "Desfazer" do Snackbar também fecha o Snackbar: sem esta marca, o fechamento voltaria para a lista
+  // antes de a reativação terminar.
+  const desfazendo = useRef(false);
 
   useEffect(() => {
     if (!formaPagamentoId) return;
@@ -46,6 +58,7 @@ export function FormaPagamentoFormView({ formaPagamentoId }: FormaPagamentoFormV
 
       setNome(resultado.data.nome);
       setNomeOriginal(resultado.data.nome);
+      setAtiva(resultado.data.ativa);
       setStatus('pronto');
     }
 
@@ -83,9 +96,39 @@ export function FormaPagamentoFormView({ formaPagamentoId }: FormaPagamentoFormV
     });
   }
 
+  // Desativar e reativar moram aqui, no fim do Editar, e não mais num switch na lista: é o mesmo lugar
+  // em Categorias, Formas de pagamento, Rotas e Veículos, e um toque sem querer não tira a forma do uso.
+  async function handleAlterarAtiva(novoValor: boolean) {
+    if (!formaPagamentoId) return;
+    setAlterandoAtiva(true);
+    const resposta = await definirAtivaFormaPagamento(formaPagamentoId, novoValor);
+    setAlterandoAtiva(false);
+
+    if (!resposta.ok) {
+      setFeedback({ mensagem: resposta.mensagem, tone: 'error' });
+      return;
+    }
+
+    setAtiva(resposta.data.ativa);
+    setFeedback(
+      resposta.data.ativa
+        ? { mensagem: 'Forma de pagamento reativada.', tone: 'success' }
+        : { mensagem: 'Forma de pagamento desativada.', tone: 'success', desfazer: true },
+    );
+  }
+
+  function handleDesfazer() {
+    desfazendo.current = true;
+    handleAlterarAtiva(true);
+  }
+
   function handleFeedbackDismiss() {
     const eraSucesso = feedback?.tone === 'success';
     setFeedback(null);
+    if (desfazendo.current) {
+      desfazendo.current = false;
+      return;
+    }
     if (eraSucesso) router.back();
   }
 
@@ -114,10 +157,27 @@ export function FormaPagamentoFormView({ formaPagamentoId }: FormaPagamentoFormV
     <Screen
       underHeader
       scroll
-      overlay={feedback && <Snackbar message={feedback.mensagem} tone={feedback.tone} duration={1200} onDismiss={handleFeedbackDismiss} />}
+      overlay={
+        feedback && (
+          <Snackbar
+            message={feedback.mensagem}
+            tone={feedback.tone}
+            // Com "Desfazer", o Snackbar usa o tempo maior dele, para dar tempo de tocar.
+            duration={feedback.desfazer ? undefined : 1200}
+            action={feedback.desfazer ? { label: 'Desfazer', onPress: handleDesfazer } : undefined}
+            onDismiss={handleFeedbackDismiss}
+          />
+        )
+      }
     >
       <Column gap="lg">
         {!modoEdicao && <Text tone="body">Cadastre como a empresa paga e recebe: Pix, boleto, cartão, TED.</Text>}
+
+        {modoEdicao && !ativa && (
+          <Aviso tom="info" icone="bloqueado" titulo="Forma de pagamento desativada">
+            Não aparece nos novos lançamentos. Para usar de novo, reative no fim da tela.
+          </Aviso>
+        )}
 
         <Input
           label="Nome"
@@ -129,24 +189,10 @@ export function FormaPagamentoFormView({ formaPagamentoId }: FormaPagamentoFormV
           editable={!isFixo}
         />
 
-        {isFixo ? (
+        {isFixo && (
           <Aviso tom="info" icone="bloqueado" titulo="Forma de pagamento padrão">
-            Formas de pagamento padrão não podem ter o nome alterado.
+            Formas de pagamento padrão não podem ter o nome alterado nem ser desativadas.
           </Aviso>
-        ) : (
-          // Prévia de como a forma vai aparecer no seletor de Movimentação e de Dívida, enquanto digita.
-          <Column gap="sm">
-            <Text variant="bodySm" tone="body">
-              Assim aparece nos seletores
-            </Text>
-            <ListSection>
-              <ListItem
-                icon="formasPagamento"
-                title={nome.trim() || 'Nome da forma'}
-                subtitle="Disponível para novos lançamentos"
-              />
-            </ListSection>
-          </Column>
         )}
 
         {/* Um botão preenchido só por tela (DESIGN_CYAN §7). Forma padrão não tem o que salvar: só Voltar. */}
@@ -156,16 +202,45 @@ export function FormaPagamentoFormView({ formaPagamentoId }: FormaPagamentoFormV
               label={modoEdicao ? 'Salvar alterações' : 'Criar forma de pagamento'}
               onPress={handleSalvar}
               loading={salvando}
+              disabled={alterandoAtiva}
             />
           )}
           <Button
             label={isFixo ? 'Voltar' : 'Cancelar'}
             variant="ghost"
-            disabled={salvando}
+            disabled={salvando || alterandoAtiva}
             onPress={() => router.back()}
           />
         </Column>
+
+        {modoEdicao && !isFixo && (
+          <View style={styles.status}>
+            {/* Ação de status no fim, longe da ação primária, com a consequência dita embaixo (DESIGN_CYAN §7,
+                botão de perigo). Reativar não é grave: botão secundário. */}
+            <Column gap="sm">
+              <Button
+                label={ativa ? 'Desativar forma de pagamento' : 'Reativar forma de pagamento'}
+                variant={ativa ? 'danger' : 'ghost'}
+                onPress={() => handleAlterarAtiva(!ativa)}
+                loading={alterandoAtiva}
+                disabled={salvando}
+              />
+              <Text variant="bodySm" tone="body">
+                {ativa
+                  ? 'Ela some dos novos lançamentos. Os lançamentos antigos continuam com ela.'
+                  : 'Ela volta a aparecer nos novos lançamentos.'}
+              </Text>
+            </Column>
+          </View>
+        )}
       </Column>
     </Screen>
   );
 }
+
+const styles = StyleSheet.create({
+  // Afasta a ação de status do "Salvar": as duas não podem parecer a mesma decisão.
+  status: {
+    marginTop: spacing.lg,
+  },
+});

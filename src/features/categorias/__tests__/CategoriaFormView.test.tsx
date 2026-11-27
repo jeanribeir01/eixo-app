@@ -3,7 +3,7 @@ import { KeyboardAvoidingView, ScrollView } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { CategoriaFormView } from '../CategoriaFormView';
-import { atualizarCategoria, buscarCategoriaPorId, criarCategoria } from '../categoriasRepository';
+import { atualizarCategoria, buscarCategoriaPorId, criarCategoria, definirAtivaCategoria } from '../categoriasRepository';
 
 import { porTipo } from '@/testing/componentes';
 
@@ -21,6 +21,7 @@ jest.mock('../categoriasRepository', () => ({
   criarCategoria: jest.fn(),
   atualizarCategoria: jest.fn(),
   buscarCategoriaPorId: jest.fn(),
+  definirAtivaCategoria: jest.fn(),
 }));
 
 describe('CategoriaFormView', () => {
@@ -194,5 +195,109 @@ describe('CategoriaFormView — estados de carga sob o header (NAV-04)', () => {
 
     expect(await screen.findByText('Não foi possível carregar a categoria')).toBeOnTheScreen();
     expect(porTipo(SafeAreaView).props.edges).not.toContain('top');
+  });
+});
+
+// Desativar e reativar moram no fim do Editar, no mesmo molde em Categorias, Formas de pagamento, Rotas e
+// Veículos (antes era um switch ou um "Mais opções" na lista).
+describe('CategoriaFormView — desativar e reativar no Editar', () => {
+  beforeEach(() => {
+    mockBack.mockReset();
+    jest.mocked(buscarCategoriaPorId).mockReset();
+    jest.mocked(definirAtivaCategoria).mockReset();
+    jest.mocked(definirAtivaCategoria).mockReset();
+    jest.useFakeTimers();
+  });
+
+  afterEach(() => {
+    jest.useRealTimers();
+  });
+
+  it('no cadastro não existe ação de status', async () => {
+    await render(<CategoriaFormView />);
+
+    expect(screen.queryByRole('button', { name: /^(Desativar|Reativar) / })).not.toBeOnTheScreen();
+  });
+
+  it('ativo: "Desativar categoria" no fim, com a consequência dita embaixo', async () => {
+    jest.mocked(buscarCategoriaPorId).mockResolvedValue({ ok: true, data: { id: 'c1', titulo: 'Pedágio', tipo: 'Saida' as const, ativa: true } });
+    await render(<CategoriaFormView categoriaId="c1" />);
+
+    expect(await screen.findByRole('button', { name: 'Desativar categoria' })).toBeOnTheScreen();
+    expect(screen.getByText('Ela some dos novos lançamentos. Os lançamentos antigos continuam com ela.')).toBeOnTheScreen();
+    expect(screen.queryByRole('button', { name: 'Reativar categoria' })).not.toBeOnTheScreen();
+  });
+
+  it('desativar grava, mostra o Snackbar com "Desfazer" e volta para a lista quando ele some', async () => {
+    jest.mocked(buscarCategoriaPorId).mockResolvedValue({ ok: true, data: { id: 'c1', titulo: 'Pedágio', tipo: 'Saida' as const, ativa: true } });
+    jest.mocked(definirAtivaCategoria).mockResolvedValue({ ok: true, data: { id: 'c1', titulo: 'Pedágio', tipo: 'Saida' as const, ativa: false } });
+    await render(<CategoriaFormView categoriaId="c1" />);
+
+    await fireEvent.press(await screen.findByRole('button', { name: 'Desativar categoria' }));
+
+    expect(definirAtivaCategoria).toHaveBeenCalledWith('c1', false);
+    expect(await screen.findByText('Categoria desativada.')).toBeOnTheScreen();
+    expect(screen.getByRole('button', { name: 'Desfazer' })).toBeOnTheScreen();
+    expect(mockBack).not.toHaveBeenCalled();
+
+    // Com "Desfazer" o Snackbar fica mais tempo (6 s) antes de voltar.
+    await act(() => {
+      jest.advanceTimersByTime(6000);
+    });
+    expect(mockBack).toHaveBeenCalledTimes(1);
+  });
+
+  it('"Desfazer" reativa na hora e só volta depois do aviso de reativação', async () => {
+    jest.mocked(buscarCategoriaPorId).mockResolvedValue({ ok: true, data: { id: 'c1', titulo: 'Pedágio', tipo: 'Saida' as const, ativa: true } });
+    jest.mocked(definirAtivaCategoria).mockResolvedValueOnce({ ok: true, data: { id: 'c1', titulo: 'Pedágio', tipo: 'Saida' as const, ativa: false } });
+    jest.mocked(definirAtivaCategoria).mockResolvedValueOnce({ ok: true, data: { id: 'c1', titulo: 'Pedágio', tipo: 'Saida' as const, ativa: true } });
+    await render(<CategoriaFormView categoriaId="c1" />);
+    await fireEvent.press(await screen.findByRole('button', { name: 'Desativar categoria' }));
+    await screen.findByText('Categoria desativada.');
+
+    await fireEvent.press(screen.getByRole('button', { name: 'Desfazer' }));
+
+    expect(definirAtivaCategoria).toHaveBeenCalledWith('c1', true);
+    expect(await screen.findByText('Categoria reativada.')).toBeOnTheScreen();
+    // Fechar o Snackbar do "Desfazer" não pode levar de volta antes de a reativação terminar.
+    expect(mockBack).not.toHaveBeenCalled();
+    await act(() => {
+      jest.advanceTimersByTime(1200);
+    });
+    expect(mockBack).toHaveBeenCalledTimes(1);
+  });
+
+  it('desativado: aviso no topo e "Reativar categoria" como ação secundária; reativar grava e volta', async () => {
+    jest.mocked(buscarCategoriaPorId).mockResolvedValue({ ok: true, data: { id: 'c1', titulo: 'Pedágio', tipo: 'Saida' as const, ativa: false } });
+    jest.mocked(definirAtivaCategoria).mockResolvedValue({ ok: true, data: { id: 'c1', titulo: 'Pedágio', tipo: 'Saida' as const, ativa: true } });
+    await render(<CategoriaFormView categoriaId="c1" />);
+
+    expect(await screen.findByText('Categoria desativada')).toBeOnTheScreen();
+    expect(screen.queryByRole('button', { name: 'Desativar categoria' })).not.toBeOnTheScreen();
+    await fireEvent.press(screen.getByRole('button', { name: 'Reativar categoria' }));
+
+    expect(definirAtivaCategoria).toHaveBeenCalledWith('c1', true);
+    expect(await screen.findByText('Categoria reativada.')).toBeOnTheScreen();
+    // Reativar não oferece "Desfazer": não há nada perdido para recuperar.
+    expect(screen.queryByRole('button', { name: 'Desfazer' })).not.toBeOnTheScreen();
+    await act(() => {
+      jest.advanceTimersByTime(1200);
+    });
+    expect(mockBack).toHaveBeenCalledTimes(1);
+  });
+
+  it('erro ao desativar: Snackbar de erro, fica na tela e o botão continua "Desativar categoria"', async () => {
+    jest.mocked(buscarCategoriaPorId).mockResolvedValue({ ok: true, data: { id: 'c1', titulo: 'Pedágio', tipo: 'Saida' as const, ativa: true } });
+    jest.mocked(definirAtivaCategoria).mockResolvedValue({ ok: false, mensagem: 'Sem conexão com o servidor. Tente novamente.' });
+    await render(<CategoriaFormView categoriaId="c1" />);
+
+    await fireEvent.press(await screen.findByRole('button', { name: 'Desativar categoria' }));
+
+    expect(await screen.findByText('Sem conexão com o servidor. Tente novamente.')).toBeOnTheScreen();
+    await act(() => {
+      jest.advanceTimersByTime(3000);
+    });
+    expect(mockBack).not.toHaveBeenCalled();
+    expect(screen.getByRole('button', { name: 'Desativar categoria' })).toBeOnTheScreen();
   });
 });

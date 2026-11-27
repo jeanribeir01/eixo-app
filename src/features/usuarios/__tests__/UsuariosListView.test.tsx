@@ -239,7 +239,7 @@ describe('UsuariosListView — tablet (EIX-94)', () => {
     expect(estiloDaLista()).toMatchObject({ maxWidth: 720, alignSelf: 'center' });
     const coluna = screen.getByTestId('screen-coluna');
     expect(StyleSheet.flatten(coluna.props.style)).toMatchObject({ maxWidth: 720, alignSelf: 'center' });
-    expect(within(coluna).getByText('Buscar')).toBeOnTheScreen();
+    expect(within(coluna).getByLabelText('Buscar por nome ou e-mail')).toBeOnTheScreen();
   });
 });
 
@@ -282,7 +282,7 @@ describe('UsuariosListView — aguardando aprovação', () => {
   it('a busca filtra por nome ou e-mail nas duas seções', async () => {
     await renderComLista();
 
-    await fireEvent.changeText(screen.getByPlaceholderText('Nome ou e-mail'), 'carla@');
+    await fireEvent.changeText(screen.getByLabelText('Buscar por nome ou e-mail'), 'carla@');
 
     expect(screen.getByText('Carla Dias')).toBeOnTheScreen();
     expect(screen.queryByText('Ana Souza')).not.toBeOnTheScreen();

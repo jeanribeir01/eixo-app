@@ -2,12 +2,12 @@ import { act, fireEvent, render, screen, within } from '@testing-library/react-n
 import { FlatList, RefreshControl, StyleSheet, useWindowDimensions } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-import { dispararSemEsperar, segurarPrimeiraCarga } from '@/testing/eventos';
+import { segurarPrimeiraCarga } from '@/testing/eventos';
 import { porTipo, todosPorTipo } from '@/testing/componentes';
 import { FAB_ALTURA_RESERVADA, ListItem, Skeleton, colors, spacing } from '@/ui';
 
 import { FormasPagamentoListView } from '../FormasPagamentoListView';
-import { definirAtivaFormaPagamento, listarFormasPagamento } from '../formasPagamentoRepository';
+import { listarFormasPagamento } from '../formasPagamentoRepository';
 import type { FormaPagamento } from '../types';
 
 // Largura da janela controlada pelo teste: 412 é celular, 800 é tablet (EIX-94).
@@ -42,7 +42,6 @@ jest.mock('expo-router', () => {
 
 jest.mock('../formasPagamentoRepository', () => ({
   listarFormasPagamento: jest.fn(),
-  definirAtivaFormaPagamento: jest.fn(),
 }));
 
 // O ListItem real, só embrulhado num jest.fn: o teste de memo (EIX-71) conta quantas vezes cada linha renderiza.
@@ -56,7 +55,6 @@ function rendersDaLinha(nome: string): number {
 }
 
 const mockListar = listarFormasPagamento as jest.MockedFunction<typeof listarFormasPagamento>;
-const mockDefinirAtiva = definirAtivaFormaPagamento as jest.MockedFunction<typeof definirAtivaFormaPagamento>;
 
 const formas: FormaPagamento[] = [
   { id: '1', nome: 'Pix', ativa: true },
@@ -70,7 +68,6 @@ const formas: FormaPagamento[] = [
 beforeEach(() => {
   mockPush.mockReset();
   mockListar.mockReset();
-  mockDefinirAtiva.mockReset();
 });
 
 async function renderComLista() {
@@ -111,11 +108,11 @@ describe('FormasPagamentoListView — carga (LST-03)', () => {
     expect(screen.getByText('Dinheiro')).toBeOnTheScreen();
   });
 
-  it('pull-to-refresh em accent e espaço para o FAB no fim da lista', async () => {
+  it('pull-to-refresh em accentStrong e espaço para o FAB no fim da lista', async () => {
     await renderComLista();
 
     const refresh = porTipo(RefreshControl);
-    expect(refresh.props.colors).toEqual([colors.accent]);
+    expect(refresh.props.colors).toEqual([colors.accentStrong]);
     await act(async () => refresh.props.onRefresh!());
     expect(mockListar).toHaveBeenCalledTimes(2);
 
@@ -154,74 +151,52 @@ describe('FormasPagamentoListView — linha (LST-01)', () => {
     expect(mockPush).toHaveBeenCalledWith('/formas-pagamento/2/editar');
   });
 
-  it('forma editável alterna pelo switch, desabilitado enquanto salva, com Snackbar', async () => {
-    let concluir: (valor: Awaited<ReturnType<typeof definirAtivaFormaPagamento>>) => void = () => undefined;
-    mockDefinirAtiva.mockReturnValue(new Promise((resolve) => (concluir = resolve)));
+  // Desativar e reativar moram no Editar, igual em Categorias, Rotas e Veículos.
+  it('a linha não tem switch nem botão de ação: desativar fica no Editar', async () => {
     await renderComLista();
 
-    const toque1 = await dispararSemEsperar(() => fireEvent(screen.getByRole('switch', { name: 'Ativa: Dinheiro' }), 'valueChange', false));
-
-    expect(mockDefinirAtiva).toHaveBeenCalledWith('2', false);
-    expect(screen.getByRole('switch', { name: 'Ativa: Dinheiro' })).toBeDisabled();
-
-    await act(async () => {
-      concluir({ ok: true, data: { id: '2', nome: 'Dinheiro', ativa: false } });
-      await toque1.terminou;
-    });
-    expect(screen.getByRole('alert')).toHaveTextContent('Forma de pagamento desativada.');
+    expect(screen.queryByRole('switch')).not.toBeOnTheScreen();
+    expect(screen.queryByRole('button', { name: /^(Editar|Desativar|Reativar|Mais opções)/ })).not.toBeOnTheScreen();
   });
 
-  it('o switch de uma linha re-renderiza só ela: as outras são memoizadas (EIX-71)', async () => {
-    let concluir: (valor: Awaited<ReturnType<typeof definirAtivaFormaPagamento>>) => void = () => undefined;
-    mockDefinirAtiva.mockReturnValue(new Promise((resolve) => (concluir = resolve)));
+  it('digitar na busca não re-renderiza as linhas que continuam na lista: são memoizadas (EIX-71)', async () => {
     await renderComLista();
-    const pixAntes = rendersDaLinha('Pix');
     const dinheiroAntes = rendersDaLinha('Dinheiro');
 
-    const toque1 = await dispararSemEsperar(() => fireEvent(screen.getByRole('switch', { name: 'Ativa: Dinheiro' }), 'valueChange', false));
+    await fireEvent.changeText(screen.getByLabelText('Buscar forma de pagamento'), 'dinh');
 
-    // A linha do switch renderiza para ficar desabilitada enquanto salva.
-    expect(screen.getByRole('switch', { name: 'Ativa: Dinheiro' })).toBeDisabled();
-    expect(rendersDaLinha('Dinheiro')).toBeGreaterThan(dinheiroAntes);
-
-    await act(async () => {
-      concluir({ ok: true, data: { id: '2', nome: 'Dinheiro', ativa: false } });
-      await toque1.terminou;
-    });
-
-    // Salvou, a tela mostrou o Snackbar e a lista mudou; a vizinha, que não mudou, não renderizou nenhuma vez.
-    expect(screen.getByRole('alert')).toHaveTextContent('Forma de pagamento desativada.');
-    expect(rendersDaLinha('Pix')).toBe(pixAntes);
-  });
-
-  it('não existe botão "Editar" nem "Desativar" na linha', async () => {
-    await renderComLista();
-
-    expect(screen.queryByRole('button', { name: 'Editar' })).not.toBeOnTheScreen();
-    expect(screen.queryByRole('button', { name: 'Desativar' })).not.toBeOnTheScreen();
+    expect(screen.queryByText('Pix')).not.toBeOnTheScreen();
+    expect(rendersDaLinha('Dinheiro')).toBe(dinheiroAntes);
   });
 });
 
-describe('FormasPagamentoListView — filtros e FAB (LST-01)', () => {
-  it('esconde as desativadas por padrão e mostra ao ligar o filtro', async () => {
+describe('FormasPagamentoListView — desativadas, busca e FAB (LST-01)', () => {
+  it('as disponíveis vêm num grupo com a contagem e não há mais o "Mostrar desativadas"', async () => {
     await renderComLista();
-    expect(screen.queryByText('Antiga')).not.toBeOnTheScreen();
 
-    await fireEvent(screen.getByRole('switch', { name: 'Mostrar desativadas' }), 'valueChange', true);
-
-    expect(screen.getByText('Antiga')).toBeOnTheScreen();
-    expect(screen.getByText('Desativada')).toBeOnTheScreen();
+    expect(screen.getByText('Disponíveis · 5')).toBeOnTheScreen();
+    expect(screen.queryByRole('switch', { name: 'Mostrar desativadas' })).not.toBeOnTheScreen();
   });
 
-  it('com as desativadas à mostra, separa os grupos e explica o interruptor no fim', async () => {
+  it('desativadas ficam recolhidas no fim; ao abrir, a linha leva ao Editar para reativar', async () => {
     await renderComLista();
-    expect(screen.queryByText(/^Desativadas · /)).not.toBeOnTheScreen();
 
-    await fireEvent(screen.getByRole('switch', { name: 'Mostrar desativadas' }), 'valueChange', true);
+    const cabecalho = screen.getByRole('button', { name: 'Desativadas, 1' });
+    expect(cabecalho).toBeCollapsed();
+    expect(screen.queryByRole('button', { name: 'Antiga' })).not.toBeOnTheScreen();
 
-    expect(screen.getByText(/^Disponíveis · \d+$/)).toBeOnTheScreen();
-    expect(screen.getByText('Desativadas · 1')).toBeOnTheScreen();
-    expect(screen.getByText(/^Desativar uma forma tira ela dos novos lançamentos/)).toBeOnTheScreen();
+    await fireEvent.press(cabecalho);
+    await fireEvent.press(screen.getByRole('button', { name: 'Antiga' }));
+
+    expect(mockPush).toHaveBeenCalledWith('/formas-pagamento/6/editar');
+  });
+
+  it('sem desativadas, o grupo recolhido não aparece', async () => {
+    mockListar.mockResolvedValue({ ok: true, data: formas.filter((forma) => forma.ativa) });
+    await render(<FormasPagamentoListView />);
+    await screen.findByText('Dinheiro');
+
+    expect(screen.queryByRole('button', { name: /^Desativadas/ })).not.toBeOnTheScreen();
   });
 
   it('filtra pela busca e mostra o vazio quando nada bate', async () => {

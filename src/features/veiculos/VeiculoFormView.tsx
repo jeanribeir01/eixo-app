@@ -1,17 +1,19 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useRouter } from 'expo-router';
+import { StyleSheet, View } from 'react-native';
 import { z } from 'zod';
 
-import { Button, Column, EmptyState, Input, Screen, Select, Skeleton, Snackbar, Text } from '@/ui';
+import { Aviso, Button, Column, EmptyState, Input, Screen, Select, Skeleton, Snackbar, Text, spacing } from '@/ui';
 
 import { formatarPlaca, normalizarPlaca } from './placa';
-import { atualizarVeiculo, buscarVeiculoPorId, criarVeiculo } from './repository';
+import { atualizarVeiculo, buscarVeiculoPorId, criarVeiculo, inativarVeiculo, reativarVeiculo } from './repository';
 import { veiculoSchema } from './schema';
 import { STATUS_VEICULO, rotuloStatusVeiculo, type StatusVeiculo } from './types';
 
 type Campo = 'placa' | 'marca' | 'modelo' | 'ano_fabricacao' | 'capacidade_carga' | 'status';
 type Erros = Partial<Record<Campo, string>>;
-type Feedback = { mensagem: string; tone: 'success' | 'error' };
+// `desfazer`: depois de desativar, o Snackbar oferece "Desfazer" (reativa na hora).
+type Feedback = { mensagem: string; tone: 'success' | 'error'; desfazer?: boolean };
 type StatusCarga = 'carregando' | 'pronto' | 'erro';
 
 const opcoesStatus = STATUS_VEICULO.filter((status) => status !== 'Inativo').map((status) => ({ label: rotuloStatusVeiculo[status], value: status }));
@@ -47,9 +49,16 @@ export function VeiculoFormView({ veiculoId }: VeiculoFormViewProps) {
   const [anoFabricacao, setAnoFabricacao] = useState('');
   const [capacidade, setCapacidade] = useState('');
   const [statusVeiculo, setStatusVeiculo] = useState<StatusVeiculo>('Disponivel');
+  // O status gravado no banco, separado do seletor: desativar depende do que está salvo, não do que a
+  // pessoa escolheu e ainda não salvou.
+  const [statusSalvo, setStatusSalvo] = useState<StatusVeiculo>('Disponivel');
   const [erros, setErros] = useState<Erros>({});
   const [salvando, setSalvando] = useState(false);
+  const [alterandoAtiva, setAlterandoAtiva] = useState(false);
   const [feedback, setFeedback] = useState<Feedback | null>(null);
+  // O "Desfazer" do Snackbar também fecha o Snackbar: sem esta marca, o fechamento voltaria para a lista
+  // antes de a reativação terminar.
+  const desfazendo = useRef(false);
   const [tentativa, setTentativa] = useState(0);
 
   useEffect(() => {
@@ -74,6 +83,7 @@ export function VeiculoFormView({ veiculoId }: VeiculoFormViewProps) {
       setAnoFabricacao(resultado.data.ano_fabricacao === null ? '' : String(resultado.data.ano_fabricacao));
       setCapacidade(capacidadeParaTexto(resultado.data.capacidade_carga));
       setStatusVeiculo(resultado.data.status);
+      setStatusSalvo(resultado.data.status);
       setStatus('pronto');
     }
 
@@ -126,11 +136,54 @@ export function VeiculoFormView({ veiculoId }: VeiculoFormViewProps) {
     });
   }
 
+  // Desativar e reativar moram aqui, no fim do Editar, e não mais no "Mais opções" da lista com o Alert do
+  // sistema: é o mesmo lugar em Categorias, Formas de pagamento, Rotas e Veículos.
+  async function handleAlterarAtiva(reativar: boolean) {
+    if (!veiculoId) return;
+    setAlterandoAtiva(true);
+    // Só Disponível desativa (INA-08) e só Desativado reativa (REA-04): o repositório confere de novo no
+    // banco, porque uma viagem pode ter começado depois de a tela abrir.
+    const resposta = reativar ? await reativarVeiculo(veiculoId) : await inativarVeiculo(veiculoId);
+    setAlterandoAtiva(false);
+
+    if (!resposta.ok) {
+      setFeedback({ mensagem: resposta.mensagem, tone: 'error' });
+      return;
+    }
+
+    setStatusVeiculo(resposta.data.status);
+    setStatusSalvo(resposta.data.status);
+    if (!reativar) {
+      setFeedback({ mensagem: 'Veículo desativado.', tone: 'success', desfazer: true });
+      return;
+    }
+    // Com viagem ou manutenção aberta o banco devolve o veículo com esse status (trigger da EIX-81), e a
+    // mensagem diz isso para o gestor não esperar vê-lo como Disponível.
+    setFeedback({
+      mensagem:
+        resposta.data.status === 'Disponivel'
+          ? 'Veículo reativado.'
+          : `Veículo reativado como ${rotuloStatusVeiculo[resposta.data.status]}.`,
+      tone: 'success',
+    });
+  }
+
+  function handleDesfazer() {
+    desfazendo.current = true;
+    handleAlterarAtiva(true);
+  }
+
   function handleFeedbackDismiss() {
     const eraSucesso = feedback?.tone === 'success';
     setFeedback(null);
+    if (desfazendo.current) {
+      desfazendo.current = false;
+      return;
+    }
     if (eraSucesso) router.back();
   }
+
+  const desativado = statusSalvo === 'Inativo';
 
   if (status === 'carregando') {
     return (
@@ -158,10 +211,27 @@ export function VeiculoFormView({ veiculoId }: VeiculoFormViewProps) {
     <Screen
       underHeader
       scroll
-      overlay={feedback && <Snackbar message={feedback.mensagem} tone={feedback.tone} duration={1200} onDismiss={handleFeedbackDismiss} />}
+      overlay={
+        feedback && (
+          <Snackbar
+            message={feedback.mensagem}
+            tone={feedback.tone}
+            // Com "Desfazer", o Snackbar usa o tempo maior dele, para dar tempo de tocar.
+            duration={feedback.desfazer ? undefined : 1200}
+            action={feedback.desfazer ? { label: 'Desfazer', onPress: handleDesfazer } : undefined}
+            onDismiss={handleFeedbackDismiss}
+          />
+        )
+      }
     >
       <Column gap="lg">
         {!modoEdicao && <Text tone="body">Cadastre o caminhão com a placa e os dados do documento.</Text>}
+
+        {desativado && (
+          <Aviso tom="info" icone="bloqueado" titulo="Veículo desativado">
+            Não aparece na abertura de viagens nem nas manutenções. Para usar de novo, reative no fim da tela.
+          </Aviso>
+        )}
 
         <Column gap="md">
           <Input
@@ -195,14 +265,7 @@ export function VeiculoFormView({ veiculoId }: VeiculoFormViewProps) {
             error={erros.capacidade_carga}
           />
 
-          {statusVeiculo === 'Inativo' ? (
-            <Column gap="xs">
-              <Text variant="bodySm" weight="medium">
-                Status
-              </Text>
-              <Text>Inativo</Text>
-            </Column>
-          ) : (
+          {!desativado && (
             // Seletor em vez de abas: "Em Manutenção" cabia cortado numa fileira de três. O erro sai
             // igual ao dos outros campos (ícone, vermelho e alerta para o leitor de tela).
             <Select
@@ -217,10 +280,52 @@ export function VeiculoFormView({ veiculoId }: VeiculoFormViewProps) {
 
         {/* Um botão preenchido só por tela (DESIGN_CYAN §7); o rótulo diz o que o toque faz. */}
         <Column gap="sm">
-          <Button label={modoEdicao ? 'Salvar alterações' : 'Cadastrar veículo'} onPress={handleSalvar} loading={salvando} />
-          <Button label="Cancelar" variant="ghost" disabled={salvando} onPress={() => router.back()} />
+          <Button
+            label={modoEdicao ? 'Salvar alterações' : 'Cadastrar veículo'}
+            onPress={handleSalvar}
+            loading={salvando}
+            disabled={alterandoAtiva}
+          />
+          <Button label="Cancelar" variant="ghost" disabled={salvando || alterandoAtiva} onPress={() => router.back()} />
         </Column>
+
+        {/* Em viagem ou em manutenção o veículo não desativa (INA-08): a tela diz o porquê, sem botão. */}
+        {modoEdicao && (statusSalvo === 'EmViagem' || statusSalvo === 'EmManutencao') && (
+          <View style={styles.status}>
+            <Text variant="bodySm" tone="body">
+              Para desativar, o veículo precisa estar disponível: sem viagem nem manutenção em aberto.
+            </Text>
+          </View>
+        )}
+
+        {modoEdicao && (statusSalvo === 'Disponivel' || desativado) && (
+          <View style={styles.status}>
+            {/* Ação de status no fim, longe da ação primária, com a consequência dita embaixo (DESIGN_CYAN §7,
+                botão de perigo). Reativar não é grave: botão secundário. */}
+            <Column gap="sm">
+              <Button
+                label={!desativado ? 'Desativar veículo' : 'Reativar veículo'}
+                variant={!desativado ? 'danger' : 'ghost'}
+                onPress={() => handleAlterarAtiva(desativado)}
+                loading={alterandoAtiva}
+                disabled={salvando}
+              />
+              <Text variant="bodySm" tone="body">
+                {!desativado
+                  ? 'Ele some da abertura de viagens e das manutenções. O histórico continua com ele.'
+                  : 'Ele volta à frota. Com viagem ou manutenção em aberto, volta com esse status.'}
+              </Text>
+            </Column>
+          </View>
+        )}
       </Column>
     </Screen>
   );
 }
+
+const styles = StyleSheet.create({
+  // Afasta a ação de status do "Salvar": as duas não podem parecer a mesma decisão.
+  status: {
+    marginTop: spacing.lg,
+  },
+});

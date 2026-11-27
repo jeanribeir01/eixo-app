@@ -1,9 +1,14 @@
-import { fireEvent, render, screen, waitFor } from '@testing-library/react-native';
+import { act, fireEvent, render, screen, waitFor } from '@testing-library/react-native';
 import { KeyboardAvoidingView, ScrollView } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { FormaPagamentoFormView } from '../FormaPagamentoFormView';
-import { atualizarFormaPagamento, buscarFormaPagamentoPorId, criarFormaPagamento } from '../formasPagamentoRepository';
+import {
+  atualizarFormaPagamento,
+  buscarFormaPagamentoPorId,
+  criarFormaPagamento,
+  definirAtivaFormaPagamento,
+} from '../formasPagamentoRepository';
 
 import { porTipo } from '@/testing/componentes';
 
@@ -18,6 +23,7 @@ jest.mock('../formasPagamentoRepository', () => ({
   atualizarFormaPagamento: jest.fn(),
   buscarFormaPagamentoPorId: jest.fn(),
   criarFormaPagamento: jest.fn(),
+  definirAtivaFormaPagamento: jest.fn(),
 }));
 
 const dinheiro = { id: '1', nome: 'Dinheiro', ativa: true };
@@ -43,17 +49,10 @@ describe('FormaPagamentoFormView', () => {
     expect(screen.getByPlaceholderText('Ex.: Dinheiro')).toBeOnTheScreen();
   });
 
-  it('mostra como a forma vai aparecer nos seletores, acompanhando o nome digitado', async () => {
+  it('não mostra mais a prévia "Assim aparece nos seletores": nenhum outro formulário tem', async () => {
     await render(<FormaPagamentoFormView />);
 
-    expect(screen.getByText('Assim aparece nos seletores')).toBeOnTheScreen();
-    expect(screen.getByText('Nome da forma')).toBeOnTheScreen();
-
-    await fireEvent.changeText(screen.getByPlaceholderText('Ex.: Dinheiro'), 'Vale-pedágio');
-
-    expect(screen.getByText('Vale-pedágio')).toBeOnTheScreen();
-    expect(screen.queryByText('Nome da forma')).not.toBeOnTheScreen();
-    expect(screen.getByRole('button', { name: 'Criar forma de pagamento' })).toBeOnTheScreen();
+    expect(screen.queryByText('Assim aparece nos seletores')).not.toBeOnTheScreen();
   });
 
   it('cria a forma de pagamento e volta com feedback de sucesso', async () => {
@@ -114,7 +113,7 @@ describe('FormaPagamentoFormView', () => {
     await render(<FormaPagamentoFormView formaPagamentoId="2" />);
 
     expect(await screen.findByDisplayValue('Pix')).toBeOnTheScreen();
-    expect(screen.getByText('Formas de pagamento padrão não podem ter o nome alterado.')).toBeOnTheScreen();
+    expect(screen.getByText('Formas de pagamento padrão não podem ter o nome alterado nem ser desativadas.')).toBeOnTheScreen();
 
     expect(screen.queryByRole('button', { name: /^(Criar forma de pagamento|Salvar alterações)$/ })).not.toBeOnTheScreen();
     expect(screen.getByRole('button', { name: 'Voltar' })).toBeOnTheScreen();
@@ -151,5 +150,119 @@ describe('FormaPagamentoFormView — estados de carga sob o header (NAV-04)', ()
 
     expect(await screen.findByText('Não foi possível carregar a forma de pagamento')).toBeOnTheScreen();
     expect(porTipo(SafeAreaView).props.edges).not.toContain('top');
+  });
+});
+
+// Desativar e reativar moram no fim do Editar, no mesmo molde em Categorias, Formas de pagamento, Rotas e
+// Veículos (antes era um switch ou um "Mais opções" na lista).
+describe('FormaPagamentoFormView — desativar e reativar no Editar', () => {
+  beforeEach(() => {
+    mockBack.mockReset();
+    jest.mocked(buscarFormaPagamentoPorId).mockReset();
+    jest.mocked(definirAtivaFormaPagamento).mockReset();
+    jest.mocked(definirAtivaFormaPagamento).mockReset();
+    jest.useFakeTimers();
+  });
+
+  afterEach(() => {
+    jest.useRealTimers();
+  });
+
+  it('no cadastro não existe ação de status', async () => {
+    await render(<FormaPagamentoFormView />);
+
+    expect(screen.queryByRole('button', { name: /^(Desativar|Reativar) / })).not.toBeOnTheScreen();
+  });
+
+  it('ativo: "Desativar forma de pagamento" no fim, com a consequência dita embaixo', async () => {
+    jest.mocked(buscarFormaPagamentoPorId).mockResolvedValue({ ok: true, data: { id: '1', nome: 'Dinheiro', ativa: true } });
+    await render(<FormaPagamentoFormView formaPagamentoId="1" />);
+
+    expect(await screen.findByRole('button', { name: 'Desativar forma de pagamento' })).toBeOnTheScreen();
+    expect(screen.getByText('Ela some dos novos lançamentos. Os lançamentos antigos continuam com ela.')).toBeOnTheScreen();
+    expect(screen.queryByRole('button', { name: 'Reativar forma de pagamento' })).not.toBeOnTheScreen();
+  });
+
+  it('desativar grava, mostra o Snackbar com "Desfazer" e volta para a lista quando ele some', async () => {
+    jest.mocked(buscarFormaPagamentoPorId).mockResolvedValue({ ok: true, data: { id: '1', nome: 'Dinheiro', ativa: true } });
+    jest.mocked(definirAtivaFormaPagamento).mockResolvedValue({ ok: true, data: { id: '1', nome: 'Dinheiro', ativa: false } });
+    await render(<FormaPagamentoFormView formaPagamentoId="1" />);
+
+    await fireEvent.press(await screen.findByRole('button', { name: 'Desativar forma de pagamento' }));
+
+    expect(definirAtivaFormaPagamento).toHaveBeenCalledWith('1', false);
+    expect(await screen.findByText('Forma de pagamento desativada.')).toBeOnTheScreen();
+    expect(screen.getByRole('button', { name: 'Desfazer' })).toBeOnTheScreen();
+    expect(mockBack).not.toHaveBeenCalled();
+
+    // Com "Desfazer" o Snackbar fica mais tempo (6 s) antes de voltar.
+    await act(() => {
+      jest.advanceTimersByTime(6000);
+    });
+    expect(mockBack).toHaveBeenCalledTimes(1);
+  });
+
+  it('"Desfazer" reativa na hora e só volta depois do aviso de reativação', async () => {
+    jest.mocked(buscarFormaPagamentoPorId).mockResolvedValue({ ok: true, data: { id: '1', nome: 'Dinheiro', ativa: true } });
+    jest.mocked(definirAtivaFormaPagamento).mockResolvedValueOnce({ ok: true, data: { id: '1', nome: 'Dinheiro', ativa: false } });
+    jest.mocked(definirAtivaFormaPagamento).mockResolvedValueOnce({ ok: true, data: { id: '1', nome: 'Dinheiro', ativa: true } });
+    await render(<FormaPagamentoFormView formaPagamentoId="1" />);
+    await fireEvent.press(await screen.findByRole('button', { name: 'Desativar forma de pagamento' }));
+    await screen.findByText('Forma de pagamento desativada.');
+
+    await fireEvent.press(screen.getByRole('button', { name: 'Desfazer' }));
+
+    expect(definirAtivaFormaPagamento).toHaveBeenCalledWith('1', true);
+    expect(await screen.findByText('Forma de pagamento reativada.')).toBeOnTheScreen();
+    // Fechar o Snackbar do "Desfazer" não pode levar de volta antes de a reativação terminar.
+    expect(mockBack).not.toHaveBeenCalled();
+    await act(() => {
+      jest.advanceTimersByTime(1200);
+    });
+    expect(mockBack).toHaveBeenCalledTimes(1);
+  });
+
+  it('desativado: aviso no topo e "Reativar forma de pagamento" como ação secundária; reativar grava e volta', async () => {
+    jest.mocked(buscarFormaPagamentoPorId).mockResolvedValue({ ok: true, data: { id: '1', nome: 'Dinheiro', ativa: false } });
+    jest.mocked(definirAtivaFormaPagamento).mockResolvedValue({ ok: true, data: { id: '1', nome: 'Dinheiro', ativa: true } });
+    await render(<FormaPagamentoFormView formaPagamentoId="1" />);
+
+    expect(await screen.findByText('Forma de pagamento desativada')).toBeOnTheScreen();
+    expect(screen.queryByRole('button', { name: 'Desativar forma de pagamento' })).not.toBeOnTheScreen();
+    await fireEvent.press(screen.getByRole('button', { name: 'Reativar forma de pagamento' }));
+
+    expect(definirAtivaFormaPagamento).toHaveBeenCalledWith('1', true);
+    expect(await screen.findByText('Forma de pagamento reativada.')).toBeOnTheScreen();
+    // Reativar não oferece "Desfazer": não há nada perdido para recuperar.
+    expect(screen.queryByRole('button', { name: 'Desfazer' })).not.toBeOnTheScreen();
+    await act(() => {
+      jest.advanceTimersByTime(1200);
+    });
+    expect(mockBack).toHaveBeenCalledTimes(1);
+  });
+
+  it('erro ao desativar: Snackbar de erro, fica na tela e o botão continua "Desativar forma de pagamento"', async () => {
+    jest.mocked(buscarFormaPagamentoPorId).mockResolvedValue({ ok: true, data: { id: '1', nome: 'Dinheiro', ativa: true } });
+    jest.mocked(definirAtivaFormaPagamento).mockResolvedValue({ ok: false, mensagem: 'Sem conexão com o servidor. Tente novamente.' });
+    await render(<FormaPagamentoFormView formaPagamentoId="1" />);
+
+    await fireEvent.press(await screen.findByRole('button', { name: 'Desativar forma de pagamento' }));
+
+    expect(await screen.findByText('Sem conexão com o servidor. Tente novamente.')).toBeOnTheScreen();
+    await act(() => {
+      jest.advanceTimersByTime(3000);
+    });
+    expect(mockBack).not.toHaveBeenCalled();
+    expect(screen.getByRole('button', { name: 'Desativar forma de pagamento' })).toBeOnTheScreen();
+  });
+});
+
+describe('FormaPagamentoFormView — forma padrão do sistema', () => {
+  it('não tem ação de desativar: o aviso do topo diz por quê', async () => {
+    jest.mocked(buscarFormaPagamentoPorId).mockResolvedValue({ ok: true, data: { id: '2', nome: 'Pix', ativa: true } });
+    await render(<FormaPagamentoFormView formaPagamentoId="2" />);
+
+    expect(await screen.findByText('Forma de pagamento padrão')).toBeOnTheScreen();
+    expect(screen.queryByRole('button', { name: /^(Desativar|Reativar) / })).not.toBeOnTheScreen();
   });
 });

@@ -9,10 +9,10 @@ import {
   Avatar,
   Badge,
   Button,
+  CampoBusca,
   Card,
   Column,
   EmptyState,
-  Input,
   List,
   ListItem,
   Screen,
@@ -184,13 +184,7 @@ export function UsuariosListView() {
     >
       {/* Fora da lista, na coluna: no tablet fica alinhado com as linhas (EIX-94). */}
       <ScreenColumn>
-        <Input
-          label="Buscar"
-          placeholder="Nome ou e-mail"
-          value={busca}
-          onChangeText={setBusca}
-          autoCapitalize="none"
-        />
+        <CampoBusca placeholder="Buscar por nome ou e-mail" value={busca} onChangeText={setBusca} />
 
         {tela.status === 'carregando' && (
           <Column gap="sm">

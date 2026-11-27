@@ -2,12 +2,12 @@ import { act, fireEvent, render, screen, within } from '@testing-library/react-n
 import { FlatList, RefreshControl, StyleSheet, useWindowDimensions } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-import { dispararSemEsperar, segurarPrimeiraCarga } from '@/testing/eventos';
+import { segurarPrimeiraCarga } from '@/testing/eventos';
 import { porTipo, todosPorTipo } from '@/testing/componentes';
 import { FAB_ALTURA_RESERVADA, ListItem, Skeleton, colors, spacing } from '@/ui';
 
 import { CategoriasListView } from '../CategoriasListView';
-import { definirAtivaCategoria, listarCategorias } from '../categoriasRepository';
+import { listarCategorias } from '../categoriasRepository';
 import type { Categoria } from '../types';
 
 // O runner do GitHub Actions é mais lento que a máquina local: o padrão de 5s estourava no CI.
@@ -36,7 +36,6 @@ jest.mock('expo-router', () => {
 
 jest.mock('../categoriasRepository', () => ({
   listarCategorias: jest.fn(),
-  definirAtivaCategoria: jest.fn(),
 }));
 
 
@@ -61,7 +60,6 @@ function mockLargura(width: number) {
 }
 
 const mockListar = listarCategorias as jest.MockedFunction<typeof listarCategorias>;
-const mockDefinirAtiva = definirAtivaCategoria as jest.MockedFunction<typeof definirAtivaCategoria>;
 
 // A tela abre na aba Saídas: duas saídas ativas, uma desativada e uma entrada (só aparece na outra aba).
 const categorias: Categoria[] = [
@@ -74,7 +72,6 @@ const categorias: Categoria[] = [
 beforeEach(() => {
   mockPush.mockReset();
   mockListar.mockReset();
-  mockDefinirAtiva.mockReset();
 });
 
 async function renderComLista() {
@@ -205,105 +202,42 @@ describe('CategoriasListView — linha (LST-01)', () => {
     expect(mockPush).toHaveBeenCalledWith('/categorias/2/editar');
   });
 
-  it('não existe botão "Editar" nem "Desativar" na linha', async () => {
+  // Desativar e reativar moram no Editar, igual em Formas de pagamento, Rotas e Veículos: a linha não
+  // tem switch, "Mais opções" nem botões de ação.
+  it('a linha não tem switch nem botão de ação: desativar fica no Editar', async () => {
     await renderComLista();
 
-    expect(screen.queryByRole('button', { name: 'Editar' })).not.toBeOnTheScreen();
-    expect(screen.queryByRole('button', { name: 'Desativar' })).not.toBeOnTheScreen();
-    expect(screen.queryByRole('button', { name: 'Reativar' })).not.toBeOnTheScreen();
+    expect(screen.queryByRole('switch')).not.toBeOnTheScreen();
+    expect(screen.queryByRole('button', { name: /^(Editar|Desativar|Reativar|Mais opções)/ })).not.toBeOnTheScreen();
   });
 
-  it('switch "Ativa" desativa, fica desabilitado enquanto salva e a categoria vai para Desativadas', async () => {
-    let concluir: (valor: Awaited<ReturnType<typeof definirAtivaCategoria>>) => void = () => undefined;
-    mockDefinirAtiva.mockReturnValue(new Promise((resolve) => (concluir = resolve)));
-    await renderComLista();
-
-    const toque1 = await dispararSemEsperar(() => fireEvent(screen.getByRole('switch', { name: 'Ativa: Combustível' }), 'valueChange', false));
-
-    expect(mockDefinirAtiva).toHaveBeenCalledWith('2', false);
-    expect(screen.getByRole('switch', { name: 'Ativa: Combustível' })).toBeDisabled();
-
-    await act(async () => {
-      concluir({ ok: true, data: { ...categorias[1]!, ativa: false } });
-      await toque1.terminou;
-    });
-
-    expect(screen.getByText('"Combustível" desativada.')).toBeOnTheScreen();
-    expect(screen.queryByRole('button', { name: 'Combustível' })).not.toBeOnTheScreen();
-    expect(screen.getByRole('button', { name: 'Desativadas, 2' })).toBeOnTheScreen();
-    expect(screen.getByRole('tab', { name: 'Saídas · 1' })).toBeOnTheScreen();
-  });
-
-  it('"Desfazer" no Snackbar reativa a categoria que acabou de ser desativada', async () => {
-    mockDefinirAtiva
-      .mockResolvedValueOnce({ ok: true, data: { ...categorias[1]!, ativa: false } })
-      .mockResolvedValueOnce({ ok: true, data: { ...categorias[1]!, ativa: true } });
-    await renderComLista();
-
-    await act(async () => await fireEvent(screen.getByRole('switch', { name: 'Ativa: Combustível' }), 'valueChange', false));
-    await act(async () => await fireEvent.press(screen.getByRole('button', { name: 'Desfazer' })));
-
-    expect(mockDefinirAtiva).toHaveBeenLastCalledWith('2', true);
-    expect(screen.getByText('"Combustível" reativada.')).toBeOnTheScreen();
-    expect(screen.getByRole('button', { name: 'Combustível' })).toBeOnTheScreen();
-    // Reativar não oferece "Desfazer": não há nada perdido para recuperar.
-    expect(screen.queryByRole('button', { name: 'Desfazer' })).not.toBeOnTheScreen();
-  });
-
-  it('erro ao desativar mostra o Snackbar de erro e mantém a categoria ativa', async () => {
-    mockDefinirAtiva.mockResolvedValue({ ok: false, mensagem: 'Não foi possível atualizar a categoria.' });
-    await renderComLista();
-
-    await act(async () => await fireEvent(screen.getByRole('switch', { name: 'Ativa: Combustível' }), 'valueChange', false));
-
-    expect(screen.getByRole('alert')).toHaveTextContent('Não foi possível atualizar a categoria.');
-    expect(screen.getByRole('switch', { name: 'Ativa: Combustível' })).toBeChecked();
-  });
-
-  it('o switch de uma linha re-renderiza só ela: as outras são memoizadas (EIX-71)', async () => {
-    let concluir: (valor: Awaited<ReturnType<typeof definirAtivaCategoria>>) => void = () => undefined;
-    mockDefinirAtiva.mockReturnValue(new Promise((resolve) => (concluir = resolve)));
+  it('digitar na busca não re-renderiza as linhas que continuam na lista: são memoizadas (EIX-71)', async () => {
     await renderComLista();
     const pedagioAntes = rendersDaLinha('Pedágio');
-    const combustivelAntes = rendersDaLinha('Combustível');
 
-    const toque1 = await dispararSemEsperar(() => fireEvent(screen.getByRole('switch', { name: 'Ativa: Combustível' }), 'valueChange', false));
+    await fireEvent.changeText(screen.getByLabelText('Buscar categoria'), 'ped');
 
-    // A linha do switch renderiza para ficar desabilitada enquanto salva.
-    expect(screen.getByRole('switch', { name: 'Ativa: Combustível' })).toBeDisabled();
-    expect(rendersDaLinha('Combustível')).toBeGreaterThan(combustivelAntes);
-
-    await act(async () => {
-      concluir({ ok: true, data: { ...categorias[1]!, ativa: false } });
-      await toque1.terminou;
-    });
-
-    // Salvou, a tela mostrou o Snackbar e a lista mudou; a vizinha, que não mudou, não renderizou nenhuma vez.
-    expect(screen.getByText('"Combustível" desativada.')).toBeOnTheScreen();
+    expect(screen.queryByText('Combustível')).not.toBeOnTheScreen();
+    expect(screen.getByText('Pedágio')).toBeOnTheScreen();
     expect(rendersDaLinha('Pedágio')).toBe(pedagioAntes);
-  });
-
-  it('o switch fica fora do botão da linha: o leitor de tela alcança os dois', async () => {
-    await renderComLista();
-
-    expect(within(screen.getByRole('button', { name: 'Combustível' })).queryByRole('switch')).not.toBeOnTheScreen();
   });
 });
 
 describe('CategoriasListView — desativadas e busca (LST-01)', () => {
-  it('desativadas ficam recolhidas no fim, com os nomes; ao abrir, aparecem para reativar pelo switch', async () => {
+  it('desativadas ficam recolhidas no fim, com os nomes ao lado; ao abrir, a linha leva ao Editar para reativar', async () => {
     await renderComLista();
 
     const cabecalho = screen.getByRole('button', { name: 'Desativadas, 1' });
     expect(cabecalho).toBeCollapsed();
+    // Fechado, só o resumo com o nome: a linha da categoria ainda não existe.
     expect(screen.getByText('Categoria antiga')).toBeOnTheScreen();
-    expect(screen.queryByRole('switch', { name: 'Ativa: Categoria antiga' })).not.toBeOnTheScreen();
+    expect(screen.queryByRole('button', { name: 'Categoria antiga' })).not.toBeOnTheScreen();
 
     await fireEvent.press(cabecalho);
 
     expect(screen.getByRole('button', { name: 'Desativadas, 1' })).toBeExpanded();
-    expect(screen.getByText('Desativada · some dos novos lançamentos')).toBeOnTheScreen();
-    expect(screen.getByRole('switch', { name: 'Ativa: Categoria antiga' })).not.toBeChecked();
+    await fireEvent.press(screen.getByRole('button', { name: 'Categoria antiga' }));
+    expect(mockPush).toHaveBeenCalledWith('/categorias/3/editar');
   });
 
   it('sem desativadas, a seção não aparece', async () => {
@@ -311,22 +245,33 @@ describe('CategoriasListView — desativadas e busca (LST-01)', () => {
     await render(<CategoriasListView />);
     await screen.findByText('Combustível');
 
-    expect(screen.queryByText(/^Desativadas/)).not.toBeOnTheScreen();
+    expect(screen.queryByRole('button', { name: /^Desativadas/ })).not.toBeOnTheScreen();
   });
 
-  it('filtra a aba pela busca no nome', async () => {
+  it('filtra a aba pela busca no nome, inclusive as desativadas', async () => {
     await renderComLista();
 
-    await fireEvent.changeText(screen.getByLabelText('Buscar'), 'combust');
+    await fireEvent.changeText(screen.getByLabelText('Buscar categoria'), 'combust');
 
     expect(screen.queryByText('Pedágio')).not.toBeOnTheScreen();
     expect(screen.getByText('Combustível')).toBeOnTheScreen();
+    expect(screen.queryByRole('button', { name: /^Desativadas/ })).not.toBeOnTheScreen();
+  });
+
+  it('o "×" da busca limpa o texto e a lista volta inteira', async () => {
+    await renderComLista();
+    await fireEvent.changeText(screen.getByLabelText('Buscar categoria'), 'combust');
+
+    await fireEvent.press(screen.getByRole('button', { name: 'Limpar busca' }));
+
+    expect(screen.getByLabelText('Buscar categoria').props.value).toBe('');
+    expect(screen.getByText('Pedágio')).toBeOnTheScreen();
   });
 
   it('estado vazio quando a busca não encontra nenhuma categoria', async () => {
     await renderComLista();
 
-    await fireEvent.changeText(screen.getByLabelText('Buscar'), 'zzz');
+    await fireEvent.changeText(screen.getByLabelText('Buscar categoria'), 'zzz');
 
     expect(screen.getByText('Nenhuma categoria encontrada')).toBeOnTheScreen();
   });
@@ -360,7 +305,7 @@ describe('CategoriasListView — tablet (EIX-94)', () => {
 
     const coluna = screen.getByTestId('screen-coluna');
     expect(StyleSheet.flatten(coluna.props.style)).toMatchObject({ maxWidth: 720, alignSelf: 'center' });
-    expect(within(coluna).getByLabelText('Buscar')).toBeOnTheScreen();
+    expect(within(coluna).getByLabelText('Buscar categoria')).toBeOnTheScreen();
     expect(within(coluna).getByRole('tab', { name: 'Saídas · 2' })).toBeOnTheScreen();
   });
 
@@ -368,13 +313,13 @@ describe('CategoriasListView — tablet (EIX-94)', () => {
     mockListar.mockResolvedValue({ ok: true, data: categorias });
     const { rerender } = await render(<CategoriasListView />);
     await screen.findByText('Combustível');
-    await fireEvent.changeText(screen.getByLabelText('Buscar'), 'combust');
+    await fireEvent.changeText(screen.getByLabelText('Buscar categoria'), 'combust');
 
     mockLargura(800);
     await rerender(<CategoriasListView />);
 
     expect(estiloDaLista()).toMatchObject({ maxWidth: 720, alignSelf: 'center' });
-    expect(screen.getByLabelText('Buscar').props.value).toBe('combust');
+    expect(screen.getByLabelText('Buscar categoria').props.value).toBe('combust');
     expect(screen.queryByText('Pedágio')).not.toBeOnTheScreen();
     expect(screen.getByText('Combustível')).toBeOnTheScreen();
   });

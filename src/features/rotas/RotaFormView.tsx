@@ -1,8 +1,9 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useRouter } from 'expo-router';
+import { StyleSheet, View } from 'react-native';
 import { z } from 'zod';
 
-import { Aviso, Button, Column, EmptyState, Input, Screen, Select, Skeleton, Snackbar, Text } from '@/ui';
+import { Aviso, Button, Column, EmptyState, Input, Screen, Select, Skeleton, Snackbar, Text, spacing } from '@/ui';
 import { Constants } from '@/types/database';
 
 import { atualizarRota, buscarRotaPorId, criarRota, definirAtivaRota } from './rotasRepository';
@@ -11,7 +12,8 @@ import type { Uf } from './types';
 
 type Campo = 'cidade_origem' | 'uf_origem' | 'cidade_destino' | 'uf_destino' | 'distancia_estimada_km';
 type Erros = Partial<Record<Campo, string>>;
-type Feedback = { mensagem: string; tone: 'success' | 'error' };
+// `desfazer`: depois de desativar, o Snackbar oferece "Desfazer" (reativa na hora).
+type Feedback = { mensagem: string; tone: 'success' | 'error'; desfazer?: boolean };
 type StatusCarga = 'carregando' | 'pronto' | 'erro';
 // Rota igual já cadastrada: a mensagem fica no formulário e, se ela estiver inativa, o id vai
 // para o botão "Reativar rota existente".
@@ -46,7 +48,12 @@ export function RotaFormView({ rotaId }: RotaFormViewProps) {
   const [duplicada, setDuplicada] = useState<Duplicada | null>(null);
   const [salvando, setSalvando] = useState(false);
   const [reativando, setReativando] = useState(false);
+  const [ativa, setAtiva] = useState(true);
+  const [alterandoAtiva, setAlterandoAtiva] = useState(false);
   const [feedback, setFeedback] = useState<Feedback | null>(null);
+  // O "Desfazer" do Snackbar também fecha o Snackbar: sem esta marca, o fechamento voltaria para a lista
+  // antes de a reativação terminar.
+  const desfazendo = useRef(false);
 
   useEffect(() => {
     if (!rotaId) return;
@@ -69,6 +76,7 @@ export function RotaFormView({ rotaId }: RotaFormViewProps) {
       setCidadeDestino(resultado.data.cidade_destino);
       setUfDestino(resultado.data.uf_destino);
       setDistancia(distanciaParaTexto(resultado.data.distancia_estimada_km));
+      setAtiva(resultado.data.ativa);
       setStatus('pronto');
     }
 
@@ -142,9 +150,39 @@ export function RotaFormView({ rotaId }: RotaFormViewProps) {
     setFeedback({ mensagem: 'Rota reativada.', tone: 'success' });
   }
 
+  // Desativar e reativar esta rota moram aqui, no fim do Editar, e não mais num switch na lista: é o mesmo
+  // lugar em Categorias, Formas de pagamento, Rotas e Veículos, e um toque sem querer não tira o trecho do uso.
+  async function handleAlterarAtiva(novoValor: boolean) {
+    if (!rotaId) return;
+    setAlterandoAtiva(true);
+    const resposta = await definirAtivaRota(rotaId, novoValor);
+    setAlterandoAtiva(false);
+
+    if (!resposta.ok) {
+      setFeedback({ mensagem: resposta.mensagem, tone: 'error' });
+      return;
+    }
+
+    setAtiva(resposta.data.ativa);
+    setFeedback(
+      resposta.data.ativa
+        ? { mensagem: 'Rota reativada.', tone: 'success' }
+        : { mensagem: 'Rota desativada.', tone: 'success', desfazer: true },
+    );
+  }
+
+  function handleDesfazer() {
+    desfazendo.current = true;
+    handleAlterarAtiva(true);
+  }
+
   function handleFeedbackDismiss() {
     const eraSucesso = feedback?.tone === 'success';
     setFeedback(null);
+    if (desfazendo.current) {
+      desfazendo.current = false;
+      return;
+    }
     if (eraSucesso) router.back();
   }
 
@@ -182,12 +220,25 @@ export function RotaFormView({ rotaId }: RotaFormViewProps) {
       scroll
       overlay={
         feedback && (
-          <Snackbar message={feedback.mensagem} tone={feedback.tone} duration={1200} onDismiss={handleFeedbackDismiss} />
+          <Snackbar
+            message={feedback.mensagem}
+            tone={feedback.tone}
+            // Com "Desfazer", o Snackbar usa o tempo maior dele, para dar tempo de tocar.
+            duration={feedback.desfazer ? undefined : 1200}
+            action={feedback.desfazer ? { label: 'Desfazer', onPress: handleDesfazer } : undefined}
+            onDismiss={handleFeedbackDismiss}
+          />
         )
       }
     >
       <Column gap="lg">
         {!modoEdicao && <Text tone="body">Cadastre o trecho com a cidade de origem e a de destino.</Text>}
+
+        {modoEdicao && !ativa && (
+          <Aviso tom="info" icone="bloqueado" titulo="Rota desativada">
+            Não aparece nas novas viagens. Para usar de novo, reative no fim da tela.
+          </Aviso>
+        )}
 
         {/* Origem e destino em grupos, UF antes da cidade (protótipo): quem cadastra pensa "de onde, para onde". */}
         <Column gap="md">
@@ -265,11 +316,44 @@ export function RotaFormView({ rotaId }: RotaFormViewProps) {
             label={modoEdicao ? 'Salvar alterações' : 'Cadastrar rota'}
             onPress={handleSalvar}
             loading={salvando}
-            disabled={reativando}
+            disabled={reativando || alterandoAtiva}
           />
-          <Button label="Cancelar" variant="ghost" disabled={salvando || reativando} onPress={() => router.back()} />
+          <Button
+            label="Cancelar"
+            variant="ghost"
+            disabled={salvando || reativando || alterandoAtiva}
+            onPress={() => router.back()}
+          />
         </Column>
+
+        {modoEdicao && (
+          <View style={styles.status}>
+            {/* Ação de status no fim, longe da ação primária, com a consequência dita embaixo (DESIGN_CYAN §7,
+                botão de perigo). Reativar não é grave: botão secundário. */}
+            <Column gap="sm">
+              <Button
+                label={ativa ? 'Desativar rota' : 'Reativar rota'}
+                variant={ativa ? 'danger' : 'ghost'}
+                onPress={() => handleAlterarAtiva(!ativa)}
+                loading={alterandoAtiva}
+                disabled={salvando || reativando}
+              />
+              <Text variant="bodySm" tone="body">
+                {ativa
+                  ? 'O trecho some das novas viagens. As viagens antigas continuam com ele.'
+                  : 'O trecho volta a aparecer nas novas viagens.'}
+              </Text>
+            </Column>
+          </View>
+        )}
       </Column>
     </Screen>
   );
 }
+
+const styles = StyleSheet.create({
+  // Afasta a ação de status do "Salvar": as duas não podem parecer a mesma decisão.
+  status: {
+    marginTop: spacing.lg,
+  },
+});

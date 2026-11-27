@@ -214,13 +214,28 @@ Todo botão tem `accessibilityRole="button"` e `accessibilityLabel`. Toda ação
 - `minHeight` 44, padding vertical `spacing.md`, gap `spacing.md`. Solta na tela, a linha separa-se da próxima com hairline `border` embaixo.
 - Ao tocar: ripple `border` no Android e fundo `border` no iOS. A linha não usa o `opacity 0.6` dos botões.
 - O `accessibilityLabel` padrão é o título. Passe outro quando o título sozinho não basta ("Gerenciar Bruno Lima").
-- Controle à direita que responde sozinho (o `Switch` "Ativa", o botão "Mais opções") vai em `control`, **não** em `trailing`. Ele fica fora da área de toque da linha: tocar na linha abre o item, tocar no controle muda só ele, e o leitor de tela alcança os dois separados. Linha com `control` não mostra o chevron.
+- Controle à direita que responde sozinho (o botão "Mais opções" de Movimentações) vai em `control`, **não** em `trailing`. Ele fica fora da área de toque da linha: tocar na linha abre o item, tocar no controle muda só ele, e o leitor de tela alcança os dois separados. Linha com `control` não mostra o chevron.
 - Conteúdo que não cabe na linha padrão vai em `children` (modo livre).
 
 ### Grupo de linhas (`ListSection`)
 - Rótulo opcional em `caption` peso 500 `textBody` acima do grupo, com gap `spacing.sm`.
 - Bloco `surface` com borda 1px `border` e `radius.card`. Separadores hairline **só entre** as linhas, e as linhas ganham padding lateral `spacing.base`.
 - Use para menus e ajustes (hub Financeiro, Conta). Agrupa por borda e fundo: **não** faça um cartão por linha.
+
+### Grupo recolhido (`GrupoRecolhivel`)
+- Cabeçalho tocável no mesmo peso dos grupos da lista ("Desativadas · 2"), com o resumo dos nomes ao lado em `bodySm` `textBody` e a seta `avancar`/`recolher` na borda direita. `minHeight` `touchTarget`.
+- Começa recolhido. Aberto, mostra as linhas e anuncia `expanded` ao leitor de tela.
+- Uso: o fim das listas de cadastro, para o que foi desativado.
+
+### Desativar e reativar (soft delete)
+- **Um padrão só** em Categorias, Formas de pagamento, Rotas e Veículos. A lista mostra só os ativos; os desativados ficam no `GrupoRecolhivel` "Desativadas · N" (ou "Desativados") no fim. A linha não tem `Switch` nem "Mais opções": tocar abre o Editar.
+- No fim do Editar, longe do "Salvar": `Button` danger "Desativar …" com a consequência numa linha embaixo; desativado, `Button` ghost "Reativar …" e um `Aviso` info no topo dizendo a situação. Sem diálogo de confirmação: o Snackbar de sucesso oferece "Desfazer".
+- A palavra é sempre **desativar / desativada(o)**. "Inativo" fica só no banco.
+
+### Campo de busca (`CampoBusca`)
+- A mesma caixa do campo de texto (fundo, borda, raio, 48pt e anel de foco), com a lupa à esquerda e, quando há texto, o botão "×" ("Limpar busca") à direita.
+- **Sem rótulo acima**: a lupa já diz que é busca, e o placeholder diz o que procurar ("Buscar por placa ou modelo"). É a única exceção ao "label sempre visível" do Input.
+- Uma busca por lista, sempre no topo, na coluna da tela.
 
 ### Botão flutuante (`FAB`)
 - Pílula `accentStrong`, ícone (padrão `adicionar`) e rótulo em `onAccent` peso 500. `minHeight` `controlHeight` (48), sombra `shadow.float`.
