@@ -1,13 +1,13 @@
-import { useCallback, useRef, useState } from 'react';
-import { useFocusEffect, useRouter, type Href } from 'expo-router';
+import { useRouter, type Href } from 'expo-router';
 import { StyleSheet, View } from 'react-native';
 
-import { SaldoAtualCard } from '@/features/caixa/components/SaldoAtualCard';
-import { buscarResumoCaixa } from '@/features/caixa/fonteResumoCaixa';
-import { Button, Card, FAB, ListItem, ListSection, Screen, Skeleton, Text, useTablet, type IconName } from '@/ui';
+import { MesEmAndamentoCard } from '@/features/caixa/components/MesEmAndamentoCard';
+import { ProximosVencimentos } from '@/features/caixa/components/ProximosVencimentos';
+import { buscarMesEmAndamento } from '@/features/caixa/mesEmAndamento';
+import { hojeISO } from '@/lib/datas';
+import { useDadosDaTela } from '@/lib/useDadosDaTela';
+import { Button, Card, Column, FAB, ListItem, ListSection, Screen, Skeleton, Snackbar, Text, useTablet, type IconName } from '@/ui';
 import { spacing } from '@/ui/tokens';
-
-type Saldo = { status: 'carregando' } | { status: 'pronto'; centavos: number } | { status: 'erro' };
 
 type Atalho = { titulo: string; descricao: string; icone: IconName; href: Href };
 
@@ -30,38 +30,15 @@ const CADASTROS: Atalho[] = [
   { titulo: 'Formas de pagamento', descricao: 'Pix, boleto, cartão e TED', icone: 'formasPagamento', href: '/formas-pagamento' },
 ];
 
-// Aba Caixa (EIX-62): o saldo em destaque e o menu do módulo. O menu nunca
-// depende do saldo: se o saldo falhar, o erro fica dentro do cartão e as linhas continuam tocáveis.
+// Aba Caixa (EIX-62, redesign): o mês em andamento e o que vence primeiro, depois o menu do módulo. O
+// saldo saiu daqui porque já é o destaque do Início. O menu nunca depende dos dados: se a carga falhar,
+// o erro fica no lugar do cartão e as linhas continuam tocáveis.
 export function FinanceiroHubView() {
   const router = useRouter();
   const tablet = useTablet();
-  const [saldo, setSaldo] = useState<Saldo>({ status: 'carregando' });
-  // Só a resposta mais recente escreve na tela (mesmo padrão das listas).
-  const ultimoPedido = useRef(0);
-
-  const carregarSaldo = useCallback(async () => {
-    const pedido = ++ultimoPedido.current;
-    const resultado = await buscarResumoCaixa();
-    if (pedido !== ultimoPedido.current) return;
-
-    // Ao voltar para a aba o saldo novo substitui o antigo; se essa recarga falhar, o antigo fica.
-    setSaldo((atual) => {
-      if (resultado.ok) return { status: 'pronto', centavos: resultado.data.saldoAtualCentavos };
-      return atual.status === 'pronto' ? atual : { status: 'erro' };
-    });
-  }, []);
-
-  // Recarrega sempre que a aba volta ao foco: quem acabou de lançar uma movimentação vê o saldo novo.
-  useFocusEffect(
-    useCallback(() => {
-      carregarSaldo();
-    }, [carregarSaldo]),
-  );
-
-  function tentarDeNovo() {
-    setSaldo({ status: 'carregando' });
-    carregarSaldo();
-  }
+  // Carrega ao abrir e de novo sempre que a aba volta ao foco: quem acabou de lançar vê o mês novo.
+  const tela = useDadosDaTela(buscarMesEmAndamento);
+  const hoje = hojeISO();
 
   function linha(atalho: Atalho) {
     return (
@@ -76,19 +53,35 @@ export function FinanceiroHubView() {
   }
 
   return (
-    <Screen scroll fab={<FAB label="Nova movimentação" onPress={() => router.push('/movimentacoes/nova')} />}>
+    <Screen
+      scroll
+      overlay={
+        tela.feedbackErro ? <Snackbar message={tela.feedbackErro} tone="error" onDismiss={tela.limparFeedbackErro} /> : null
+      }
+      fab={<FAB label="Nova movimentação" onPress={() => router.push('/movimentacoes/nova')} />}
+    >
       {/* Aba não tem header nativo: o título fica no conteúdo. */}
       <Text variant="heading">Caixa</Text>
 
-      {saldo.status === 'carregando' && <Skeleton height="xxl" accessibilityLabel="Carregando saldo" />}
-      {saldo.status === 'pronto' && (
-        <SaldoAtualCard saldoAtualCentavos={saldo.centavos} onPress={() => router.push('/caixa')} />
+      {tela.status === 'carregando' && (
+        <Column gap="lg">
+          <Skeleton height="xxl" accessibilityLabel="Carregando o mês" />
+          <Skeleton height="xxl" />
+        </Column>
       )}
-      {saldo.status === 'erro' && (
+
+      {tela.status === 'erro' && (
         <Card variant="feature">
-          <Text tone="body">Não foi possível carregar o saldo.</Text>
-          <Button label="Tentar novamente" variant="ghost" onPress={tentarDeNovo} />
+          <Text tone="body">{tela.erro ?? 'Não foi possível carregar o mês.'}</Text>
+          <Button label="Tentar novamente" variant="ghost" onPress={tela.recarregar} />
         </Card>
+      )}
+
+      {tela.status === 'pronto' && tela.dados && (
+        <>
+          <MesEmAndamentoCard mes={tela.dados} onPress={() => router.push('/movimentacoes')} />
+          <ProximosVencimentos movimentacoes={tela.dados.proximosVencimentos} vencidos={tela.dados.vencidos} hoje={hoje} />
+        </>
       )}
 
       <View testID="atalhos-financeiro" style={[styles.atalhos, tablet && styles.duasColunas]}>

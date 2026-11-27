@@ -5,16 +5,18 @@ import { intervaloDoMes } from '@/lib/datas';
 import {
   atualizarMovimentacao,
   buscarMovimentacaoPorId,
+  contarVencidos,
   criarMovimentacao,
   excluirMovimentacao,
   listarMovimentacoesDoMes,
   listarOpcoesMovimentacao,
+  listarProximosVencimentos,
 } from '../movimentacoesRepository';
 import type { MovimentacaoInput } from '../schema';
 
-type Resposta = { data: unknown; error: { code: string; message: string } | null };
+type Resposta = { data: unknown; error: { code: string; message: string } | null; count?: number | null };
 
-const METODOS = ['select', 'insert', 'update', 'delete', 'eq', 'or', 'order', 'limit', 'single', 'maybeSingle'] as const;
+const METODOS = ['select', 'insert', 'update', 'delete', 'eq', 'gte', 'lt', 'or', 'order', 'limit', 'single', 'maybeSingle'] as const;
 type Metodo = (typeof METODOS)[number];
 type Builder = Record<Metodo, jest.Mock> & PromiseLike<Resposta>;
 
@@ -331,5 +333,51 @@ describe('listarOpcoesMovimentacao (MOV-01 AC12)', () => {
     mockListarFormas.mockResolvedValue({ ok: true, data: [] });
 
     expect(await listarOpcoesMovimentacao()).toEqual({ ok: false, mensagem: 'Falhou categorias.' });
+  });
+});
+
+// Aba Caixa: "Próximos vencimentos" e a linha dos vencidos sem baixa.
+describe('listarProximosVencimentos', () => {
+  it('pede ao banco só pendentes de hoje em diante, o mais próximo primeiro, com limite', async () => {
+    const builder = responder(ok([linha({ status_pagamento: 'Pendente', data_vencimento: '2026-11-28' })]));
+
+    const resultado = await listarProximosVencimentos('2026-11-27', 5);
+
+    expect(builder.eq).toHaveBeenCalledWith('status_pagamento', 'Pendente');
+    expect(builder.gte).toHaveBeenCalledWith('data_vencimento', '2026-11-27');
+    expect(builder.order).toHaveBeenCalledWith('data_vencimento', { ascending: true });
+    expect(builder.limit).toHaveBeenCalledWith(5);
+    expect(resultado).toMatchObject({ ok: true, data: [{ id: 'mov-1', valorCentavos: 1999 }] });
+  });
+
+  it('erro do banco vira mensagem em português, sem o texto técnico', async () => {
+    responder(erro('XX000'));
+
+    expect(await listarProximosVencimentos('2026-11-27', 5)).toEqual({
+      ok: false,
+      mensagem: 'Não foi possível carregar os próximos vencimentos. Tente novamente.',
+    });
+  });
+});
+
+describe('contarVencidos', () => {
+  it('conta no banco (count com head) os pendentes que venceram antes de hoje', async () => {
+    const builder = responder({ data: null, error: null, count: 7 });
+
+    const resultado = await contarVencidos('2026-11-27');
+
+    expect(builder.select).toHaveBeenCalledWith('id', { count: 'exact', head: true });
+    expect(builder.eq).toHaveBeenCalledWith('status_pagamento', 'Pendente');
+    expect(builder.lt).toHaveBeenCalledWith('data_vencimento', '2026-11-27');
+    expect(resultado).toEqual({ ok: true, data: 7 });
+  });
+
+  it('acesso negado devolve a mensagem própria', async () => {
+    responder(erro('42501'));
+
+    const resultado = await contarVencidos('2026-11-27');
+
+    expect(resultado.ok).toBe(false);
+    expect(resultado).not.toHaveProperty('mensagem', expect.stringContaining('detalhe técnico'));
   });
 });
