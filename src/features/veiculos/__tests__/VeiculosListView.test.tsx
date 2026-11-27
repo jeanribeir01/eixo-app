@@ -67,7 +67,7 @@ describe('VeiculosListView', () => {
     expect(screen.queryByRole('button', { name: /^(Inativar|Desativar|Reativar|Mais opções)/ })).toBeNull();
   });
 
-  it('desativados ficam recolhidos no fim, com as placas ao lado; ao abrir, a linha leva ao Editar', async () => {
+  it('desativados ficam recolhidos no fim, com as placas ao lado; ao abrir, a linha leva ao Detalhe', async () => {
     (listarVeiculos as jest.Mock).mockResolvedValue({ ok: true, data: [...veiculosMock, desativado] });
     await render(<VeiculosListView />);
     await screen.findByText('ABC-1234');
@@ -75,14 +75,14 @@ describe('VeiculosListView', () => {
     const cabecalho = screen.getByRole('button', { name: 'Desativados, 1' });
     expect(cabecalho).toBeCollapsed();
     expect(screen.getByText('GHI-1234')).toBeOnTheScreen();
-    expect(screen.queryByRole('button', { name: 'Editar GHI-1234' })).toBeNull();
+    expect(screen.queryByRole('button', { name: 'GHI-1234' })).toBeNull();
     // O desativado não vira um grupo comum entre os outros.
     expect(screen.getAllByRole('header').map((titulo) => titulo.props.children)).toEqual(['Disponíveis · 1', 'Em manutenção · 1']);
 
     await fireEvent.press(cabecalho);
-    await fireEvent.press(screen.getByRole('button', { name: 'Editar GHI-1234' }));
+    await fireEvent.press(screen.getByRole('button', { name: 'GHI-1234' }));
 
-    expect(mockPush).toHaveBeenCalledWith('/frota/3/editar');
+    expect(mockPush).toHaveBeenCalledWith('/frota/3');
   });
 
   it('sem desativados, o grupo recolhido não aparece', async () => {
@@ -196,14 +196,15 @@ describe('VeiculosListView', () => {
     await waitFor(() => expect(listarVeiculos).toHaveBeenLastCalledWith({ busca: 'fh', status: undefined }));
   });
 
-  it('tocar na linha abre a edição do veículo', async () => {
+  // O Detalhe tem o histórico e o "Editar veículo"; a linha não pula direto para o formulário.
+  it('tocar na linha abre o Detalhe do veículo', async () => {
     (listarVeiculos as jest.Mock).mockResolvedValue({ ok: true, data: veiculosMock });
 
     await render(<VeiculosListView />);
     await screen.findByText('ABC-1234');
 
-    await fireEvent.press(screen.getByRole('button', { name: 'Editar ABC-1234' }));
-    expect(mockPush).toHaveBeenCalledWith('/frota/1/editar');
+    await fireEvent.press(screen.getByRole('button', { name: 'ABC-1234' }));
+    expect(mockPush).toHaveBeenCalledWith('/frota/1');
   });
 
   describe('VeiculosListView — tablet (EIX-94)', () => {

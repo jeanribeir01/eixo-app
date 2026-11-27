@@ -82,7 +82,8 @@ const routes = {
   '(app)/manutencoes/nova': () => <Text>Tela Nova Manutencao</Text>,
   '(app)/viagens/nova': () => <Text>Tela Abrir Viagem</Text>,
   '(app)/viagens/[id]/fechar': () => <Text>Tela Fechar Viagem</Text>,
-  '(app)/viagens/[id]/index': () => <Text>Tela Viagem Lancamentos</Text>,
+  '(app)/viagens/[id]/index': () => <Text>Tela Viagem Detalhe</Text>,
+  '(app)/viagens/[id]/lancamentos': () => <Text>Tela Viagem Lancamentos</Text>,
   '(app)/viagens/lancamentos': () => <Text>Tela Lancamentos por Viagem</Text>,
   '(app)/caixa/index': () => <Text>Tela Saldo e Projecao</Text>,
   '(app)/formas-pagamento/index': () => <Text>Tela Formas</Text>,
@@ -294,7 +295,7 @@ describe('telas internas seguem o módulo (EIX-31)', () => {
     (['Gestor de Frota', 'Motorista'] as const).flatMap((perfil) =>
       [
         ['/viagens/lancamentos', 'Tela Lancamentos por Viagem'],
-        ['/viagens/v-1', 'Tela Viagem Lancamentos'],
+        ['/viagens/v-1/lancamentos', 'Tela Viagem Lancamentos'],
       ].map(([rota, tela]) => ({ perfil, rota: rota!, tela: tela! })),
     ),
   )('$perfil digitando $rota volta para a home do perfil', async ({ perfil, rota, tela }) => {
@@ -313,7 +314,7 @@ describe('telas internas seguem o módulo (EIX-31)', () => {
     (['Admin', 'Financeiro'] as const).flatMap((perfil) =>
       [
         ['/viagens/lancamentos', 'Tela Lancamentos por Viagem'],
-        ['/viagens/v-1', 'Tela Viagem Lancamentos'],
+        ['/viagens/v-1/lancamentos', 'Tela Viagem Lancamentos'],
       ].map(([rota, tela]) => ({ perfil, rota: rota!, tela: tela! })),
     ),
   )('$perfil abre $rota', async ({ perfil, rota, tela }) => {
@@ -322,6 +323,28 @@ describe('telas internas seguem o módulo (EIX-31)', () => {
     await act(() => navegador.push(rota as Href));
 
     expect(await screen.findByText(tela)).toBeOnTheScreen();
+  });
+
+  // Detalhe da viagem: segue as viagens (Admin, Gestor e Motorista). O Financeiro não lê `viagem`; ele
+  // vê a viagem pelos lançamentos.
+  it.each(['Admin', 'Gestor de Frota', 'Motorista'] as const)('%s abre /viagens/v-1', async (perfil) => {
+    await entrarComo(perfil);
+
+    await act(() => navegador.push('/viagens/v-1'));
+
+    expect(await screen.findByText('Tela Viagem Detalhe')).toBeOnTheScreen();
+  });
+
+  it('Financeiro digitando /viagens/v-1 volta para a home do perfil', async () => {
+    const { telaInicial, rotaInicial } = cenarios.find((c) => c.perfil === 'Financeiro')!;
+    const router = await entrarComo('Financeiro');
+    await screen.findByText(telaInicial);
+
+    await act(() => navegador.push('/viagens/v-1'));
+
+    expect(await screen.findByText(telaInicial)).toBeOnTheScreen();
+    expect(screen.queryByText('Tela Viagem Detalhe')).not.toBeOnTheScreen();
+    expect(router.getPathname()).toBe(rotaInicial);
   });
 
   // Dívidas (EIX-50): só Financeiro e Admin. O RLS de `divida` é quem garante.

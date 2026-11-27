@@ -157,9 +157,11 @@ describe('ViagensListView', () => {
     expect(screen.getByText(/^Pedro Santos · \d{2}\/\d{2} · 500 km$/)).toBeTruthy();
     expect(screen.getByText(/acima da rota/i)).toBeTruthy();
 
-    const linhaNaEstrada = screen.getByRole('button', { name: 'Finalizar viagem BRA2E19, São Paulo → Campinas' });
-    await fireEvent.press(linhaNaEstrada);
-    expect(mockPush).toHaveBeenCalledWith('/viagens/viagem-1/fechar');
+    // Toda linha abre o Detalhe da viagem, na estrada ou concluída; o "Finalizar" mora lá.
+    await fireEvent.press(screen.getByRole('button', { name: 'BRA2E19 · São Paulo → Campinas' }));
+    expect(mockPush).toHaveBeenCalledWith('/viagens/viagem-1');
+    await fireEvent.press(screen.getByRole('button', { name: 'XYZ9K88 · São Paulo → Ribeirão Preto' }));
+    expect(mockPush).toHaveBeenCalledWith('/viagens/viagem-2');
   });
 
   it('agrupa as concluídas como "Concluídas", o mesmo nome do filtro', async () => {
@@ -396,7 +398,7 @@ describe('ViagensListView', () => {
     });
   });
 
-  it('põe a estrada antes das concluídas e só a viagem em andamento abre o fechamento', async () => {
+  it('põe a estrada antes das concluídas', async () => {
     // A lista chega com a concluída primeiro: o agrupamento reordena pelo que o gestor precisa agir.
     jest.spyOn(repo, 'listarViagens').mockResolvedValue({ ok: true, data: [mockViagens[1], mockViagens[0]] });
 
@@ -409,6 +411,5 @@ describe('ViagensListView', () => {
     // Fora de hoje, a viagem em andamento diz o dia da saída.
     expect(screen.getByText(/^João Silva · saída em \d{2}\/\d{2}$/)).toBeOnTheScreen();
     expect(screen.getByText('Acima da rota')).toBeOnTheScreen();
-    expect(screen.queryByRole('button', { name: /XYZ9K88/ })).not.toBeOnTheScreen();
   });
 });

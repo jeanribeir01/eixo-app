@@ -87,7 +87,7 @@ describe('ViagensLancamentosListView', () => {
 
     await fireEvent.press(await screen.findByRole('button', { name: 'XYZ9K88 · Campinas/SP → Belo Horizonte/MG' }));
 
-    expect(mockPush).toHaveBeenCalledWith('/viagens/v-2');
+    expect(mockPush).toHaveBeenCalledWith('/viagens/v-2/lancamentos');
   });
 
   it('mostra o carregando enquanto busca', async () => {

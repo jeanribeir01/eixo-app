@@ -309,7 +309,7 @@ export function MovimentacaoFormView({ movimentacaoId, viagemIdInicial }: Movime
               error={erro}
             />
             {!!viagemSalva && (
-              <Button label="Ver viagem" variant="ghost" onPress={() => router.push(`/viagens/${viagemSalva}`)} />
+              <Button label="Ver viagem" variant="ghost" onPress={() => router.push(`/viagens/${viagemSalva}/lancamentos`)} />
             )}
           </Column>
         );

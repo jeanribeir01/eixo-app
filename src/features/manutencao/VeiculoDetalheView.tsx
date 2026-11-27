@@ -81,8 +81,9 @@ export type VeiculoDetalheViewProps = {
   veiculoId: string;
 };
 
-// Detalhe do veículo (`/frota/<id>`), aberto pelo "Ver veículo" da lista de manutenções e pelo Ranking. Mora
-// na feature de manutenção porque o conteúdo é o histórico; os dados do veículo são o cartão de destaque.
+// Detalhe do veículo (`/frota/<id>`), aberto pela lista de Veículos, pela aba Frota, pelo Detalhe da viagem,
+// pelo "Ver veículo" da lista de manutenções e pelo Ranking. Mora na feature de manutenção porque o
+// conteúdo é o histórico; os dados do veículo são o cartão de destaque.
 export function VeiculoDetalheView({ veiculoId }: VeiculoDetalheViewProps) {
   const router = useRouter();
   // O mesmo hook das listas: carrega ao abrir, recarrega ao voltar ao foco, tem pull-to-refresh e
