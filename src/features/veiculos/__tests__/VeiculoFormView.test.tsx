@@ -29,14 +29,14 @@ async function preencher({ placa = 'abc1234', marca = 'Volvo', modelo = 'FH 540'
   await fireEvent.changeText(screen.getByLabelText('Placa'), placa);
   await fireEvent.changeText(screen.getByLabelText('Marca'), marca);
   await fireEvent.changeText(screen.getByLabelText('Modelo'), modelo);
-  await fireEvent.changeText(screen.getByLabelText('Ano de Fabricação'), ano);
+  await fireEvent.changeText(screen.getByLabelText('Ano de fabricação'), ano);
   await fireEvent.changeText(screen.getByLabelText('Capacidade de carga (toneladas)'), capacidade);
 }
 
 // O fireEvent já roda dentro de act na Testing Library 14: um act a mais em volta dele quebra os testes
 // que disparam o salvar sem esperar (dispararSemEsperar).
 async function salvar() {
-  await fireEvent.press(screen.getByRole('button', { name: 'Salvar' }));
+  await fireEvent.press(screen.getByRole('button', { name: /^(Cadastrar veículo|Salvar alterações)$/ }));
 }
 
 describe('VeiculoFormView', () => {
@@ -65,11 +65,29 @@ describe('VeiculoFormView', () => {
     expect(screen.getByLabelText('Marca')).toBeOnTheScreen();
     expect(screen.getByLabelText('Modelo')).toBeOnTheScreen();
     expect(screen.getByLabelText('Capacidade de carga (toneladas)')).toBeOnTheScreen();
-    expect(screen.getByRole('tab', { name: 'Disponível' })).toBeOnTheScreen();
-    expect(screen.getByRole('tab', { name: 'Em Viagem' })).toBeOnTheScreen();
-    expect(screen.getByRole('tab', { name: 'Em Manutenção' })).toBeOnTheScreen();
-    expect(screen.getByLabelText('Ano de Fabricação')).toBeOnTheScreen();
-    expect(screen.queryByRole('tab', { name: 'Inativo' })).toBeNull();
+    // Status num seletor: começa em Disponível e abre as três opções ativas.
+    expect(screen.getByRole('button', { name: 'Status' })).toHaveTextContent('Disponível');
+    await fireEvent.press(screen.getByRole('button', { name: 'Status' }));
+    expect(screen.getByRole('button', { name: 'Em Viagem' })).toBeOnTheScreen();
+    expect(screen.getByRole('button', { name: 'Em Manutenção' })).toBeOnTheScreen();
+    expect(screen.getByLabelText('Ano de fabricação')).toBeOnTheScreen();
+    expect(screen.queryByRole('button', { name: 'Inativo' })).toBeNull();
+  });
+
+  it('cadastro: orientação no topo e o botão diz o que faz', async () => {
+    await render(<VeiculoFormView />);
+
+    expect(screen.getByText('Cadastre o caminhão com a placa e os dados do documento.')).toBeOnTheScreen();
+    expect(screen.getByRole('button', { name: 'Cadastrar veículo' })).toBeOnTheScreen();
+    expect(screen.getByTestId('icone-frota', { includeHiddenElements: true })).toBeOnTheScreen();
+  });
+
+  it('edição: sem a orientação do cadastro e com "Salvar alterações"', async () => {
+    (buscarVeiculoPorId as jest.Mock).mockResolvedValue({ ok: true, data: volvo });
+    await render(<VeiculoFormView veiculoId="9" />);
+
+    expect(await screen.findByRole('button', { name: 'Salvar alterações' })).toBeOnTheScreen();
+    expect(screen.queryByText('Cadastre o caminhão com a placa e os dados do documento.')).not.toBeOnTheScreen();
   });
 
   it('máscara: placa antiga ganha hífen só na tela', async () => {
@@ -105,7 +123,8 @@ describe('VeiculoFormView', () => {
 
     await render(<VeiculoFormView />);
     await preencher();
-    await fireEvent.press(screen.getByRole('tab', { name: 'Em Manutenção' }));
+    await fireEvent.press(screen.getByRole('button', { name: 'Status' }));
+    await fireEvent.press(screen.getByRole('button', { name: 'Em Manutenção' }));
     await salvar();
 
     expect(criarVeiculo).toHaveBeenCalledWith({
@@ -164,8 +183,8 @@ describe('VeiculoFormView', () => {
     expect(screen.queryByText('Editar veículo')).not.toBeOnTheScreen();
     expect(screen.getByLabelText('Placa').props.value).toBe('ABC-1234');
     expect(screen.getByLabelText('Capacidade de carga (toneladas)').props.value).toBe('12,5');
-    expect(screen.getByLabelText('Ano de Fabricação').props.value).toBe('2020');
-    expect(screen.getByRole('tab', { name: 'Em Manutenção' })).toHaveProp('accessibilityState', { selected: true });
+    expect(screen.getByLabelText('Ano de fabricação').props.value).toBe('2020');
+    expect(screen.getByRole('button', { name: 'Status' })).toHaveTextContent('Em Manutenção');
   });
 
   it.each(['', '1949', '2028'])('ano inválido %s impede envio (ANO-01/02)', async (ano) => {
@@ -180,7 +199,7 @@ describe('VeiculoFormView', () => {
     (buscarVeiculoPorId as jest.Mock).mockResolvedValue({ ok: true, data: { ...volvo, ano_fabricacao: null } });
     (atualizarVeiculo as jest.Mock).mockResolvedValue({ ok: true, data: volvo });
     await render(<VeiculoFormView veiculoId="9" />);
-    const ano = await screen.findByLabelText('Ano de Fabricação');
+    const ano = await screen.findByLabelText('Ano de fabricação');
     expect(ano.props.value).toBe('');
     await salvar();
     expect(atualizarVeiculo).not.toHaveBeenCalled();
@@ -197,7 +216,7 @@ describe('VeiculoFormView', () => {
     await render(<VeiculoFormView veiculoId="9" />);
     await screen.findByLabelText('Placa');
     expect(screen.getByText('Inativo')).toBeOnTheScreen();
-    expect(screen.queryByRole('tab')).toBeNull();
+    expect(screen.queryByRole('button', { name: 'Status' })).toBeNull();
     await fireEvent.changeText(screen.getByLabelText('Modelo'), 'FH 460');
     await salvar();
     expect(atualizarVeiculo).toHaveBeenCalledWith('9', expect.objectContaining({ status: 'Inativo', modelo: 'FH 460' }));
@@ -219,7 +238,7 @@ describe('VeiculoFormView', () => {
     await render(<VeiculoFormView />);
     await preencher();
     const toque1 = await dispararSemEsperar(() => salvar());
-    expect(screen.getByRole('button', { name: 'Salvar' })).toBeDisabled();
+    expect(screen.getByRole('button', { name: /^(Cadastrar veículo|Salvar alterações)$/ })).toBeDisabled();
     expect(screen.getByTestId('button-loading')).toBeOnTheScreen();
     const toque2 = await dispararSemEsperar(() => salvar());
     expect(criarVeiculo).toHaveBeenCalledTimes(1);
@@ -236,7 +255,7 @@ describe('VeiculoFormView', () => {
       .mockResolvedValueOnce({ ok: true, data: volvo });
     await render(<VeiculoFormView veiculoId="9" />);
     await fireEvent.press(await screen.findByRole('button', { name: 'Tentar novamente' }));
-    expect(await screen.findByLabelText('Ano de Fabricação')).toHaveProp('value', '2020');
+    expect(await screen.findByLabelText('Ano de fabricação')).toHaveProp('value', '2020');
   });
 
   it('modo editar: envia a atualização para o id certo', async () => {

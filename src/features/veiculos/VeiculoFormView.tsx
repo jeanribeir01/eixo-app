@@ -1,9 +1,8 @@
 import { useEffect, useState } from 'react';
 import { useRouter } from 'expo-router';
-import { ActivityIndicator } from 'react-native';
 import { z } from 'zod';
 
-import { Button, Column, EmptyState, Input, Screen, Snackbar, Tabs, Text, colors } from '@/ui';
+import { Button, Column, EmptyState, Input, Screen, Select, Skeleton, Snackbar, Text } from '@/ui';
 
 import { formatarPlaca, normalizarPlaca } from './placa';
 import { atualizarVeiculo, buscarVeiculoPorId, criarVeiculo } from './repository';
@@ -135,8 +134,13 @@ export function VeiculoFormView({ veiculoId }: VeiculoFormViewProps) {
 
   if (status === 'carregando') {
     return (
-      <Screen align="center" underHeader>
-        <ActivityIndicator size="small" color={colors.accent} accessibilityLabel="Carregando veículo" />
+      <Screen underHeader>
+        {/* O formato do formulário aparece enquanto o veículo carrega: sem spinner no vazio. */}
+        <Column gap="lg">
+          <Skeleton height="xxl" accessibilityLabel="Carregando veículo" />
+          <Skeleton height="xxl" />
+          <Skeleton height="xxl" />
+        </Column>
       </Screen>
     );
   }
@@ -156,56 +160,67 @@ export function VeiculoFormView({ veiculoId }: VeiculoFormViewProps) {
       scroll
       overlay={feedback && <Snackbar message={feedback.mensagem} tone={feedback.tone} duration={1200} onDismiss={handleFeedbackDismiss} />}
     >
-      <Column gap="md">
-        <Input
-          label="Placa"
-          placeholder="AAA-1234 ou AAA1A23"
-          value={placa}
-          onChangeText={(texto) => setPlaca(mascararPlaca(texto))}
-          autoCapitalize="characters"
-          autoCorrect={false}
-          maxLength={TAMANHO_PLACA + 1}
-          error={erros.placa}
-        />
-        <Input label="Marca" placeholder="Ex.: Volvo" value={marca} onChangeText={setMarca} error={erros.marca} />
-        <Input label="Modelo" placeholder="Ex.: FH 540" value={modelo} onChangeText={setModelo} error={erros.modelo} />
-        <Input label="Ano de Fabricação" placeholder="Ex.: 2020" value={anoFabricacao} onChangeText={setAnoFabricacao} keyboardType="number-pad" error={erros.ano_fabricacao} />
-        <Input
-          label="Capacidade de carga (toneladas)"
-          placeholder="Ex.: 12,5"
-          value={capacidade}
-          onChangeText={setCapacidade}
-          keyboardType="decimal-pad"
-          error={erros.capacidade_carga}
-        />
+      <Column gap="lg">
+        {!modoEdicao && <Text tone="body">Cadastre o caminhão com a placa e os dados do documento.</Text>}
 
-        <Column gap="xs">
-          <Text variant="bodySm" tone="body" weight="medium">
-            Status
-          </Text>
+        <Column gap="md">
+          <Input
+            label="Placa"
+            icone="frota"
+            placeholder="AAA-1234 ou AAA1A23"
+            value={placa}
+            onChangeText={(texto) => setPlaca(mascararPlaca(texto))}
+            autoCapitalize="characters"
+            autoCorrect={false}
+            maxLength={TAMANHO_PLACA + 1}
+            error={erros.placa}
+          />
+          <Input label="Marca" placeholder="Ex.: Volvo" value={marca} onChangeText={setMarca} error={erros.marca} />
+          <Input label="Modelo" placeholder="Ex.: FH 540" value={modelo} onChangeText={setModelo} error={erros.modelo} />
+          <Input
+            label="Ano de fabricação"
+            icone="calendario"
+            placeholder="Ex.: 2020"
+            value={anoFabricacao}
+            onChangeText={setAnoFabricacao}
+            keyboardType="number-pad"
+            error={erros.ano_fabricacao}
+          />
+          <Input
+            label="Capacidade de carga (toneladas)"
+            placeholder="Ex.: 12,5"
+            value={capacidade}
+            onChangeText={setCapacidade}
+            keyboardType="decimal-pad"
+            error={erros.capacidade_carga}
+          />
+
           {statusVeiculo === 'Inativo' ? (
-            <Text>Inativo</Text>
+            <Column gap="xs">
+              <Text variant="bodySm" weight="medium">
+                Status
+              </Text>
+              <Text>Inativo</Text>
+            </Column>
           ) : (
-            <Tabs
-              options={opcoesStatus}
+            // Seletor em vez de abas: "Em Manutenção" cabia cortado numa fileira de três. O erro sai
+            // igual ao dos outros campos (ícone, vermelho e alerta para o leitor de tela).
+            <Select
+              label="Status"
               value={statusVeiculo}
+              options={opcoesStatus}
               onChange={(valor) => setStatusVeiculo(valor as StatusVeiculo)}
-              accessibilityLabel="Status do veículo"
-              // "Em Manutenção" não cabe num terço da largura; rolar evita cortar o rótulo.
-              scrollable
+              error={erros.status}
             />
           )}
-          {!!erros.status && (
-            <Text accessibilityRole="alert" variant="bodySm">
-              {erros.status}
-            </Text>
-          )}
+        </Column>
+
+        {/* Um botão preenchido só por tela (DESIGN_CYAN §7); o rótulo diz o que o toque faz. */}
+        <Column gap="sm">
+          <Button label={modoEdicao ? 'Salvar alterações' : 'Cadastrar veículo'} onPress={handleSalvar} loading={salvando} />
+          <Button label="Cancelar" variant="ghost" disabled={salvando} onPress={() => router.back()} />
         </Column>
       </Column>
-
-      <Button label="Salvar" onPress={handleSalvar} loading={salvando} />
-      <Button label="Cancelar" variant="ghost" onPress={() => router.back()} />
-
     </Screen>
   );
 }
