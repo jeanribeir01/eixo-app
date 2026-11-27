@@ -1,6 +1,5 @@
 import { useEffect, useState } from 'react';
 import { useRouter } from 'expo-router';
-import { ActivityIndicator } from 'react-native';
 import { z } from 'zod';
 
 import { rotuloTipoCategoria, type TipoCategoria } from '@/features/categorias/types';
@@ -13,7 +12,7 @@ import {
 } from '@/features/ponte-viagem/ponteRepository';
 import { isoParaDataBR } from '@/lib/datas';
 import { removerComprovante } from '@/lib/storage';
-import { Button, CampoData, CampoMoeda, Column, EmptyState, Input, Screen, Select, Snackbar, Tabs, Text, colors } from '@/ui';
+import { Button, CampoData, CampoMoeda, Column, EmptyState, Input, Screen, Select, Skeleton, Snackbar, Tabs, Text } from '@/ui';
 
 import { camposMovimentacao, type CampoMovimentacao, type ContextoCampos } from './camposMovimentacao';
 import { AnexoComprovante } from './components/AnexoComprovante';
@@ -65,6 +64,12 @@ function ehCombustivel(categoria: { titulo: string; tipo: TipoCategoria } | unde
   return categoria?.titulo === 'Combustível' && categoria.tipo === 'Saida';
 }
 
+// Saída primeiro: é o lançamento mais comum (combustível, pedágio, manutenção).
+const OPCOES_TIPO: { value: TipoCategoria; label: string }[] = [
+  { value: 'Saida', label: 'Saída' },
+  { value: 'Entrada', label: 'Entrada' },
+];
+
 // Usado quando a viagem do vínculo não carrega: o campo não fica parecendo vazio.
 const ROTULO_VIAGEM_DESCONHECIDA = 'Viagem vinculada';
 
@@ -90,6 +95,8 @@ export function MovimentacaoFormView({ movimentacaoId, viagemIdInicial }: Movime
     ...VALORES_INICIAIS,
     viagemId: viagemIdInicial ?? null,
   }));
+  // Saída ou Entrada: filtra as categorias e decide "Pago" x "Recebido". Na edição, vem da categoria gravada.
+  const [tipo, setTipo] = useState<TipoCategoria>('Saida');
   const [erros, setErros] = useState<Erros>({});
   const [salvando, setSalvando] = useState(false);
   const [feedback, setFeedback] = useState<Feedback | null>(null);
@@ -126,6 +133,7 @@ export function MovimentacaoFormView({ movimentacaoId, viagemIdInicial }: Movime
       if (resultadoMovimentacao?.ok) {
         setOriginal(resultadoMovimentacao.data);
         setValores(valoresDe(resultadoMovimentacao.data));
+        setTipo(resultadoMovimentacao.data.categoria.tipo);
         viagemId = resultadoMovimentacao.data.viagem_id;
       }
 
@@ -159,10 +167,18 @@ export function MovimentacaoFormView({ movimentacaoId, viagemIdInicial }: Movime
     alterar('caminhoComprovante', caminho);
   }
 
-  // Tipo da categoria escolhida decide "Pago" x "Recebido". Sem categoria, vale o de saída.
-  const tipoAtual: TipoCategoria =
-    opcoes.categorias.find((categoria) => categoria.id === valores.categoriaId)?.tipo ??
-    (original && original.categoria_id === valores.categoriaId ? original.categoria.tipo : 'Saida');
+  // O tipo escolhido no topo decide "Pago" x "Recebido" e quais categorias aparecem.
+  const tipoAtual = tipo;
+
+  // Trocar de Saída para Entrada (ou o contrário) solta a categoria do outro tipo: ela não está mais
+  // na lista, e salvar com ela gravaria uma entrada com categoria de saída.
+  function trocarTipo(novo: TipoCategoria) {
+    setTipo(novo);
+    const categoria =
+      opcoes.categorias.find((item) => item.id === valores.categoriaId) ??
+      (original && original.categoria_id === valores.categoriaId ? original.categoria : undefined);
+    if (categoria && categoria.tipo !== novo) alterar('categoriaId', null);
+  }
 
   // Combustível decide se o campo de litros aparece e se ele é validado (LITROS-01/02).
   const contexto: ContextoCampos = {
@@ -246,15 +262,13 @@ export function MovimentacaoFormView({ movimentacaoId, viagemIdInicial }: Movime
             key={campo.nome}
             label={campo.rotulo}
             value={valores.categoriaId}
-            options={opcoes.categorias.map((categoria) => ({
-              value: categoria.id,
-              label: categoria.titulo,
-              description: rotuloTipoCategoria[categoria.tipo],
-            }))}
+            options={opcoes.categorias
+              .filter((categoria) => categoria.tipo === tipo)
+              .map((categoria) => ({ value: categoria.id, label: categoria.titulo }))}
             onChange={(id) => alterar('categoriaId', id)}
-            placeholder="Escolha a categoria"
-            emptyMessage="Nenhuma opção cadastrada."
-            fallbackLabel={original?.categoria.titulo}
+            placeholder={`Escolha a categoria de ${rotuloTipoCategoria[tipo].toLowerCase()}`}
+            emptyMessage={`Nenhuma categoria de ${rotuloTipoCategoria[tipo].toLowerCase()} cadastrada.`}
+            fallbackLabel={original?.categoria.tipo === tipo ? original.categoria.titulo : undefined}
             error={erro}
           />
         );
@@ -329,7 +343,7 @@ export function MovimentacaoFormView({ movimentacaoId, viagemIdInicial }: Movime
       case 'status':
         return (
           <Column key={campo.nome} gap="xs">
-            <Text variant="bodySm" tone="body" weight="medium">
+            <Text variant="bodySm" weight="medium">
               {campo.rotulo}
             </Text>
             <Tabs
@@ -359,8 +373,14 @@ export function MovimentacaoFormView({ movimentacaoId, viagemIdInicial }: Movime
 
   if (status === 'carregando') {
     return (
-      <Screen align="center" underHeader>
-        <ActivityIndicator size="small" color={colors.accent} accessibilityLabel="Carregando formulário" />
+      <Screen underHeader>
+        {/* O formato do formulário aparece enquanto as opções carregam: sem spinner no vazio. */}
+        <Column gap="lg">
+          <Skeleton height="xxl" accessibilityLabel="Carregando formulário" />
+          <Skeleton height="xxl" />
+          <Skeleton height="xxl" />
+          <Skeleton height="xxl" />
+        </Column>
       </Screen>
     );
   }
@@ -384,14 +404,27 @@ export function MovimentacaoFormView({ movimentacaoId, viagemIdInicial }: Movime
         )
       }
     >
-      <Column gap="md">
-        {camposMovimentacao
-          .filter((campo) => !campo.visivel || campo.visivel(valores, contexto))
-          .map(renderizarCampo)}
-      </Column>
+      <Column gap="lg">
+        {!modoEdicao && <Text tone="body">Registre uma entrada ou saída do caixa.</Text>}
 
-      <Button label="Salvar" onPress={handleSalvar} loading={salvando} />
-      <Button label="Cancelar" variant="ghost" onPress={() => router.back()} />
+        <Tabs accessibilityLabel="Tipo da movimentação" options={OPCOES_TIPO} value={tipo} onChange={(valor) => trocarTipo(valor as TipoCategoria)} />
+
+        <Column gap="md">
+          {camposMovimentacao
+            .filter((campo) => !campo.visivel || campo.visivel(valores, contexto))
+            .map(renderizarCampo)}
+        </Column>
+
+        {/* Um botão preenchido só por tela (DESIGN_CYAN §7); Cancelar sai sem salvar. */}
+        <Column gap="sm">
+          <Button
+            label={modoEdicao ? 'Salvar alterações' : 'Salvar movimentação'}
+            onPress={handleSalvar}
+            loading={salvando}
+          />
+          <Button label="Cancelar" variant="ghost" disabled={salvando} onPress={() => router.back()} />
+        </Column>
+      </Column>
     </Screen>
   );
 }

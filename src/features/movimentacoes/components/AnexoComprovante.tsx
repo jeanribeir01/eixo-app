@@ -110,7 +110,8 @@ export function AnexoComprovante({ label, value, onChange, onErro, error }: Anex
 
   return (
     <Column gap="xs">
-      <Text variant="bodySm" tone="body" weight="medium">
+      {/* Mesmo rótulo do Input e do Select: o campo de anexo não pode parecer desabilitado ao lado deles. */}
+      <Text variant="bodySm" weight="medium">
         {label}
       </Text>
 
