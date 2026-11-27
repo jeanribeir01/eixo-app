@@ -77,7 +77,7 @@ async function preencher() {
 // O fireEvent já roda dentro de act na Testing Library 14: um act a mais em volta dele quebra os testes
 // que disparam o salvar sem esperar (dispararSemEsperar).
 async function salvar() {
-  await fireEvent.press(screen.getByRole('button', { name: 'Salvar' }));
+  await fireEvent.press(screen.getByRole('button', { name: 'Registrar manutenção' }));
 }
 
 async function renderPronto() {
@@ -98,6 +98,19 @@ afterEach(() => {
 });
 
 describe('ManutencaoFormView — campos', () => {
+  it('avisa antes de salvar que a manutenção gera a despesa e para o veículo', async () => {
+    await renderPronto();
+
+    expect(screen.getByText('Registre o serviço feito no caminhão.')).toBeOnTheScreen();
+    expect(screen.getByText('Manutenção e despesa juntas')).toBeOnTheScreen();
+    expect(
+      screen.getByText(
+        'Ao registrar, o valor entra no caixa como despesa de Manutenção e o veículo fica em manutenção até o serviço ser concluído.',
+      ),
+    ).toBeOnTheScreen();
+    expect(screen.getByRole('button', { name: 'Registrar manutenção' })).toBeOnTheScreen();
+  });
+
   // MAN-01, MAN-04
   it('mostra os seis campos, com a data de hoje e o status Pendente', async () => {
     // Segura a primeira carga: o render async esperaria a resposta e pularia o "carregando".
@@ -224,7 +237,7 @@ describe('ManutencaoFormView — salvar', () => {
 
     expect(screen.getByRole('alert')).toHaveTextContent(mensagem);
     // Depois da recusa o usuário corrige e tenta de novo.
-    expect(screen.getByRole('button', { name: 'Salvar' })).not.toBeDisabled();
+    expect(screen.getByRole('button', { name: 'Registrar manutenção' })).not.toBeDisabled();
     await act(() => {
       jest.advanceTimersByTime(1200);
     });
@@ -239,7 +252,7 @@ describe('ManutencaoFormView — salvar', () => {
     await preencher();
 
     const toque1 = await dispararSemEsperar(() => salvar());
-    expect(screen.getByRole('button', { name: 'Salvar' })).toBeDisabled();
+    expect(screen.getByRole('button', { name: 'Registrar manutenção' })).toBeDisabled();
     const toque2 = await dispararSemEsperar(() => salvar());
     expect(mockRegistrar).toHaveBeenCalledTimes(1);
 
@@ -250,7 +263,7 @@ describe('ManutencaoFormView — salvar', () => {
       await Promise.all([toque1.terminou, toque2.terminou]);
     });
     expect(screen.getByRole('alert')).toHaveTextContent('Manutenção registrada. O veículo está em manutenção.');
-    expect(screen.getByRole('button', { name: 'Salvar' })).toBeDisabled();
+    expect(screen.getByRole('button', { name: 'Registrar manutenção' })).toBeDisabled();
     await salvar();
     expect(mockRegistrar).toHaveBeenCalledTimes(1);
   });
