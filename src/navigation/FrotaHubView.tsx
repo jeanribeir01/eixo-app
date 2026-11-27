@@ -1,6 +1,10 @@
 import { useRouter, type Href } from 'expo-router';
 
-import { ListItem, ListSection, Screen, Text, type IconName } from '@/ui';
+import { ResumoDaFrota } from '@/features/frota-agora/components/ResumoDaFrota';
+import { VeiculosAgora } from '@/features/frota-agora/components/VeiculosAgora';
+import { buscarFrotaAgora } from '@/features/frota-agora/frotaAgora';
+import { useDadosDaTela } from '@/lib/useDadosDaTela';
+import { Button, Card, Column, ListItem, ListSection, Screen, Skeleton, Snackbar, Text, type IconName } from '@/ui';
 
 import { useMenu } from './menu';
 
@@ -19,13 +23,16 @@ const CADASTROS: Atalho[] = [
   { titulo: 'Rotas', descricao: 'Trechos padrão e distância estimada', icone: 'rotas', href: '/rotas' },
 ];
 
-// Aba Frota (EIX-77): o menu do módulo. A lista de veículos mora em `/frota/veiculos` e não em
-// `frota/index`, porque `frota/index` teria a mesma URL da aba (`/frota`) e o expo-router abriria a
-// lista no lugar do hub.
+// Aba Frota (EIX-77, redesign): o que cada veículo está fazendo agora e, embaixo, o menu do módulo. A
+// lista de veículos mora em `/frota/veiculos` e não em `frota/index`, porque `frota/index` teria a mesma
+// URL da aba (`/frota`) e o expo-router abriria a lista no lugar desta tela. O menu nunca depende dos
+// dados: se a carga falhar, o erro fica no lugar do resumo e as linhas continuam tocáveis.
 export function FrotaHubView() {
   const router = useRouter();
   const { viagensForaDaAba } = useMenu();
   const operacao = viagensForaDaAba ? [VIAGENS, ...OPERACAO] : OPERACAO;
+  // Carrega ao abrir e de novo sempre que a aba volta ao foco (quem fechou uma viagem vê o veículo livre).
+  const tela = useDadosDaTela(buscarFrotaAgora);
 
   function linha(atalho: Atalho) {
     return (
@@ -40,9 +47,35 @@ export function FrotaHubView() {
   }
 
   return (
-    <Screen scroll>
+    <Screen
+      scroll
+      overlay={
+        tela.feedbackErro ? <Snackbar message={tela.feedbackErro} tone="error" onDismiss={tela.limparFeedbackErro} /> : null
+      }
+    >
       {/* Aba não tem header nativo: o título fica no conteúdo. */}
       <Text variant="heading">Frota</Text>
+
+      {tela.status === 'carregando' && (
+        <Column gap="lg">
+          <Skeleton height="xxl" accessibilityLabel="Carregando a frota" />
+          <Skeleton height="xxl" />
+        </Column>
+      )}
+
+      {tela.status === 'erro' && (
+        <Card variant="feature">
+          <Text tone="body">{tela.erro ?? 'Não foi possível carregar a frota.'}</Text>
+          <Button label="Tentar novamente" variant="ghost" onPress={tela.recarregar} />
+        </Card>
+      )}
+
+      {tela.status === 'pronto' && tela.dados && (
+        <>
+          <ResumoDaFrota contagem={tela.dados.contagem} onPress={() => router.push('/frota/veiculos')} />
+          <VeiculosAgora veiculos={tela.dados.veiculos} />
+        </>
+      )}
 
       <ListSection label="Operação">{operacao.map(linha)}</ListSection>
       <ListSection label="Cadastros">{CADASTROS.map(linha)}</ListSection>

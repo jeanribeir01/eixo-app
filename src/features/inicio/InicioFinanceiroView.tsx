@@ -4,8 +4,9 @@ import { StyleSheet, View } from 'react-native';
 
 import { useProfile } from '@/features/auth/profileStore';
 import { formatarMoedaComSinal, tomDoValor } from '@/features/caixa/formatadores';
+import { ValorDaMovimentacao } from '@/features/movimentacoes/components/ValorDaMovimentacao';
 import { dataDeReferencia } from '@/features/movimentacoes/movimentacoesRepository';
-import { rotuloStatus, type Movimentacao } from '@/features/movimentacoes/types';
+import type { Movimentacao } from '@/features/movimentacoes/types';
 import { hojeISO, isoParaDataBR } from '@/lib/datas';
 import { formatarMoeda } from '@/lib/money';
 import { useDadosDaTela } from '@/lib/useDadosDaTela';
@@ -16,21 +17,6 @@ import { CabecalhoInicio } from './CabecalhoInicio';
 import { buscarInicioFinanceiro, type ResumoInicioFinanceiro } from './inicioFinanceiroRepository';
 import { pedeAtencao } from './pedeAtencao';
 import { SecaoPedeAtencao } from './SecaoPedeAtencao';
-
-// Cor nunca sozinha: o sinal + / − acompanha sempre (DESIGN_CYAN, cores semânticas).
-function ValorDaMovimentacao({ movimentacao }: { movimentacao: Movimentacao }) {
-  const entrada = movimentacao.categoria.tipo === 'Entrada';
-  return (
-    <View style={styles.valor}>
-      <Text weight="medium" tone={entrada ? 'success' : 'danger'}>
-        {`${entrada ? '+' : '−'} ${formatarMoeda(movimentacao.valorCentavos)}`}
-      </Text>
-      <Text variant="caption" tone="body">
-        {rotuloStatus(movimentacao.status_pagamento, movimentacao.categoria.tipo)}
-      </Text>
-    </View>
-  );
-}
 
 // "Hoje · Pix · Combustível": o dia em palavras quando é hoje, senão a data curta.
 function subtituloMovimentacao(movimentacao: Movimentacao, hoje: string): string {
@@ -166,9 +152,5 @@ const styles = StyleSheet.create({
   acoes: {
     flexDirection: 'row',
     gap: spacing.sm,
-  },
-  valor: {
-    alignItems: 'flex-end',
-    gap: spacing.xs,
   },
 });

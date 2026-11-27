@@ -108,6 +108,42 @@ export async function listarMovimentacoesDoMes(ano: number, mes: number): Promis
   return { ok: true, data: movimentacoes };
 }
 
+// Os pendentes que vencem de `aPartirDe` (ISO) em diante, o mais próximo primeiro (aba Caixa). O banco
+// ordena e limita; o app não soma nada.
+export async function listarProximosVencimentos(aPartirDe: string, limite: number): Promise<Resultado<Movimentacao[]>> {
+  const { data, error } = await supabase
+    .from('movimentacao')
+    .select(COLUNAS)
+    .eq('status_pagamento', 'Pendente')
+    .gte('data_vencimento', aPartirDe)
+    .order('data_vencimento', { ascending: true })
+    .order('id')
+    .limit(limite);
+
+  if (error) {
+    return { ok: false, mensagem: traduzirErro(error, 'Não foi possível carregar os próximos vencimentos. Tente novamente.') };
+  }
+
+  const parsed = z.array(linhaSchema).safeParse(data);
+  if (!parsed.success) return { ok: false, mensagem: MENSAGEM_DADOS_INVALIDOS };
+  return { ok: true, data: parsed.data.map(paraMovimentacao) };
+}
+
+// Quantos pendentes já venceram antes de `hoje` (ISO) sem baixa. A contagem é do Postgres (`count`
+// com `head`), não do app (RNF06).
+export async function contarVencidos(hoje: string): Promise<Resultado<number>> {
+  const { count, error } = await supabase
+    .from('movimentacao')
+    .select('id', { count: 'exact', head: true })
+    .eq('status_pagamento', 'Pendente')
+    .lt('data_vencimento', hoje);
+
+  if (error) {
+    return { ok: false, mensagem: traduzirErro(error, 'Não foi possível carregar os próximos vencimentos. Tente novamente.') };
+  }
+  return { ok: true, data: count ?? 0 };
+}
+
 export async function buscarMovimentacaoPorId(id: string): Promise<Resultado<Movimentacao>> {
   const { data, error } = await supabase.from('movimentacao').select(COLUNAS).eq('id', id).maybeSingle();
 
