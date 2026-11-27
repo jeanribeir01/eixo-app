@@ -1,9 +1,8 @@
 import { useEffect, useState } from 'react';
 import { useRouter } from 'expo-router';
-import { ActivityIndicator } from 'react-native';
 import { z } from 'zod';
 
-import { Button, Column, EmptyState, Input, Screen, Select, Snackbar, Text, colors } from '@/ui';
+import { Aviso, Button, Column, EmptyState, Input, Screen, Select, Skeleton, Snackbar, Text } from '@/ui';
 import { Constants } from '@/types/database';
 
 import { atualizarRota, buscarRotaPorId, criarRota, definirAtivaRota } from './rotasRepository';
@@ -151,8 +150,13 @@ export function RotaFormView({ rotaId }: RotaFormViewProps) {
 
   if (status === 'carregando') {
     return (
-      <Screen align="center" underHeader>
-        <ActivityIndicator size="small" color={colors.accent} accessibilityLabel="Carregando rota" />
+      <Screen underHeader>
+        {/* O formato do formulário aparece enquanto a rota carrega: sem spinner no vazio. */}
+        <Column gap="lg">
+          <Skeleton height="xxl" accessibilityLabel="Carregando rota" />
+          <Skeleton height="xxl" />
+          <Skeleton height="xxl" />
+        </Column>
       </Screen>
     );
   }
@@ -182,35 +186,54 @@ export function RotaFormView({ rotaId }: RotaFormViewProps) {
         )
       }
     >
-      <Column gap="md">
-        <Input
-          label="Cidade de origem"
-          placeholder="Ex.: Curitiba"
-          value={cidadeOrigem}
-          onChangeText={alterarTrecho(setCidadeOrigem)}
-          error={erros.cidade_origem}
-        />
-        <Select
-          label="UF de origem"
-          value={ufOrigem}
-          options={opcoesUf}
-          onChange={alterarTrecho((valor: string) => setUfOrigem(valor as Uf))}
-          error={erros.uf_origem}
-        />
-        <Input
-          label="Cidade de destino"
-          placeholder="Ex.: São Paulo"
-          value={cidadeDestino}
-          onChangeText={alterarTrecho(setCidadeDestino)}
-          error={erros.cidade_destino}
-        />
-        <Select
-          label="UF de destino"
-          value={ufDestino}
-          options={opcoesUf}
-          onChange={alterarTrecho((valor: string) => setUfDestino(valor as Uf))}
-          error={erros.uf_destino}
-        />
+      <Column gap="lg">
+        {!modoEdicao && <Text tone="body">Cadastre o trecho com a cidade de origem e a de destino.</Text>}
+
+        {/* Origem e destino em grupos, UF antes da cidade (protótipo): quem cadastra pensa "de onde, para onde". */}
+        <Column gap="md">
+          <Text weight="semibold" accessibilityRole="header">
+            Origem
+          </Text>
+          <Select
+            label="UF de origem"
+            value={ufOrigem}
+            options={opcoesUf}
+            onChange={alterarTrecho((valor: string) => setUfOrigem(valor as Uf))}
+            placeholder="Escolha a UF"
+            error={erros.uf_origem}
+          />
+          <Input
+            label="Cidade de origem"
+            icone="rotas"
+            placeholder="Ex.: Curitiba"
+            value={cidadeOrigem}
+            onChangeText={alterarTrecho(setCidadeOrigem)}
+            error={erros.cidade_origem}
+          />
+        </Column>
+
+        <Column gap="md">
+          <Text weight="semibold" accessibilityRole="header">
+            Destino
+          </Text>
+          <Select
+            label="UF de destino"
+            value={ufDestino}
+            options={opcoesUf}
+            onChange={alterarTrecho((valor: string) => setUfDestino(valor as Uf))}
+            placeholder="Escolha a UF"
+            error={erros.uf_destino}
+          />
+          <Input
+            label="Cidade de destino"
+            icone="rotas"
+            placeholder="Ex.: São Paulo"
+            value={cidadeDestino}
+            onChangeText={alterarTrecho(setCidadeDestino)}
+            error={erros.cidade_destino}
+          />
+        </Column>
+
         <Input
           label="Distância estimada (km)"
           placeholder="Ex.: 408,5"
@@ -220,27 +243,33 @@ export function RotaFormView({ rotaId }: RotaFormViewProps) {
           error={erros.distancia_estimada_km}
         />
 
+        {/* Rota duplicada é validação, não erro de rede: fica no formulário, num aviso com o que fazer. A ação
+            é ghost dentro do Aviso: o único preenchido da tela continua sendo o de salvar (DESIGN_CYAN §7). */}
         {duplicada && (
-          <Column gap="sm">
-            <Text accessibilityRole="alert" variant="bodySm">
-              {duplicada.mensagem}
-            </Text>
-            {/* Ghost: o único cyan da tela é o "Salvar" (DESIGN_CYAN §7). */}
-            {rotaInativaId && (
-              <Button
-                label="Reativar rota existente"
-                variant="ghost"
-                onPress={() => handleReativar(rotaInativaId)}
-                loading={reativando}
-                disabled={salvando}
-              />
-            )}
-          </Column>
+          <Aviso
+            tom="warning"
+            icone="alerta"
+            titulo="Esta rota já existe"
+            acao={
+              rotaInativaId
+                ? { label: 'Reativar rota existente', onPress: () => handleReativar(rotaInativaId), loading: reativando }
+                : undefined
+            }
+          >
+            {duplicada.mensagem}
+          </Aviso>
         )}
-      </Column>
 
-      <Button label="Salvar" onPress={handleSalvar} loading={salvando} disabled={reativando} />
-      <Button label="Cancelar" variant="ghost" onPress={() => router.back()} />
+        <Column gap="sm">
+          <Button
+            label={modoEdicao ? 'Salvar alterações' : 'Cadastrar rota'}
+            onPress={handleSalvar}
+            loading={salvando}
+            disabled={reativando}
+          />
+          <Button label="Cancelar" variant="ghost" disabled={salvando || reativando} onPress={() => router.back()} />
+        </Column>
+      </Column>
     </Screen>
   );
 }
