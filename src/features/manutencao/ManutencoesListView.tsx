@@ -1,24 +1,27 @@
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { useRouter } from 'expo-router';
-import { RefreshControl, StyleSheet } from 'react-native';
+import { RefreshControl, StyleSheet, View } from 'react-native';
 
 import { formatarPlaca } from '@/features/veiculos/placa';
-import { isoParaDataBR } from '@/lib/datas';
+import { diasEntre, hojeISO, isoParaDataBR } from '@/lib/datas';
 import { formatarMoeda } from '@/lib/money';
 import { useDadosDaTela } from '@/lib/useDadosDaTela';
 import {
-  List,
   Button,
+  Card,
   Column,
   EmptyState,
   FAB,
   FAB_ALTURA_RESERVADA,
+  List,
   ListItem,
   Screen,
   ScreenColumn,
   Skeleton,
   Snackbar,
+  Text,
   colors,
+  spacing,
   useScreenColumn,
 } from '@/ui';
 
@@ -31,10 +34,12 @@ function titulo(manutencao: ManutencaoComPlaca): string {
   return `${formatarPlaca(manutencao.placa)} · ${manutencao.descricao}`;
 }
 
-// Situação em texto, nunca só por cor (CLAUDE.md §8).
+// Situação em texto, nunca só por cor (CLAUDE.md §8). Aberta já é dita pelo grupo "Em aberto" e pelo botão
+// Concluir, e a linha fica sem cortar ao lado dele; concluída diz "Concluída", porque a que acabou de ser
+// concluída continua no grupo de cima até a próxima carga.
 function subtitulo(manutencao: ManutencaoComPlaca): string {
-  const situacao = manutencao.data_conclusao === null ? 'Em aberto' : 'Concluída';
-  return `${isoParaDataBR(manutencao.data_manutencao)} · ${formatarMoeda(manutencao.valorCentavos)} · ${situacao}`;
+  const base = `${isoParaDataBR(manutencao.data_manutencao)} · ${formatarMoeda(manutencao.valorCentavos)}`;
+  return manutencao.data_conclusao === null ? base : `${base} · Concluída`;
 }
 
 // A RPC devolve o status final do veículo, e o texto conta o que aconteceu com ele.
@@ -44,6 +49,43 @@ function mensagemDeConclusao(status: VeiculoResumo['status']): string {
   // Veículo inativado no meio do caminho continua Inativo (a RPC não mexe nele): o texto não
   // afirma nada sobre o veículo.
   return 'Manutenção concluída.';
+}
+
+// Cabeçalhos e manutenções numa FlatList só, como nas outras listas do redesign.
+type Linha = { tipo: 'grupo'; id: string; rotulo: string } | { tipo: 'manutencao'; id: string; manutencao: ManutencaoComPlaca };
+
+// "aberta há 4 dias" / "aberta hoje": quanto tempo o caminhão está parado, que é o que o gestor quer saber.
+function tempoAberta(dataManutencao: string, hoje: string): string {
+  const dias = diasEntre(dataManutencao, hoje);
+  if (dias <= 0) return 'aberta hoje';
+  return dias === 1 ? 'aberta há 1 dia' : `aberta há ${dias} dias`;
+}
+
+// O cartão de destaque: quantos caminhões estão parados agora e há quanto tempo o mais antigo espera.
+function ResumoDaFrota({ abertas }: { abertas: ManutencaoComPlaca[] }) {
+  const placas = [...new Set(abertas.map((manutencao) => formatarPlaca(manutencao.placa)))];
+  const hoje = hojeISO();
+  // A mais antiga: as abertas chegam em qualquer ordem de data, então compara as datas (AAAA-MM-DD).
+  const maisAntiga = abertas.reduce<ManutencaoComPlaca | undefined>(
+    (atual, manutencao) => (!atual || manutencao.data_manutencao < atual.data_manutencao ? manutencao : atual),
+    undefined,
+  );
+
+  return (
+    <Card variant="feature">
+      <Text variant="bodySm" tone="body">
+        Em manutenção
+      </Text>
+      <Text variant="display" weight="semibold">
+        {placas.length === 0 ? 'Nenhum veículo' : placas.length === 1 ? '1 veículo' : `${placas.length} veículos`}
+      </Text>
+      <Text tone="body">
+        {maisAntiga
+          ? `${placas.join(', ')} · ${tempoAberta(maisAntiga.data_manutencao, hoje)}`
+          : 'Toda a frota está fora da oficina.'}
+      </Text>
+    </Card>
+  );
 }
 
 export function ManutencoesListView() {
@@ -83,6 +125,27 @@ export function ManutencoesListView() {
     const concluidaEm = concluidasAqui[item.id];
     return item.data_conclusao === null && concluidaEm ? { ...item, data_conclusao: concluidaEm } : item;
   });
+
+  // Os grupos vêm do que o banco devolveu, não da marca local: a linha concluída agora fica no lugar,
+  // como "Concluída", e só muda de grupo na próxima carga (a lista não "pula" sob o dedo).
+  const linhas = useMemo(() => {
+    const porId = new Map(manutencoes.map((item) => [item.id, item]));
+    const originais = tela.dados ?? [];
+    const resultado: Linha[] = [];
+    const grupos = [
+      { id: 'abertas', rotulo: 'Em aberto', itens: originais.filter((item) => item.data_conclusao === null) },
+      { id: 'concluidas', rotulo: 'Concluídas', itens: originais.filter((item) => item.data_conclusao !== null) },
+    ];
+    for (const grupo of grupos) {
+      if (grupo.itens.length === 0) continue;
+      resultado.push({ tipo: 'grupo', id: `grupo-${grupo.id}`, rotulo: `${grupo.rotulo} · ${grupo.itens.length}` });
+      for (const item of grupo.itens) {
+        resultado.push({ tipo: 'manutencao', id: item.id, manutencao: porId.get(item.id) ?? item });
+      }
+    }
+    return resultado;
+  }, [manutencoes, tela.dados]);
+  const abertas = manutencoes.filter((item) => item.data_conclusao === null);
 
   // Um Snackbar só: o retorno da ação vem antes do aviso de recarga que falhou.
   const snackbar = feedback ?? (tela.feedbackErro ? { mensagem: tela.feedbackErro, tone: 'error' as const } : null);
@@ -125,8 +188,8 @@ export function ManutencoesListView() {
 
       {tela.status === 'pronto' && (
         <List
-          data={manutencoes}
-          keyExtractor={(item) => item.id}
+          data={linhas}
+          keyExtractor={(linha) => linha.id}
           style={styles.lista}
           contentContainerStyle={[coluna, styles.espacoDoFab]}
           refreshControl={
@@ -137,6 +200,8 @@ export function ManutencoesListView() {
               tintColor={colors.accent}
             />
           }
+          ListHeaderComponent={manutencoes.length > 0 ? <ResumoDaFrota abertas={abertas} /> : undefined}
+          ListHeaderComponentStyle={styles.cabecalho}
           // Sem ação aqui, porque o FAB "Nova manutenção" já está na tela.
           ListEmptyComponent={
             <EmptyState
@@ -145,28 +210,37 @@ export function ManutencoesListView() {
               description="Registre a primeira manutenção para começar."
             />
           }
-          renderItem={({ item }) => (
-            <ListItem
-              title={titulo(item)}
-              subtitle={subtitulo(item)}
-              // As duas ações ficam no controle, fora de uma área de toque da linha: o leitor de tela
-              // alcança cada botão separado, e cada um tem o alvo de 44pt do Button. Ghost porque o
-              // único cyan da tela é o FAB.
-              control={
-                <Column gap="xs">
-                  {item.data_conclusao === null && (
+          renderItem={({ item }) =>
+            item.tipo === 'grupo' ? (
+              <View style={styles.grupo}>
+                <Text weight="semibold" accessibilityRole="header">
+                  {item.rotulo}
+                </Text>
+              </View>
+            ) : (
+              <ListItem
+                icon="manutencoes"
+                // Em aberto, a chave fica no tom de alerta: o caminhão está parado por ela. O texto diz o mesmo.
+                iconTone={item.manutencao.data_conclusao === null ? 'warning' : 'body'}
+                title={titulo(item.manutencao)}
+                subtitle={subtitulo(item.manutencao)}
+                // Tocar na linha abre o veículo (era o botão "Ver veículo"). Concluir continua à vista nas
+                // abertas: é a ação desta tela. Ghost porque o único cyan da tela é o FAB.
+                onPress={() => router.push(`/frota/${item.manutencao.veiculo_id}`)}
+                accessibilityLabel={`Ver veículo, ${titulo(item.manutencao)}`}
+                control={
+                  item.manutencao.data_conclusao === null ? (
                     <Button
                       label="Concluir"
                       variant="ghost"
-                      loading={concluindo.has(item.id)}
-                      onPress={() => handleConcluir(item)}
+                      loading={concluindo.has(item.manutencao.id)}
+                      onPress={() => handleConcluir(item.manutencao)}
                     />
-                  )}
-                  <Button label="Ver veículo" variant="ghost" onPress={() => router.push(`/frota/${item.veiculo_id}`)} />
-                </Column>
-              }
-            />
-          )}
+                  ) : undefined
+                }
+              />
+            )
+          }
         />
       )}
     </Screen>
@@ -176,6 +250,13 @@ export function ManutencoesListView() {
 const styles = StyleSheet.create({
   lista: {
     flex: 1,
+  },
+  cabecalho: {
+    paddingBottom: spacing.xs,
+  },
+  grupo: {
+    paddingTop: spacing.lg,
+    paddingBottom: spacing.xs,
   },
   // O Screen só reserva o espaço do FAB quando ele mesmo rola; aqui quem rola é a FlatList.
   espacoDoFab: {

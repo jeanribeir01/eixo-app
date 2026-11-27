@@ -112,11 +112,21 @@ describe('ManutencoesListView — carga', () => {
   it('título "PLACA · descrição" e subtítulo com data, valor e situação', async () => {
     await renderComLista();
 
-    expect(linha(TITULO_PNEUS).props.subtitle).toBe('16/10/2026 · R$ 1,13 · Em aberto');
+    expect(linha(TITULO_PNEUS).props.subtitle).toBe('16/10/2026 · R$ 1,13');
     expect(linha(TITULO_FREIOS).props.subtitle).toBe('10/10/2026 · R$ 2.500,00 · Concluída');
   });
 
   // MAN-18: a ordem do repositório (abertas primeiro) chega igual à tela.
+  it('resumo no topo: quantos veículos estão parados, em grupos "Em aberto" e "Concluídas"', async () => {
+    await renderComLista();
+
+    expect(screen.getByText('Em manutenção')).toBeOnTheScreen();
+    expect(screen.getByText('2 veículos')).toBeOnTheScreen();
+    expect(screen.getByText(/^ABC-1234, BRA2E19 · aberta há \d+ dias$/)).toBeOnTheScreen();
+    expect(screen.getByText('Em aberto · 2')).toBeOnTheScreen();
+    expect(screen.getByText('Concluídas · 1')).toBeOnTheScreen();
+  });
+
   it('mantém a ordem recebida: abertas antes das concluídas', async () => {
     await renderComLista();
 
@@ -271,25 +281,25 @@ describe('ManutencoesListView — concluir', () => {
     });
 
     expect(screen.getByRole('alert')).toHaveTextContent('Manutenção não encontrada ou já concluída.');
-    expect(linha(TITULO_PNEUS).props.subtitle).toBe('16/10/2026 · R$ 1,13 · Em aberto');
+    expect(linha(TITULO_PNEUS).props.subtitle).toBe('16/10/2026 · R$ 1,13');
     expect(within(linha(TITULO_PNEUS).elementoNativo()).getByRole('button', { name: 'Concluir' })).toBeOnTheScreen();
   });
 });
 
 describe('ManutencoesListView — navegação', () => {
   // MAN-33
-  it('"Ver veículo" abre o detalhe do veículo daquela manutenção', async () => {
+  it('tocar na linha abre o detalhe do veículo daquela manutenção', async () => {
     await renderComLista();
 
-    await fireEvent.press(within(linha(TITULO_OLEO).elementoNativo()).getByRole('button', { name: 'Ver veículo' }));
+    await fireEvent.press(screen.getByRole('button', { name: `Ver veículo, ${TITULO_OLEO}` }));
 
     expect(mockPush).toHaveBeenCalledWith('/frota/v2');
   });
 
-  it('"Ver veículo" também aparece nas concluídas', async () => {
+  it('a linha concluída também abre o veículo', async () => {
     await renderComLista();
 
-    await fireEvent.press(within(linha(TITULO_FREIOS).elementoNativo()).getByRole('button', { name: 'Ver veículo' }));
+    await fireEvent.press(screen.getByRole('button', { name: `Ver veículo, ${TITULO_FREIOS}` }));
 
     expect(mockPush).toHaveBeenCalledWith('/frota/v1');
   });
