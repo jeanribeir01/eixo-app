@@ -1,45 +1,27 @@
-import { Card, Column, Text } from '@/ui';
+import { Aviso } from '@/ui';
 
-import { formatarMoedaComSinal, tomDoValor } from '../formatadores';
+import { formatarMoedaComSinal } from '../formatadores';
 import type { PendentesSemVencimento } from '../resumoCaixa';
 
-// Bloco separado de propósito: sem vencimento não há mês onde encaixar a pendência, então ela
-// fica fora da projeção mensal — mas o gestor precisa saber que esse dinheiro existe.
+// Bloco separado de propósito: sem vencimento não há mês onde encaixar a pendência, então ela fica fora
+// da projeção mensal — mas o gestor precisa saber que esse dinheiro existe. Sem nenhuma, o bloco some.
 export function PendentesSemDataCard({ semVencimento }: { semVencimento: PendentesSemVencimento }) {
   const { quantidade, entradasCentavos, saidasCentavos } = semVencimento;
+  if (quantidade === 0) return null;
+
+  // Só o que existe entra no texto: "+ R$ 500,00 a receber e − R$ 1.200,00 a pagar".
+  const valores = [
+    entradasCentavos > 0 ? `${formatarMoedaComSinal(entradasCentavos)} a receber` : null,
+    saidasCentavos > 0 ? `${formatarMoedaComSinal(-saidasCentavos)} a pagar` : null,
+  ].filter(Boolean);
+  const uma = quantidade === 1;
+  const quantas = uma ? '1 movimentação pendente não tem' : `${quantidade} movimentações pendentes não têm`;
+  const ficam = uma ? 'fica' : 'ficam';
+  const incluir = uma ? 'incluí-la' : 'incluí-las';
 
   return (
-    <Card>
-      <Column gap="xs">
-        <Text variant="subheading">Pendentes sem data de vencimento</Text>
-        <Text variant="bodySm" tone="body">
-          Não entram na projeção mensal.
-        </Text>
-      </Column>
-
-      {quantidade === 0 ? (
-        <Text tone="body">Nenhuma pendência sem data.</Text>
-      ) : (
-        <Column gap="xs">
-          <Text>{quantidade === 1 ? '1 movimentação' : `${quantidade} movimentações`}</Text>
-          <Column direction="row" gap="xs" wrap>
-            <Text variant="bodySm" tone="body">
-              Entradas:
-            </Text>
-            <Text variant="bodySm" tone={tomDoValor(entradasCentavos)}>
-              {formatarMoedaComSinal(entradasCentavos)}
-            </Text>
-          </Column>
-          <Column direction="row" gap="xs" wrap>
-            <Text variant="bodySm" tone="body">
-              Saídas:
-            </Text>
-            <Text variant="bodySm" tone={tomDoValor(-saidasCentavos)}>
-              {formatarMoedaComSinal(-saidasCentavos)}
-            </Text>
-          </Column>
-        </Column>
-      )}
-    </Card>
+    <Aviso tom="warning" icone="calendario" titulo="Pendentes sem data">
+      {`${quantas} data de vencimento e ${ficam} fora da projeção${valores.length > 0 ? `: ${valores.join(' e ')}` : ''}. Defina o vencimento para ${incluir}.`}
+    </Aviso>
   );
 }

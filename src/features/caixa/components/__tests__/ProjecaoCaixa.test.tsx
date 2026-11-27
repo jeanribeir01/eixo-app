@@ -49,9 +49,9 @@ describe('ProjecaoCaixa — 12 meses (EIX-74)', () => {
   it('o alerta do topo aponta o primeiro mês negativo, mesmo fora da janela', async () => {
     await renderFinanciamento();
 
-    expect(screen.getByText('⚠ O saldo fica negativo em julho de 2028')).toBeOnTheScreen();
+    expect(screen.getByText('O saldo fica negativo em julho de 2028')).toBeOnTheScreen();
     // Dentro da janela nenhum mês é negativo: nenhum alerta por linha.
-    expect(screen.queryByText('⚠ Saldo negativo')).not.toBeOnTheScreen();
+    expect(screen.queryByText('Negativo em algum mês')).not.toBeOnTheScreen();
   });
 
   it('linha compacta: saldo projetado com sinal e cor; valor zero não aparece', async () => {
@@ -62,13 +62,13 @@ describe('ProjecaoCaixa — 12 meses (EIX-74)', () => {
     expect(screen.queryByText('Entradas')).not.toBeOnTheScreen();
   });
 
-  it('mês negativo dentro da janela ganha "⚠ Saldo negativo" e valor vermelho', async () => {
+  it('mês negativo dentro da janela: valor vermelho com "−", sem selo repetido', async () => {
     const meses: MesProjetado[] = [
       { mes: '2026-10', entradasPendentesCentavos: 50_000, saidasPendentesCentavos: 200_000, saldoProjetadoCentavos: -30_000 },
     ];
     await render(<ProjecaoCaixa mesReferencia="2026-10" meses={meses} anos={[]} />);
 
-    expect(screen.getByText('⚠ Saldo negativo')).toBeOnTheScreen();
+    expect(screen.queryByText('Negativo em algum mês')).not.toBeOnTheScreen();
     expect(screen.getByText('− R$ 300,00')).toHaveStyle({ color: colors.danger });
     expect(screen.getByText('Entradas')).toBeOnTheScreen();
     expect(screen.getByText('+ R$ 500,00')).toBeOnTheScreen();
@@ -105,9 +105,10 @@ describe('ProjecaoCaixa — por ano (EIX-74)', () => {
 
     await fireEvent.press(screen.getByRole('tab', { name: 'Por ano' }));
 
-    expect(screen.getByText('2026')).toBeOnTheScreen();
-    expect(screen.getByText('2027')).toBeOnTheScreen();
-    expect(screen.getByText('2028')).toBeOnTheScreen();
+    // Cada ano aparece duas vezes: embaixo da barra do gráfico e na linha com os valores.
+    expect(screen.getAllByText('2026')).toHaveLength(2);
+    expect(screen.getAllByText('2027')).toHaveLength(2);
+    expect(screen.getAllByText('2028')).toHaveLength(2);
     expect(screen.getAllByText('− R$ 18.000,00')).toHaveLength(2);
     expect(screen.getByText('+ R$ 9.000,00')).toBeOnTheScreen();
     expect(screen.getByText('− R$ 9.000,00')).toHaveStyle({ color: colors.danger });
@@ -127,7 +128,7 @@ describe('ProjecaoCaixa — por ano (EIX-74)', () => {
     await fireEvent.press(screen.getByRole('tab', { name: 'Por ano' }));
 
     expect(screen.getByText('+ R$ 300,00')).toHaveStyle({ color: colors.success });
-    expect(screen.getByText('⚠ Saldo negativo')).toBeOnTheScreen();
+    expect(screen.getByText('Negativo em algum mês')).toBeOnTheScreen();
   });
 });
 
