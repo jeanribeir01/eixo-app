@@ -207,8 +207,8 @@ async function trocarStatusVeiculo(
 export function inativarVeiculo(id: string): Promise<Resultado<Veiculo>> {
   // Só de Disponivel: uma viagem pode ter começado depois de a lista carregar.
   return trocarStatusVeiculo(id, 'Disponivel', 'Inativo', {
-    falha: 'Não foi possível inativar o veículo. Tente novamente.',
-    semLinha: 'Não foi possível inativar. O veículo pode não estar mais disponível ou você não tem permissão. Atualize a lista e tente novamente.',
+    falha: 'Não foi possível desativar o veículo. Tente novamente.',
+    semLinha: 'Não foi possível desativar. O veículo pode não estar mais disponível ou você não tem permissão. Volte à lista e tente novamente.',
   });
 }
 
@@ -219,7 +219,7 @@ export function inativarVeiculo(id: string): Promise<Resultado<Veiculo>> {
 export function reativarVeiculo(id: string): Promise<Resultado<Veiculo>> {
   return trocarStatusVeiculo(id, 'Inativo', 'Disponivel', {
     falha: 'Não foi possível reativar o veículo. Tente novamente.',
-    semLinha: 'Não foi possível reativar. O veículo pode já ter sido reativado ou você não tem permissão. Atualize a lista e tente novamente.',
+    semLinha: 'Não foi possível reativar. O veículo pode já ter sido reativado ou você não tem permissão. Volte à lista e tente novamente.',
   });
 }
 

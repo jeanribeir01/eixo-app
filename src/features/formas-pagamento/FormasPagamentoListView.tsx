@@ -4,90 +4,57 @@ import { RefreshControl, StyleSheet, View, type ListRenderItemInfo } from 'react
 
 import { useDadosDaTela } from '@/lib/useDadosDaTela';
 import {
-  List,
+  CampoBusca,
   Column,
   EmptyState,
   FAB,
   FAB_ALTURA_RESERVADA,
-  Input,
+  GrupoRecolhivel,
+  List,
   ListItem,
   Screen,
   ScreenColumn,
   Skeleton,
   Snackbar,
-  Switch,
   Text,
   colors,
   spacing,
   useScreenColumn,
 } from '@/ui';
 
-import { definirAtivaFormaPagamento, listarFormasPagamento } from './formasPagamentoRepository';
+import { listarFormasPagamento } from './formasPagamentoRepository';
 import { isFormaFixa, type FormaPagamento } from './types';
-
-type Feedback = { mensagem: string; tone: 'success' | 'error' };
-
-// Forma fixa (do seed) não muda: o subtítulo explica por que a linha não abre nem tem switch.
-function subtitulo(forma: FormaPagamento): string | undefined {
-  if (isFormaFixa(forma.nome)) return 'Padrão do sistema';
-  return forma.ativa ? undefined : 'Desativada';
-}
 
 type LinhaProps = {
   forma: FormaPagamento;
-  // Booleano, não o id em processamento: só a linha cujo switch mudou re-renderiza.
-  processando: boolean;
   onAbrir: (id: string) => void;
-  onAlternarAtiva: (forma: FormaPagamento) => void;
 };
 
 // Linha memoizada (EIX-71): digitar na busca re-renderiza a tela a cada letra; com memo, só as linhas
-// que entram ou saem do filtro renderizam. Por isso os callbacks do pai são estáveis (useCallback).
-const FormaPagamentoLinha = memo(function FormaPagamentoLinha({
-  forma,
-  processando,
-  onAbrir,
-  onAlternarAtiva,
-}: LinhaProps) {
+// que entram ou saem do filtro renderizam. Por isso o callback do pai é estável (useCallback).
+// Sem switch na linha: desativar e reativar ficam no Editar, como nas outras listas de cadastro.
+const FormaPagamentoLinha = memo(function FormaPagamentoLinha({ forma, onAbrir }: LinhaProps) {
   const fixa = isFormaFixa(forma.nome);
   return (
     <ListItem
       icon="formasPagamento"
       title={forma.nome}
-      subtitle={subtitulo(forma)}
-      // A regra das fixas continua: sem edição e sem switch.
+      // Forma fixa (do seed) não muda: o subtítulo explica por que a linha não abre.
+      subtitle={fixa ? 'Padrão do sistema' : undefined}
       onPress={fixa ? undefined : () => onAbrir(forma.id)}
-      control={
-        fixa ? undefined : (
-          <Switch
-            label="Ativa"
-            accessibilityLabel={`Ativa: ${forma.nome}`}
-            value={forma.ativa}
-            disabled={processando}
-            onValueChange={() => onAlternarAtiva(forma)}
-          />
-        )
-      }
     />
   );
 });
 
-// Cabeçalhos e formas numa FlatList só, como nas outras listas do redesign.
+// Cabeçalho e formas numa FlatList só, como nas outras listas do redesign.
 type Linha = { tipo: 'grupo'; id: string; rotulo: string } | { tipo: 'forma'; id: string; forma: FormaPagamento };
 
-// Com as desativadas à mostra, elas ficam num grupo próprio, depois das disponíveis.
-function agruparPorSituacao(formas: FormaPagamento[]): Linha[] {
-  const grupos = [
-    { id: 'disponiveis', rotulo: 'Disponíveis', itens: formas.filter((forma) => forma.ativa) },
-    { id: 'desativadas', rotulo: 'Desativadas', itens: formas.filter((forma) => !forma.ativa) },
+function comCabecalho(formas: FormaPagamento[]): Linha[] {
+  if (formas.length === 0) return [];
+  return [
+    { tipo: 'grupo', id: 'grupo-disponiveis', rotulo: `Disponíveis · ${formas.length}` },
+    ...formas.map((forma): Linha => ({ tipo: 'forma', id: forma.id, forma })),
   ];
-  const linhas: Linha[] = [];
-  for (const grupo of grupos) {
-    if (grupo.itens.length === 0) continue;
-    linhas.push({ tipo: 'grupo', id: `grupo-${grupo.id}`, rotulo: `${grupo.rotulo} · ${grupo.itens.length}` });
-    for (const forma of grupo.itens) linhas.push({ tipo: 'forma', id: forma.id, forma });
-  }
-  return linhas;
 }
 
 // Fora do componente: a mesma função em todo render, sem precisar de useCallback.
@@ -99,32 +66,8 @@ export function FormasPagamentoListView() {
   const router = useRouter();
   // Carrega ao abrir e ao voltar da criação/edição, sem a lista piscar (EIX-63).
   const tela = useDadosDaTela(listarFormasPagamento);
-  const { atualizarDados } = tela;
   const [busca, setBusca] = useState('');
-  const [mostrarDesativadas, setMostrarDesativadas] = useState(false);
-  const [processandoId, setProcessandoId] = useState<string | null>(null);
-  const [feedback, setFeedback] = useState<Feedback | null>(null);
   const coluna = useScreenColumn();
-
-  const handleAlternarAtiva = useCallback(
-    async (forma: FormaPagamento) => {
-      setProcessandoId(forma.id);
-      const resultado = await definirAtivaFormaPagamento(forma.id, !forma.ativa);
-      setProcessandoId(null);
-
-      if (!resultado.ok) {
-        setFeedback({ mensagem: resultado.mensagem, tone: 'error' });
-        return;
-      }
-
-      atualizarDados((atuais) => atuais.map((item) => (item.id === forma.id ? resultado.data : item)));
-      setFeedback({
-        mensagem: resultado.data.ativa ? 'Forma de pagamento reativada.' : 'Forma de pagamento desativada.',
-        tone: 'success',
-      });
-    },
-    [atualizarDados],
-  );
 
   const abrir = useCallback((id: string) => router.push(`/formas-pagamento/${id}/editar`), [router]);
 
@@ -137,53 +80,33 @@ export function FormasPagamentoListView() {
           </Text>
         </View>
       ) : (
-        <FormaPagamentoLinha
-          forma={item.forma}
-          processando={processandoId === item.forma.id}
-          onAbrir={abrir}
-          onAlternarAtiva={handleAlternarAtiva}
-        />
+        <FormaPagamentoLinha forma={item.forma} onAbrir={abrir} />
       ),
-    [processandoId, abrir, handleAlternarAtiva],
+    [abrir],
   );
 
   const termo = busca.trim().toLowerCase();
-  // O useMemo mantém o mesmo array enquanto dados, busca e switch não mudam.
-  const filtradas = useMemo(
-    () =>
-      (tela.dados ?? []).filter((forma) => {
-        if (!mostrarDesativadas && !forma.ativa) return false;
-        if (!termo) return true;
-        return forma.nome.toLowerCase().includes(termo);
-      }),
-    [tela.dados, mostrarDesativadas, termo],
-  );
-  const linhas = useMemo(() => agruparPorSituacao(filtradas), [filtradas]);
-
-  // Um Snackbar só: o retorno da ação vem antes do aviso de recarga que falhou.
-  const snackbar = feedback ?? (tela.feedbackErro ? { mensagem: tela.feedbackErro, tone: 'error' as const } : null);
+  // O useMemo mantém os mesmos arrays enquanto dados e busca não mudam.
+  const { linhas, desativadas } = useMemo(() => {
+    const encontradas = (tela.dados ?? []).filter((forma) => !termo || forma.nome.toLowerCase().includes(termo));
+    return {
+      linhas: comCabecalho(encontradas.filter((forma) => forma.ativa)),
+      desativadas: encontradas.filter((forma) => !forma.ativa),
+    };
+  }, [tela.dados, termo]);
 
   return (
     <Screen
       underHeader
       list
-      overlay={
-        snackbar && (
-          <Snackbar
-            message={snackbar.mensagem}
-            tone={snackbar.tone}
-            onDismiss={() => (feedback ? setFeedback(null) : tela.limparFeedbackErro())}
-          />
-        )
-      }
-      // O FAB é a ação de criar e o único cyan da tela (DESIGN_CYAN §7).
+      // Aviso de recarga que falhou (os dados antigos continuam na tela).
+      overlay={tela.feedbackErro ? <Snackbar message={tela.feedbackErro} tone="error" onDismiss={tela.limparFeedbackErro} /> : null}
+      // O FAB é a ação de criar e o único azul preenchido da tela (DESIGN_CYAN §7).
       fab={<FAB label="Nova forma de pagamento" onPress={() => router.push('/formas-pagamento/nova')} />}
     >
       {/* Fora da lista, na coluna: no tablet fica alinhado com as linhas (EIX-94). */}
       <ScreenColumn>
-        <Input label="Buscar forma de pagamento" icone="buscar" placeholder="Nome" value={busca} onChangeText={setBusca} />
-
-        <Switch label="Mostrar desativadas" value={mostrarDesativadas} onValueChange={setMostrarDesativadas} />
+        <CampoBusca placeholder="Buscar forma de pagamento" value={busca} onChangeText={setBusca} />
 
         {tela.status === 'carregando' && (
           <Column gap="sm">
@@ -213,26 +136,32 @@ export function FormasPagamentoListView() {
             <RefreshControl
               refreshing={tela.atualizando}
               onRefresh={tela.puxarParaAtualizar}
-              colors={[colors.accent]}
-              tintColor={colors.accent}
+              colors={[colors.accentStrong]}
+              tintColor={colors.accentStrong}
             />
           }
           // Vazio dentro da lista: o pull-to-refresh funciona até sem forma nenhuma. Sem ação aqui,
           // porque o FAB já está na tela.
           ListEmptyComponent={
             <EmptyState
+              icon="formasPagamento"
               title={termo ? 'Nenhuma forma de pagamento encontrada' : 'Nenhuma forma de pagamento cadastrada'}
               description={termo ? 'Tente buscar por outro nome.' : 'Crie a primeira forma de pagamento para começar.'}
             />
           }
           renderItem={renderLinha}
-          // O que o interruptor faz e por que as padrão não têm, dito uma vez no fim da lista.
+          // Desativadas no fim, recolhidas: continuam nos lançamentos antigos e abrem para reativar.
           ListFooterComponent={
-            linhas.length > 0 ? (
-              <Text variant="bodySm" tone="body" style={styles.rodape}>
-                Desativar uma forma tira ela dos novos lançamentos e preserva o histórico. As formas padrão do
-                sistema não podem ser desativadas nem renomeadas.
-              </Text>
+            desativadas.length > 0 ? (
+              <GrupoRecolhivel
+                rotulo="Desativadas"
+                quantidade={desativadas.length}
+                resumo={desativadas.map((forma) => forma.nome).join(', ')}
+              >
+                {desativadas.map((forma) => (
+                  <FormaPagamentoLinha key={forma.id} forma={forma} onAbrir={abrir} />
+                ))}
+              </GrupoRecolhivel>
             ) : undefined
           }
         />
@@ -248,9 +177,6 @@ const styles = StyleSheet.create({
   grupo: {
     paddingTop: spacing.lg,
     paddingBottom: spacing.xs,
-  },
-  rodape: {
-    paddingTop: spacing.lg,
   },
   // O Screen só reserva o espaço do FAB quando ele mesmo rola; aqui quem rola é a FlatList.
   espacoDoFab: {

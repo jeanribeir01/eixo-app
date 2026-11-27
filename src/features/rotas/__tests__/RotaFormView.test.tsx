@@ -356,3 +356,107 @@ describe('RotaFormView — edição', () => {
     expect(mockBack).toHaveBeenCalledTimes(1);
   });
 });
+
+// Desativar e reativar moram no fim do Editar, no mesmo molde em Categorias, Formas de pagamento, Rotas e
+// Veículos (antes era um switch ou um "Mais opções" na lista).
+describe('RotaFormView — desativar e reativar no Editar', () => {
+  beforeEach(() => {
+    mockBack.mockReset();
+    jest.mocked(buscarRotaPorId).mockReset();
+    jest.mocked(definirAtivaRota).mockReset();
+    jest.mocked(definirAtivaRota).mockReset();
+    jest.useFakeTimers();
+  });
+
+  afterEach(() => {
+    jest.useRealTimers();
+  });
+
+  it('no cadastro não existe ação de status', async () => {
+    await render(<RotaFormView />);
+
+    expect(screen.queryByRole('button', { name: /^(Desativar|Reativar) / })).not.toBeOnTheScreen();
+  });
+
+  it('ativo: "Desativar rota" no fim, com a consequência dita embaixo', async () => {
+    jest.mocked(buscarRotaPorId).mockResolvedValue({ ok: true, data: { id: 'r1', cidade_origem: 'Curitiba', uf_origem: 'PR' as const, cidade_destino: 'São Paulo', uf_destino: 'SP' as const, distancia_estimada_km: 408, ativa: true } });
+    await render(<RotaFormView rotaId="r1" />);
+
+    expect(await screen.findByRole('button', { name: 'Desativar rota' })).toBeOnTheScreen();
+    expect(screen.getByText('O trecho some das novas viagens. As viagens antigas continuam com ele.')).toBeOnTheScreen();
+    expect(screen.queryByRole('button', { name: 'Reativar rota' })).not.toBeOnTheScreen();
+  });
+
+  it('desativar grava, mostra o Snackbar com "Desfazer" e volta para a lista quando ele some', async () => {
+    jest.mocked(buscarRotaPorId).mockResolvedValue({ ok: true, data: { id: 'r1', cidade_origem: 'Curitiba', uf_origem: 'PR' as const, cidade_destino: 'São Paulo', uf_destino: 'SP' as const, distancia_estimada_km: 408, ativa: true } });
+    jest.mocked(definirAtivaRota).mockResolvedValue({ ok: true, data: { id: 'r1', cidade_origem: 'Curitiba', uf_origem: 'PR' as const, cidade_destino: 'São Paulo', uf_destino: 'SP' as const, distancia_estimada_km: 408, ativa: false } });
+    await render(<RotaFormView rotaId="r1" />);
+
+    await fireEvent.press(await screen.findByRole('button', { name: 'Desativar rota' }));
+
+    expect(definirAtivaRota).toHaveBeenCalledWith('r1', false);
+    expect(await screen.findByText('Rota desativada.')).toBeOnTheScreen();
+    expect(screen.getByRole('button', { name: 'Desfazer' })).toBeOnTheScreen();
+    expect(mockBack).not.toHaveBeenCalled();
+
+    // Com "Desfazer" o Snackbar fica mais tempo (6 s) antes de voltar.
+    await act(() => {
+      jest.advanceTimersByTime(6000);
+    });
+    expect(mockBack).toHaveBeenCalledTimes(1);
+  });
+
+  it('"Desfazer" reativa na hora e só volta depois do aviso de reativação', async () => {
+    jest.mocked(buscarRotaPorId).mockResolvedValue({ ok: true, data: { id: 'r1', cidade_origem: 'Curitiba', uf_origem: 'PR' as const, cidade_destino: 'São Paulo', uf_destino: 'SP' as const, distancia_estimada_km: 408, ativa: true } });
+    jest.mocked(definirAtivaRota).mockResolvedValueOnce({ ok: true, data: { id: 'r1', cidade_origem: 'Curitiba', uf_origem: 'PR' as const, cidade_destino: 'São Paulo', uf_destino: 'SP' as const, distancia_estimada_km: 408, ativa: false } });
+    jest.mocked(definirAtivaRota).mockResolvedValueOnce({ ok: true, data: { id: 'r1', cidade_origem: 'Curitiba', uf_origem: 'PR' as const, cidade_destino: 'São Paulo', uf_destino: 'SP' as const, distancia_estimada_km: 408, ativa: true } });
+    await render(<RotaFormView rotaId="r1" />);
+    await fireEvent.press(await screen.findByRole('button', { name: 'Desativar rota' }));
+    await screen.findByText('Rota desativada.');
+
+    await fireEvent.press(screen.getByRole('button', { name: 'Desfazer' }));
+
+    expect(definirAtivaRota).toHaveBeenCalledWith('r1', true);
+    expect(await screen.findByText('Rota reativada.')).toBeOnTheScreen();
+    // Fechar o Snackbar do "Desfazer" não pode levar de volta antes de a reativação terminar.
+    expect(mockBack).not.toHaveBeenCalled();
+    await act(() => {
+      jest.advanceTimersByTime(1200);
+    });
+    expect(mockBack).toHaveBeenCalledTimes(1);
+  });
+
+  it('desativado: aviso no topo e "Reativar rota" como ação secundária; reativar grava e volta', async () => {
+    jest.mocked(buscarRotaPorId).mockResolvedValue({ ok: true, data: { id: 'r1', cidade_origem: 'Curitiba', uf_origem: 'PR' as const, cidade_destino: 'São Paulo', uf_destino: 'SP' as const, distancia_estimada_km: 408, ativa: false } });
+    jest.mocked(definirAtivaRota).mockResolvedValue({ ok: true, data: { id: 'r1', cidade_origem: 'Curitiba', uf_origem: 'PR' as const, cidade_destino: 'São Paulo', uf_destino: 'SP' as const, distancia_estimada_km: 408, ativa: true } });
+    await render(<RotaFormView rotaId="r1" />);
+
+    expect(await screen.findByText('Rota desativada')).toBeOnTheScreen();
+    expect(screen.queryByRole('button', { name: 'Desativar rota' })).not.toBeOnTheScreen();
+    await fireEvent.press(screen.getByRole('button', { name: 'Reativar rota' }));
+
+    expect(definirAtivaRota).toHaveBeenCalledWith('r1', true);
+    expect(await screen.findByText('Rota reativada.')).toBeOnTheScreen();
+    // Reativar não oferece "Desfazer": não há nada perdido para recuperar.
+    expect(screen.queryByRole('button', { name: 'Desfazer' })).not.toBeOnTheScreen();
+    await act(() => {
+      jest.advanceTimersByTime(1200);
+    });
+    expect(mockBack).toHaveBeenCalledTimes(1);
+  });
+
+  it('erro ao desativar: Snackbar de erro, fica na tela e o botão continua "Desativar rota"', async () => {
+    jest.mocked(buscarRotaPorId).mockResolvedValue({ ok: true, data: { id: 'r1', cidade_origem: 'Curitiba', uf_origem: 'PR' as const, cidade_destino: 'São Paulo', uf_destino: 'SP' as const, distancia_estimada_km: 408, ativa: true } });
+    jest.mocked(definirAtivaRota).mockResolvedValue({ ok: false, mensagem: 'Sem conexão com o servidor. Tente novamente.' });
+    await render(<RotaFormView rotaId="r1" />);
+
+    await fireEvent.press(await screen.findByRole('button', { name: 'Desativar rota' }));
+
+    expect(await screen.findByText('Sem conexão com o servidor. Tente novamente.')).toBeOnTheScreen();
+    await act(() => {
+      jest.advanceTimersByTime(3000);
+    });
+    expect(mockBack).not.toHaveBeenCalled();
+    expect(screen.getByRole('button', { name: 'Desativar rota' })).toBeOnTheScreen();
+  });
+});

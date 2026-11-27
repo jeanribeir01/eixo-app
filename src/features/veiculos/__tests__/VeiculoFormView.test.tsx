@@ -3,7 +3,7 @@ import { KeyboardAvoidingView, ScrollView } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { VeiculoFormView } from '../VeiculoFormView';
-import { atualizarVeiculo, buscarVeiculoPorId, criarVeiculo } from '../repository';
+import { atualizarVeiculo, buscarVeiculoPorId, criarVeiculo, inativarVeiculo, reativarVeiculo } from '../repository';
 
 import { dispararSemEsperar, segurarPrimeiraCarga } from '@/testing/eventos';
 import { porTipo } from '@/testing/componentes';
@@ -21,6 +21,8 @@ jest.mock('../repository', () => ({
   criarVeiculo: jest.fn(),
   atualizarVeiculo: jest.fn(),
   buscarVeiculoPorId: jest.fn(),
+  inativarVeiculo: jest.fn(),
+  reativarVeiculo: jest.fn(),
 }));
 
 const volvo = { id: '9', placa: 'ABC1234', marca: 'Volvo', modelo: 'FH 540', ano_fabricacao: 2020, capacidade_carga: 12.5, status: 'EmManutencao' };
@@ -209,14 +211,15 @@ describe('VeiculoFormView', () => {
     expect(atualizarVeiculo).toHaveBeenCalledWith('9', expect.objectContaining({ ano_fabricacao: 2020 }));
   });
 
-  it('edição preserva Inativo sem oferecer reativação (ANO-06)', async () => {
+  it('edição de desativado preserva o status: o aviso do topo diz a situação, sem seletor de Status (ANO-06)', async () => {
     const inativo = { ...volvo, status: 'Inativo' };
     (buscarVeiculoPorId as jest.Mock).mockResolvedValue({ ok: true, data: inativo });
     (atualizarVeiculo as jest.Mock).mockResolvedValue({ ok: true, data: inativo });
     await render(<VeiculoFormView veiculoId="9" />);
     await screen.findByLabelText('Placa');
-    expect(screen.getByText('Inativo')).toBeOnTheScreen();
-    expect(screen.queryByRole('button', { name: 'Status' })).toBeNull();
+    expect(screen.getByText('Veículo desativado')).toBeOnTheScreen();
+    expect(screen.queryByText('Inativo')).toBeNull();
+    expect(screen.queryByRole('button', { name: /^Status/ })).toBeNull();
     await fireEvent.changeText(screen.getByLabelText('Modelo'), 'FH 460');
     await salvar();
     expect(atualizarVeiculo).toHaveBeenCalledWith('9', expect.objectContaining({ status: 'Inativo', modelo: 'FH 460' }));
@@ -299,5 +302,151 @@ describe('VeiculoFormView — estados de carga sob o header (NAV-04)', () => {
 
     expect(await screen.findByText('Não foi possível carregar o veículo')).toBeOnTheScreen();
     expect(porTipo(SafeAreaView).props.edges).not.toContain('top');
+  });
+});
+
+// Desativar e reativar moram no fim do Editar, no mesmo molde em Categorias, Formas de pagamento, Rotas e
+// Veículos (antes era um switch ou um "Mais opções" na lista).
+describe('VeiculoFormView — desativar e reativar no Editar', () => {
+  beforeEach(() => {
+    mockBack.mockReset();
+    jest.mocked(buscarVeiculoPorId).mockReset();
+    jest.mocked(inativarVeiculo).mockReset();
+    jest.mocked(reativarVeiculo).mockReset();
+    jest.useFakeTimers();
+  });
+
+  afterEach(() => {
+    jest.useRealTimers();
+  });
+
+  it('no cadastro não existe ação de status', async () => {
+    await render(<VeiculoFormView />);
+
+    expect(screen.queryByRole('button', { name: /^(Desativar|Reativar) / })).not.toBeOnTheScreen();
+  });
+
+  it('ativo: "Desativar veículo" no fim, com a consequência dita embaixo', async () => {
+    jest.mocked(buscarVeiculoPorId).mockResolvedValue({ ok: true, data: { ...volvo, status: 'Disponivel' as const } });
+    await render(<VeiculoFormView veiculoId="9" />);
+
+    expect(await screen.findByRole('button', { name: 'Desativar veículo' })).toBeOnTheScreen();
+    expect(screen.getByText('Ele some da abertura de viagens e das manutenções. O histórico continua com ele.')).toBeOnTheScreen();
+    expect(screen.queryByRole('button', { name: 'Reativar veículo' })).not.toBeOnTheScreen();
+  });
+
+  it('desativar grava, mostra o Snackbar com "Desfazer" e volta para a lista quando ele some', async () => {
+    jest.mocked(buscarVeiculoPorId).mockResolvedValue({ ok: true, data: { ...volvo, status: 'Disponivel' as const } });
+    jest.mocked(inativarVeiculo).mockResolvedValue({ ok: true, data: { ...volvo, status: 'Inativo' as const } });
+    await render(<VeiculoFormView veiculoId="9" />);
+
+    await fireEvent.press(await screen.findByRole('button', { name: 'Desativar veículo' }));
+
+    expect(inativarVeiculo).toHaveBeenCalledWith('9');
+    expect(await screen.findByText('Veículo desativado.')).toBeOnTheScreen();
+    expect(screen.getByRole('button', { name: 'Desfazer' })).toBeOnTheScreen();
+    expect(mockBack).not.toHaveBeenCalled();
+
+    // Com "Desfazer" o Snackbar fica mais tempo (6 s) antes de voltar.
+    await act(() => {
+      jest.advanceTimersByTime(6000);
+    });
+    expect(mockBack).toHaveBeenCalledTimes(1);
+  });
+
+  it('"Desfazer" reativa na hora e só volta depois do aviso de reativação', async () => {
+    jest.mocked(buscarVeiculoPorId).mockResolvedValue({ ok: true, data: { ...volvo, status: 'Disponivel' as const } });
+    jest.mocked(inativarVeiculo).mockResolvedValueOnce({ ok: true, data: { ...volvo, status: 'Inativo' as const } });
+    jest.mocked(reativarVeiculo).mockResolvedValueOnce({ ok: true, data: { ...volvo, status: 'Disponivel' as const } });
+    await render(<VeiculoFormView veiculoId="9" />);
+    await fireEvent.press(await screen.findByRole('button', { name: 'Desativar veículo' }));
+    await screen.findByText('Veículo desativado.');
+
+    await fireEvent.press(screen.getByRole('button', { name: 'Desfazer' }));
+
+    expect(reativarVeiculo).toHaveBeenCalledWith('9');
+    expect(await screen.findByText('Veículo reativado.')).toBeOnTheScreen();
+    // Fechar o Snackbar do "Desfazer" não pode levar de volta antes de a reativação terminar.
+    expect(mockBack).not.toHaveBeenCalled();
+    await act(() => {
+      jest.advanceTimersByTime(1200);
+    });
+    expect(mockBack).toHaveBeenCalledTimes(1);
+  });
+
+  it('desativado: aviso no topo e "Reativar veículo" como ação secundária; reativar grava e volta', async () => {
+    jest.mocked(buscarVeiculoPorId).mockResolvedValue({ ok: true, data: { ...volvo, status: 'Inativo' as const } });
+    jest.mocked(reativarVeiculo).mockResolvedValue({ ok: true, data: { ...volvo, status: 'Disponivel' as const } });
+    await render(<VeiculoFormView veiculoId="9" />);
+
+    expect(await screen.findByText('Veículo desativado')).toBeOnTheScreen();
+    expect(screen.queryByRole('button', { name: 'Desativar veículo' })).not.toBeOnTheScreen();
+    await fireEvent.press(screen.getByRole('button', { name: 'Reativar veículo' }));
+
+    expect(reativarVeiculo).toHaveBeenCalledWith('9');
+    expect(await screen.findByText('Veículo reativado.')).toBeOnTheScreen();
+    // Reativar não oferece "Desfazer": não há nada perdido para recuperar.
+    expect(screen.queryByRole('button', { name: 'Desfazer' })).not.toBeOnTheScreen();
+    await act(() => {
+      jest.advanceTimersByTime(1200);
+    });
+    expect(mockBack).toHaveBeenCalledTimes(1);
+  });
+
+  it('erro ao desativar: Snackbar de erro, fica na tela e o botão continua "Desativar veículo"', async () => {
+    jest.mocked(buscarVeiculoPorId).mockResolvedValue({ ok: true, data: { ...volvo, status: 'Disponivel' as const } });
+    jest.mocked(inativarVeiculo).mockResolvedValue({ ok: false, mensagem: 'Sem conexão com o servidor. Tente novamente.' });
+    await render(<VeiculoFormView veiculoId="9" />);
+
+    await fireEvent.press(await screen.findByRole('button', { name: 'Desativar veículo' }));
+
+    expect(await screen.findByText('Sem conexão com o servidor. Tente novamente.')).toBeOnTheScreen();
+    await act(() => {
+      jest.advanceTimersByTime(3000);
+    });
+    expect(mockBack).not.toHaveBeenCalled();
+    expect(screen.getByRole('button', { name: 'Desativar veículo' })).toBeOnTheScreen();
+  });
+});
+
+describe('VeiculoFormView — quando o veículo não pode ser desativado (INA-08, REA)', () => {
+  beforeEach(() => {
+    jest.mocked(buscarVeiculoPorId).mockReset();
+    jest.mocked(reativarVeiculo).mockReset();
+  });
+
+  it.each([
+    ['Em viagem', 'EmViagem'],
+    ['Em manutenção', 'EmManutencao'],
+  ] as const)('%s: sem botão, e a tela diz o que falta para desativar', async (_rotulo, status) => {
+    jest.mocked(buscarVeiculoPorId).mockResolvedValue({ ok: true, data: { ...volvo, status } });
+    await render(<VeiculoFormView veiculoId="9" />);
+    await screen.findByLabelText('Placa');
+
+    expect(screen.queryByRole('button', { name: /^(Desativar|Reativar) / })).toBeNull();
+    expect(
+      screen.getByText('Para desativar, o veículo precisa estar disponível: sem viagem nem manutenção em aberto.'),
+    ).toBeOnTheScreen();
+  });
+
+  it('o botão segue o status gravado, não o escolhido no seletor e ainda não salvo', async () => {
+    jest.mocked(buscarVeiculoPorId).mockResolvedValue({ ok: true, data: { ...volvo, status: 'EmManutencao' } });
+    await render(<VeiculoFormView veiculoId="9" />);
+    await screen.findByLabelText('Placa');
+
+    await fireEvent.press(screen.getByRole('button', { name: /^Status/ }));
+    await fireEvent.press(screen.getByRole('button', { name: 'Disponível' }));
+
+    expect(screen.queryByRole('button', { name: 'Desativar veículo' })).toBeNull();
+  });
+
+  it('reativado com viagem em aberto: o Snackbar diz com que status ele voltou', async () => {
+    jest.mocked(buscarVeiculoPorId).mockResolvedValue({ ok: true, data: { ...volvo, status: 'Inativo' } });
+    jest.mocked(reativarVeiculo).mockResolvedValue({ ok: true, data: { ...volvo, status: 'EmViagem' } });
+    await render(<VeiculoFormView veiculoId="9" />);
+
+    await fireEvent.press(await screen.findByRole('button', { name: 'Reativar veículo' }));
+
+    expect(await screen.findByText('Veículo reativado como Em Viagem.')).toBeOnTheScreen();
   });
 });

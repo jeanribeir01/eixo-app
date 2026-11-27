@@ -4,18 +4,18 @@ import { RefreshControl, StyleSheet, View } from 'react-native';
 
 import { useDadosDaTela } from '@/lib/useDadosDaTela';
 import {
-  List,
+  CampoBusca,
   Column,
   EmptyState,
   FAB,
   FAB_ALTURA_RESERVADA,
-  Input,
+  GrupoRecolhivel,
+  List,
   ListItem,
   Screen,
   ScreenColumn,
   Skeleton,
   Snackbar,
-  Switch,
   Text,
   colors,
   spacing,
@@ -23,10 +23,8 @@ import {
 } from '@/ui';
 
 import { chaveCidade } from './cidade';
-import { definirAtivaRota, listarRotas } from './rotasRepository';
+import { listarRotas } from './rotasRepository';
 import type { Rota, RotaComViagens } from './types';
-
-type Feedback = { mensagem: string; tone: 'success' | 'error' };
 
 function trecho(rota: Rota): string {
   return `${rota.cidade_origem}/${rota.uf_origem} → ${rota.cidade_destino}/${rota.uf_destino}`;
@@ -37,26 +35,25 @@ function subtitulo(rota: RotaComViagens): string {
   const distancia = `${rota.distancia_estimada_km.toLocaleString('pt-BR', { maximumFractionDigits: 2 })} km`;
   const viagens =
     rota.viagens_finalizadas === 1 ? '1 viagem finalizada' : `${rota.viagens_finalizadas} viagens finalizadas`;
-  const texto = `${distancia} · ${viagens}`;
-  return rota.ativa ? texto : `${texto} · Inativa`;
+  return `${distancia} · ${viagens}`;
 }
 
-// Cabeçalhos e rotas numa FlatList só, como nas outras listas do redesign.
+// Cabeçalho e rotas numa FlatList só, como nas outras listas do redesign.
 type Linha = { tipo: 'grupo'; id: string; rotulo: string } | { tipo: 'rota'; id: string; rota: RotaComViagens };
 
-// Com as inativas à mostra, elas ficam num grupo próprio, depois das ativas; sem elas, um grupo só.
-function agruparPorSituacao(rotas: RotaComViagens[]): Linha[] {
-  const grupos = [
-    { id: 'ativas', rotulo: 'Ativas', itens: rotas.filter((rota) => rota.ativa) },
-    { id: 'inativas', rotulo: 'Inativas', itens: rotas.filter((rota) => !rota.ativa) },
+function comCabecalho(rotas: RotaComViagens[]): Linha[] {
+  if (rotas.length === 0) return [];
+  return [
+    { tipo: 'grupo', id: 'grupo-ativas', rotulo: `Ativas · ${rotas.length}` },
+    ...rotas.map((rota): Linha => ({ tipo: 'rota', id: rota.id, rota })),
   ];
-  const linhas: Linha[] = [];
-  for (const grupo of grupos) {
-    if (grupo.itens.length === 0) continue;
-    linhas.push({ tipo: 'grupo', id: `grupo-${grupo.id}`, rotulo: `${grupo.rotulo} · ${grupo.itens.length}` });
-    for (const rota of grupo.itens) linhas.push({ tipo: 'rota', id: rota.id, rota });
-  }
-  return linhas;
+}
+
+type LinhaDaRotaProps = { rota: RotaComViagens; onAbrir: (id: string) => void };
+
+// Sem switch na linha: desativar e reativar ficam no Editar, como nas outras listas de cadastro.
+function LinhaDaRota({ rota, onAbrir }: LinhaDaRotaProps) {
+  return <ListItem icon="rotas" title={trecho(rota)} subtitle={subtitulo(rota)} onPress={() => onAbrir(rota.id)} />;
 }
 
 export function RotasListView() {
@@ -64,63 +61,37 @@ export function RotasListView() {
   // Carrega ao abrir e ao voltar da criação/edição, sem a lista piscar (EIX-63).
   const tela = useDadosDaTela(listarRotas);
   const [busca, setBusca] = useState('');
-  const [mostrarInativas, setMostrarInativas] = useState(false);
-  const [processandoId, setProcessandoId] = useState<string | null>(null);
-  const [feedback, setFeedback] = useState<Feedback | null>(null);
   const coluna = useScreenColumn();
 
-  async function handleAlternarAtiva(rota: RotaComViagens) {
-    setProcessandoId(rota.id);
-    const resultado = await definirAtivaRota(rota.id, !rota.ativa);
-    setProcessandoId(null);
-
-    if (!resultado.ok) {
-      setFeedback({ mensagem: resultado.mensagem, tone: 'error' });
-      return;
-    }
-
-    // O repositório devolve a rota sem a contagem: mantém a que já estava na tela.
-    tela.atualizarDados((atuais) =>
-      atuais.map((item) => (item.id === rota.id ? { ...resultado.data, viagens_finalizadas: item.viagens_finalizadas } : item)),
-    );
-    setFeedback({ mensagem: resultado.data.ativa ? 'Rota reativada.' : 'Rota inativada.', tone: 'success' });
+  function abrir(id: string) {
+    router.push(`/rotas/${id}/editar`);
   }
 
   // Busca local (catálogo pequeno): `chaveCidade` ignora maiúscula, espaço e acento, então
   // "sao" encontra "São Paulo" — a mesma regra que o banco usa para rota duplicada.
   const termo = chaveCidade(busca);
-  const rotasFiltradas = (tela.dados ?? []).filter((rota) => {
-    if (!mostrarInativas && !rota.ativa) return false;
-    if (!termo) return true;
-    return chaveCidade(rota.cidade_origem).includes(termo) || chaveCidade(rota.cidade_destino).includes(termo);
-  });
-
-  const linhas = useMemo(() => agruparPorSituacao(rotasFiltradas), [rotasFiltradas]);
-
-  // Um Snackbar só: o retorno da ação vem antes do aviso de recarga que falhou.
-  const snackbar = feedback ?? (tela.feedbackErro ? { mensagem: tela.feedbackErro, tone: 'error' as const } : null);
+  const { linhas, desativadas } = useMemo(() => {
+    const encontradas = (tela.dados ?? []).filter(
+      (rota) => !termo || chaveCidade(rota.cidade_origem).includes(termo) || chaveCidade(rota.cidade_destino).includes(termo),
+    );
+    return {
+      linhas: comCabecalho(encontradas.filter((rota) => rota.ativa)),
+      desativadas: encontradas.filter((rota) => !rota.ativa),
+    };
+  }, [tela.dados, termo]);
 
   return (
     <Screen
       underHeader
       list
-      overlay={
-        snackbar && (
-          <Snackbar
-            message={snackbar.mensagem}
-            tone={snackbar.tone}
-            onDismiss={() => (feedback ? setFeedback(null) : tela.limparFeedbackErro())}
-          />
-        )
-      }
-      // O FAB é a ação de criar e o único cyan da tela (DESIGN_CYAN §7).
+      // Aviso de recarga que falhou (os dados antigos continuam na tela).
+      overlay={tela.feedbackErro ? <Snackbar message={tela.feedbackErro} tone="error" onDismiss={tela.limparFeedbackErro} /> : null}
+      // O FAB é a ação de criar e o único azul preenchido da tela (DESIGN_CYAN §7).
       fab={<FAB label="Nova rota" onPress={() => router.push('/rotas/nova')} />}
     >
       {/* Fora da lista, na coluna: no tablet fica alinhado com as linhas (EIX-94). */}
       <ScreenColumn>
-        <Input label="Buscar rota" icone="buscar" placeholder="Cidade de origem ou destino" value={busca} onChangeText={setBusca} />
-
-        <Switch label="Mostrar inativas" value={mostrarInativas} onValueChange={setMostrarInativas} />
+        <CampoBusca placeholder="Buscar por cidade" value={busca} onChangeText={setBusca} />
 
         {tela.status === 'carregando' && (
           <Column gap="sm">
@@ -150,8 +121,8 @@ export function RotasListView() {
             <RefreshControl
               refreshing={tela.atualizando}
               onRefresh={tela.puxarParaAtualizar}
-              colors={[colors.accent]}
-              tintColor={colors.accent}
+              colors={[colors.accentStrong]}
+              tintColor={colors.accentStrong}
             />
           }
           // Vazio dentro da lista: o pull-to-refresh funciona até sem rota. Sem ação aqui,
@@ -171,29 +142,17 @@ export function RotasListView() {
                 </Text>
               </View>
             ) : (
-              <ListItem
-                icon="rotas"
-                title={trecho(item.rota)}
-                subtitle={subtitulo(item.rota)}
-                onPress={() => router.push(`/rotas/${item.rota.id}/editar`)}
-                control={
-                  <Switch
-                    label="Ativa"
-                    accessibilityLabel={`Ativa: ${trecho(item.rota)}`}
-                    value={item.rota.ativa}
-                    disabled={processandoId === item.rota.id}
-                    onValueChange={() => handleAlternarAtiva(item.rota)}
-                  />
-                }
-              />
+              <LinhaDaRota rota={item.rota} onAbrir={abrir} />
             )
           }
-          // O que o interruptor "Ativa" faz, dito uma vez no fim da lista e não em cada linha.
+          // Desativadas no fim, recolhidas: continuam no histórico das viagens e abrem para reativar.
           ListFooterComponent={
-            linhas.length > 0 ? (
-              <Text variant="bodySm" tone="body" style={styles.rodape}>
-                Inativar uma rota tira o trecho das novas viagens e preserva o histórico.
-              </Text>
+            desativadas.length > 0 ? (
+              <GrupoRecolhivel rotulo="Desativadas" quantidade={desativadas.length} resumo={desativadas.map(trecho).join(', ')}>
+                {desativadas.map((rota) => (
+                  <LinhaDaRota key={rota.id} rota={rota} onAbrir={abrir} />
+                ))}
+              </GrupoRecolhivel>
             ) : undefined
           }
         />
@@ -209,9 +168,6 @@ const styles = StyleSheet.create({
   grupo: {
     paddingTop: spacing.lg,
     paddingBottom: spacing.xs,
-  },
-  rodape: {
-    paddingTop: spacing.lg,
   },
   // O Screen só reserva o espaço do FAB quando ele mesmo rola; aqui quem rola é a FlatList.
   espacoDoFab: {

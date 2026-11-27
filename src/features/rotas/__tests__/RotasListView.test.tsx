@@ -1,12 +1,12 @@
 import { act, fireEvent, render, screen, within } from '@testing-library/react-native';
 import { FlatList, RefreshControl, StyleSheet, useWindowDimensions } from 'react-native';
 
-import { dispararSemEsperar, segurarPrimeiraCarga } from '@/testing/eventos';
+import { segurarPrimeiraCarga } from '@/testing/eventos';
 import { porTipo, todosPorTipo } from '@/testing/componentes';
 import { FAB_ALTURA_RESERVADA, Skeleton, colors, spacing } from '@/ui';
 
 import { RotasListView } from '../RotasListView';
-import { definirAtivaRota, listarRotas } from '../rotasRepository';
+import { listarRotas } from '../rotasRepository';
 import type { RotaComViagens } from '../types';
 
 // Largura da janela controlada pelo teste: 412 é celular, 800 é tablet (EIX-94).
@@ -42,11 +42,9 @@ jest.mock('expo-router', () => {
 
 jest.mock('../rotasRepository', () => ({
   listarRotas: jest.fn(),
-  definirAtivaRota: jest.fn(),
 }));
 
 const mockListar = listarRotas as jest.MockedFunction<typeof listarRotas>;
-const mockDefinirAtiva = definirAtivaRota as jest.MockedFunction<typeof definirAtivaRota>;
 
 const curitibaSp: RotaComViagens = {
   id: 'r1',
@@ -87,7 +85,6 @@ const TITULO_JOINVILLE = 'Joinville/SC → Florianópolis/SC';
 beforeEach(() => {
   mockPush.mockReset();
   mockListar.mockReset();
-  mockDefinirAtiva.mockReset();
 });
 
 async function renderComLista() {
@@ -133,12 +130,12 @@ describe('RotasListView — carga', () => {
     expect(screen.getByText('Curitiba/PR → Campinas/SP')).toBeOnTheScreen();
   });
 
-  it('pull-to-refresh com o indicador em accent busca de novo', async () => {
+  it('pull-to-refresh com o indicador em accentStrong busca de novo', async () => {
     await renderComLista();
 
     const refresh = porTipo(RefreshControl);
-    expect(refresh.props.colors).toEqual([colors.accent]);
-    expect(refresh.props.tintColor).toBe(colors.accent);
+    expect(refresh.props.colors).toEqual([colors.accentStrong]);
+    expect(refresh.props.tintColor).toBe(colors.accentStrong);
 
     await act(async () => refresh.props.onRefresh!());
     expect(mockListar).toHaveBeenCalledTimes(2);
@@ -185,95 +182,46 @@ describe('RotasListView — linha', () => {
     expect(mockPush).toHaveBeenCalledWith('/rotas/r2/editar');
   });
 
-  // ROTA-21
-  it('switch "Ativa" inativa, fica desabilitado enquanto salva e mostra "Rota inativada."', async () => {
-    let concluir: (valor: Awaited<ReturnType<typeof definirAtivaRota>>) => void = () => undefined;
-    mockDefinirAtiva.mockReturnValue(new Promise((resolve) => (concluir = resolve)));
+  // ROTA-21/22: desativar e reativar moram no Editar (RotaFormView), igual em Categorias, Formas de
+  // pagamento e Veículos. A linha não tem switch nem botão de ação.
+  it('a linha não tem switch nem botão de ação: desativar fica no Editar', async () => {
     await renderComLista();
 
-    const toque1 = await dispararSemEsperar(() => fireEvent(screen.getByRole('switch', { name: `Ativa: ${TITULO_LONDRINA}` }), 'valueChange', false));
-
-    expect(mockDefinirAtiva).toHaveBeenCalledWith('r2', false);
-    expect(screen.getByRole('switch', { name: `Ativa: ${TITULO_LONDRINA}` })).toBeDisabled();
-
-    const { viagens_finalizadas: _contagem, ...rota } = londrinaMaringa;
-    await act(async () => {
-      concluir({ ok: true, data: { ...rota, ativa: false } });
-      await toque1.terminou;
-    });
-
-    expect(screen.getByRole('alert')).toHaveTextContent('Rota inativada.');
-    // Com "Mostrar inativas" desligado, a rota sai da lista.
-    expect(screen.queryByText(TITULO_LONDRINA)).not.toBeOnTheScreen();
-  });
-
-  // ROTA-22
-  it('switch "Ativa" reativa uma rota inativa, mostra "Rota reativada." e mantém a contagem', async () => {
-    const { viagens_finalizadas: _contagem, ...rota } = joinvilleFloripa;
-    mockDefinirAtiva.mockResolvedValue({ ok: true, data: { ...rota, ativa: true } });
-    await renderComLista();
-    await fireEvent(screen.getByRole('switch', { name: 'Mostrar inativas' }), 'valueChange', true);
-
-    await act(async () =>
-      await fireEvent(screen.getByRole('switch', { name: `Ativa: ${TITULO_JOINVILLE}` }), 'valueChange', true),
-    );
-
-    expect(mockDefinirAtiva).toHaveBeenCalledWith('r3', true);
-    expect(screen.getByRole('alert')).toHaveTextContent('Rota reativada.');
-    expect(screen.getByRole('switch', { name: `Ativa: ${TITULO_JOINVILLE}` })).toBeChecked();
-    expect(screen.getByText('1.200 km · 0 viagens finalizadas')).toBeOnTheScreen();
-  });
-
-  it('erro ao inativar mostra o Snackbar de erro e mantém a rota ativa', async () => {
-    mockDefinirAtiva.mockResolvedValue({ ok: false, mensagem: 'Acesso negado. Seu perfil não tem permissão para esta ação.' });
-    await renderComLista();
-
-    await act(async () =>
-      await fireEvent(screen.getByRole('switch', { name: `Ativa: ${TITULO_CURITIBA}` }), 'valueChange', false),
-    );
-
-    expect(screen.getByRole('alert')).toHaveTextContent('Acesso negado. Seu perfil não tem permissão para esta ação.');
-    expect(screen.getByRole('switch', { name: `Ativa: ${TITULO_CURITIBA}` })).toBeChecked();
-  });
-
-  it('o switch fica fora do botão da linha: o leitor de tela alcança os dois', async () => {
-    await renderComLista();
-
-    expect(within(screen.getByRole('button', { name: TITULO_CURITIBA })).queryByRole('switch')).not.toBeOnTheScreen();
+    expect(screen.queryByRole('switch')).not.toBeOnTheScreen();
+    expect(screen.queryByRole('button', { name: /^(Editar|Desativar|Reativar|Mais opções)/ })).not.toBeOnTheScreen();
   });
 });
 
-describe('RotasListView — filtros e FAB', () => {
+describe('RotasListView — desativadas, busca e FAB', () => {
   // ROTA-20
-  it('esconde as inativas por padrão; com o filtro, aparecem marcadas como inativas', async () => {
+  it('as ativas vêm num grupo com a contagem e não há mais o "Mostrar inativas"', async () => {
     await renderComLista();
-    expect(screen.queryByText(TITULO_JOINVILLE)).not.toBeOnTheScreen();
 
-    await fireEvent(screen.getByRole('switch', { name: 'Mostrar inativas' }), 'valueChange', true);
-
-    expect(screen.getByText(TITULO_JOINVILLE)).toBeOnTheScreen();
-    expect(screen.getByText('1.200 km · 0 viagens finalizadas · Inativa')).toBeOnTheScreen();
-    expect(screen.getByRole('switch', { name: `Ativa: ${TITULO_JOINVILLE}` })).not.toBeChecked();
+    expect(screen.getByText('Ativas · 2')).toBeOnTheScreen();
+    expect(screen.queryByRole('switch', { name: 'Mostrar inativas' })).not.toBeOnTheScreen();
   });
 
-  it('com as inativas à mostra, separa "Ativas" e "Inativas" e explica o interruptor no fim', async () => {
+  it('desativadas ficam recolhidas no fim, com o trecho ao lado; ao abrir, a linha leva ao Editar', async () => {
     await renderComLista();
-    expect(screen.queryByText(/^Inativas · /)).not.toBeOnTheScreen();
 
-    await fireEvent(screen.getByRole('switch', { name: 'Mostrar inativas' }), 'valueChange', true);
+    const cabecalho = screen.getByRole('button', { name: 'Desativadas, 1' });
+    expect(cabecalho).toBeCollapsed();
+    expect(screen.getByText(TITULO_JOINVILLE)).toBeOnTheScreen();
+    expect(screen.queryByRole('button', { name: TITULO_JOINVILLE })).not.toBeOnTheScreen();
 
-    expect(screen.getByText(/^Ativas · \d+$/)).toBeOnTheScreen();
-    expect(screen.getByText('Inativas · 1')).toBeOnTheScreen();
-    expect(
-      screen.getByText('Inativar uma rota tira o trecho das novas viagens e preserva o histórico.'),
-    ).toBeOnTheScreen();
+    await fireEvent.press(cabecalho);
+
+    // Aberta, a linha mostra o mesmo subtítulo das ativas, sem "Inativa" repetido: o grupo já diz.
+    expect(screen.getByText('1.200 km · 0 viagens finalizadas')).toBeOnTheScreen();
+    await fireEvent.press(screen.getByRole('button', { name: TITULO_JOINVILLE }));
+    expect(mockPush).toHaveBeenCalledWith('/rotas/r3/editar');
   });
 
   // ROTA-19
   it('busca pela cidade de destino ignorando acento e maiúscula', async () => {
     await renderComLista();
 
-    await fireEvent.changeText(screen.getByLabelText('Buscar rota'), ' SAO ');
+    await fireEvent.changeText(screen.getByLabelText('Buscar por cidade'), ' SAO ');
 
     expect(screen.getByText(TITULO_CURITIBA)).toBeOnTheScreen();
     expect(screen.queryByText(TITULO_LONDRINA)).not.toBeOnTheScreen();
@@ -282,11 +230,11 @@ describe('RotasListView — filtros e FAB', () => {
   it('busca também pela cidade de origem e acha nome digitado sem acento', async () => {
     await renderComLista();
 
-    await fireEvent.changeText(screen.getByLabelText('Buscar rota'), 'londrina');
+    await fireEvent.changeText(screen.getByLabelText('Buscar por cidade'), 'londrina');
     expect(screen.getByText(TITULO_LONDRINA)).toBeOnTheScreen();
     expect(screen.queryByText(TITULO_CURITIBA)).not.toBeOnTheScreen();
 
-    await fireEvent.changeText(screen.getByLabelText('Buscar rota'), 'maringa');
+    await fireEvent.changeText(screen.getByLabelText('Buscar por cidade'), 'maringa');
     expect(screen.getByText(TITULO_LONDRINA)).toBeOnTheScreen();
   });
 
@@ -294,7 +242,7 @@ describe('RotasListView — filtros e FAB', () => {
   it('busca sem resultado mostra "Nenhuma rota encontrada"', async () => {
     await renderComLista();
 
-    await fireEvent.changeText(screen.getByLabelText('Buscar rota'), 'Manaus');
+    await fireEvent.changeText(screen.getByLabelText('Buscar por cidade'), 'Manaus');
 
     expect(screen.getByText('Nenhuma rota encontrada')).toBeOnTheScreen();
     expect(screen.queryByText('Nenhuma rota cadastrada')).not.toBeOnTheScreen();
@@ -337,6 +285,6 @@ describe('RotasListView — tablet (EIX-94)', () => {
     expect(estiloDaLista()).toMatchObject({ maxWidth: 720, alignSelf: 'center' });
     const coluna = screen.getByTestId('screen-coluna');
     expect(StyleSheet.flatten(coluna.props.style)).toMatchObject({ maxWidth: 720, alignSelf: 'center' });
-    expect(within(coluna).getByLabelText('Buscar rota')).toBeOnTheScreen();
+    expect(within(coluna).getByLabelText('Buscar por cidade')).toBeOnTheScreen();
   });
 });

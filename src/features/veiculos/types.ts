@@ -23,8 +23,9 @@ export const rotuloStatusVeiculo: Record<StatusVeiculo, string> = {
   Disponivel: 'Disponível',
   EmViagem: 'Em Viagem',
   EmManutencao: 'Em Manutenção',
-  Inativo: 'Inativo',
+  // Na tela é 'Desativado', a mesma palavra de Categorias, Formas de pagamento e Rotas; no banco segue Inativo.
+  Inativo: 'Desativado',
 };
 
-// O formulário tem opções próprias: inativação exige botão e confirmação.
+// O formulário tem opções próprias: desativar é o botão do fim do Editar, não uma opção do seletor.
 export const STATUS_VEICULO: StatusVeiculo[] = ['Disponivel', 'EmViagem', 'EmManutencao', 'Inativo'];

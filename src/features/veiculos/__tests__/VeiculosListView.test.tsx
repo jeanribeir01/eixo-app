@@ -1,12 +1,12 @@
-import { act, fireEvent, render, screen, waitFor, within } from '@testing-library/react-native';
-import { Alert, FlatList, ScrollView, StyleSheet, useWindowDimensions } from 'react-native';
+import { fireEvent, render, screen, waitFor, within } from '@testing-library/react-native';
+import { FlatList, ScrollView, StyleSheet, useWindowDimensions } from 'react-native';
 
 import { porTipo } from '@/testing/componentes';
 import { segurarPrimeiraCarga } from '@/testing/eventos';
-import { spacing } from '@/ui';
+import { FAB_ALTURA_RESERVADA, spacing } from '@/ui';
 
 import { VeiculosListView } from '../VeiculosListView';
-import { inativarVeiculo, listarVeiculos, reativarVeiculo } from '../repository';
+import { listarVeiculos } from '../repository';
 
 // Largura da janela controlada pelo teste: 412 é celular, 800 é tablet (EIX-94).
 // O filtro de status é um chip: abre a folha e toca na opção.
@@ -42,8 +42,6 @@ jest.mock('expo-router', () => {
 
 jest.mock('../repository', () => ({
   listarVeiculos: jest.fn(),
-  inativarVeiculo: jest.fn(),
-  reativarVeiculo: jest.fn(),
 }));
 
 const veiculosMock = [
@@ -52,112 +50,50 @@ const veiculosMock = [
 ];
 
 describe('VeiculosListView', () => {
-  let alerta: jest.SpyInstance;
   beforeEach(() => {
     mockPush.mockReset();
     (listarVeiculos as jest.Mock).mockReset();
-    (inativarVeiculo as jest.Mock).mockReset();
-    (reativarVeiculo as jest.Mock).mockReset();
-    alerta = jest.spyOn(Alert, 'alert').mockImplementation(() => {});
   });
 
-  afterEach(() => alerta.mockRestore());
+  const desativado = { ...veiculosMock[0], id: '3', placa: 'GHI1234', status: 'Inativo' as const };
 
-  async function confirmar() {
-    await act(async () => {
-      const botoes = alerta.mock.calls[alerta.mock.calls.length - 1][2];
-      botoes.find((botao: { text: string }) => botao.text === 'Inativar').onPress();
-    });
-  }
+  // INA/REA: desativar e reativar moram no Editar (VeiculoFormView), igual em Categorias, Formas de
+  // pagamento e Rotas. A linha não tem "Mais opções" nem o Alert do sistema.
+  it('a linha não tem "Mais opções" nem botão de desativar/reativar', async () => {
+    (listarVeiculos as jest.Mock).mockResolvedValue({ ok: true, data: [...veiculosMock, desativado] });
+    await render(<VeiculosListView />);
+    await screen.findByText('ABC-1234');
 
-  it('confirma antes de inativar e cancelar não altera dados (INA-04/05)', async () => {
+    expect(screen.queryByRole('button', { name: /^(Inativar|Desativar|Reativar|Mais opções)/ })).toBeNull();
+  });
+
+  it('desativados ficam recolhidos no fim, com as placas ao lado; ao abrir, a linha leva ao Editar', async () => {
+    (listarVeiculos as jest.Mock).mockResolvedValue({ ok: true, data: [...veiculosMock, desativado] });
+    await render(<VeiculosListView />);
+    await screen.findByText('ABC-1234');
+
+    const cabecalho = screen.getByRole('button', { name: 'Desativados, 1' });
+    expect(cabecalho).toBeCollapsed();
+    expect(screen.getByText('GHI-1234')).toBeOnTheScreen();
+    expect(screen.queryByRole('button', { name: 'Editar GHI-1234' })).toBeNull();
+    // O desativado não vira um grupo comum entre os outros.
+    expect(screen.getAllByRole('header').map((titulo) => titulo.props.children)).toEqual(['Disponíveis · 1', 'Em manutenção · 1']);
+
+    await fireEvent.press(cabecalho);
+    await fireEvent.press(screen.getByRole('button', { name: 'Editar GHI-1234' }));
+
+    expect(mockPush).toHaveBeenCalledWith('/frota/3/editar');
+  });
+
+  it('sem desativados, o grupo recolhido não aparece', async () => {
     (listarVeiculos as jest.Mock).mockResolvedValue({ ok: true, data: veiculosMock });
     await render(<VeiculosListView />);
     await screen.findByText('ABC-1234');
-    await fireEvent.press(screen.getByRole('button', { name: 'Inativar ABC-1234' }));
-    expect(alerta).toHaveBeenCalledWith('Inativar veículo?', expect.stringContaining('ABC-1234'), [
-      expect.objectContaining({ text: 'Cancelar', style: 'cancel' }),
-      expect.objectContaining({ text: 'Inativar', style: 'destructive', onPress: expect.any(Function) }),
-    ]);
-    // Cancelar fecha apenas o diálogo nativo; não há mutação antes de confirmar.
-    expect(inativarVeiculo).not.toHaveBeenCalled();
-    expect(screen.getByText('ABC-1234')).toBeOnTheScreen();
+
+    expect(screen.queryByRole('button', { name: /^Desativados/ })).toBeNull();
   });
 
-  it('sucesso atualiza status e mostra Snackbar (INA-06)', async () => {
-    const inativo = { ...veiculosMock[0], status: 'Inativo' };
-    (listarVeiculos as jest.Mock)
-      .mockResolvedValueOnce({ ok: true, data: veiculosMock })
-      .mockResolvedValue({ ok: true, data: [inativo, veiculosMock[1]] });
-    (inativarVeiculo as jest.Mock).mockResolvedValue({ ok: true, data: inativo });
-    await render(<VeiculosListView />);
-    await screen.findByText('ABC-1234');
-    await fireEvent.press(screen.getByRole('button', { name: 'Inativar ABC-1234' }));
-    await confirmar();
-    expect(inativarVeiculo).toHaveBeenCalledWith('1');
-    expect(screen.getByText('Veículo inativado.')).toBeOnTheScreen();
-    // O veículo muda de grupo: sai de Disponíveis e entra em Inativos, agora com a opção de reativar.
-    expect(screen.getByText('Inativos · 1')).toBeOnTheScreen();
-    expect(screen.getByRole('button', { name: 'Reativar ABC-1234' })).toBeOnTheScreen();
-    expect(screen.queryByRole('button', { name: 'Inativar ABC-1234' })).toBeNull();
-  });
-
-  it('respeita filtro Disponível ao atualizar após inativar (INA-06)', async () => {
-    (listarVeiculos as jest.Mock).mockResolvedValue({ ok: true, data: [veiculosMock[0]] });
-    (inativarVeiculo as jest.Mock).mockResolvedValue({ ok: true, data: { ...veiculosMock[0], status: 'Inativo' } });
-    await render(<VeiculosListView />);
-    await screen.findByText('ABC-1234');
-    await escolherStatus('Disponível');
-    await waitFor(() => expect(listarVeiculos).toHaveBeenLastCalledWith({ busca: undefined, status: 'Disponivel' }));
-    await screen.findByRole('button', { name: 'Inativar ABC-1234' });
-    (listarVeiculos as jest.Mock).mockResolvedValue({ ok: true, data: [] });
-    await fireEvent.press(screen.getByRole('button', { name: 'Inativar ABC-1234' }));
-    await confirmar();
-    expect(screen.queryByText('ABC-1234')).toBeNull();
-    expect(screen.getByText('Nenhum veículo encontrado')).toBeOnTheScreen();
-    expect(listarVeiculos).toHaveBeenLastCalledWith({ busca: undefined, status: 'Disponivel' });
-  });
-
-  it('pendente exibe loading e impede confirmação repetida (INA-03)', async () => {
-    let concluir: (value: unknown) => void = () => {};
-    (listarVeiculos as jest.Mock).mockResolvedValue({ ok: true, data: veiculosMock });
-    (inativarVeiculo as jest.Mock).mockReturnValue(new Promise((resolve) => { concluir = resolve; }));
-    await render(<VeiculosListView />);
-    await screen.findByText('ABC-1234');
-    await fireEvent.press(screen.getByRole('button', { name: 'Inativar ABC-1234' }));
-    await confirmar();
-    expect(screen.getByRole('button', { name: 'Inativar ABC-1234' })).toBeDisabled();
-    expect(screen.getByTestId('button-loading')).toBeOnTheScreen();
-    await confirmar();
-    expect(inativarVeiculo).toHaveBeenCalledTimes(1);
-    await act(async () => concluir({ ok: false, mensagem: 'Falha de rede.' }));
-    expect(screen.getByText('Falha de rede.')).toBeOnTheScreen();
-    expect(screen.getByRole('button', { name: 'Inativar ABC-1234' })).not.toBeDisabled();
-  });
-
-  it('falha ou concorrência preserva veículo e mostra erro (INA-02/07)', async () => {
-    (listarVeiculos as jest.Mock).mockResolvedValue({ ok: true, data: veiculosMock });
-    (inativarVeiculo as jest.Mock).mockResolvedValue({ ok: false, mensagem: 'Veículo não está mais disponível.' });
-    await render(<VeiculosListView />);
-    await screen.findByText('ABC-1234');
-    await fireEvent.press(screen.getByRole('button', { name: 'Inativar ABC-1234' }));
-    await confirmar();
-    expect(screen.getByText('Veículo não está mais disponível.')).toBeOnTheScreen();
-    expect(screen.getByText('ABC-1234')).toBeOnTheScreen();
-    expect(screen.queryByText('Veículo inativado.')).toBeNull();
-  });
-
-  it('não oferece inativação para ocupado ou inativo (INA-08)', async () => {
-    (listarVeiculos as jest.Mock).mockResolvedValue({ ok: true, data: [
-      { ...veiculosMock[0], status: 'EmViagem' }, veiculosMock[1],
-      { ...veiculosMock[0], id: '3', placa: 'GHI1234', status: 'Inativo' },
-    ] });
-    await render(<VeiculosListView />);
-    await screen.findByText('ABC-1234');
-    expect(screen.queryByRole('button', { name: /^Inativar/ })).toBeNull();
-  });
-
-  it('filtra Inativo e mantém filtros roláveis em telas pequenas (SEL-01)', async () => {
+  it('o filtro de status não oferece "Desativado" e rola na horizontal em telas pequenas (SEL-01)', async () => {
     (listarVeiculos as jest.Mock).mockResolvedValue({ ok: true, data: [] });
     await render(<VeiculosListView />);
     await screen.findByText('Nenhum veículo cadastrado');
@@ -165,109 +101,23 @@ describe('VeiculosListView', () => {
     const filtro = porTipo(ScrollView);
     expect(filtro.props.horizontal).toBe(true);
     expect(within(filtro.elementoNativo()).getByRole('button', { name: 'Status: Todos' })).toBeOnTheScreen();
-    await escolherStatus('Inativo');
-    await waitFor(() => expect(listarVeiculos).toHaveBeenLastCalledWith({ busca: undefined, status: 'Inativo' }));
-    expect(await screen.findByText('Nenhum veículo encontrado')).toBeOnTheScreen();
+
+    await fireEvent.press(screen.getByRole('button', { name: /^Status: / }));
+
+    expect(screen.getByRole('button', { name: 'Disponível' })).toBeOnTheScreen();
+    expect(screen.queryByRole('button', { name: 'Desativado' })).toBeNull();
   });
 
-  describe('reativação (EIX-81)', () => {
-    const inativo = { ...veiculosMock[0], id: '3', placa: 'GHI1234', status: 'Inativo' as const };
+  it('"Novo veículo" é o FAB, como nas outras listas, e a lista reserva o espaço dele no fim', async () => {
+    (listarVeiculos as jest.Mock).mockResolvedValue({ ok: true, data: veiculosMock });
+    await render(<VeiculosListView />);
+    await screen.findByText('ABC-1234');
 
-    async function confirmarReativacao() {
-      await act(async () => {
-        const botoes = alerta.mock.calls[alerta.mock.calls.length - 1][2];
-        botoes.find((botao: { text: string }) => botao.text === 'Reativar').onPress();
-      });
-    }
-
-    it('oferece Reativar só para Inativo (REA-04)', async () => {
-      (listarVeiculos as jest.Mock).mockResolvedValue({ ok: true, data: [
-        veiculosMock[0], veiculosMock[1], { ...veiculosMock[0], id: '4', placa: 'JKL1234', status: 'EmViagem' }, inativo,
-      ] });
-      await render(<VeiculosListView />);
-      await screen.findByText('GHI-1234');
-      expect(screen.getAllByRole('button', { name: /^Reativar/ })).toHaveLength(1);
-    });
-
-    it('confirma antes de reativar e cancelar não altera dados (REA-05)', async () => {
-      (listarVeiculos as jest.Mock).mockResolvedValue({ ok: true, data: [inativo] });
-      await render(<VeiculosListView />);
-      await screen.findByText('GHI-1234');
-      await fireEvent.press(screen.getByRole('button', { name: 'Reativar GHI-1234' }));
-      expect(alerta).toHaveBeenCalledWith('Reativar veículo?', expect.stringContaining('GHI-1234'), [
-        expect.objectContaining({ text: 'Cancelar', style: 'cancel' }),
-        expect.objectContaining({ text: 'Reativar', onPress: expect.any(Function) }),
-      ]);
-      expect(reativarVeiculo).not.toHaveBeenCalled();
-      expect(screen.getByText('GHI-1234')).toBeOnTheScreen();
-    });
-
-    it('pendente exibe loading e impede confirmação repetida (REA-06)', async () => {
-      let concluir: (value: unknown) => void = () => {};
-      (listarVeiculos as jest.Mock).mockResolvedValue({ ok: true, data: [inativo] });
-      (reativarVeiculo as jest.Mock).mockReturnValue(new Promise((resolve) => { concluir = resolve; }));
-      await render(<VeiculosListView />);
-      await screen.findByText('GHI-1234');
-      await fireEvent.press(screen.getByRole('button', { name: 'Reativar GHI-1234' }));
-      await confirmarReativacao();
-      expect(screen.getByRole('button', { name: 'Reativar GHI-1234' })).toBeDisabled();
-      expect(screen.getByTestId('button-loading')).toBeOnTheScreen();
-      await confirmarReativacao();
-      expect(reativarVeiculo).toHaveBeenCalledTimes(1);
-      await act(async () => concluir({ ok: false, mensagem: 'Falha de rede.' }));
-      expect(screen.getByRole('button', { name: 'Reativar GHI-1234' })).not.toBeDisabled();
-    });
-
-    it('sucesso mostra Snackbar e recarrega respeitando o filtro Inativo (REA-07)', async () => {
-      (listarVeiculos as jest.Mock).mockResolvedValue({ ok: true, data: [inativo] });
-      (reativarVeiculo as jest.Mock).mockResolvedValue({ ok: true, data: { ...inativo, status: 'Disponivel' } });
-      await render(<VeiculosListView />);
-      await screen.findByText('GHI-1234');
-      await escolherStatus('Inativo');
-      await waitFor(() => expect(listarVeiculos).toHaveBeenLastCalledWith({ busca: undefined, status: 'Inativo' }));
-      await screen.findByRole('button', { name: 'Reativar GHI-1234' });
-      (listarVeiculos as jest.Mock).mockResolvedValue({ ok: true, data: [] });
-      await fireEvent.press(screen.getByRole('button', { name: 'Reativar GHI-1234' }));
-      await confirmarReativacao();
-      expect(reativarVeiculo).toHaveBeenCalledWith('3');
-      expect(screen.getByText('Veículo reativado.')).toBeOnTheScreen();
-      expect(screen.queryByText('GHI-1234')).toBeNull();
-      expect(listarVeiculos).toHaveBeenLastCalledWith({ busca: undefined, status: 'Inativo' });
-    });
-
-    it('avisa quando o banco devolve o veículo com viagem em aberto', async () => {
-      (listarVeiculos as jest.Mock).mockResolvedValue({ ok: true, data: [inativo] });
-      (reativarVeiculo as jest.Mock).mockResolvedValue({ ok: true, data: { ...inativo, status: 'EmViagem' } });
-      await render(<VeiculosListView />);
-      await screen.findByText('GHI-1234');
-      await fireEvent.press(screen.getByRole('button', { name: 'Reativar GHI-1234' }));
-      await confirmarReativacao();
-      expect(screen.getByText('Veículo reativado como Em Viagem.')).toBeOnTheScreen();
-    });
-
-    it('erro imprevisto (exceção) mostra Snackbar de erro e libera o botão', async () => {
-      (listarVeiculos as jest.Mock).mockResolvedValue({ ok: true, data: [inativo] });
-      (reativarVeiculo as jest.Mock).mockRejectedValue(new TypeError('Network request failed'));
-      await render(<VeiculosListView />);
-      await screen.findByText('GHI-1234');
-      await fireEvent.press(screen.getByRole('button', { name: 'Reativar GHI-1234' }));
-      await confirmarReativacao();
-      expect(screen.getByText('Não foi possível concluir a operação. Atualize a lista e tente novamente.')).toBeOnTheScreen();
-      expect(screen.getByRole('button', { name: 'Reativar GHI-1234' })).not.toBeDisabled();
-      expect(screen.getByText('GHI-1234')).toBeOnTheScreen();
-    });
-
-    it('falha preserva o veículo e mostra erro (REA-08)', async () => {
-      (listarVeiculos as jest.Mock).mockResolvedValue({ ok: true, data: [inativo] });
-      (reativarVeiculo as jest.Mock).mockResolvedValue({ ok: false, mensagem: 'Não foi possível reativar o veículo. Tente novamente.' });
-      await render(<VeiculosListView />);
-      await screen.findByText('GHI-1234');
-      await fireEvent.press(screen.getByRole('button', { name: 'Reativar GHI-1234' }));
-      await confirmarReativacao();
-      expect(screen.getByText('Não foi possível reativar o veículo. Tente novamente.')).toBeOnTheScreen();
-      expect(screen.getByText('GHI-1234')).toBeOnTheScreen();
-      expect(screen.queryByText('Veículo reativado.')).toBeNull();
-      expect(listarVeiculos).toHaveBeenCalledTimes(1);
+    expect(within(screen.getByTestId('screen-coluna')).queryByRole('button', { name: 'Novo veículo' })).toBeNull();
+    await fireEvent.press(screen.getByRole('button', { name: 'Novo veículo' }));
+    expect(mockPush).toHaveBeenCalledWith('/frota/novo');
+    expect(StyleSheet.flatten(porTipo(FlatList).props.contentContainerStyle)).toMatchObject({
+      paddingBottom: FAB_ALTURA_RESERVADA,
     });
   });
 
@@ -305,7 +155,8 @@ describe('VeiculosListView', () => {
     await render(<VeiculosListView />);
 
     expect(await screen.findByText('Nenhum veículo cadastrado')).toBeOnTheScreen();
-    await fireEvent.press(screen.getAllByRole('button', { name: 'Novo veículo' })[1]);
+    // Duas entradas para o mesmo cadastro: a ação do estado vazio e o FAB.
+    await fireEvent.press(screen.getAllByRole('button', { name: 'Novo veículo' })[0]);
     expect(mockPush).toHaveBeenCalledWith('/frota/novo');
   });
 
@@ -340,7 +191,7 @@ describe('VeiculosListView', () => {
     await render(<VeiculosListView />);
     await screen.findByText('ABC-1234');
 
-    await fireEvent.changeText(screen.getByLabelText('Buscar veículo'), 'fh');
+    await fireEvent.changeText(screen.getByLabelText('Buscar por placa ou modelo'), 'fh');
 
     await waitFor(() => expect(listarVeiculos).toHaveBeenLastCalledWith({ busca: 'fh', status: undefined }));
   });
@@ -386,8 +237,7 @@ describe('VeiculosListView', () => {
       expect(estiloDaLista()).toMatchObject({ maxWidth: 720, alignSelf: 'center' });
       const coluna = screen.getByTestId('screen-coluna');
       expect(StyleSheet.flatten(coluna.props.style)).toMatchObject({ maxWidth: 720, alignSelf: 'center' });
-      expect(within(coluna).getByLabelText('Buscar veículo')).toBeOnTheScreen();
-      expect(within(coluna).getByRole('button', { name: 'Novo veículo' })).toBeOnTheScreen();
+      expect(within(coluna).getByLabelText('Buscar por placa ou modelo')).toBeOnTheScreen();
     });
   });
 });

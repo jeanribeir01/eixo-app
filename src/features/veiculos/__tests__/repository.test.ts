@@ -79,7 +79,7 @@ describe('veiculos/repository', () => {
       responder(ok(null));
       expect(await inativarVeiculo('1')).toEqual({
         ok: false,
-        mensagem: 'Não foi possível inativar. O veículo pode não estar mais disponível ou você não tem permissão. Atualize a lista e tente novamente.',
+        mensagem: 'Não foi possível desativar. O veículo pode não estar mais disponível ou você não tem permissão. Volte à lista e tente novamente.',
       });
     });
 
@@ -90,7 +90,7 @@ describe('veiculos/repository', () => {
 
     it('traduz falha de rede e rejeita resposta inválida (INA-07)', async () => {
       responder(erro('PGRST301'), ok({ ...volvo, status: 'Vendido' }));
-      expect(await inativarVeiculo('1')).toEqual({ ok: false, mensagem: 'Não foi possível inativar o veículo. Tente novamente.' });
+      expect(await inativarVeiculo('1')).toEqual({ ok: false, mensagem: 'Não foi possível desativar o veículo. Tente novamente.' });
       expect(await inativarVeiculo('1')).toEqual({ ok: false, mensagem: 'Os dados recebidos são inválidos. Tente novamente.' });
     });
   });
@@ -117,7 +117,7 @@ describe('veiculos/repository', () => {
       responder(ok(null));
       expect(await reativarVeiculo('1')).toEqual({
         ok: false,
-        mensagem: 'Não foi possível reativar. O veículo pode já ter sido reativado ou você não tem permissão. Atualize a lista e tente novamente.',
+        mensagem: 'Não foi possível reativar. O veículo pode já ter sido reativado ou você não tem permissão. Volte à lista e tente novamente.',
       });
     });
 
