@@ -1,9 +1,9 @@
 import { useCallback, useState } from 'react';
-import { ActivityIndicator, Alert, FlatList, RefreshControl, StyleSheet, View } from 'react-native';
+import { Alert, FlatList, RefreshControl, StyleSheet } from 'react-native';
 
 import { useDadosDaTela } from '@/lib/useDadosDaTela';
 import {
-  Badge,
+  Aviso,
   Button,
   Card,
   Column,
@@ -11,6 +11,7 @@ import {
   Input,
   Screen,
   ScreenColumn,
+  Skeleton,
   Snackbar,
   Text,
   colors,
@@ -86,7 +87,10 @@ export function RevisoesViagensView() {
   );
 
   return (
+    // Tela interna, sob o header nativo "Revisões de viagens": o header já protege o topo, então o Screen
+    // não repete o inset (NAV-04). Sem isso sobrava uma faixa vazia entre o header e o conteúdo.
     <Screen
+      underHeader
       list
       overlay={
         feedback ? (
@@ -104,19 +108,15 @@ export function RevisoesViagensView() {
         ) : undefined
       }
     >
-      {/* Fora da coluna: o indicador já fica centralizado e precisa do flex da tela para ficar no meio. */}
-      {tela.status === 'carregando' && (
-        <View style={styles.centro}>
-          <ActivityIndicator
-            size="large"
-            color={colors.accent}
-            accessibilityLabel="Carregando revisões"
-          />
-        </View>
-      )}
-
-      {/* Na coluna: no tablet o texto do erro não se espalha pela largura toda (EIX-94). */}
+      {/* Na coluna: no tablet o esboço e o texto do erro não se espalham pela largura toda (EIX-94). */}
       <ScreenColumn>
+        {tela.status === 'carregando' && (
+          <Column gap="lg">
+            <Skeleton height="xxl" accessibilityLabel="Carregando revisões" />
+            <Skeleton height="xxl" />
+          </Column>
+        )}
+
         {tela.status === 'erro' && (
           <EmptyState
             icon="viagens"
@@ -135,9 +135,9 @@ export function RevisoesViagensView() {
           style={styles.lista}
           contentContainerStyle={[coluna, styles.conteudo]}
           ListHeaderComponent={
-            <Text variant="bodySm" tone="muted">
-              Viagens que o servidor recusou e cujo dado local foi preservado. Resolver ou
-              descartar aqui encerra a pendência; a viagem no aparelho não é apagada por esta tela.
+            <Text tone="body">
+              Viagens que o servidor recusou e cujo dado local foi preservado. Resolver ou descartar aqui
+              encerra a pendência; a viagem no aparelho não é apagada por esta tela.
             </Text>
           }
           refreshControl={
@@ -174,61 +174,60 @@ type CartaoRevisaoProps = {
   onDecidir: (status: 'Resolvida' | 'Descartada', observacao: string) => void;
 };
 
+// Uma revisão: primeiro o porquê (o motivo da recusa, num aviso), depois de qual viagem se trata e, por fim, a
+// decisão. Os dois botões empilhados ocupam a largura toda; o descarte usa o estilo de ação grave.
 function CartaoRevisao({ revisao, salvando, onDecidir }: CartaoRevisaoProps) {
   const [observacao, setObservacao] = useState('');
 
   return (
-    <Card>
-      <Column gap="sm">
-        <View style={styles.linhaTopo}>
-          <Text variant="body" weight="medium">
-            {revisao.veiculo_placa ?? 'Viagem sem veículo'}
-            {revisao.motorista_nome ? ` • ${revisao.motorista_nome}` : ''}
-          </Text>
-          <Badge label="Pendente" tone="danger" />
-        </View>
+    <Column gap="md">
+      <Aviso tom="danger" icone="alerta" titulo="O servidor não aceitou esta viagem">
+        {revisao.mensagem}
+      </Aviso>
 
+      <Card>
         {revisao.rota_trecho && (
           <Text variant="bodySm" tone="body">
             {revisao.rota_trecho}
           </Text>
         )}
-
-        <Text variant="bodySm" tone="body">
-          {revisao.mensagem}
+        <Text variant="subheading" weight="semibold">
+          {revisao.veiculo_placa ?? 'Viagem sem veículo'}
         </Text>
-
-        <Text variant="caption" tone="muted">
-          {`Código: ${revisao.codigo} · ${formatarDataHora(revisao.data_inclusao)}`}
+        <Text tone="body">
+          {[revisao.motorista_nome, `registrada em ${formatarDataHora(revisao.data_inclusao)}`]
+            .filter(Boolean)
+            .join(' · ')}
         </Text>
+        <Text variant="caption" tone="body">{`Código: ${revisao.codigo}`}</Text>
+      </Card>
 
-        <Input
-          label="Observação (opcional)"
-          placeholder="Ex.: hodômetro conferido com o motorista"
-          value={observacao}
-          onChangeText={setObservacao}
-          multiline
-          maxLength={1000}
-          editable={!salvando}
+      <Input
+        label="Observação (opcional)"
+        placeholder="Ex.: hodômetro conferido com o motorista"
+        value={observacao}
+        onChangeText={setObservacao}
+        multiline
+        maxLength={1000}
+        editable={!salvando}
+      />
+
+      <Column gap="sm">
+        <Button
+          variant="ghost"
+          label="Resolver revisão"
+          loading={salvando}
+          disabled={salvando}
+          onPress={() => onDecidir('Resolvida', observacao)}
         />
-
-        <View style={styles.acoes}>
-          <Button
-            variant="ghost"
-            label="Resolver"
-            loading={salvando}
-            disabled={salvando}
-            onPress={() => onDecidir('Resolvida', observacao)}
-          />
-          <Button
-            variant="ghost"
-            label="Descartar"
-            disabled={salvando}
-            onPress={() => onDecidir('Descartada', observacao)}
-          />
-        </View>
+        <Button
+          variant="danger"
+          label="Descartar revisão"
+          disabled={salvando}
+          onPress={() => onDecidir('Descartada', observacao)}
+        />
       </Column>
-    </Card>
+    </Column>
   );
 }
 
@@ -236,25 +235,9 @@ const styles = StyleSheet.create({
   lista: {
     flex: 1,
   },
+  // Espaço maior entre revisões do que dentro de uma: cada uma é um bloco de decisão separado.
   conteudo: {
-    gap: spacing.lg,
+    gap: spacing.xl,
     paddingBottom: spacing.xl,
-  },
-  centro: {
-    flex: 1,
-    paddingVertical: spacing.xl,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  linhaTopo: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    gap: spacing.sm,
-  },
-  acoes: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: spacing.sm,
   },
 });
