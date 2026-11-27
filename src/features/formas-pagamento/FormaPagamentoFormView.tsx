@@ -1,9 +1,8 @@
 import { useEffect, useState } from 'react';
 import { useRouter } from 'expo-router';
-import { ActivityIndicator } from 'react-native';
 import { z } from 'zod';
 
-import { Button, Column, EmptyState, Input, Screen, Snackbar, Text, colors } from '@/ui';
+import { Aviso, Button, Column, EmptyState, Input, ListItem, ListSection, Screen, Skeleton, Snackbar, Text } from '@/ui';
 
 import { atualizarFormaPagamento, buscarFormaPagamentoPorId, criarFormaPagamento } from './formasPagamentoRepository';
 import { formaPagamentoSchema } from './schema';
@@ -92,8 +91,11 @@ export function FormaPagamentoFormView({ formaPagamentoId }: FormaPagamentoFormV
 
   if (status === 'carregando') {
     return (
-      <Screen align="center" underHeader>
-        <ActivityIndicator size="small" color={colors.accent} accessibilityLabel="Carregando forma de pagamento" />
+      <Screen underHeader>
+        <Column gap="lg">
+          <Skeleton height="xxl" accessibilityLabel="Carregando forma de pagamento" />
+          <Skeleton height="xxl" />
+        </Column>
       </Screen>
     );
   }
@@ -114,25 +116,56 @@ export function FormaPagamentoFormView({ formaPagamentoId }: FormaPagamentoFormV
       scroll
       overlay={feedback && <Snackbar message={feedback.mensagem} tone={feedback.tone} duration={1200} onDismiss={handleFeedbackDismiss} />}
     >
-      <Column gap="md">
-        <Input 
-          label="Nome" 
-          placeholder="Ex.: Dinheiro" 
-          value={nome} 
-          onChangeText={setNome} 
-          error={erros.nome} 
+      <Column gap="lg">
+        {!modoEdicao && <Text tone="body">Cadastre como a empresa paga e recebe: Pix, boleto, cartão, TED.</Text>}
+
+        <Input
+          label="Nome"
+          icone="formasPagamento"
+          placeholder="Ex.: Dinheiro"
+          value={nome}
+          onChangeText={setNome}
+          error={erros.nome}
           editable={!isFixo}
         />
-        {isFixo && (
-          <Text variant="bodySm" tone="muted">
+
+        {isFixo ? (
+          <Aviso tom="info" icone="bloqueado" titulo="Forma de pagamento padrão">
             Formas de pagamento padrão não podem ter o nome alterado.
-          </Text>
+          </Aviso>
+        ) : (
+          // Prévia de como a forma vai aparecer no seletor de Movimentação e de Dívida, enquanto digita.
+          <Column gap="sm">
+            <Text variant="bodySm" tone="body">
+              Assim aparece nos seletores
+            </Text>
+            <ListSection>
+              <ListItem
+                icon="formasPagamento"
+                title={nome.trim() || 'Nome da forma'}
+                subtitle="Disponível para novos lançamentos"
+              />
+            </ListSection>
+          </Column>
         )}
+
+        {/* Um botão preenchido só por tela (DESIGN_CYAN §7). Forma padrão não tem o que salvar: só Voltar. */}
+        <Column gap="sm">
+          {!isFixo && (
+            <Button
+              label={modoEdicao ? 'Salvar alterações' : 'Criar forma de pagamento'}
+              onPress={handleSalvar}
+              loading={salvando}
+            />
+          )}
+          <Button
+            label={isFixo ? 'Voltar' : 'Cancelar'}
+            variant="ghost"
+            disabled={salvando}
+            onPress={() => router.back()}
+          />
+        </Column>
       </Column>
-
-      {!isFixo && <Button label="Salvar" onPress={handleSalvar} loading={salvando} />}
-      <Button label={isFixo ? 'Voltar' : 'Cancelar'} variant="ghost" onPress={() => router.back()} />
-
     </Screen>
   );
 }
