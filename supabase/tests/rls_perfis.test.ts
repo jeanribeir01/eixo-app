@@ -108,7 +108,7 @@ describe('EIX-32: RLS por perfil', () => {
       );
       await tx.query(
         `insert into manutencao (veiculo_id, descricao, data_manutencao, valor)
-         values ($1, 'Troca de pneus', current_date, 1200)`,
+         values ($1, 'Troca de pneus', (now() at time zone 'America/Sao_Paulo')::date, 1200)`,
         [veiculoId],
       );
       await tx.query(

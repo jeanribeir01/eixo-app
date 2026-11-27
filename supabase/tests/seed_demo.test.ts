@@ -134,7 +134,7 @@ describe('seed do ambiente de demonstração (EIX-53)', () => {
     await db.exec(`
       insert into veiculo (placa, marca, modelo, capacidade_carga) values ('ABC1D23', 'Volvo', 'FH 540', 30000);
       insert into manutencao (veiculo_id, descricao, data_manutencao, valor, movimentacao_id)
-      values ((select id from veiculo where placa = 'ABC1D23'), 'Troca de pneus', current_date, 3200.00,
+      values ((select id from veiculo where placa = 'ABC1D23'), 'Troca de pneus', (now() at time zone 'America/Sao_Paulo')::date, 3200.00,
               'de000000-0000-4000-8000-000000000009');
     `);
 

@@ -509,7 +509,7 @@ describe('migration manutencao_rpc', () => {
           comoUsuario(db, usuario, (tx) =>
             tx.query(
               `insert into manutencao (veiculo_id, descricao, data_manutencao, valor)
-               values ($1, 'Sem despesa', current_date, 100)`,
+               values ($1, 'Sem despesa', (now() at time zone 'America/Sao_Paulo')::date, 100)`,
               [veiculoId],
             ),
           ),
