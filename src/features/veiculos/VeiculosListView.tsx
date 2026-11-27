@@ -1,24 +1,24 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useFocusEffect, useRouter } from 'expo-router';
-import { ActivityIndicator, Alert } from 'react-native';
+import { Alert, StyleSheet, View } from 'react-native';
 
 import {
-  ChipFiltro,
-  LinhaDeFiltros,
-  List,
-  Badge,
   Button,
+  ChipFiltro,
   Column,
   EmptyState,
   Input,
+  LinhaDeFiltros,
+  List,
   ListItem,
   Screen,
   ScreenColumn,
+  Skeleton,
   Snackbar,
   Text,
-  colors,
+  spacing,
   useScreenColumn,
-  type BadgeTone,
+  type IconName,
 } from '@/ui';
 
 import { formatarPlaca } from './placa';
@@ -28,15 +28,28 @@ import { STATUS_VEICULO, rotuloStatusVeiculo, type StatusVeiculo, type Veiculo }
 type Status = 'carregando' | 'pronto' | 'erro';
 type Feedback = { mensagem: string; tone: 'success' | 'error' };
 
-// Chip por status (critério da US06). Vermelho/verde são reservados para entrada/saída
-// financeira (DESIGN_CYAN §1, CLAUDE.md §8), então "Em Manutenção" fica neutro; o rótulo
-// escrito acompanha sempre — cor nunca é o único indicador.
-const tomStatus: Record<StatusVeiculo, BadgeTone> = {
-  Disponivel: 'success',
-  EmViagem: 'neutral',
-  EmManutencao: 'neutral',
-  Inativo: 'neutral',
-};
+// Grupos na ordem em que o gestor olha a frota: o que está rodando, o que pode sair, o que está parado. O
+// status vem do cabeçalho do grupo (critério da US06: o status aparece em cada veículo, agora pelo grupo).
+const GRUPOS: { status: StatusVeiculo; rotulo: string; icone: IconName }[] = [
+  { status: 'EmViagem', rotulo: 'Em viagem', icone: 'viagens' },
+  { status: 'Disponivel', rotulo: 'Disponíveis', icone: 'frota' },
+  { status: 'EmManutencao', rotulo: 'Em manutenção', icone: 'manutencoes' },
+  { status: 'Inativo', rotulo: 'Inativos', icone: 'bloqueado' },
+];
+
+// Cabeçalhos e veículos numa FlatList só, como Viagens e Movimentações: a lista continua virtualizada.
+type Linha = { tipo: 'grupo'; id: string; rotulo: string } | { tipo: 'veiculo'; id: string; veiculo: Veiculo };
+
+function agruparPorStatus(veiculos: Veiculo[]): Linha[] {
+  const linhas: Linha[] = [];
+  for (const { status, rotulo } of GRUPOS) {
+    const doGrupo = veiculos.filter((veiculo) => veiculo.status === status);
+    if (doGrupo.length === 0) continue;
+    linhas.push({ tipo: 'grupo', id: `grupo-${status}`, rotulo: `${rotulo} · ${doGrupo.length}` });
+    for (const veiculo of doGrupo) linhas.push({ tipo: 'veiculo', id: veiculo.id, veiculo });
+  }
+  return linhas;
+}
 
 const TODOS = 'Todos';
 
@@ -159,6 +172,7 @@ export function VeiculosListView() {
   );
 
   const filtrando = buscaAplicada.trim() !== '' || filtroStatus !== TODOS;
+  const linhas = useMemo(() => agruparPorStatus(veiculos), [veiculos]);
 
   return (
     // Tela interna, aberta pelo hub de Frota (EIX-77): o título "Veículos" vem do header nativo.
@@ -170,8 +184,9 @@ export function VeiculosListView() {
       {/* Fora da lista, na coluna: no tablet fica alinhado com as linhas (EIX-94). */}
       <ScreenColumn>
         <Input
-          label="Buscar"
-          placeholder="Buscar por placa ou modelo"
+          label="Buscar veículo"
+          icone="buscar"
+          placeholder="Placa ou modelo"
           value={busca}
           onChangeText={setBusca}
           autoCapitalize="none"
@@ -188,8 +203,10 @@ export function VeiculosListView() {
         <Button label="Novo veículo" onPress={() => router.push('/frota/novo')} />
 
         {status === 'carregando' && (
-          <Column align="center">
-            <ActivityIndicator size="small" color={colors.accent} accessibilityLabel="Carregando veículos" />
+          <Column gap="sm">
+            <Skeleton height="xxl" accessibilityLabel="Carregando veículos" />
+            <Skeleton height="xxl" />
+            <Skeleton height="xxl" />
           </Column>
         )}
 
@@ -209,54 +226,87 @@ export function VeiculosListView() {
 
       {status === 'pronto' && veiculos.length > 0 && (
         <List
-          data={veiculos}
-          keyExtractor={(item) => item.id}
-          style={{ flex: 1 }}
+          data={linhas}
+          keyExtractor={(linha) => linha.id}
+          style={styles.lista}
           contentContainerStyle={coluna}
-          renderItem={({ item }) => (
-            <ListItem>
-              <Column gap="sm">
-                <Column gap="xs" align="start">
-                  {/* A máscara com hífen da placa antiga é só visual; o banco guarda sem hífen. */}
-                  <Text weight="medium">{formatarPlaca(item.placa)}</Text>
-                  <Text variant="bodySm" tone="body">
-                    {`${item.marca} ${item.modelo} · ${formatarCapacidade(item.capacidade_carga)}`}
-                  </Text>
-                  <Badge label={rotuloStatusVeiculo[item.status]} tone={tomStatus[item.status]} />
-                </Column>
-                <Column direction="row" gap="sm" wrap>
-                  <Button
-                    label="Editar"
-                    variant="ghost"
-                    onPress={() => router.push(`/frota/${item.id}/editar`)}
-                  />
-                  {item.status === 'Disponivel' && (
-                    <Button
-                      label="Inativar"
-                      accessibilityLabel={`Inativar ${formatarPlaca(item.placa)}`}
-                      variant="ghost"
-                      onPress={() => confirmarInativacao(item)}
-                      loading={alterandoId === item.id}
-                      disabled={alterandoId !== null}
-                    />
-                  )}
-                  {/* A placa no nome acessível: com várias linhas, o leitor de tela diria só "Reativar". */}
-                  {item.status === 'Inativo' && (
-                    <Button
-                      label="Reativar"
-                      accessibilityLabel={`Reativar ${formatarPlaca(item.placa)}`}
-                      variant="ghost"
-                      onPress={() => confirmarReativacao(item)}
-                      loading={alterandoId === item.id}
-                      disabled={alterandoId !== null}
-                    />
-                  )}
-                </Column>
-              </Column>
-            </ListItem>
-          )}
+          renderItem={({ item }) =>
+            item.tipo === 'grupo' ? (
+              <View style={styles.grupo}>
+                <Text weight="semibold" accessibilityRole="header">
+                  {item.rotulo}
+                </Text>
+              </View>
+            ) : (
+              <LinhaDoVeiculo
+                veiculo={item.veiculo}
+                alterando={alterandoId === item.veiculo.id}
+                bloqueado={alterandoId !== null}
+                onEditar={() => router.push(`/frota/${item.veiculo.id}/editar`)}
+                onInativar={() => confirmarInativacao(item.veiculo)}
+                onReativar={() => confirmarReativacao(item.veiculo)}
+              />
+            )
+          }
         />
       )}
     </Screen>
   );
 }
+
+type LinhaDoVeiculoProps = {
+  veiculo: Veiculo;
+  alterando: boolean;
+  bloqueado: boolean;
+  onEditar: () => void;
+  onInativar: () => void;
+  onReativar: () => void;
+};
+
+// Uma linha por veículo, no lugar dos botões "Editar"/"Inativar" grandes em cada um: tocar na linha edita, e
+// a ação de status fica no "Mais opções" à direita, com confirmação no Alert do sistema (como em
+// Movimentações). O nome acessível do botão diz a ação e a placa: "Inativar ABC-1234".
+function LinhaDoVeiculo({ veiculo, alterando, bloqueado, onEditar, onInativar, onReativar }: LinhaDoVeiculoProps) {
+  const placa = formatarPlaca(veiculo.placa);
+  const icone = GRUPOS.find((grupo) => grupo.status === veiculo.status)?.icone ?? 'frota';
+  // Só Disponível inativa (em viagem ou manutenção não, INA-08) e só Inativo reativa (REA-04).
+  const acao =
+    veiculo.status === 'Disponivel'
+      ? { label: `Inativar ${placa}`, onPress: onInativar }
+      : veiculo.status === 'Inativo'
+        ? { label: `Reativar ${placa}`, onPress: onReativar }
+        : null;
+
+  return (
+    <ListItem
+      icon={icone}
+      // A máscara com hífen da placa antiga é só visual; o banco guarda sem hífen.
+      title={placa}
+      subtitle={`${veiculo.marca} ${veiculo.modelo} · ${formatarCapacidade(veiculo.capacidade_carga)}`}
+      onPress={onEditar}
+      accessibilityLabel={`Editar ${placa}`}
+      control={
+        acao ? (
+          <Button
+            variant="icon"
+            icon="maisOpcoes"
+            label={acao.label}
+            onPress={acao.onPress}
+            loading={alterando}
+            disabled={bloqueado}
+          />
+        ) : undefined
+      }
+    />
+  );
+}
+
+const styles = StyleSheet.create({
+  lista: {
+    flex: 1,
+  },
+  grupo: {
+    paddingTop: spacing.lg,
+    paddingBottom: spacing.xs,
+  },
+});

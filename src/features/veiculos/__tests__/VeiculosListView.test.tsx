@@ -96,7 +96,9 @@ describe('VeiculosListView', () => {
     await confirmar();
     expect(inativarVeiculo).toHaveBeenCalledWith('1');
     expect(screen.getByText('Veículo inativado.')).toBeOnTheScreen();
-    expect(screen.getAllByText('Inativo')).toHaveLength(1);
+    // O veículo muda de grupo: sai de Disponíveis e entra em Inativos, agora com a opção de reativar.
+    expect(screen.getByText('Inativos · 1')).toBeOnTheScreen();
+    expect(screen.getByRole('button', { name: 'Reativar ABC-1234' })).toBeOnTheScreen();
     expect(screen.queryByRole('button', { name: 'Inativar ABC-1234' })).toBeNull();
   });
 
@@ -269,7 +271,7 @@ describe('VeiculosListView', () => {
     });
   });
 
-  it('mostra carregando e depois a lista com placa mascarada, capacidade e chip de status', async () => {
+  it('mostra carregando e depois a lista com placa mascarada, capacidade e o status no grupo', async () => {
     (listarVeiculos as jest.Mock).mockResolvedValue({ ok: true, data: veiculosMock });
     // Segura a primeira carga: o render async esperaria a resposta e pularia o "carregando".
     const liberarCarga = segurarPrimeiraCarga(jest.mocked(listarVeiculos));
@@ -281,10 +283,9 @@ describe('VeiculosListView', () => {
     expect(await screen.findByText('ABC-1234')).toBeOnTheScreen();
     expect(screen.getByText('DEF1G23')).toBeOnTheScreen();
     expect(screen.getByText('Volvo FH 540 · 12,5 t')).toBeOnTheScreen();
-    // O rótulo aparece só no selo do veículo: as opções do filtro ficam na folha, fechada.
-    expect(screen.getAllByText('Disponível')).toHaveLength(1);
-    expect(screen.getAllByText('Em Manutenção')).toHaveLength(1);
-    expect(screen.queryAllByText('Em Viagem')).toHaveLength(0);
+    // O status vem do grupo, na ordem em que o gestor olha a frota; grupo vazio não aparece.
+    const grupos = screen.getAllByRole('header').map((cabecalho) => cabecalho.props.children);
+    expect(grupos).toEqual(['Disponíveis · 1', 'Em manutenção · 1']);
   });
 
   // Desde a EIX-77 a lista abre por cima do hub de Frota, com o header nativo "Veículos" (NAV5-14).
@@ -339,18 +340,18 @@ describe('VeiculosListView', () => {
     await render(<VeiculosListView />);
     await screen.findByText('ABC-1234');
 
-    await fireEvent.changeText(screen.getByLabelText('Buscar'), 'fh');
+    await fireEvent.changeText(screen.getByLabelText('Buscar veículo'), 'fh');
 
     await waitFor(() => expect(listarVeiculos).toHaveBeenLastCalledWith({ busca: 'fh', status: undefined }));
   });
 
-  it('"Editar" abre a edição do veículo', async () => {
+  it('tocar na linha abre a edição do veículo', async () => {
     (listarVeiculos as jest.Mock).mockResolvedValue({ ok: true, data: veiculosMock });
 
     await render(<VeiculosListView />);
     await screen.findByText('ABC-1234');
 
-    await fireEvent.press(screen.getAllByRole('button', { name: 'Editar' })[0]);
+    await fireEvent.press(screen.getByRole('button', { name: 'Editar ABC-1234' }));
     expect(mockPush).toHaveBeenCalledWith('/frota/1/editar');
   });
 
@@ -385,7 +386,7 @@ describe('VeiculosListView', () => {
       expect(estiloDaLista()).toMatchObject({ maxWidth: 720, alignSelf: 'center' });
       const coluna = screen.getByTestId('screen-coluna');
       expect(StyleSheet.flatten(coluna.props.style)).toMatchObject({ maxWidth: 720, alignSelf: 'center' });
-      expect(within(coluna).getByLabelText('Buscar')).toBeOnTheScreen();
+      expect(within(coluna).getByLabelText('Buscar veículo')).toBeOnTheScreen();
       expect(within(coluna).getByRole('button', { name: 'Novo veículo' })).toBeOnTheScreen();
     });
   });
