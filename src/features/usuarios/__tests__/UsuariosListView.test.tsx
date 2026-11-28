@@ -250,7 +250,7 @@ describe('UsuariosListView — aguardando aprovação', () => {
 
     expect(screen.getByText('Aguardando aprovação · 1')).toBeOnTheScreen();
     expect(screen.getByText('Equipe · 2')).toBeOnTheScreen();
-    expect(screen.getByText(/Ao aprovar, começa como Operador\/Motorista/)).toBeOnTheScreen();
+    expect(screen.getByText(/Ao aprovar, começa como Motorista/)).toBeOnTheScreen();
     expect(screen.queryByRole('button', { name: 'Gerenciar Bruno Lima' })).not.toBeOnTheScreen();
   });
 

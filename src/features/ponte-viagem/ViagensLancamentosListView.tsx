@@ -48,6 +48,9 @@ export function ViagensLancamentosListView() {
       }
     >
       <FlatList
+        // No celular a lista fica dentro do respiro lateral da tela: a barra de rolagem do Android
+        // aparecia por cima das setas e dos valores das linhas.
+        showsVerticalScrollIndicator={false}
         data={tela.dados}
         keyExtractor={(viagem) => viagem.id}
         contentContainerStyle={coluna}

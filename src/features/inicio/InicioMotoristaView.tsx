@@ -6,10 +6,11 @@ import { useProfile } from '@/features/auth/profileStore';
 import { calcularKmRodado, formatarHodometro, formatarKm } from '@/features/viagens/calculo';
 import { IndicadorSincronizacao } from '@/features/viagens/IndicadorSincronizacao';
 import { useSyncStore } from '@/features/viagens/syncStore';
-import { rotuloStatusViagem, type ViagemDetalhada } from '@/features/viagens/types';
+import { rotuloStatusViagem, tomStatusViagem, type ViagemDetalhada } from '@/features/viagens/types';
 import { listarViagens } from '@/features/viagens/viagensRepository';
 import { dataLocalISO, horaLocal, isoParaDataBR } from '@/lib/datas';
 import { useDadosDaTela } from '@/lib/useDadosDaTela';
+import { trechoDaViagem } from '@/lib/trecho';
 import {
   Badge,
   Button,
@@ -22,6 +23,7 @@ import {
   Skeleton,
   Snackbar,
   Text,
+  TituloSecao,
   colors,
   spacing,
   useScreenColumn,
@@ -30,10 +32,6 @@ import {
 import { CabecalhoInicio } from './CabecalhoInicio';
 
 // "Campinas → Belo Horizonte": a cidade basta para o motorista; a UF fica para a lista do gestor.
-function trecho(viagem: ViagemDetalhada): string {
-  return viagem.rota ? `${viagem.rota.cidade_origem} → ${viagem.rota.cidade_destino}` : 'Rota não informada';
-}
-
 // Data e km de uma viagem do histórico: "22/11/2026 · 532 km". Sem km (cancelada), diz o status.
 function resumoDaViagem(viagem: ViagemDetalhada): string {
   const data = viagem.data_inicio ? isoParaDataBR(dataLocalISO(new Date(viagem.data_inicio))) : null;
@@ -51,7 +49,7 @@ function LinhaDoHistorico({ item }: ListRenderItemInfo<ViagemDetalhada>) {
   return (
     <ListItem
       icon="viagens"
-      title={`${item.veiculo?.placa ?? 'Veículo'} · ${trecho(item)}`}
+      title={`${item.veiculo?.placa ?? 'Veículo'} · ${trechoDaViagem(item)}`}
       subtitle={resumoDaViagem(item)}
       // Em revisão: o gestor ainda vai decidir sobre algo que o motorista registrou sem internet.
       trailing={item.em_revisao ? <Badge label="Em revisão" tone="warning" /> : undefined}
@@ -91,13 +89,13 @@ function ViagemAtual({ viagem, onAbrir, onFinalizar }: ViagemAtualProps) {
         <Text variant="bodySm" tone="body">
           Sua viagem
         </Text>
-        <Badge label={rotuloStatusViagem[viagem.status]} tone="neutral" />
+        <Badge label={rotuloStatusViagem[viagem.status]} tone={tomStatusViagem[viagem.status]} />
       </View>
       <Column gap="xs">
         <Text variant="display" weight="semibold">
           {placa}
         </Text>
-        <Text tone="body">{trecho(viagem)}</Text>
+        <Text tone="body">{trechoDaViagem(viagem)}</Text>
       </Column>
       <View style={styles.divisor} />
       <Text variant="bodySm" tone="body">
@@ -198,6 +196,9 @@ export function InicioMotoristaView() {
 
       {tela.status === 'pronto' && (
         <FlatList
+          // No celular a lista fica dentro do respiro lateral da tela: a barra de rolagem do Android
+          // aparecia por cima das setas e dos valores das linhas.
+          showsVerticalScrollIndicator={false}
           data={historico}
           keyExtractor={chaveDaViagem}
           style={styles.lista}
@@ -214,9 +215,7 @@ export function InicioMotoristaView() {
             <Column gap="lg">
               <IndicadorSincronizacao />
               <ViagemAtual viagem={atual} onAbrir={abrir} onFinalizar={finalizar} />
-              <Text variant="title" weight="semibold" accessibilityRole="header">
-                Suas viagens
-              </Text>
+              <TituloSecao titulo="Suas viagens" />
             </Column>
           }
           ListHeaderComponentStyle={styles.cabecalhoLista}

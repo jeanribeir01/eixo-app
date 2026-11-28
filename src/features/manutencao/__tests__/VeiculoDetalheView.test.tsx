@@ -4,7 +4,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { segurarPrimeiraCarga } from '@/testing/eventos';
 import { porTipo, todosPorTipo } from '@/testing/componentes';
-import { ListItem, spacing } from '@/ui';
+import { colors, ListItem, spacing } from '@/ui';
 
 import { VeiculoDetalheView } from '../VeiculoDetalheView';
 import { buscarVeiculoComHistorico } from '../manutencaoRepository';
@@ -77,7 +77,7 @@ beforeEach(() => {
 
 describe('VeiculoDetalheView', () => {
   // MAN-34, MAN-37
-  it('carrega o veículo do id e mostra placa, "Marca Modelo", status e a seção do histórico', async () => {
+  it('carrega o veículo do id e mostra placa, "Marca Modelo", status e os grupos do histórico', async () => {
     mockBuscar.mockResolvedValue({ ok: true, data: volvo });
     // Segura a primeira carga: o render async esperaria a resposta e pularia o "carregando".
     const liberarCarga = segurarPrimeiraCarga(mockBuscar);
@@ -88,8 +88,10 @@ describe('VeiculoDetalheView', () => {
     expect(await screen.findByText('ABC-1234')).toBeOnTheScreen();
     expect(mockBuscar).toHaveBeenCalledWith('v1');
     expect(screen.getByText('Volvo FH 540')).toBeOnTheScreen();
-    expect(screen.getByText('Em Manutenção')).toBeOnTheScreen();
-    expect(screen.getByText('Histórico de manutenções')).toBeOnTheScreen();
+    // Parado na oficina pede atenção: o selo é laranja (warning), não o azul de informação.
+    expect(screen.getByText('Em manutenção')).toHaveStyle({ color: colors.warning });
+    // Os grupos são os títulos de seção; não há um "Histórico" a mais em cima deles.
+    expect(screen.getAllByRole('header').map((titulo) => titulo.props.children)).toEqual(['Manutenções em aberto · 1', 'Manutenções concluídas · 1']);
     // Tela interna: o header nativo protege o topo.
     expect(porTipo(SafeAreaView).props.edges).not.toContain('top');
   });
@@ -108,8 +110,8 @@ describe('VeiculoDetalheView', () => {
       '01/09/2026 · Concluída em 02/09',
     ]);
     // Em aberto antes das concluídas, cada grupo com a contagem.
-    expect(screen.getByText('Em aberto · 1')).toBeOnTheScreen();
-    expect(screen.getByText('Concluídas · 1')).toBeOnTheScreen();
+    expect(screen.getByText('Manutenções em aberto · 1')).toBeOnTheScreen();
+    expect(screen.getByText('Manutenções concluídas · 1')).toBeOnTheScreen();
     expect(screen.getByText('2 manutenções registradas · 1 em aberto')).toBeOnTheScreen();
     expect(screen.getByText('R$ 1,13')).toBeOnTheScreen();
     expect(screen.getByText('R$ 2.500,00')).toBeOnTheScreen();
@@ -216,6 +218,6 @@ describe('VeiculoDetalheView — tablet (EIX-94)', () => {
     expect(estiloDoConteudo().paddingHorizontal).toBeUndefined();
     expect(estiloDaLista()).toMatchObject({ maxWidth: 720, alignSelf: 'center' });
     // O cartão do veículo é o cabeçalho da lista: fica na mesma coluna do histórico.
-    expect(screen.getByText('Histórico de manutenções')).toBeOnTheScreen();
+    expect(screen.getByText('Volvo FH 540')).toBeOnTheScreen();
   });
 });

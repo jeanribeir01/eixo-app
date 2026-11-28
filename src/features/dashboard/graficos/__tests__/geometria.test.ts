@@ -97,10 +97,10 @@ describe('caminhoDoSetor (GRAF-13)', () => {
 });
 
 describe('cores (GRAF-19)', () => {
-  it('as fatias usam só os tokens, e "Outras" é a mais apagada', () => {
+  it('as fatias usam só os tokens, sem o preto, e "Outras" é a mais apagada', () => {
     expect([0, 1, 2, 3, 4].map((indice) => corDaFatia(indice, false))).toEqual([
+      colors.accentStrong,
       colors.accent,
-      colors.inverted,
       colors.textBody,
       colors.accentWash,
       colors.borderMuted,

@@ -17,7 +17,7 @@ import {
   ScreenColumn,
   Skeleton,
   Snackbar,
-  Text,
+  TituloSecao,
   colors,
   spacing,
   useScreenColumn,
@@ -76,9 +76,7 @@ export function FormasPagamentoListView() {
     ({ item }: ListRenderItemInfo<Linha>) =>
       item.tipo === 'grupo' ? (
         <View style={styles.grupo}>
-          <Text weight="semibold" accessibilityRole="header">
-            {item.rotulo}
-          </Text>
+          <TituloSecao titulo={item.rotulo} />
         </View>
       ) : (
         <FormaPagamentoLinha forma={item.forma} onAbrir={abrir} />
@@ -131,6 +129,9 @@ export function FormasPagamentoListView() {
 
       {tela.status === 'pronto' && (
         <List
+          // No celular a lista fica dentro do respiro lateral da tela: a barra de rolagem do Android
+          // aparecia por cima das setas e dos valores das linhas.
+          showsVerticalScrollIndicator={false}
           data={linhas}
           keyExtractor={chaveDaLinha}
           style={styles.lista}

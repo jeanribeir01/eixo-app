@@ -17,11 +17,13 @@ export const DIAMETRO_MAX_ROSCA = spacing.xxl * 5;
 /** Espessura do anel da rosca. */
 export const ESPESSURA_ANEL = spacing.lg;
 
-// Neutros stone + um cyan (DESIGN_CYAN §1). Verde e vermelho ficam só no texto do valor; cada cor
-// sempre aparece com rótulo ao lado, porque cor nunca é o único indicador.
-export const COR_ENTRADAS = colors.accent;
-export const COR_SAIDAS = colors.inverted;
-const CORES_DAS_FATIAS = [colors.accent, colors.inverted, colors.textBody, colors.accentWash, colors.borderMuted];
+// Entrada verde e saída vermelha, como no resto do app (valores, cartão do mês na aba Caixa). Antes a
+// saída era preta e destoava. Cada cor aparece com rótulo ao lado: cor nunca é o único indicador.
+export const COR_ENTRADAS = colors.success;
+export const COR_SAIDAS = colors.danger;
+// A rosca é toda de despesas: vermelho em tudo não separa nada. As fatias vão do azul da marca aos
+// neutros stone, da maior para a menor, sem o preto (que lia como "saída" no gráfico de barras).
+const CORES_DAS_FATIAS = [colors.accentStrong, colors.accent, colors.textBody, colors.accentWash, colors.borderMuted];
 const COR_OUTRAS = colors.textMuted;
 
 /** Cor da fatia na posição `indice` (0 = maior). "Outras" tem cor própria, sempre a mais apagada. */

@@ -1,8 +1,8 @@
 import { Children, createContext, Fragment, type ReactNode } from 'react';
 import { StyleSheet, View } from 'react-native';
 
-import { Text } from './Text';
 import { colors, radius, spacing } from './tokens';
+import { TituloSecao } from './TituloSecao';
 
 // Avisa a linha que ela está dentro de um grupo: aí quem desenha a separação é o grupo, e a linha
 // ganha o respiro lateral que a tela daria.
@@ -21,11 +21,8 @@ export function ListSection({ label, children }: ListSectionProps) {
 
   return (
     <View style={styles.wrapper}>
-      {!!label && (
-        <Text variant="caption" tone="body" weight="medium">
-          {label}
-        </Text>
-      )}
+      {/* O rótulo é um título de seção como os outros: "Pede atenção" e "Concluídas · 93" têm o mesmo estilo. */}
+      {!!label && <TituloSecao titulo={label} />}
       <View testID="bloco-secao" style={styles.bloco}>
         <ListSectionContext.Provider value={true}>
           {linhas.map((linha, indice) => (

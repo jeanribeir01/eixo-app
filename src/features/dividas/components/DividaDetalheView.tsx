@@ -17,6 +17,7 @@ import {
   Skeleton,
   Snackbar,
   Text,
+  TituloSecao,
   colors,
   spacing,
   useScreenColumn,
@@ -165,9 +166,7 @@ export function DividaDetalheView({ id }: { id: string }) {
     if (item.tipo === 'grupo') {
       return (
         <View style={styles.grupo}>
-          <Text weight="semibold" accessibilityRole="header">
-            {item.rotulo}
-          </Text>
+          <TituloSecao titulo={item.rotulo} />
         </View>
       );
     }
@@ -199,6 +198,9 @@ export function DividaDetalheView({ id }: { id: string }) {
       }
     >
       <FlatList
+        // No celular a lista fica dentro do respiro lateral da tela: a barra de rolagem do Android
+        // aparecia por cima das setas e dos valores das linhas.
+        showsVerticalScrollIndicator={false}
         data={linhas}
         keyExtractor={(linha) => linha.id}
         contentContainerStyle={coluna}

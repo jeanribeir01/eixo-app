@@ -41,7 +41,8 @@ export function LinhaRanking({ posicao, empatado, titulo, subtitulo, rotuloMetri
         </View>
 
         <View style={styles.textos}>
-          <Text numberOfLines={1}>{titulo}</Text>
+          {/* Duas linhas para o trecho: "Porto Alegre → Curitiba" não pode virar "Porto A…". */}
+          <Text numberOfLines={2}>{titulo}</Text>
           <Text variant="bodySm" tone="body" numberOfLines={1}>
             {empatado ? `Empate · ${subtitulo}` : subtitulo}
           </Text>

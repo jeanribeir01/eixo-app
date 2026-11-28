@@ -30,11 +30,13 @@ import { buscarInicioFinanceiro, type ResumoInicioFinanceiro } from './inicioFin
 import { pedeAtencao } from './pedeAtencao';
 import { SecaoPedeAtencao } from './SecaoPedeAtencao';
 
-// "Hoje · Pix · Combustível": o dia em palavras quando é hoje, senão a data curta.
+// "Hoje · Combustível · Pix": o dia em palavras quando é hoje, senão a data curta. A categoria vem antes
+// da forma de pagamento: o subtítulo tem uma linha só, e quando não cabe, o corte cai no que importa menos
+// ("21/11 · Combustível · Cartão Corp…", não "21/11 · Cartão Corporativo · Combu…").
 function subtituloMovimentacao(movimentacao: Movimentacao, hoje: string): string {
   const data = dataDeReferencia(movimentacao);
   const dia = data === hoje ? 'Hoje' : isoParaDataBR(data).slice(0, 5);
-  return [dia, movimentacao.formaPagamento.nome, movimentacao.categoria.titulo].join(' · ');
+  return [dia, movimentacao.categoria.titulo, movimentacao.formaPagamento.nome].join(' · ');
 }
 
 function CartaoSaldo({ resumo, onPress }: { resumo: ResumoInicioFinanceiro; onPress: () => void }) {

@@ -32,7 +32,8 @@ export function GrupoRecolhivel({ rotulo, quantidade, resumo, children }: GrupoR
         android_ripple={{ color: colors.border }}
         style={styles.cabecalho}
       >
-        <Text weight="semibold">{`${rotulo} · ${quantidade}`}</Text>
+        {/* Mesmo estilo do TituloSecao (os grupos acima dele na lista); aqui é botão, não cabeçalho. */}
+        <Text variant="title" weight="semibold">{`${rotulo} · ${quantidade}`}</Text>
         {/* Ocupa o meio mesmo vazio: a seta fica sempre na borda direita, onde o chevron das linhas fica. */}
         <View style={styles.resumo}>
           {!aberto && !!resumo && (

@@ -68,7 +68,7 @@ describe('GraficoRosca', () => {
     // A cor que a tela passa ao Path (o elemento nativo recebe a cor já convertida em número).
     const cores = todosPorTipo(Path).map((fatia) => fatia.props.fill);
 
-    expect(cores).toEqual([colors.accent, colors.inverted, colors.textMuted]);
+    expect(cores).toEqual([colors.accentStrong, colors.accent, colors.textMuted]);
   });
 
   it('uma categoria só (100%) desenha o anel inteiro', async () => {

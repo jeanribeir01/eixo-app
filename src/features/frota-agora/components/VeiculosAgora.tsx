@@ -1,6 +1,7 @@
 import { useRouter } from 'expo-router';
 
 import { formatarPlaca } from '@/features/veiculos/placa';
+import { trecho } from '@/lib/trecho';
 import { ListItem, ListSection, type IconName } from '@/ui';
 
 import type { SituacaoAgora, VeiculoAgora } from '../frotaAgora';
@@ -17,8 +18,7 @@ export function descreverSituacao({ veiculo, situacao }: VeiculoAgora): string {
     case 'estrada': {
       const { viagem } = situacao;
       if (!viagem) return 'Na estrada';
-      const trecho = viagem.rota ? `${viagem.rota.cidade_origem} → ${viagem.rota.cidade_destino}` : null;
-      return trecho ? `Na estrada · ${trecho}` : 'Na estrada';
+      return viagem.rota ? `Na estrada · ${trecho(viagem.rota)}` : 'Na estrada';
     }
     case 'oficina': {
       const quando = situacao.dias === null ? 'Na oficina' : situacao.dias === 0 ? 'Na oficina desde hoje' : `Na oficina ${haQuantosDias(situacao.dias)}`;

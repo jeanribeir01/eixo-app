@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { StyleSheet, View } from 'react-native';
 
-import { Aviso, Badge, Button, Column, ListItem, ListSection, Tabs, Text, spacing } from '@/ui';
+import { Aviso, Badge, Button, Column, ListItem, ListSection, Tabs, Text, TituloSecao, spacing } from '@/ui';
 
 import { formatarMes, formatarMoedaComSinal, tomDoValor } from '../formatadores';
 import { primeiroMesNegativo, separarJanela } from '../projecao';
@@ -86,9 +86,7 @@ export function ProjecaoCaixa({ mesReferencia, meses, anos }: ProjecaoCaixaProps
   const [aba, setAba] = useState<Aba>('meses');
 
   const cabecalho = (
-    <Text variant="subheading" weight="semibold" accessibilityRole="header">
-      Projeção de caixa
-    </Text>
+    <TituloSecao titulo="Projeção de caixa" />
   );
 
   if (meses.length === 0) {

@@ -215,7 +215,7 @@ describe('VeiculosListView', () => {
     await screen.findByText('ABC-1234');
 
     (listarVeiculos as jest.Mock).mockResolvedValue({ ok: true, data: [] });
-    await escolherStatus('Em Viagem');
+    await escolherStatus('Em viagem');
 
     await waitFor(() => expect(listarVeiculos).toHaveBeenLastCalledWith({ busca: undefined, status: 'EmViagem' }));
     expect(await screen.findByText('Nenhum veículo encontrado')).toBeOnTheScreen();

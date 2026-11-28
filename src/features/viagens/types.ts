@@ -1,5 +1,6 @@
 import type { PerfilNome, StatusUsuario } from '@/features/auth/permissions';
 import type { Enums, Tables } from '@/types/database';
+import type { BadgeTone } from '@/ui';
 
 export type StatusViagem = Enums<'status_viagem'>;
 export type StatusVeiculo = Enums<'status_veiculo'>;
@@ -9,11 +10,20 @@ export type Uf = Enums<'uf'>;
 export type Viagem = Tables<'viagem'>;
 
 // O banco guarda "Finalizada", mas o critério de aceite da US08 exibe "Concluída"
-// (mesmo padrão de `rotuloStatusVeiculo`). Um mapa só, para lista e fechamento não divergirem.
+// (mesmo padrão de `rotuloStatusVeiculo`). Um mapa só, para lista, detalhe e fechamento não divergirem.
+// "Na estrada" é a palavra do grupo da lista e do detalhe; "Em andamento" saiu de todas as telas.
 export const rotuloStatusViagem: Record<StatusViagem, string> = {
-  EmAndamento: 'Em andamento',
+  EmAndamento: 'Na estrada',
   Finalizada: 'Concluída',
   Cancelada: 'Cancelada',
+};
+
+// Tom do selo de cada status (mesma regra de `tomStatusVeiculo`): na estrada é informação, concluída é
+// o estado bom e cancelada não tem ênfase.
+export const tomStatusViagem: Record<StatusViagem, BadgeTone> = {
+  EmAndamento: 'neutral',
+  Finalizada: 'success',
+  Cancelada: 'muted',
 };
 
 // Linha local: além das colunas do Postgres, o SQLite guarda `em_revisao` (estado só do aparelho).

@@ -76,8 +76,8 @@ describe('ViagensLancamentosListView', () => {
   it('lista as viagens vinculáveis com placa, rota, status e início', async () => {
     await render(<ViagensLancamentosListView />);
 
-    expect(await screen.findByText('ABC1D23 · São Paulo/SP → Curitiba/PR')).toBeOnTheScreen();
-    expect(screen.getByText('XYZ9K88 · Campinas/SP → Belo Horizonte/MG')).toBeOnTheScreen();
+    expect(await screen.findByText('ABC1D23 · São Paulo → Curitiba')).toBeOnTheScreen();
+    expect(screen.getByText('XYZ9K88 · Campinas → Belo Horizonte')).toBeOnTheScreen();
     expect(screen.getByText('Concluída · início 02/11/2026')).toBeOnTheScreen();
   });
 
@@ -85,7 +85,7 @@ describe('ViagensLancamentosListView', () => {
   it('tocar numa viagem abre o detalhe dela', async () => {
     await render(<ViagensLancamentosListView />);
 
-    await fireEvent.press(await screen.findByRole('button', { name: 'XYZ9K88 · Campinas/SP → Belo Horizonte/MG' }));
+    await fireEvent.press(await screen.findByRole('button', { name: 'XYZ9K88 · Campinas → Belo Horizonte' }));
 
     expect(mockPush).toHaveBeenCalledWith('/viagens/v-2/lancamentos');
   });
@@ -113,7 +113,7 @@ describe('ViagensLancamentosListView', () => {
     expect(await screen.findByText('Não foi possível carregar as viagens. Tente novamente.')).toBeOnTheScreen();
     await act(async () => await fireEvent.press(screen.getByRole('button', { name: 'Tentar novamente' })));
 
-    expect(await screen.findByText('ABC1D23 · São Paulo/SP → Curitiba/PR')).toBeOnTheScreen();
+    expect(await screen.findByText('ABC1D23 · São Paulo → Curitiba')).toBeOnTheScreen();
   });
 });
 
@@ -130,7 +130,7 @@ describe('ViagensLancamentosListView — tablet (EIX-94)', () => {
 
   it('412: nada muda, o respiro lateral continua no Screen e a lista não ganha coluna', async () => {
     await render(<ViagensLancamentosListView />);
-    await screen.findByText('ABC1D23 · São Paulo/SP → Curitiba/PR');
+    await screen.findByText('ABC1D23 · São Paulo → Curitiba');
 
     expect(estiloDoConteudo()).toMatchObject({ paddingHorizontal: spacing.base });
     expect(estiloDaLista()?.maxWidth).toBeUndefined();
@@ -139,7 +139,7 @@ describe('ViagensLancamentosListView — tablet (EIX-94)', () => {
   it('800: a lista rola na largura toda e o conteúdo fica na coluna de 720', async () => {
     mockLargura(800);
     await render(<ViagensLancamentosListView />);
-    await screen.findByText('ABC1D23 · São Paulo/SP → Curitiba/PR');
+    await screen.findByText('ABC1D23 · São Paulo → Curitiba');
 
     expect(estiloDoConteudo().maxWidth).toBeUndefined();
     expect(estiloDoConteudo().paddingHorizontal).toBeUndefined();

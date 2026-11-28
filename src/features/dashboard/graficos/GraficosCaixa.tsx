@@ -2,7 +2,7 @@ import { useCallback, useEffect, useState } from 'react';
 
 import { hojeISO } from '@/lib/datas';
 import { useDadosDaTela, type DadosDaTela } from '@/lib/useDadosDaTela';
-import { Card, Column, EmptyState, Skeleton, Tabs, Text } from '@/ui';
+import { Card, Column, EmptyState, Skeleton, Tabs, TituloSecao } from '@/ui';
 
 import type { Periodo } from '../periodo';
 import { GraficoBarras } from './GraficoBarras';
@@ -109,7 +109,7 @@ export function GraficosCaixa({ periodo, onErroAoAtualizar }: GraficosCaixaProps
   return (
     <Column gap="lg">
       <Column gap="md">
-        <Text variant="subheading">Entradas e saídas</Text>
+        <TituloSecao titulo="Entradas e saídas" />
         <Tabs
           options={OPCOES_HORIZONTE}
           value={opcao}
@@ -121,7 +121,7 @@ export function GraficosCaixa({ periodo, onErroAoAtualizar }: GraficosCaixaProps
       </Column>
 
       <Column gap="md">
-        <Text variant="subheading">Despesas por categoria</Text>
+        <TituloSecao titulo="Despesas por categoria" />
         <Card>{conteudoRosca()}</Card>
       </Column>
     </Column>

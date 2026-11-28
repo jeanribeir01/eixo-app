@@ -124,6 +124,9 @@ export function CategoriasListView() {
 
       {tela.status === 'pronto' && (
         <List
+          // No celular a lista fica dentro do respiro lateral da tela: a barra de rolagem do Android
+          // aparecia por cima das setas e dos valores das linhas.
+          showsVerticalScrollIndicator={false}
           data={ativas}
           keyExtractor={chaveDaCategoria}
           style={styles.lista}

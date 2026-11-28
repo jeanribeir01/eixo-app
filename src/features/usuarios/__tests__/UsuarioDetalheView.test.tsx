@@ -81,10 +81,10 @@ describe('UsuarioDetalheView', () => {
     expect(screen.getByText('bruno@empresa.com')).toBeOnTheScreen();
     expect(screen.getByText('Aguardando aprovação')).toBeOnTheScreen();
     // Perfis como opções de rádio, cada uma dizendo o que libera; o atual vem marcado.
-    for (const rotulo of ['Administrador', 'Gestor de Frota', 'Financeiro', 'Operador/Motorista']) {
+    for (const rotulo of ['Administrador', 'Gestor de Frota', 'Financeiro', 'Motorista']) {
       expect(screen.getByRole('radio', { name: new RegExp(`^${rotulo}\\. `) })).toBeOnTheScreen();
     }
-    expect(screen.getByRole('radio', { name: /^Operador\/Motorista\. / })).toBeChecked();
+    expect(screen.getByRole('radio', { name: /^Motorista\. / })).toBeChecked();
     expect(screen.getByRole('radio', { name: /^Financeiro\. Caixa, dívidas/ })).not.toBeChecked();
   });
 

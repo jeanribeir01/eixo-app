@@ -94,8 +94,8 @@ describe('ViagemLancamentosView', () => {
     await renderDetalhe();
 
     expect(mockBuscarViagem).toHaveBeenCalledWith('v-1');
-    expect(screen.getByText('São Paulo/SP → Curitiba/PR')).toBeOnTheScreen();
-    expect(screen.getByText('Em andamento · início 09/11/2026')).toBeOnTheScreen();
+    expect(screen.getByText('São Paulo → Curitiba')).toBeOnTheScreen();
+    expect(screen.getByText('Na estrada · início 09/11/2026')).toBeOnTheScreen();
   });
 
   // DETALHE-03

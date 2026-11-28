@@ -2,23 +2,24 @@ import { useCallback, useState } from 'react';
 import { useLocalSearchParams } from 'expo-router';
 import { ActivityIndicator, StyleSheet, View } from 'react-native';
 
-import { rotuloPerfil, rotuloStatus, type StatusUsuario } from '@/features/auth/permissions';
+import { rotuloPerfil, rotuloStatus, tomPerfil, type StatusUsuario } from '@/features/auth/permissions';
 import { useProfile } from '@/features/auth/profileStore';
 import { useCargaUnica } from '@/lib/useCargaUnica';
 import {
   Avatar,
   Badge,
+  type BadgeTone,
   Button,
   Column,
   EmptyState,
+  type IconName,
   OpcaoSelecionavel,
   Screen,
   Snackbar,
   Text,
+  TituloSecao,
   colors,
   spacing,
-  type BadgeTone,
-  type IconName,
 } from '@/ui';
 
 import type { Perfil, Usuario } from './types';
@@ -150,7 +151,7 @@ export function UsuarioDetalheView() {
         </Text>
         <Text tone="body">{usuario.email}</Text>
         <Column direction="row" gap="sm" align="center">
-          <Badge label={rotuloPerfil[usuario.perfil.nome]} tone="muted" />
+          <Badge label={rotuloPerfil[usuario.perfil.nome]} tone={tomPerfil[usuario.perfil.nome]} />
           <Badge label={rotuloStatus[usuario.status]} tone={TOM_DO_STATUS[usuario.status]} />
         </Column>
       </Column>
@@ -159,9 +160,7 @@ export function UsuarioDetalheView() {
         <Text tone="body">Você não pode alterar o próprio perfil nem bloquear a si mesmo.</Text>
       ) : (
         <Column gap="sm">
-          <Text variant="title" weight="semibold" accessibilityRole="header">
-            Perfil de acesso
-          </Text>
+          <TituloSecao titulo="Perfil de acesso" />
           <View accessibilityRole="radiogroup" style={styles.opcoes}>
             {perfis.map((perfil) => (
               <OpcaoSelecionavel

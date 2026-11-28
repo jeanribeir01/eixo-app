@@ -46,6 +46,7 @@ Fonte única de verdade visual do app. Todo agente de IA e todo dev lê este arq
 - Neutros stone + **um** azul da marca, em quatro intensidades (`accentSoft` → `accent` → `accentStrong` → `accentText`). Não introduza outra cor de acento.
 - **Um único elemento preenchido de azul (`accentStrong`) por tela** — a ação primária. Numa lista, essa ação é o FAB: com FAB na tela, nenhum `Button` primário aparece junto. Seleção (aba, chip, aba da tab bar) usa `accentSoft`, que não compete com ela.
 - Sem gradiente, glassmorphism ou decoração com cor.
+- **Gráficos:** entrada em `success` e saída em `danger`, como nos valores e no cartão do mês. Fatias de uma mesma natureza (a rosca de despesas) vão do azul ao stone (`accentStrong`, `accent`, `textBody`, `accentWash`, `borderMuted`; "Outras" em `textMuted`). Nunca preto num gráfico: ele lia como "saída".
 - **Exceção semântica (financeiro e estado):** verde, vermelho e laranja aparecem só no **valor**, no ícone e no badge. Nunca no cartão, borda ou fundo inteiro. Nunca cor como único indicador: acompanhe sempre de sinal (`+` / `−`) ou rótulo — cor sozinha falha para daltônicos e sob sol forte na cabine.
 
 ### Contraste (WCAG 2.1 AA)
@@ -81,6 +82,7 @@ Fonte: **Inter** para o app todo (carregada com `expo-font`, ver `src/ui/fonts.t
 - **Títulos de tela em peso 400.** Ênfase vem de tamanho e do highlight, não de negrito.
 - Peso 500 (`weight="medium"`) para rótulo de botão, título de cartão e ênfase curta.
 - Peso 600 (`weight="semibold"`) **só** para número em destaque (`numeric`: saldo, KPI) e título de seção (`title`: "Pede atenção"). Nunca 700.
+- **Dois títulos, e só dois.** O da tela (`heading` 400, quando a tela não tem header nativo) e o de seção (`TituloSecao`: `title` 600). Grupo de lista ("Concluídas · 93"), bloco do Início ("Pede atenção"), seção de detalhe ("Histórico de manutenções"), de gráfico ("Entradas e saídas") e de formulário ("Origem") usam o mesmo. Título dentro de cartão (a placa, a descrição da dívida) não é título de seção.
 - `caption` subiu de 11 para 12 na 2.0: 11 era pequeno demais na cabine.
 - Sempre use o primitivo `Text` (`variant`, `tone`, `weight`). Nunca `fontSize`/`fontFamily` soltos.
 
@@ -216,14 +218,26 @@ Todo botão tem `accessibilityRole="button"` e `accessibilityLabel`. Toda ação
 - O `accessibilityLabel` padrão é o título. Passe outro quando o título sozinho não basta ("Gerenciar Bruno Lima").
 - Controle à direita que responde sozinho (o botão "Mais opções" de Movimentações) vai em `control`, **não** em `trailing`. Ele fica fora da área de toque da linha: tocar na linha abre o item, tocar no controle muda só ele, e o leitor de tela alcança os dois separados. Linha com `control` não mostra o chevron.
 - Conteúdo que não cabe na linha padrão vai em `children` (modo livre).
+- O subtítulo tem uma linha: ponha o que importa primeiro, para o corte cair no fim ("21/11 · Combustível · Cartão Corp…").
+- **Trecho de rota:** `trecho()` de `src/lib/trecho.ts`, "Curitiba → São Paulo", sem UF. "Curitiba/PR" quebrava a linha depois da barra no Android. A UF (`ufsDoTrecho`: "PR → SP") vai no subtítulo, só onde separa duas rotas de mesmo nome (lista de Rotas, escolha da rota ao abrir a viagem).
+
+### Título de seção (`TituloSecao`)
+- `title` 17 peso 600 em `textPrimary`, com `accessibilityRole="header"`: o leitor de tela pula de seção em seção.
+- `quantidade` opcional vira "Concluídas · 93". Nas listas, o título vai numa linha da `FlatList` com `paddingTop` `spacing.lg` e `paddingBottom` `spacing.xs`.
+- Ninguém monta título de seção com `Text` solto.
 
 ### Grupo de linhas (`ListSection`)
-- Rótulo opcional em `caption` peso 500 `textBody` acima do grupo, com gap `spacing.sm`.
+- Rótulo opcional acima do grupo, desenhado pelo `TituloSecao`, com gap `spacing.sm`.
 - Bloco `surface` com borda 1px `border` e `radius.card`. Separadores hairline **só entre** as linhas, e as linhas ganham padding lateral `spacing.base`.
 - Use para menus e ajustes (hub Financeiro, Conta). Agrupa por borda e fundo: **não** faça um cartão por linha.
 
+### Selo (`Badge`)
+- Status de uma entidade tem **um** mapa de rótulo e **um** de tom, ao lado do tipo dela, e toda tela usa os dois: `rotuloStatusVeiculo`/`tomStatusVeiculo`, `rotuloStatusViagem`/`tomStatusViagem`, `rotuloPerfil`/`tomPerfil`. Nunca escreva o tom do selo na tela.
+- Tom: `warning` para o que pede atenção (em manutenção, aguardando aprovação, em revisão), `neutral` para informação (na estrada, Administrador), `success` para o estado bom (disponível, concluída, ativo), `muted` para o que não tem ênfase (desativado, cancelada, os outros perfis), `danger` para o ruim (bloqueado).
+- Rótulo com maiúscula só na primeira palavra ("Em manutenção", "Na estrada"). Uma palavra por status no app inteiro: a viagem em andamento é "Na estrada" na lista, no detalhe, no filtro e no Início.
+
 ### Grupo recolhido (`GrupoRecolhivel`)
-- Cabeçalho tocável no mesmo peso dos grupos da lista ("Desativadas · 2"), com o resumo dos nomes ao lado em `bodySm` `textBody` e a seta `avancar`/`recolher` na borda direita. `minHeight` `touchTarget`.
+- Cabeçalho tocável no mesmo estilo dos títulos de seção (`title` 600, "Desativadas · 2"), com o resumo dos nomes ao lado em `bodySm` `textBody` e a seta `avancar`/`recolher` na borda direita. `minHeight` `touchTarget`.
 - Começa recolhido. Aberto, mostra as linhas e anuncia `expanded` ao leitor de tela.
 - Uso: o fim das listas de cadastro, para o que foi desativado.
 

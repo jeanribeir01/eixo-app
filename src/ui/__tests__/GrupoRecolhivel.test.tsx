@@ -2,7 +2,7 @@ import { fireEvent, render, screen } from '@testing-library/react-native';
 
 import { GrupoRecolhivel } from '../GrupoRecolhivel';
 import { ListItem } from '../ListItem';
-import { touchTarget } from '../tokens';
+import { fontFamily, touchTarget, typography } from '../tokens';
 
 // O grupo "Desativadas · N" do fim das listas de cadastro (Categorias, Formas de pagamento, Rotas e
 // Veículos): começa recolhido, com os nomes ao lado, e abre para mostrar as linhas.
@@ -24,6 +24,12 @@ describe('GrupoRecolhivel', () => {
     expect(screen.getByText('Alimento, Lavagem')).toBeOnTheScreen();
     expect(screen.queryByRole('button', { name: 'Alimento' })).not.toBeOnTheScreen();
     expect(screen.getByTestId('icone-avancar', { includeHiddenElements: true })).toBeTruthy();
+  });
+
+  it('o cabeçalho tem o estilo dos títulos de seção da lista (title, peso 600)', async () => {
+    await renderGrupo();
+
+    expect(screen.getByText('Desativadas · 2')).toHaveStyle({ fontSize: typography.title.fontSize, fontFamily: fontFamily.semibold });
   });
 
   it('tocar abre: as linhas aparecem, o resumo some e a seta aponta para baixo; tocar de novo recolhe', async () => {

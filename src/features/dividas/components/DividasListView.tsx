@@ -19,6 +19,7 @@ import {
   Skeleton,
   Snackbar,
   Text,
+  TituloSecao,
   colors,
   spacing,
   useScreenColumn,
@@ -161,15 +162,16 @@ export function DividasListView() {
 
       {status === 'pronto' && dividas.length > 0 && (
         <List
+          // No celular a lista fica dentro do respiro lateral da tela: a barra de rolagem do Android
+          // aparecia por cima das setas e dos valores das linhas.
+          showsVerticalScrollIndicator={false}
           data={dividas}
           keyExtractor={(divida) => divida.id}
           contentContainerStyle={[coluna, styles.espacoDoFab]}
           ListHeaderComponent={
             <Column gap="lg">
               <ResumoDasDividas dividas={dividas} />
-              <Text weight="semibold" accessibilityRole="header">
-                {`Ativas · ${dividas.length}`}
-              </Text>
+              <TituloSecao titulo="Ativas" quantidade={dividas.length} />
             </Column>
           }
           ListHeaderComponentStyle={styles.cabecalho}

@@ -1,4 +1,5 @@
 import type { Enums, Tables } from '@/types/database';
+import type { BadgeTone } from '@/ui';
 
 // Derivados dos tipos gerados por `supabase gen types typescript` — nunca digite o tipo de
 // tabela na mão (AGENTS.md §2.2, CLAUDE.md §12).
@@ -19,12 +20,22 @@ export type FiltroVeiculos = {
 };
 
 // O enum do banco não tem acento nem espaço ('EmManutencao'); isso existe só no que o usuário lê.
+// Só a primeira palavra com maiúscula, como todo rótulo do app ("Em viagem", não "Em Viagem").
 export const rotuloStatusVeiculo: Record<StatusVeiculo, string> = {
   Disponivel: 'Disponível',
-  EmViagem: 'Em Viagem',
-  EmManutencao: 'Em Manutenção',
+  EmViagem: 'Em viagem',
+  EmManutencao: 'Em manutenção',
   // Na tela é 'Desativado', a mesma palavra de Categorias, Formas de pagamento e Rotas; no banco segue Inativo.
   Inativo: 'Desativado',
+};
+
+// Tom do selo de cada status, num lugar só (DESIGN-CYAN §1): parado na oficina pede atenção (warning),
+// na estrada é informação (neutral), disponível é o estado bom (success) e desativado não tem ênfase.
+export const tomStatusVeiculo: Record<StatusVeiculo, BadgeTone> = {
+  Disponivel: 'success',
+  EmViagem: 'neutral',
+  EmManutencao: 'warning',
+  Inativo: 'muted',
 };
 
 // O formulário tem opções próprias: desativar é o botão do fim do Editar, não uma opção do seletor.

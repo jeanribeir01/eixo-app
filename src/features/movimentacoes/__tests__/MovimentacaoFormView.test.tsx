@@ -105,8 +105,8 @@ const VIAGEM_BH = viagem({
   uf_destino: 'MG',
   status: 'Finalizada',
 });
-const ROTULO_SP = 'ABC1D23 · São Paulo/SP → Curitiba/PR';
-const ROTULO_BH = 'XYZ9K88 · Campinas/SP → Belo Horizonte/MG';
+const ROTULO_SP = 'ABC1D23 · São Paulo → Curitiba';
+const ROTULO_BH = 'XYZ9K88 · Campinas → Belo Horizonte';
 
 const opcoes: OpcoesMovimentacao = {
   categorias: [
@@ -527,7 +527,7 @@ describe('MovimentacaoFormView — vincular à viagem (US09)', () => {
 
     expect(screen.getByRole('button', { name: ROTULO_SP })).toBeOnTheScreen();
     expect(screen.getByRole('button', { name: ROTULO_BH })).toBeOnTheScreen();
-    expect(screen.getByText('Em andamento · início 09/11/2026')).toBeOnTheScreen();
+    expect(screen.getByText('Na estrada · início 09/11/2026')).toBeOnTheScreen();
   });
 
   // PONTE-03
@@ -599,7 +599,7 @@ describe('MovimentacaoFormView — vincular à viagem (US09)', () => {
 
     expect(mockBuscarViagem).toHaveBeenCalledWith('v-velha');
     expect(screen.getByRole('button', { name: 'Viagem (opcional)' })).toHaveTextContent(
-      'OLD1A11 · São Paulo/SP → Curitiba/PR',
+      'OLD1A11 · São Paulo → Curitiba',
     );
   });
 
