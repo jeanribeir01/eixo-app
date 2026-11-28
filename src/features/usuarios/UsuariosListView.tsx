@@ -2,7 +2,7 @@ import { memo, useCallback, useMemo, useState } from 'react';
 import { useRouter } from 'expo-router';
 import { RefreshControl, StyleSheet, View, type ListRenderItemInfo } from 'react-native';
 
-import { rotuloCurtoPerfil, rotuloPerfil, rotuloStatus, type StatusUsuario } from '@/features/auth/permissions';
+import { rotuloCurtoPerfil, rotuloPerfil, rotuloStatus, tomPerfil, type StatusUsuario } from '@/features/auth/permissions';
 import { useProfile } from '@/features/auth/profileStore';
 import { useDadosDaTela } from '@/lib/useDadosDaTela';
 import {
@@ -22,6 +22,7 @@ import {
   Skeleton,
   Snackbar,
   Text,
+  TituloSecao,
   colors,
   spacing,
   useScreenColumn,
@@ -33,10 +34,10 @@ import { alterarStatusUsuario, listarUsuarios } from './usuariosRepository';
 type Feedback = { mensagem: string; tone: 'success' | 'error' };
 
 // Um Badge só por linha, com o nome curto do perfil, para caber no celular pequeno. Bloqueado tem prioridade: é o que o Admin
-// precisa ver. Admin em destaque (neutral); os outros perfis, sem ênfase.
+// precisa ver. O tom é o mesmo do detalhe e da Conta (tomPerfil).
 function badgeDaEquipe(usuario: Usuario): { label: string; tone: BadgeTone } {
   if (usuario.status === 'Bloqueado') return { label: rotuloStatus.Bloqueado, tone: 'danger' };
-  return { label: rotuloCurtoPerfil[usuario.perfil.nome], tone: usuario.perfil.nome === 'Admin' ? 'neutral' : 'muted' };
+  return { label: rotuloCurtoPerfil[usuario.perfil.nome], tone: tomPerfil[usuario.perfil.nome] };
 }
 
 type LinhaProps = {
@@ -209,6 +210,9 @@ export function UsuariosListView() {
 
       {tela.status === 'pronto' && (
         <List
+          // No celular a lista fica dentro do respiro lateral da tela: a barra de rolagem do Android
+          // aparecia por cima das setas e dos valores das linhas.
+          showsVerticalScrollIndicator={false}
           data={equipe}
           keyExtractor={chaveDoUsuario}
           style={styles.lista}
@@ -225,9 +229,7 @@ export function UsuariosListView() {
             <Column gap="md">
               {pedidos.length > 0 && (
                 <Column gap="sm">
-                  <Text variant="title" weight="semibold" accessibilityRole="header">
-                    {`Aguardando aprovação · ${pedidos.length}`}
-                  </Text>
+                  <TituloSecao titulo="Aguardando aprovação" quantidade={pedidos.length} />
                   {pedidos.map((usuario) => (
                     <PedidoDeAcesso
                       key={usuario.id}
@@ -240,9 +242,7 @@ export function UsuariosListView() {
                 </Column>
               )}
               {equipe.length > 0 && (
-                <Text variant="title" weight="semibold" accessibilityRole="header">
-                  {`Equipe · ${equipe.length}`}
-                </Text>
+                <TituloSecao titulo="Equipe" quantidade={equipe.length} />
               )}
             </Column>
           }

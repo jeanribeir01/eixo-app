@@ -1,4 +1,5 @@
 import type { Enums } from '@/types/database';
+import type { BadgeTone } from '@/ui';
 
 // Regras de acesso do app num lugar só (US16). As US17 (navegação) e US18 consomem estas
 // funções via `useProfile()` em vez de comparar nome de perfil em cada tela.
@@ -15,7 +16,7 @@ export const rotuloPerfil: Record<PerfilNome, string> = {
   Admin: 'Administrador',
   'Gestor de Frota': 'Gestor de Frota',
   Financeiro: 'Financeiro',
-  Motorista: 'Operador/Motorista',
+  Motorista: 'Motorista',
 };
 
 // Rótulo curto para selo em linha de lista, onde o nome completo espreme o e-mail.
@@ -24,6 +25,14 @@ export const rotuloCurtoPerfil: Record<PerfilNome, string> = {
   'Gestor de Frota': 'Gestor',
   Financeiro: 'Financeiro',
   Motorista: 'Motorista',
+};
+
+// Tom do selo de perfil, o mesmo na lista, no detalhe e na Conta: o Admin em destaque, os outros sem ênfase.
+export const tomPerfil: Record<PerfilNome, BadgeTone> = {
+  Admin: 'neutral',
+  'Gestor de Frota': 'muted',
+  Financeiro: 'muted',
+  Motorista: 'muted',
 };
 
 export const rotuloStatus: Record<StatusUsuario, string> = {

@@ -3,19 +3,23 @@ import { StyleSheet } from 'react-native';
 
 import { ListItem } from '../ListItem';
 import { ListSection } from '../ListSection';
-import { colors, radius, spacing, touchTarget, typography } from '../tokens';
+import { colors, fontFamily, radius, spacing, touchTarget, typography } from '../tokens';
 
 // Grupo de linhas (UIP-02): rótulo opcional + bloco surface com borda, radius de cartão e hairline
 // entre as linhas — o padrão de menu e de tela de ajustes, sem virar "um cartão por linha".
 describe('ListSection (UIP-02)', () => {
-  it('mostra o rótulo do grupo em caption textBody', async () => {
+  it('o rótulo do grupo é um título de seção (title, peso 600, cabeçalho para o leitor de tela)', async () => {
     await render(
       <ListSection label="Administração">
         <ListItem title="Usuários" />
       </ListSection>,
     );
 
-    expect(screen.getByText('Administração')).toHaveStyle({ color: colors.textBody, fontSize: typography.caption.fontSize });
+    expect(screen.getByRole('header', { name: 'Administração' })).toHaveStyle({
+      color: colors.textPrimary,
+      fontSize: typography.title.fontSize,
+      fontFamily: fontFamily.semibold,
+    });
   });
 
   it('bloco em surface com borda hairline e radius de cartão', async () => {

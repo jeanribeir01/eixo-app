@@ -21,7 +21,7 @@ import {
   ScreenColumn,
   Skeleton,
   Snackbar,
-  Text,
+  TituloSecao,
   spacing,
   useScreenColumn,
 } from '@/ui';
@@ -158,6 +158,9 @@ export function VeiculosListView() {
 
       {status === 'pronto' && veiculos.length > 0 && (
         <List
+          // No celular a lista fica dentro do respiro lateral da tela: a barra de rolagem do Android
+          // aparecia por cima das setas e dos valores das linhas.
+          showsVerticalScrollIndicator={false}
           data={linhas}
           keyExtractor={(linha) => linha.id}
           style={styles.lista}
@@ -165,9 +168,7 @@ export function VeiculosListView() {
           renderItem={({ item }) =>
             item.tipo === 'grupo' ? (
               <View style={styles.grupo}>
-                <Text weight="semibold" accessibilityRole="header">
-                  {item.rotulo}
-                </Text>
+                <TituloSecao titulo={item.rotulo} />
               </View>
             ) : (
               <LinhaDoVeiculo veiculo={item.veiculo} onAbrir={() => abrir(item.veiculo.id)} />

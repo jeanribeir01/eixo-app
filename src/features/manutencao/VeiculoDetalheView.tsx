@@ -3,7 +3,7 @@ import { useRouter } from 'expo-router';
 import { FlatList, RefreshControl, StyleSheet, View, type ListRenderItemInfo } from 'react-native';
 
 import { formatarPlaca } from '@/features/veiculos/placa';
-import { rotuloStatusVeiculo } from '@/features/veiculos/types';
+import { rotuloStatusVeiculo, tomStatusVeiculo } from '@/features/veiculos/types';
 import { dataLocalISO, isoParaDataBR } from '@/lib/datas';
 import { formatarMoeda } from '@/lib/money';
 import { useDadosDaTela } from '@/lib/useDadosDaTela';
@@ -19,6 +19,7 @@ import {
   Skeleton,
   Snackbar,
   Text,
+  TituloSecao,
   colors,
   spacing,
   useScreenColumn,
@@ -36,11 +37,11 @@ function agruparManutencoes(manutencoes: ManutencaoItem[]): Linha[] {
   const concluidas = manutencoes.filter((manutencao) => manutencao.data_conclusao !== null);
   const linhas: Linha[] = [];
   if (abertas.length > 0) {
-    linhas.push({ tipo: 'grupo', id: 'grupo-abertas', rotulo: `Em aberto · ${abertas.length}` });
+    linhas.push({ tipo: 'grupo', id: 'grupo-abertas', rotulo: `Manutenções em aberto · ${abertas.length}` });
     for (const manutencao of abertas) linhas.push({ tipo: 'manutencao', id: manutencao.id, manutencao });
   }
   if (concluidas.length > 0) {
-    linhas.push({ tipo: 'grupo', id: 'grupo-concluidas', rotulo: `Concluídas · ${concluidas.length}` });
+    linhas.push({ tipo: 'grupo', id: 'grupo-concluidas', rotulo: `Manutenções concluídas · ${concluidas.length}` });
     for (const manutencao of concluidas) linhas.push({ tipo: 'manutencao', id: manutencao.id, manutencao });
   }
   return linhas;
@@ -59,9 +60,7 @@ function renderLinha({ item }: ListRenderItemInfo<Linha>) {
   if (item.tipo === 'grupo') {
     return (
       <View style={styles.grupo}>
-        <Text weight="semibold" accessibilityRole="header">
-          {item.rotulo}
-        </Text>
+        <TituloSecao titulo={item.rotulo} />
       </View>
     );
   }
@@ -144,6 +143,9 @@ export function VeiculoDetalheView({ veiculoId }: VeiculoDetalheViewProps) {
       }
     >
       <FlatList
+        // No celular a lista fica dentro do respiro lateral da tela: a barra de rolagem do Android
+        // aparecia por cima das setas e dos valores das linhas.
+        showsVerticalScrollIndicator={false}
         data={linhas}
         keyExtractor={(linha) => linha.id}
         contentContainerStyle={coluna}
@@ -165,7 +167,7 @@ export function VeiculoDetalheView({ veiculoId }: VeiculoDetalheViewProps) {
                 <Text variant="bodySm" tone="body">
                   Veículo
                 </Text>
-                <Badge label={rotuloStatusVeiculo[veiculo.status]} tone="neutral" />
+                <Badge label={rotuloStatusVeiculo[veiculo.status]} tone={tomStatusVeiculo[veiculo.status]} />
               </View>
               <Column gap="xs">
                 <Text variant="display" weight="semibold">
@@ -178,9 +180,8 @@ export function VeiculoDetalheView({ veiculoId }: VeiculoDetalheViewProps) {
                 {resumo}
               </Text>
             </Card>
-            <Text variant="subheading" weight="semibold" accessibilityRole="header">
-              Histórico de manutenções
-            </Text>
+            {/* Sem um "Histórico de manutenções" acima dos grupos: seriam dois títulos de seção seguidos.
+                Os próprios grupos dizem o que são. */}
           </Column>
         }
         ListEmptyComponent={<EmptyState icon="manutencoes" title="Nenhuma manutenção registrada para este veículo." />}

@@ -7,6 +7,7 @@ import { canSeeFinanceiro, canSeeFrota } from '@/features/auth/permissions';
 import { formatarPlaca } from '@/features/veiculos/placa';
 import { dataLocalISO, horaLocal, isoParaDataBR } from '@/lib/datas';
 import { useDadosDaTela } from '@/lib/useDadosDaTela';
+import { trechoDaViagem } from '@/lib/trecho';
 import {
   Aviso,
   Badge,
@@ -25,15 +26,8 @@ import {
 } from '@/ui';
 
 import { calcularKmRodado, distanciaUltrapassaEstimativa, formatarHodometro, formatarKm } from './calculo';
-import type { StatusViagem, ViagemDetalhada } from './types';
+import { rotuloStatusViagem, tomStatusViagem, type ViagemDetalhada } from './types';
 import { buscarViagemPorId } from './viagensRepository';
-
-// As mesmas palavras dos grupos da lista de Viagens e da aba Frota: "Na estrada", não "Em andamento".
-const ROTULO_DO_STATUS: Record<StatusViagem, string> = {
-  EmAndamento: 'Na estrada',
-  Finalizada: 'Concluída',
-  Cancelada: 'Cancelada',
-};
 
 // "27/11 às 10:00" no fuso do aparelho: o banco guarda o instante em UTC.
 function quando(iso: string): string {
@@ -137,8 +131,7 @@ export function ViagemDetalheView({ viagemId }: ViagemDetalheViewProps) {
 
   const km = calcularKmRodado(viagem);
   const acimaDaRota = distanciaUltrapassaEstimativa(km, viagem.rota?.distancia_estimada_km);
-  // Sem a UF, como na lista: "Belo Horizonte/MG" quebrava a linha no meio, depois da barra.
-  const trecho = viagem.rota ? `${viagem.rota.cidade_origem} → ${viagem.rota.cidade_destino}` : 'Rota não informada';
+  const trecho = trechoDaViagem(viagem);
   const placa = viagem.veiculo ? formatarPlaca(viagem.veiculo.placa) : null;
   const quem = [viagem.motorista?.nome, placa].filter(Boolean).join(' · ');
   // A linha do veículo só abre para quem vê a Frota; os lançamentos, para quem vê o Caixa (Admin). O
@@ -181,7 +174,7 @@ export function ViagemDetalheView({ viagemId }: ViagemDetalheViewProps) {
             <Text variant="bodySm" tone="body">
               Viagem
             </Text>
-            <Badge label={ROTULO_DO_STATUS[viagem.status]} tone="neutral" />
+            <Badge label={rotuloStatusViagem[viagem.status]} tone={tomStatusViagem[viagem.status]} />
           </View>
           <Column gap="xs">
             <Text variant="subheading" weight="semibold">

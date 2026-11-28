@@ -4,6 +4,7 @@ import { ActivityIndicator } from 'react-native';
 
 import { formatarMoeda } from '@/lib/money';
 import { useDadosDaTela } from '@/lib/useDadosDaTela';
+import { trecho } from '@/lib/trecho';
 import {
   AvisoSemInternet,
   Button,
@@ -159,7 +160,7 @@ export function ViagemLancamentosView({ viagemId }: ViagemLancamentosViewProps) 
         <Card variant="feature">
           <Column gap="xs">
             <Text variant="subheading">{viagem.placa}</Text>
-            <Text tone="body">{`${viagem.cidade_origem}/${viagem.uf_origem} → ${viagem.cidade_destino}/${viagem.uf_destino}`}</Text>
+            <Text tone="body">{trecho(viagem)}</Text>
             <Text variant="bodySm" weight="medium">
               {descricaoViagem(viagem)}
             </Text>

@@ -4,6 +4,7 @@ import { StyleSheet, View } from 'react-native';
 import { z } from 'zod';
 
 import { horaLocal } from '@/lib/datas';
+import { trecho } from '@/lib/trecho';
 import {
   Aviso,
   Button,
@@ -292,7 +293,7 @@ function ResumoDaViagem({ viagem }: { viagem: ViagemDetalhada }) {
         </Text>
         {viagem.rota && (
           <Text tone="body">
-            {`${viagem.rota.cidade_origem}/${viagem.rota.uf_origem} → ${viagem.rota.cidade_destino}/${viagem.rota.uf_destino}`}
+            {trecho(viagem.rota)}
           </Text>
         )}
       </Column>

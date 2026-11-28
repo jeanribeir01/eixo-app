@@ -6,6 +6,7 @@ import { useProfile } from '@/features/auth/profileStore';
 import type { ViagemDetalhada } from '@/features/viagens/types';
 import { dataLocalISO, hojeISO, isoParaDataBR } from '@/lib/datas';
 import { useDadosDaTela } from '@/lib/useDadosDaTela';
+import { trechoDaViagem } from '@/lib/trecho';
 import {
   AvisoSemInternet,
   Card,
@@ -35,10 +36,6 @@ export function saida(viagem: ViagemDetalhada, hoje: string): string {
   return dia === hoje ? `saiu às ${hora}` : `saiu em ${isoParaDataBR(dia).slice(0, 5)} às ${hora}`;
 }
 
-function trecho(viagem: ViagemDetalhada): string {
-  return viagem.rota ? `${viagem.rota.cidade_origem} → ${viagem.rota.cidade_destino}` : 'Rota não informada';
-}
-
 function CartaoNaEstrada({ viagens, hoje, onPress }: { viagens: ViagemDetalhada[]; hoje: string; onPress: () => void }) {
   const titulo = viagens.length === 0 ? 'Nenhum veículo na estrada' : `${viagens.length} na estrada`;
   return (
@@ -52,7 +49,7 @@ function CartaoNaEstrada({ viagens, hoje, onPress }: { viagens: ViagemDetalhada[
       {viagens.map((viagem) => (
         <Column key={viagem.id} gap="xs">
           <Text weight="medium" numberOfLines={1}>
-            {`${viagem.veiculo?.placa ?? 'Veículo'} · ${trecho(viagem)}`}
+            {`${viagem.veiculo?.placa ?? 'Veículo'} · ${trechoDaViagem(viagem)}`}
           </Text>
           <Text variant="bodySm" tone="body" numberOfLines={1}>
             {[viagem.motorista?.nome, saida(viagem, hoje)].filter(Boolean).join(' · ')}

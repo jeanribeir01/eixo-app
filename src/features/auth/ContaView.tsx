@@ -10,7 +10,7 @@ import { Avatar, Badge, Button, Card, Column, ListItem, ListSection, Screen, Tex
 
 import { signOut } from './googleAuth';
 import { profileFromSession } from './perfilGoogle';
-import { rotuloPerfil } from './permissions';
+import { rotuloPerfil, tomPerfil } from './permissions';
 import { useProfile } from './profileStore';
 import { useSessionStore } from './sessionStore';
 
@@ -57,7 +57,7 @@ export function ContaView() {
               {profile.email}
             </Text>
             {/* Enquanto o perfil carrega, sem Badge: melhor nada do que um perfil errado. */}
-            {usuario && <Badge label={rotuloPerfil[usuario.perfil]} />}
+            {usuario && <Badge label={rotuloPerfil[usuario.perfil]} tone={tomPerfil[usuario.perfil]} />}
           </View>
         </View>
       </Card>

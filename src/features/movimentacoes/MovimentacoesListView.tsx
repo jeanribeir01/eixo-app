@@ -24,6 +24,7 @@ import {
   Skeleton,
   Snackbar,
   Text,
+  TituloSecao,
   colors,
   spacing,
   useScreenColumn,
@@ -224,9 +225,7 @@ export function MovimentacoesListView() {
     ({ item }: ListRenderItemInfo<Linha>) =>
       item.tipo === 'dia' ? (
         <View style={styles.dia}>
-          <Text weight="semibold" accessibilityRole="header">
-            {item.rotulo}
-          </Text>
+          <TituloSecao titulo={item.rotulo} />
         </View>
       ) : (
         <MovimentacaoLinha movimentacao={item.movimentacao} onAbrir={abrir} onMaisOpcoes={confirmarExclusao} />
@@ -321,6 +320,9 @@ export function MovimentacoesListView() {
 
       {tela.status === 'pronto' && (
         <List
+          // No celular a lista fica dentro do respiro lateral da tela: a barra de rolagem do Android
+          // aparecia por cima das setas e dos valores das linhas.
+          showsVerticalScrollIndicator={false}
           // Filtro novo é uma lista nova: remontar evita que a transição das linhas deixe vãos onde
           // estavam as que saíram (visto no emulador ao trocar para "Saídas").
           key={`${filtroTipo}-${filtroStatus}`}

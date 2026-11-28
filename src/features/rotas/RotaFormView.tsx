@@ -4,7 +4,20 @@ import { StyleSheet, View } from 'react-native';
 import { z } from 'zod';
 
 import { useCargaUnica } from '@/lib/useCargaUnica';
-import { Aviso, Button, Column, EmptyState, Input, Screen, Select, Skeleton, Snackbar, Text, spacing } from '@/ui';
+import {
+  Aviso,
+  Button,
+  Column,
+  EmptyState,
+  Input,
+  Screen,
+  Select,
+  Skeleton,
+  Snackbar,
+  Text,
+  TituloSecao,
+  spacing,
+} from '@/ui';
 import { Constants } from '@/types/database';
 
 import { atualizarRota, buscarRotaPorId, criarRota, definirAtivaRota } from './rotasRepository';
@@ -220,9 +233,7 @@ export function RotaFormView({ rotaId }: RotaFormViewProps) {
 
         {/* Origem e destino em grupos, UF antes da cidade (protótipo): quem cadastra pensa "de onde, para onde". */}
         <Column gap="md">
-          <Text weight="semibold" accessibilityRole="header">
-            Origem
-          </Text>
+          <TituloSecao titulo="Origem" />
           <Select
             label="UF de origem"
             value={ufOrigem}
@@ -242,9 +253,7 @@ export function RotaFormView({ rotaId }: RotaFormViewProps) {
         </Column>
 
         <Column gap="md">
-          <Text weight="semibold" accessibilityRole="header">
-            Destino
-          </Text>
+          <TituloSecao titulo="Destino" />
           <Select
             label="UF de destino"
             value={ufDestino}

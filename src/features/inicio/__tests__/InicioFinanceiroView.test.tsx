@@ -54,7 +54,8 @@ describe('InicioFinanceiroView', () => {
   it('saudação com o primeiro nome como título da tela', async () => {
     await renderPronto();
 
-    expect(screen.getByRole('header')).toHaveTextContent(/, Jean$/);
+    // O primeiro cabeçalho da tela; os outros são os títulos de seção ("Pede atenção").
+    expect(screen.getAllByRole('header')[0]).toHaveTextContent(/, Jean$/);
   });
 
   it('mostra a foto do Google, a mesma da aba Conta', async () => {
@@ -153,6 +154,12 @@ describe('InicioFinanceiroView', () => {
 
     await fireEvent.press(screen.getByRole('button', { name: 'Ver todas as movimentações' }));
     expect(mockPush).toHaveBeenCalledWith('/movimentacoes');
+  });
+
+  it('subtítulo da movimentação: data, categoria e só então a forma de pagamento (o corte cai no fim)', async () => {
+    await renderPronto();
+
+    expect(screen.getByText(/^\d{2}\/\d{2} · Combustível · Cartão$/)).toBeOnTheScreen();
   });
 
   it('mês sem movimentação: a seção explica e aponta para o Lançar', async () => {

@@ -3,6 +3,7 @@ import { useRouter } from 'expo-router';
 import { RefreshControl, StyleSheet, View } from 'react-native';
 
 import { useDadosDaTela } from '@/lib/useDadosDaTela';
+import { trecho, ufsDoTrecho } from '@/lib/trecho';
 import {
   AvisoSemInternet,
   CampoBusca,
@@ -17,7 +18,7 @@ import {
   ScreenColumn,
   Skeleton,
   Snackbar,
-  Text,
+  TituloSecao,
   colors,
   spacing,
   useScreenColumn,
@@ -25,18 +26,15 @@ import {
 
 import { chaveCidade } from './cidade';
 import { listarRotas } from './rotasRepository';
-import type { Rota, RotaComViagens } from './types';
-
-function trecho(rota: Rota): string {
-  return `${rota.cidade_origem}/${rota.uf_origem} → ${rota.cidade_destino}/${rota.uf_destino}`;
-}
+import type { RotaComViagens } from './types';
 
 function subtitulo(rota: RotaComViagens): string {
   // Mesmo formato da capacidade em Veículos: vírgula decimal e até 2 casas ("408,5 km").
   const distancia = `${rota.distancia_estimada_km.toLocaleString('pt-BR', { maximumFractionDigits: 2 })} km`;
   const viagens =
     rota.viagens_finalizadas === 1 ? '1 viagem finalizada' : `${rota.viagens_finalizadas} viagens finalizadas`;
-  return `${distancia} · ${viagens}`;
+  // A UF fica aqui, e não no título: separa duas rotas de mesmo nome sem quebrar a linha do trecho.
+  return `${ufsDoTrecho(rota)} · ${distancia} · ${viagens}`;
 }
 
 // Cabeçalho e rotas numa FlatList só, como nas outras listas do redesign.
@@ -116,6 +114,9 @@ export function RotasListView() {
 
       {tela.status === 'pronto' && (
         <List
+          // No celular a lista fica dentro do respiro lateral da tela: a barra de rolagem do Android
+          // aparecia por cima das setas e dos valores das linhas.
+          showsVerticalScrollIndicator={false}
           data={linhas}
           keyExtractor={(linha) => linha.id}
           style={styles.lista}
@@ -140,9 +141,7 @@ export function RotasListView() {
           renderItem={({ item }) =>
             item.tipo === 'grupo' ? (
               <View style={styles.grupo}>
-                <Text weight="semibold" accessibilityRole="header">
-                  {item.rotulo}
-                </Text>
+                <TituloSecao titulo={item.rotulo} />
               </View>
             ) : (
               <LinhaDaRota rota={item.rota} onAbrir={abrir} />

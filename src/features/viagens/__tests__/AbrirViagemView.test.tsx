@@ -124,7 +124,7 @@ async function preencherFormulario(
   }
 
   await fireEvent.press(screen.getByRole('button', { name: 'Rota' }));
-  await fireEvent.press(await screen.findByRole('button', { name: 'São Paulo/SP → Curitiba/PR' }));
+  await fireEvent.press(await screen.findByRole('button', { name: 'São Paulo → Curitiba' }));
 
   await fireEvent.changeText(screen.getByLabelText('Hodômetro inicial (km)'), hodometro);
 }

@@ -337,7 +337,7 @@ describe('FecharViagemView', () => {
 
     expect(await screen.findByText('Viagem em andamento')).toBeOnTheScreen();
     expect(screen.getByText('BRA2E19')).toBeOnTheScreen();
-    expect(screen.getByText('São Paulo/SP → Campinas/SP')).toBeOnTheScreen();
+    expect(screen.getByText('São Paulo → Campinas')).toBeOnTheScreen();
     expect(screen.getByText(/^João Silva · saída às \d{2}:\d{2}$/)).toBeOnTheScreen();
   });
 

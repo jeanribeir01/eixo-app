@@ -5,6 +5,7 @@ import { FlatList, RefreshControl, StyleSheet, View, type ListRenderItemInfo } f
 import { useProfile } from '@/features/auth/profileStore';
 import { dataLocalISO, horaLocal, isoParaDataBR } from '@/lib/datas';
 import { useDadosDaTela } from '@/lib/useDadosDaTela';
+import { trechoDaViagem } from '@/lib/trecho';
 import {
   Aviso,
   Badge,
@@ -19,11 +20,12 @@ import {
   ScreenColumn,
   Skeleton,
   Snackbar,
+  type TabOption,
   Text,
+  TituloSecao,
   colors,
   spacing,
   useScreenColumn,
-  type TabOption,
 } from '@/ui';
 
 import { calcularKmRodado, distanciaUltrapassaEstimativa, formatarKm } from './calculo';
@@ -37,7 +39,7 @@ type FiltroStatus = StatusViagem | 'Todos';
 
 const opcoesFiltro: TabOption[] = [
   { label: 'Todas', value: 'Todos' },
-  { label: 'Em andamento', value: 'EmAndamento' },
+  { label: 'Na estrada', value: 'EmAndamento' },
   { label: 'Concluídas', value: 'Finalizada' },
   { label: 'Canceladas', value: 'Cancelada' },
 ];
@@ -175,6 +177,9 @@ export function ViagensListView({ underHeader = false }: ViagensListViewProps) {
 
       {tela.status === 'pronto' && (
         <FlatList
+          // No celular a lista fica dentro do respiro lateral da tela: a barra de rolagem do Android
+          // aparecia por cima das setas e dos valores das linhas.
+          showsVerticalScrollIndicator={false}
           data={linhas}
           keyExtractor={chaveDaLinha}
           style={styles.lista}
@@ -239,9 +244,7 @@ function chaveDaLinha(linha: Linha): string {
 function renderLinha({ item }: ListRenderItemInfo<Linha>) {
   return item.tipo === 'grupo' ? (
     <View style={styles.grupo}>
-      <Text weight="semibold" accessibilityRole="header">
-        {item.rotulo}
-      </Text>
+      <TituloSecao titulo={item.rotulo} />
     </View>
   ) : (
     <LinhaDaViagem viagem={item.viagem} />
@@ -277,7 +280,7 @@ function resumoDaViagem(viagem: ViagemDetalhada): string {
 const LinhaDaViagem = memo(function LinhaDaViagem({ viagem }: { viagem: ViagemDetalhada }) {
   const router = useRouter();
   const placa = viagem.veiculo?.placa ?? 'Veículo';
-  const trecho = viagem.rota ? `${viagem.rota.cidade_origem} → ${viagem.rota.cidade_destino}` : 'Rota não informada';
+  const trecho = trechoDaViagem(viagem);
   // Passo 3.3: km bem acima da estimativa da rota costuma ser hodômetro digitado errado.
   const distanciaExcessiva = distanciaUltrapassaEstimativa(calcularKmRodado(viagem), viagem.rota?.distancia_estimada_km);
 

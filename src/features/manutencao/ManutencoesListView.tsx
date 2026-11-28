@@ -21,6 +21,7 @@ import {
   Skeleton,
   Snackbar,
   Text,
+  TituloSecao,
   colors,
   spacing,
   useScreenColumn,
@@ -191,6 +192,9 @@ export function ManutencoesListView() {
 
       {tela.status === 'pronto' && (
         <List
+          // No celular a lista fica dentro do respiro lateral da tela: a barra de rolagem do Android
+          // aparecia por cima das setas e dos valores das linhas.
+          showsVerticalScrollIndicator={false}
           data={linhas}
           keyExtractor={(linha) => linha.id}
           style={styles.lista}
@@ -216,9 +220,7 @@ export function ManutencoesListView() {
           renderItem={({ item }) =>
             item.tipo === 'grupo' ? (
               <View style={styles.grupo}>
-                <Text weight="semibold" accessibilityRole="header">
-                  {item.rotulo}
-                </Text>
+                <TituloSecao titulo={item.rotulo} />
               </View>
             ) : (
               <ListItem

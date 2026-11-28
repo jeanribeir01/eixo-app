@@ -177,7 +177,7 @@ describe('RankingView', () => {
     expect(screen.getByText('1º')).toBeOnTheScreen();
     expect(screen.getByText('2º')).toBeOnTheScreen();
     expect(screen.getByText('3º')).toBeOnTheScreen();
-    expect(screen.getByText('Curitiba/PR → São Paulo/SP')).toBeOnTheScreen();
+    expect(screen.getByText('Curitiba → São Paulo')).toBeOnTheScreen();
     expect(screen.getByText('R$ 1.334,57')).toBeOnTheScreen();
     expect(screen.getAllByText('2 viagens · 816,5 km')).toHaveLength(2);
     expect(screen.getByText('1 viagem · 816,5 km')).toBeOnTheScreen();
@@ -196,7 +196,7 @@ describe('RankingView', () => {
     expect(screen.getByText('R$ 2,50/km')).toBeOnTheScreen();
     expect(screen.getByText('R$ 0,98/km')).toBeOnTheScreen();
     expect(screen.getAllByText('Custo por KM')).toHaveLength(3);
-    expect(screen.queryByText('Curitiba/PR → São Paulo/SP')).not.toBeOnTheScreen();
+    expect(screen.queryByText('Curitiba → São Paulo')).not.toBeOnTheScreen();
     expect(mockBuscar).toHaveBeenCalledTimes(1);
   });
 
@@ -226,7 +226,7 @@ describe('RankingView', () => {
     expect(screen.queryByText('2º')).not.toBeOnTheScreen();
     expect(screen.getByText('3º')).toBeOnTheScreen();
     expect(screen.getAllByText('Empate · 2 viagens · 816,5 km')).toHaveLength(2);
-    expect(screen.getByRole('button', { name: /^1º lugar, empatado, Curitiba\/PR → São Paulo\/SP/ })).toBeOnTheScreen();
+    expect(screen.getByRole('button', { name: /^1º lugar, empatado, Curitiba → São Paulo/ })).toBeOnTheScreen();
   });
 
   it('estado vazio: "ainda sem dados para ranquear" nas duas visões', async () => {
@@ -313,7 +313,7 @@ describe('RankingView', () => {
     await render(<RankingView />);
     await screen.findByText('Top 3 rotas mais lucrativas');
 
-    await fireEvent.press(screen.getByRole('button', { name: /^1º lugar, Curitiba\/PR → São Paulo\/SP/ }));
+    await fireEvent.press(screen.getByRole('button', { name: /^1º lugar, Curitiba → São Paulo/ }));
     expect(mockPush).toHaveBeenLastCalledWith('/rotas/r1/editar');
 
     await abrirVeiculos();
@@ -329,7 +329,7 @@ describe('RankingView', () => {
     await screen.findByText('Top 3 rotas mais lucrativas');
 
     expect(screen.queryByRole('button', { name: /lugar/ })).not.toBeOnTheScreen();
-    expect(screen.getByLabelText('1º lugar, Curitiba/PR → São Paulo/SP, Lucro R$ 1.334,57')).toBeOnTheScreen();
+    expect(screen.getByLabelText('1º lugar, Curitiba → São Paulo, Lucro R$ 1.334,57')).toBeOnTheScreen();
   });
 
   it('a linha anuncia posição, item e métrica ao leitor de tela', async () => {
@@ -339,7 +339,7 @@ describe('RankingView', () => {
     await screen.findByText('Top 3 rotas mais lucrativas');
 
     const linha = screen.getByRole('button', {
-      name: '1º lugar, Curitiba/PR → São Paulo/SP, Lucro R$ 1.334,57, Toque para abrir o detalhe',
+      name: '1º lugar, Curitiba → São Paulo, Lucro R$ 1.334,57, Toque para abrir o detalhe',
     });
     expect(within(linha).getByText('1º')).toBeOnTheScreen();
   });

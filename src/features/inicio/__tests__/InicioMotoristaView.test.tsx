@@ -75,7 +75,7 @@ describe('InicioMotoristaView', () => {
     expect(screen.getByText('Campinas → Belo Horizonte')).toBeOnTheScreen();
     expect(screen.getByText(`Saída às ${horaLocal('2026-11-23T11:15:00.000Z')} · hodômetro 124.580 km`)).toBeOnTheScreen();
     expect(screen.getByText('Próxima etapa: registrar a chegada')).toBeOnTheScreen();
-    expect(screen.getByText('Em andamento')).toBeOnTheScreen();
+    expect(screen.getByText('Na estrada')).toBeOnTheScreen();
   });
 
   it('"Finalizar viagem" abre o fechamento da viagem em andamento', async () => {

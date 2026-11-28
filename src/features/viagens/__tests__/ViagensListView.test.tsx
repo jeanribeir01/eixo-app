@@ -207,7 +207,7 @@ describe('ViagensListView', () => {
     await screen.findByText('BRA2E19 · São Paulo → Campinas');
 
     mockListar.mockResolvedValueOnce({ ok: true, data: [mockViagens[0]] });
-    await escolherStatus('Em andamento');
+    await escolherStatus('Na estrada');
 
     await waitFor(() => expect(mockListar).toHaveBeenLastCalledWith({ status: 'EmAndamento' }));
     expect(await screen.findByText('BRA2E19 · São Paulo → Campinas')).toBeOnTheScreen();
@@ -306,7 +306,7 @@ describe('ViagensListView', () => {
     await render(<ViagensListView />);
     await screen.findByText('BRA2E19 · São Paulo → Campinas');
 
-    await escolherStatus('Em andamento');
+    await escolherStatus('Na estrada');
     expect(await screen.findByText('Nenhuma viagem com esse status no momento.')).toBeOnTheScreen();
 
     await fireEvent.press(screen.getByRole('button', { name: 'Ver todas' }));
@@ -332,7 +332,7 @@ describe('ViagensListView', () => {
 
     expect(screen.getByRole('alert')).toHaveTextContent('Sem conexão com o servidor.');
 
-    await escolherStatus('Em andamento');
+    await escolherStatus('Na estrada');
 
     await waitFor(() => expect(mockListar).toHaveBeenLastCalledWith({ status: 'EmAndamento' }));
     await waitFor(() => expect(screen.queryByRole('alert')).not.toBeOnTheScreen());

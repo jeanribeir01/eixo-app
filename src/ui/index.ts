@@ -38,6 +38,7 @@ export { Snackbar, type SnackbarProps, type SnackbarTone } from './Snackbar';
 export { Switch, type SwitchProps } from './Switch';
 export { TabBarIcon } from './TabBarIcon';
 export { Tabs, type TabOption, type TabsProps } from './Tabs';
+export { TituloSecao, type TituloSecaoProps } from './TituloSecao';
 export { Text, toneColors, type TextProps, type TextTone } from './Text';
 export {
   colors,

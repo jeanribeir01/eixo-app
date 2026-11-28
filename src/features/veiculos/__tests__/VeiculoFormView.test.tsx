@@ -70,8 +70,8 @@ describe('VeiculoFormView', () => {
     // Status num seletor: começa em Disponível e abre as três opções ativas.
     expect(screen.getByRole('button', { name: 'Status' })).toHaveTextContent('Disponível');
     await fireEvent.press(screen.getByRole('button', { name: 'Status' }));
-    expect(screen.getByRole('button', { name: 'Em Viagem' })).toBeOnTheScreen();
-    expect(screen.getByRole('button', { name: 'Em Manutenção' })).toBeOnTheScreen();
+    expect(screen.getByRole('button', { name: 'Em viagem' })).toBeOnTheScreen();
+    expect(screen.getByRole('button', { name: 'Em manutenção' })).toBeOnTheScreen();
     expect(screen.getByLabelText('Ano de fabricação')).toBeOnTheScreen();
     expect(screen.queryByRole('button', { name: 'Inativo' })).toBeNull();
   });
@@ -126,7 +126,7 @@ describe('VeiculoFormView', () => {
     await render(<VeiculoFormView />);
     await preencher();
     await fireEvent.press(screen.getByRole('button', { name: 'Status' }));
-    await fireEvent.press(screen.getByRole('button', { name: 'Em Manutenção' }));
+    await fireEvent.press(screen.getByRole('button', { name: 'Em manutenção' }));
     await salvar();
 
     expect(criarVeiculo).toHaveBeenCalledWith({
@@ -186,7 +186,7 @@ describe('VeiculoFormView', () => {
     expect(screen.getByLabelText('Placa').props.value).toBe('ABC-1234');
     expect(screen.getByLabelText('Capacidade de carga (toneladas)').props.value).toBe('12,5');
     expect(screen.getByLabelText('Ano de fabricação').props.value).toBe('2020');
-    expect(screen.getByRole('button', { name: 'Status' })).toHaveTextContent('Em Manutenção');
+    expect(screen.getByRole('button', { name: 'Status' })).toHaveTextContent('Em manutenção');
   });
 
   it.each(['', '1949', '2028'])('ano inválido %s impede envio (ANO-01/02)', async (ano) => {
@@ -447,6 +447,6 @@ describe('VeiculoFormView — quando o veículo não pode ser desativado (INA-08
 
     await fireEvent.press(await screen.findByRole('button', { name: 'Reativar veículo' }));
 
-    expect(await screen.findByText('Veículo reativado como Em Viagem.')).toBeOnTheScreen();
+    expect(await screen.findByText('Veículo reativado como Em viagem.')).toBeOnTheScreen();
   });
 });

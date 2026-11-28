@@ -24,7 +24,7 @@ type Atalho = { titulo: string; descricao: string; icone: IconName; href: Href }
 
 // O dia a dia da frota primeiro; os cadastros, que mudam pouco, embaixo (mesmo critério do hub
 // Financeiro). Viagens entra aqui só para quem não tem a aba Viagens (o Admin, que já tem 5 abas).
-const VIAGENS: Atalho = { titulo: 'Viagens', descricao: 'Em andamento, concluídas e canceladas', icone: 'viagens', href: '/frota/viagens' };
+const VIAGENS: Atalho = { titulo: 'Viagens', descricao: 'Na estrada, concluídas e canceladas', icone: 'viagens', href: '/frota/viagens' };
 
 const OPERACAO: Atalho[] = [
   { titulo: 'Manutenções', descricao: 'Ordens de serviço e despesa no caixa', icone: 'manutencoes', href: '/manutencoes' },

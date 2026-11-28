@@ -78,9 +78,9 @@ const joinvilleFloripa: RotaComViagens = {
 };
 const rotas = [curitibaSp, londrinaMaringa, joinvilleFloripa];
 
-const TITULO_CURITIBA = 'Curitiba/PR → São Paulo/SP';
-const TITULO_LONDRINA = 'Londrina/PR → Maringá/PR';
-const TITULO_JOINVILLE = 'Joinville/SC → Florianópolis/SC';
+const TITULO_CURITIBA = 'Curitiba → São Paulo';
+const TITULO_LONDRINA = 'Londrina → Maringá';
+const TITULO_JOINVILLE = 'Joinville → Florianópolis';
 
 beforeEach(() => {
   mockPush.mockReset();
@@ -110,11 +110,12 @@ describe('RotasListView — carga', () => {
   });
 
   // ROTA-17, ROTA-30
-  it('título com cidade/UF e subtítulo com km e viagens finalizadas, no singular quando é 1', async () => {
+  it('título só com as cidades; a UF vai no subtítulo, com km e viagens finalizadas (singular quando é 1)', async () => {
     await renderComLista();
 
-    expect(screen.getByText('408 km · 1 viagem finalizada')).toBeOnTheScreen();
-    expect(screen.getByText('98,5 km · 3 viagens finalizadas')).toBeOnTheScreen();
+    expect(screen.getByRole('button', { name: TITULO_CURITIBA })).toBeOnTheScreen();
+    expect(screen.getByText('PR → SP · 408 km · 1 viagem finalizada')).toBeOnTheScreen();
+    expect(screen.getByText('PR → PR · 98,5 km · 3 viagens finalizadas')).toBeOnTheScreen();
   });
 
   it('voltar o foco recarrega sem skeleton e mostra a rota nova', async () => {
@@ -127,7 +128,7 @@ describe('RotasListView — carga', () => {
     });
 
     expect(screen.queryByLabelText('Carregando rotas')).not.toBeOnTheScreen();
-    expect(screen.getByText('Curitiba/PR → Campinas/SP')).toBeOnTheScreen();
+    expect(screen.getByText('Curitiba → Campinas')).toBeOnTheScreen();
   });
 
   it('pull-to-refresh com o indicador em accentStrong busca de novo', async () => {
@@ -147,6 +148,12 @@ describe('RotasListView — carga', () => {
     expect(StyleSheet.flatten(porTipo(FlatList).props.contentContainerStyle)).toMatchObject({
       paddingBottom: FAB_ALTURA_RESERVADA,
     });
+  });
+
+  it('sem a barra de rolagem vertical, que no Android ficava por cima das setas das linhas', async () => {
+    await renderComLista();
+
+    expect(porTipo(FlatList).props.showsVerticalScrollIndicator).toBe(false);
   });
 
   // ROTA-26
@@ -212,7 +219,7 @@ describe('RotasListView — desativadas, busca e FAB', () => {
     await fireEvent.press(cabecalho);
 
     // Aberta, a linha mostra o mesmo subtítulo das ativas, sem "Inativa" repetido: o grupo já diz.
-    expect(screen.getByText('1.200 km · 0 viagens finalizadas')).toBeOnTheScreen();
+    expect(screen.getByText('SC → SC · 1.200 km · 0 viagens finalizadas')).toBeOnTheScreen();
     await fireEvent.press(screen.getByRole('button', { name: TITULO_JOINVILLE }));
     expect(mockPush).toHaveBeenCalledWith('/rotas/r3/editar');
   });

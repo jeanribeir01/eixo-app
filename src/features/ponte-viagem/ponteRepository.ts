@@ -1,6 +1,7 @@
 import { z } from 'zod';
 
 import { rotuloStatusViagem } from '@/features/viagens/types';
+import { trecho } from '@/lib/trecho';
 import { dataLocalISO, isoParaDataBR } from '@/lib/datas';
 import { ehAcessoNegado, MENSAGEM_ACESSO_NEGADO } from '@/lib/errors';
 import { reaisParaCentavos } from '@/lib/money';
@@ -43,13 +44,13 @@ const lancamentoSchema = z.object({
 // Lançamento como o detalhe da viagem mostra. `valor` vira centavos aqui e nunca mais é float.
 export type LancamentoDaViagem = Omit<z.infer<typeof lancamentoSchema>, 'valor'> & { valorCentavos: number };
 
-// "ABC1D23 · São Paulo/SP → Curitiba/PR": placa e rota no rótulo, porque a busca do seletor filtra
-// por elas (PONTE-03).
+// "ABC1D23 · São Paulo → Curitiba": placa e rota no rótulo, porque a busca do seletor filtra por elas
+// (PONTE-03). O trecho sem UF, como no resto do app (src/lib/trecho.ts).
 export function rotuloViagem(viagem: ViagemVinculavel): string {
-  return `${viagem.placa} · ${viagem.cidade_origem}/${viagem.uf_origem} → ${viagem.cidade_destino}/${viagem.uf_destino}`;
+  return `${viagem.placa} · ${trecho(viagem)}`;
 }
 
-// "Em andamento · início 09/11/2026". O dia é o do fuso do aparelho, não o de UTC.
+// "Na estrada · início 09/11/2026". O dia é o do fuso do aparelho, não o de UTC.
 export function descricaoViagem(viagem: ViagemVinculavel): string {
   const status = rotuloStatusViagem[viagem.status];
   if (!viagem.data_inicio) return status;

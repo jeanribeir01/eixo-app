@@ -4,6 +4,7 @@ import { z } from 'zod';
 
 import { useProfile } from '@/features/auth/profileStore';
 import { rotuloStatusVeiculo } from '@/features/veiculos/types';
+import { trecho, ufsDoTrecho } from '@/lib/trecho';
 import {
   Aviso,
   Button,
@@ -245,8 +246,9 @@ export function AbrirViagemView() {
 
   const opcoesRotas: SelectOption[] = rotas.map((r) => ({
     value: r.id,
-    label: `${r.cidade_origem}/${r.uf_origem} → ${r.cidade_destino}/${r.uf_destino}`,
-    description: `${r.distancia_estimada_km} km estimados`,
+    label: trecho(r),
+    // A UF vai na descrição: separa duas rotas de mesmo nome sem quebrar a linha do trecho.
+    description: `${ufsDoTrecho(r)} · ${r.distancia_estimada_km} km estimados`,
   }));
 
   const opcoesMotoristas: SelectOption[] = motoristas.map((m) => ({

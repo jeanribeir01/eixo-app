@@ -64,8 +64,10 @@ describe('GraficoBarras', () => {
       .queryAll((no) => typeof no.props.style !== 'undefined')
       .map((no) => StyleSheet.flatten(no.props.style)?.backgroundColor)
       .filter((cor): cor is string => typeof cor === 'string');
-    expect(cores).toContain(colors.accent);
-    expect(cores).toContain(colors.inverted);
+    // Entrada verde e saída vermelha, como no resto do app; nunca a saída em preto.
+    expect(cores).toContain(colors.success);
+    expect(cores).toContain(colors.danger);
+    expect(cores).not.toContain(colors.inverted);
     expect(cores.every((cor) => (Object.values(colors) as string[]).includes(cor))).toBe(true);
   });
 

@@ -64,8 +64,8 @@ beforeEach(() => {
 
 describe('rotuloViagem', () => {
   // PONTE-02
-  it('monta "PLACA · Origem/UF → Destino/UF"', () => {
-    expect(rotuloViagem(viagem())).toBe('ABC1D23 · São Paulo/SP → Curitiba/PR');
+  it('monta "PLACA · Origem → Destino"', () => {
+    expect(rotuloViagem(viagem())).toBe('ABC1D23 · São Paulo → Curitiba');
   });
 });
 
@@ -76,11 +76,11 @@ describe('descricaoViagem', () => {
 
   // Lição L-001: 01h de 10/11 em UTC ainda é 09/11 em São Paulo (o jest roda nesse fuso).
   it('usa o dia local, não o de UTC, perto da meia-noite', () => {
-    expect(descricaoViagem(viagem({ data_inicio: '2026-11-10T01:30:00+00:00' }))).toBe('Em andamento · início 09/11/2026');
+    expect(descricaoViagem(viagem({ data_inicio: '2026-11-10T01:30:00+00:00' }))).toBe('Na estrada · início 09/11/2026');
   });
 
   it('sem data de início mostra só o status', () => {
-    expect(descricaoViagem(viagem({ data_inicio: null }))).toBe('Em andamento');
+    expect(descricaoViagem(viagem({ data_inicio: null }))).toBe('Na estrada');
   });
 });
 

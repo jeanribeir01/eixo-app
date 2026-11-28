@@ -7,6 +7,7 @@ import type { EstatisticaRota, EstatisticaVeiculo } from '@/features/bi/queries'
 import { ExportarRelatorio } from '@/features/relatorios/export/ExportarRelatorio';
 import { useDadosDaTela } from '@/lib/useDadosDaTela';
 import { useMenu } from '@/navigation/menu';
+import { trecho } from '@/lib/trecho';
 import {
   AvisoSemInternet,
   Column,
@@ -18,6 +19,7 @@ import {
   type SnackbarTone,
   Tabs,
   Text,
+  TituloSecao,
 } from '@/ui';
 import { motion } from '@/ui/tokens';
 import { useReducedMotion } from '@/ui/useReducedMotion';
@@ -35,10 +37,6 @@ const VISOES: { label: string; value: Visao }[] = [
   { label: 'Veículos', value: 'veiculos' },
 ];
 
-// Mesmo texto do cadastro de Rotas: "Curitiba/PR → São Paulo/SP".
-function trecho(rota: EstatisticaRota): string {
-  return `${rota.cidade_origem}/${rota.uf_origem} → ${rota.cidade_destino}/${rota.uf_destino}`;
-}
 
 function viagens(quantidade: number): string {
   return quantidade === 1 ? '1 viagem' : `${quantidade} viagens`;
@@ -206,7 +204,7 @@ export function RankingView() {
       {podeVerCaixa && <GraficosCaixa periodo={periodo} onErroAoAtualizar={setErroGraficos} />}
 
       <Column gap="md">
-        <Text variant="subheading">Ranking de eficiência</Text>
+        <TituloSecao titulo="Ranking de eficiência" />
         <Tabs options={VISOES} value={visao} onChange={trocarVisao} accessibilityLabel="Visão do ranking" />
         {/* A chave troca com a aba e o período: o conteúdo novo entra com um fade curto, a mesma duração
             das listas do app. Com "remover animações" ligado no aparelho, troca direto. */}
