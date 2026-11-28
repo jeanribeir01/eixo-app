@@ -6,7 +6,18 @@ import { useProfile } from '@/features/auth/profileStore';
 import type { ViagemDetalhada } from '@/features/viagens/types';
 import { dataLocalISO, hojeISO, isoParaDataBR } from '@/lib/datas';
 import { useDadosDaTela } from '@/lib/useDadosDaTela';
-import { Card, Column, EmptyState, Icon, Screen, Skeleton, Snackbar, Text, type IconName } from '@/ui';
+import {
+  AvisoSemInternet,
+  Card,
+  Column,
+  EmptyState,
+  Icon,
+  type IconName,
+  Screen,
+  Skeleton,
+  Snackbar,
+  Text,
+} from '@/ui';
 import { spacing } from '@/ui/tokens';
 
 import { CabecalhoInicio } from './CabecalhoInicio';
@@ -123,6 +134,7 @@ export function InicioFrotaView() {
 
       {tela.status === 'pronto' && tela.dados && (
         <>
+          {tela.semInternet && <AvisoSemInternet carregadoAs={tela.carregadoAs} />}
           <CartaoNaEstrada viagens={tela.dados.viagensEmAndamento} hoje={hoje} onPress={() => router.push('/viagens')} />
           <ContagemVeiculos contagem={tela.dados.veiculos} onPress={() => router.push('/frota/veiculos')} />
           <SecaoPedeAtencao

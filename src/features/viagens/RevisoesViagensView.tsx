@@ -1,13 +1,15 @@
 import { useCallback, useState } from 'react';
-import { Alert, FlatList, RefreshControl, StyleSheet } from 'react-native';
+import { FlatList, RefreshControl, StyleSheet } from 'react-native';
 
 import { useDadosDaTela } from '@/lib/useDadosDaTela';
 import {
   Aviso,
+  AvisoSemInternet,
   Button,
   Card,
   Column,
   EmptyState,
+  FolhaDeConfirmacao,
   Input,
   Screen,
   ScreenColumn,
@@ -63,28 +65,18 @@ export function RevisoesViagensView() {
     [tela],
   );
 
+  // Decisão esperando o "sim" da folha: qual revisão, o que fazer e a observação digitada.
+  const [decisao, setDecisao] = useState<{
+    revisao: RevisaoViagem;
+    status: 'Resolvida' | 'Descartada';
+    observacao: string;
+  } | null>(null);
   const confirmarDecisao = useCallback(
-    (revisao: RevisaoViagem, status: 'Resolvida' | 'Descartada', observacao: string) => {
-      const resolvida = status === 'Resolvida';
-      Alert.alert(
-        resolvida ? 'Marcar revisão como resolvida?' : 'Descartar revisão?',
-        resolvida
-          ? 'A pendência será marcada como resolvida. A decisão fica registrada; a viagem no aparelho não é alterada.'
-          : 'A revisão será encerrada sem alterar a viagem. A decisão fica registrada.',
-        [
-          { text: 'Cancelar', style: 'cancel' },
-          {
-            text: resolvida ? 'Resolver' : 'Descartar',
-            style: resolvida ? 'default' : 'destructive',
-            onPress: () => {
-              void executarDecisao(revisao, status, observacao);
-            },
-          },
-        ],
-      );
-    },
-    [executarDecisao],
+    (revisao: RevisaoViagem, status: 'Resolvida' | 'Descartada', observacao: string) =>
+      setDecisao({ revisao, status, observacao }),
+    [],
   );
+  const resolvida = decisao?.status === 'Resolvida';
 
   return (
     // Tela interna, sob o header nativo "Revisões de viagens": o header já protege o topo, então o Screen
@@ -110,6 +102,8 @@ export function RevisoesViagensView() {
     >
       {/* Na coluna: no tablet o esboço e o texto do erro não se espalham pela largura toda (EIX-94). */}
       <ScreenColumn>
+        {tela.semInternet && tela.status === 'pronto' && <AvisoSemInternet carregadoAs={tela.carregadoAs} />}
+
         {tela.status === 'carregando' && (
           <Column gap="lg">
             <Skeleton height="xxl" accessibilityLabel="Carregando revisões" />
@@ -164,6 +158,24 @@ export function RevisoesViagensView() {
           )}
         />
       )}
+
+      <FolhaDeConfirmacao
+        visivel={decisao !== null}
+        titulo={resolvida ? 'Marcar revisão como resolvida?' : 'Descartar revisão?'}
+        mensagem={
+          resolvida
+            ? 'A pendência será marcada como resolvida. A decisão fica registrada; a viagem no aparelho não é alterada.'
+            : 'A revisão será encerrada sem alterar a viagem. A decisão fica registrada.'
+        }
+        rotuloConfirmar={resolvida ? 'Resolver' : 'Descartar'}
+        tom={resolvida ? 'primary' : 'danger'}
+        onConfirmar={() => {
+          const escolhida = decisao;
+          setDecisao(null);
+          if (escolhida) void executarDecisao(escolhida.revisao, escolhida.status, escolhida.observacao);
+        }}
+        onCancelar={() => setDecisao(null)}
+      />
     </Screen>
   );
 }

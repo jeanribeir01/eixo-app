@@ -105,7 +105,8 @@ export function ViagemDetalheView({ viagemId }: ViagemDetalheViewProps) {
   const router = useRouter();
   const { usuario } = useProfile();
   const buscar = useCallback(() => buscarViagemPorId(viagemId), [viagemId]);
-  const tela = useDadosDaTela(buscar);
+  // A viagem vem do banco local (offline-first): sem internet a tela carrega normalmente.
+  const tela = useDadosDaTela(buscar, { precisaDeInternet: false });
   const viagem = tela.dados;
 
   if (tela.status === 'carregando') {

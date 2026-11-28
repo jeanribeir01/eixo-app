@@ -1,8 +1,9 @@
-import { useEffect, useRef, useState } from 'react';
+import { useCallback, useRef, useState } from 'react';
 import { useRouter } from 'expo-router';
 import { StyleSheet, View } from 'react-native';
 import { z } from 'zod';
 
+import { useCargaUnica } from '@/lib/useCargaUnica';
 import { Aviso, Button, Column, EmptyState, Input, Screen, Select, Skeleton, Snackbar, Text, spacing } from '@/ui';
 import { Constants } from '@/types/database';
 
@@ -14,7 +15,6 @@ type Campo = 'cidade_origem' | 'uf_origem' | 'cidade_destino' | 'uf_destino' | '
 type Erros = Partial<Record<Campo, string>>;
 // `desfazer`: depois de desativar, o Snackbar oferece "Desfazer" (reativa na hora).
 type Feedback = { mensagem: string; tone: 'success' | 'error'; desfazer?: boolean };
-type StatusCarga = 'carregando' | 'pronto' | 'erro';
 // Rota igual já cadastrada: a mensagem fica no formulário e, se ela estiver inativa, o id vai
 // para o botão "Reativar rota existente".
 type Duplicada = { mensagem: string; rotaInativaId?: string };
@@ -36,8 +36,6 @@ export function RotaFormView({ rotaId }: RotaFormViewProps) {
   const router = useRouter();
   const modoEdicao = !!rotaId;
 
-  const [status, setStatus] = useState<StatusCarga>(modoEdicao ? 'carregando' : 'pronto');
-  const [erroCarga, setErroCarga] = useState<string | null>(null);
   const [cidadeOrigem, setCidadeOrigem] = useState('');
   // UF começa sem escolha: o usuário precisa escolher, e o schema avisa se não escolheu (ROTA-07).
   const [ufOrigem, setUfOrigem] = useState<Uf | null>(null);
@@ -55,37 +53,17 @@ export function RotaFormView({ rotaId }: RotaFormViewProps) {
   // antes de a reativação terminar.
   const desfazendo = useRef(false);
 
-  useEffect(() => {
-    if (!rotaId) return;
-    const id = rotaId;
-    let cancelado = false;
-
-    async function carregar() {
-      setStatus('carregando');
-      const resultado = await buscarRotaPorId(id);
-      if (cancelado) return;
-
-      if (!resultado.ok) {
-        setErroCarga(resultado.mensagem);
-        setStatus('erro');
-        return;
-      }
-
-      setCidadeOrigem(resultado.data.cidade_origem);
-      setUfOrigem(resultado.data.uf_origem);
-      setCidadeDestino(resultado.data.cidade_destino);
-      setUfDestino(resultado.data.uf_destino);
-      setDistancia(distanciaParaTexto(resultado.data.distancia_estimada_km));
-      setAtiva(resultado.data.ativa);
-      setStatus('pronto');
-    }
-
-    carregar();
-
-    return () => {
-      cancelado = true;
-    };
-  }, [rotaId]);
+  // Carga única no Editar (useCargaUnica): sem internet a tela diz isso na hora e tenta de novo sozinha
+  // quando a conexão volta.
+  const buscarRota = useCallback(() => buscarRotaPorId(rotaId!), [rotaId]);
+  const { status, erro: erroCarga } = useCargaUnica(rotaId ? buscarRota : null, (rota) => {
+    setCidadeOrigem(rota.cidade_origem);
+    setUfOrigem(rota.uf_origem);
+    setCidadeDestino(rota.cidade_destino);
+    setUfDestino(rota.uf_destino);
+    setDistancia(distanciaParaTexto(rota.distancia_estimada_km));
+    setAtiva(rota.ativa);
+  });
 
   // Mudou o trecho: o aviso de duplicada era do trecho anterior. Some, para o botão de reativar
   // não apontar para uma rota que já não é a que está digitada.

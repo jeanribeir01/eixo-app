@@ -1,10 +1,11 @@
-import { useCallback, useRef, useState } from 'react';
-import { useFocusEffect, useRouter } from 'expo-router';
+import { useRouter } from 'expo-router';
 import { StyleSheet, View } from 'react-native';
 
 import { hojeISO, isoParaDataBR } from '@/lib/datas';
 import { formatarMoeda } from '@/lib/money';
+import { useDadosDaTela } from '@/lib/useDadosDaTela';
 import {
+  AvisoSemInternet,
   Badge,
   Card,
   Column,
@@ -16,6 +17,7 @@ import {
   Screen,
   ScreenColumn,
   Skeleton,
+  Snackbar,
   Text,
   colors,
   spacing,
@@ -24,8 +26,6 @@ import {
 
 import { listarDividas } from '../dividasRepository';
 import type { Divida } from '../types';
-
-type Status = 'carregando' | 'pronto' | 'erro';
 
 // "3 de 12 parcelas pagas": o progresso da dívida numa linha só, abaixo da descrição.
 function rotuloParcelasPagas(divida: Pick<Divida, 'parcelasPagas' | 'quantidadeParcelas'>): string {
@@ -108,41 +108,31 @@ function ResumoDasDividas({ dividas }: { dividas: Divida[] }) {
 
 export function DividasListView() {
   const router = useRouter();
-  const [status, setStatus] = useState<Status>('carregando');
-  const [dividas, setDividas] = useState<Divida[]>([]);
-  const [erro, setErro] = useState<string | null>(null);
-  // Cada carga ganha um número; só a mais recente pode escrever na tela (mesmo padrão de Movimentações).
-  const ultimoPedido = useRef(0);
   const coluna = useScreenColumn();
   const hoje = hojeISO();
-
-  const carregar = useCallback(async () => {
-    const pedido = ++ultimoPedido.current;
-    setStatus('carregando');
-    const resultado = await listarDividas();
-    if (pedido !== ultimoPedido.current) return;
-
-    if (!resultado.ok) {
-      setErro(resultado.mensagem);
-      setStatus('erro');
-      return;
-    }
-    setDividas(resultado.data);
-    setStatus('pronto');
-  }, []);
-
-  // Recarrega ao voltar do cadastro: a dívida nova já aparece na lista.
-  useFocusEffect(
-    useCallback(() => {
-      carregar();
-    }, [carregar]),
-  );
+  // A mesma carga das outras listas (useDadosDaTela): recarrega ao voltar do cadastro sem piscar o
+  // skeleton, e sem internet avisa em vez de ficar carregando.
+  const tela = useDadosDaTela(listarDividas);
+  const { status, erro } = tela;
+  const dividas = tela.dados ?? [];
 
   return (
     // O FAB é a ação de criar e o único cyan da tela (DESIGN_CYAN §7).
-    <Screen underHeader list fab={<FAB label="Nova dívida" onPress={() => router.push('/dividas/nova')} />}>
+    <Screen
+      underHeader
+      list
+      fab={<FAB label="Nova dívida" onPress={() => router.push('/dividas/nova')} />}
+      // Recarga que falha com a lista já na tela: avisa sem apagar o que está ali.
+      overlay={
+        tela.feedbackErro ? (
+          <Snackbar message={tela.feedbackErro} tone="error" onDismiss={tela.limparFeedbackErro} />
+        ) : null
+      }
+    >
       {/* Fora da lista, na coluna: no tablet fica alinhado com as linhas (EIX-94). */}
       <ScreenColumn>
+        {tela.semInternet && status === 'pronto' && <AvisoSemInternet carregadoAs={tela.carregadoAs} />}
+
         {status === 'carregando' && (
           <Column gap="sm">
             <Skeleton height="xxl" accessibilityLabel="Carregando dívidas" />
@@ -156,7 +146,7 @@ export function DividasListView() {
             title="Não foi possível carregar"
             description={erro ?? undefined}
             actionLabel="Tentar novamente"
-            onAction={carregar}
+            onAction={tela.recarregar}
           />
         )}
 

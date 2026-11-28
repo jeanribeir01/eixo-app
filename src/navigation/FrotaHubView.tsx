@@ -4,7 +4,19 @@ import { ResumoDaFrota } from '@/features/frota-agora/components/ResumoDaFrota';
 import { VeiculosAgora } from '@/features/frota-agora/components/VeiculosAgora';
 import { buscarFrotaAgora } from '@/features/frota-agora/frotaAgora';
 import { useDadosDaTela } from '@/lib/useDadosDaTela';
-import { Button, Card, Column, ListItem, ListSection, Screen, Skeleton, Snackbar, Text, type IconName } from '@/ui';
+import {
+  AvisoSemInternet,
+  Button,
+  Card,
+  Column,
+  type IconName,
+  ListItem,
+  ListSection,
+  Screen,
+  Skeleton,
+  Snackbar,
+  Text,
+} from '@/ui';
 
 import { useMenu } from './menu';
 
@@ -72,6 +84,7 @@ export function FrotaHubView() {
 
       {tela.status === 'pronto' && tela.dados && (
         <>
+          {tela.semInternet && <AvisoSemInternet carregadoAs={tela.carregadoAs} />}
           <ResumoDaFrota contagem={tela.dados.contagem} onPress={() => router.push('/frota/veiculos')} />
           <VeiculosAgora veiculos={tela.dados.veiculos} />
         </>

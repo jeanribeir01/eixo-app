@@ -135,7 +135,8 @@ export function InicioMotoristaView() {
     () => listarViagens({ status: 'Todos', ...(usuario ? { motorista_id: usuario.id } : {}) }),
     [usuario],
   );
-  const tela = useDadosDaTela(buscar);
+  // As viagens vêm do banco local (offline-first): sem internet a tela carrega normalmente.
+  const tela = useDadosDaTela(buscar, { precisaDeInternet: false });
 
   // Terminou uma sincronização (ao abrir o app, ao voltar a internet): relê o SQLite sem skeleton. No
   // primeiro login a tela abre antes de a primeira descida terminar e ficaria sem o histórico.

@@ -1,5 +1,6 @@
 import { act, renderHook, waitFor } from '@testing-library/react-native';
 
+import { MENSAGEM_SEM_INTERNET, useConexaoStore } from '../conexao';
 import { useDadosDaTela, type Resultado } from '../useDadosDaTela';
 import { segurarPrimeiraCarga } from '@/testing/eventos';
 
@@ -149,5 +150,78 @@ describe('useDadosDaTela (LST-03)', () => {
     await act(() => result.current.atualizarDados((atuais) => atuais.filter((item) => item !== 'a')));
 
     expect(result.current.dados).toEqual(['b']);
+  });
+});
+
+describe('useDadosDaTela sem internet', () => {
+  const ficarSemInternet = () => act(() => useConexaoStore.setState({ online: false }));
+  const voltarAInternet = () => act(() => useConexaoStore.setState({ online: true }));
+
+  afterEach(() => useConexaoStore.setState({ online: true }));
+
+  it('abrir sem internet: erro "Sem internet" na hora, sem consultar (nada de skeleton eterno)', async () => {
+    useConexaoStore.setState({ online: false });
+    const buscar: Buscar = jest.fn().mockResolvedValue(ok(['a']));
+    const { result } = await renderHook(() => useDadosDaTela(buscar));
+
+    expect(result.current.status).toBe('erro');
+    expect(result.current.erro).toBe(MENSAGEM_SEM_INTERNET);
+    expect(result.current.semInternet).toBe(true);
+    expect(buscar).not.toHaveBeenCalled();
+  });
+
+  it('a conexão voltou: carrega sozinha, sem ninguém tocar em "Tentar novamente"', async () => {
+    useConexaoStore.setState({ online: false });
+    const buscar: Buscar = jest.fn().mockResolvedValue(ok(['a']));
+    const { result } = await renderHook(() => useDadosDaTela(buscar));
+
+    await voltarAInternet();
+
+    await waitFor(() => expect(result.current.status).toBe('pronto'));
+    expect(result.current.dados).toEqual(['a']);
+    expect(result.current.semInternet).toBe(false);
+  });
+
+  it('caiu com dados na tela: os dados ficam, a recarga não consulta, e a hora da carga vem junto', async () => {
+    const buscar: Buscar = jest.fn().mockResolvedValue(ok(['a']));
+    const { result } = await renderHook(() => useDadosDaTela(buscar));
+    await waitFor(() => expect(result.current.status).toBe('pronto'));
+    expect(result.current.carregadoAs).toMatch(/^\d{2}:\d{2}$/);
+
+    await ficarSemInternet();
+    await focarDeNovo();
+    await act(async () => result.current.puxarParaAtualizar());
+
+    expect(buscar).toHaveBeenCalledTimes(1);
+    expect(result.current.status).toBe('pronto');
+    expect(result.current.dados).toEqual(['a']);
+    expect(result.current.semInternet).toBe(true);
+    expect(result.current.feedbackErro).toBeNull();
+  });
+
+  it('a internet caiu no meio da primeira carga: sai do skeleton para o erro; a resposta atrasada ainda entra', async () => {
+    const carga = pendente<string[]>();
+    const buscar: Buscar = jest.fn().mockReturnValue(carga.promessa);
+    const { result } = await renderHook(() => useDadosDaTela(buscar));
+    expect(result.current.status).toBe('carregando');
+
+    await ficarSemInternet();
+
+    expect(result.current.status).toBe('erro');
+    expect(result.current.erro).toBe(MENSAGEM_SEM_INTERNET);
+
+    await act(async () => carga.resolver(ok(['a'])));
+    expect(result.current.status).toBe('pronto');
+    expect(result.current.dados).toEqual(['a']);
+  });
+
+  it('tela offline-first (precisaDeInternet: false): sem internet carrega normalmente e não avisa', async () => {
+    useConexaoStore.setState({ online: false });
+    const buscar: Buscar = jest.fn().mockResolvedValue(ok(['local']));
+    const { result } = await renderHook(() => useDadosDaTela(buscar, { precisaDeInternet: false }));
+
+    await waitFor(() => expect(result.current.status).toBe('pronto'));
+    expect(result.current.dados).toEqual(['local']);
+    expect(result.current.semInternet).toBe(false);
   });
 });

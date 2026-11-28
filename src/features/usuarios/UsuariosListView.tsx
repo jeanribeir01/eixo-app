@@ -7,7 +7,9 @@ import { useProfile } from '@/features/auth/profileStore';
 import { useDadosDaTela } from '@/lib/useDadosDaTela';
 import {
   Avatar,
+  AvisoSemInternet,
   Badge,
+  type BadgeTone,
   Button,
   CampoBusca,
   Card,
@@ -23,7 +25,6 @@ import {
   colors,
   spacing,
   useScreenColumn,
-  type BadgeTone,
 } from '@/ui';
 
 import type { Usuario } from './types';
@@ -185,6 +186,8 @@ export function UsuariosListView() {
       {/* Fora da lista, na coluna: no tablet fica alinhado com as linhas (EIX-94). */}
       <ScreenColumn>
         <CampoBusca placeholder="Buscar por nome ou e-mail" value={busca} onChangeText={setBusca} />
+
+        {tela.semInternet && tela.status === 'pronto' && <AvisoSemInternet carregadoAs={tela.carregadoAs} />}
 
         {tela.status === 'carregando' && (
           <Column gap="sm">

@@ -1,6 +1,6 @@
-import { act, fireEvent, render, screen, waitFor } from '@testing-library/react-native';
+import { act, fireEvent, render, screen, waitFor, within } from '@testing-library/react-native';
 import { useRouter } from 'expo-router';
-import { Alert, Animated } from 'react-native';
+import { Animated } from 'react-native';
 
 import { FecharViagemView } from '../FecharViagemView';
 import * as repo from '../viagensRepository';
@@ -45,18 +45,9 @@ const mockViagemAberta = {
   },
 };
 
-type BotaoAlerta = { text?: string; onPress?: () => void };
-
-// O Alert do sistema não renderiza na árvore de teste: encontra o botão "Finalizar" no
-// argumento da chamada e executa o onPress, como o usuário faria.
-async function confirmarNoAlerta() {
-  const botoes = (Alert.alert as jest.Mock).mock.calls[0]?.[2] as BotaoAlerta[] | undefined;
-  const confirmar = botoes?.find((botao) => botao.text === 'Finalizar');
-  expect(confirmar).toBeDefined();
-
-  await act(async () => {
-    confirmar?.onPress?.();
-  });
+// A folha de confirmação aparece na árvore: toca no "Finalizar" dela, como o usuário faria.
+async function confirmarNaFolha() {
+  await act(async () => await fireEvent.press(screen.getByRole('button', { name: 'Finalizar' })));
 }
 
 describe('FecharViagemView', () => {
@@ -67,7 +58,6 @@ describe('FecharViagemView', () => {
     (useRouter as jest.Mock).mockReturnValue({
       back: mockBack,
     });
-    jest.spyOn(Alert, 'alert').mockImplementation(() => {});
     jest.spyOn(repo, 'buscarViagemPorId').mockResolvedValue({
       ok: true,
       data: mockViagemAberta,
@@ -104,7 +94,7 @@ describe('FecharViagemView', () => {
     expect(await screen.findByText('Confira o hodômetro final')).toBeTruthy();
   });
 
-  it('confirma no Alert do sistema com "X km rodados nesta viagem." e finaliza a viagem', async () => {
+  it('confirma na folha com "X km rodados nesta viagem." e finaliza a viagem', async () => {
     const spyFechar = jest.spyOn(repo, 'fecharViagem').mockResolvedValue({
       ok: true,
       data: {
@@ -125,13 +115,10 @@ describe('FecharViagemView', () => {
 
     await fireEvent.press(screen.getByRole('button', { name: 'Finalizar viagem' }));
 
-    expect(Alert.alert).toHaveBeenCalledWith(
-      'Finalizar viagem?',
-      '95 km rodados nesta viagem.',
-      expect.any(Array),
-    );
+    expect(screen.getByText('Finalizar viagem?')).toBeOnTheScreen();
+    expect(within(screen.getByTestId('folha')).getByText('95 km rodados nesta viagem.')).toBeOnTheScreen();
 
-    await confirmarNoAlerta();
+    await confirmarNaFolha();
 
     expect(spyFechar).toHaveBeenCalledWith('viagem-1', {
       hodometro_final: 10095,
@@ -156,11 +143,8 @@ describe('FecharViagemView', () => {
     await fireEvent.changeText(screen.getByLabelText('Hodômetro final (km)'), '10.100,3');
     await fireEvent.press(screen.getByRole('button', { name: 'Finalizar viagem' }));
 
-    expect(Alert.alert).toHaveBeenCalledWith(
-      'Finalizar viagem?',
-      '100,2 km rodados nesta viagem.',
-      expect.any(Array),
-    );
+    expect(screen.getByText('Finalizar viagem?')).toBeOnTheScreen();
+    expect(within(screen.getByTestId('folha')).getByText('100,2 km rodados nesta viagem.')).toBeOnTheScreen();
   });
 
   it('usa a mensagem do schema quando o hodômetro final está vazio', async () => {
@@ -171,7 +155,7 @@ describe('FecharViagemView', () => {
     await fireEvent.press(screen.getByRole('button', { name: 'Finalizar viagem' }));
 
     expect(await screen.findByText('Informe um número para o hodômetro final.')).toBeTruthy();
-    expect(Alert.alert).not.toHaveBeenCalled();
+    expect(screen.queryByText('Finalizar viagem?')).not.toBeOnTheScreen();
   });
 
   it('usa a mensagem do schema quando o hodômetro final é zero', async () => {
@@ -183,7 +167,7 @@ describe('FecharViagemView', () => {
     await fireEvent.press(screen.getByRole('button', { name: 'Finalizar viagem' }));
 
     expect(await screen.findByText('O hodômetro final deve ser maior que zero.')).toBeTruthy();
-    expect(Alert.alert).not.toHaveBeenCalled();
+    expect(screen.queryByText('Finalizar viagem?')).not.toBeOnTheScreen();
   });
 
   it.each(['9.999', '10.000'])(
@@ -201,24 +185,19 @@ describe('FecharViagemView', () => {
       expect(
         await screen.findByText('O hodômetro final deve ser maior que o inicial (10.000 km).'),
       ).toBeTruthy();
-      expect(Alert.alert).not.toHaveBeenCalled();
+      expect(screen.queryByText('Finalizar viagem?')).not.toBeOnTheScreen();
     },
   );
 
-  it('inclui o aviso de distância excessiva no texto do Alert', async () => {
+  it('inclui o aviso de distância excessiva no texto da folha', async () => {
     await render(<FecharViagemView viagemId="viagem-1" />);
 
     await screen.findByText('BRA2E19');
     await fireEvent.changeText(screen.getByLabelText('Hodômetro final (km)'), '10.150');
     await fireEvent.press(screen.getByRole('button', { name: 'Finalizar viagem' }));
 
-    expect(Alert.alert).toHaveBeenCalledWith(
-      'Finalizar viagem?',
-      expect.stringContaining(
-        'A distância está bem acima da estimada para esta rota.',
-      ),
-      expect.any(Array),
-    );
+    expect(screen.getByText('Finalizar viagem?')).toBeOnTheScreen();
+    expect(within(screen.getByTestId('folha')).getByText(/A distância está bem acima da estimada para esta rota\./)).toBeOnTheScreen();
   });
 
   it('em erro do repositório, reabilita o botão, mostra Snackbar e não navega ao dispensar', async () => {
@@ -235,7 +214,7 @@ describe('FecharViagemView', () => {
     await fireEvent.changeText(screen.getByLabelText('Hodômetro final (km)'), '10.095');
     await fireEvent.press(screen.getByRole('button', { name: 'Finalizar viagem' }));
 
-    await confirmarNoAlerta();
+    await confirmarNaFolha();
 
     await waitFor(() => expect(repo.fecharViagem).toHaveBeenCalledTimes(1));
     expect(screen.getByRole('alert')).toHaveTextContent('Não foi possível fechar a viagem.');
@@ -258,7 +237,7 @@ describe('FecharViagemView', () => {
     await fireEvent.changeText(screen.getByLabelText('Hodômetro final (km)'), '10.095');
     await fireEvent.press(screen.getByRole('button', { name: 'Finalizar viagem' }));
 
-    await confirmarNoAlerta();
+    await confirmarNaFolha();
 
     expect(await screen.findByRole('alert')).toHaveTextContent(
       'Não foi possível finalizar a viagem. Tente novamente.',
@@ -266,7 +245,7 @@ describe('FecharViagemView', () => {
     expect(screen.getByRole('button', { name: 'Finalizar viagem' })).not.toBeDisabled();
   });
 
-  it('não fecha duas vezes quando o Finalizar do Alert é tocado repetidamente', async () => {
+  it('não fecha duas vezes quando o Finalizar é tocado de novo durante o fechamento', async () => {
     let resolver: (valor: Awaited<ReturnType<typeof repo.fecharViagem>>) => void = () => {};
     const resposta = new Promise<Awaited<ReturnType<typeof repo.fecharViagem>>>((resolve) => {
       resolver = resolve;
@@ -279,14 +258,10 @@ describe('FecharViagemView', () => {
     await fireEvent.changeText(screen.getByLabelText('Hodômetro final (km)'), '10.095');
     await fireEvent.press(screen.getByRole('button', { name: 'Finalizar viagem' }));
 
-    const botoes = (Alert.alert as jest.Mock).mock.calls[0]?.[2] as BotaoAlerta[] | undefined;
-    const confirmar = botoes?.find((botao) => botao.text === 'Finalizar');
-    expect(confirmar).toBeDefined();
-
-    await act(() => {
-      confirmar?.onPress?.();
-      confirmar?.onPress?.();
-    });
+    await confirmarNaFolha();
+    // Fechando, o botão fica em loading: tocar de novo nem abre a folha.
+    await fireEvent.press(screen.getByRole('button', { name: 'Finalizar viagem' }));
+    expect(screen.queryByText('Finalizar viagem?')).not.toBeOnTheScreen();
 
     expect(spyFechar).toHaveBeenCalledTimes(1);
 
@@ -341,7 +316,7 @@ describe('FecharViagemView', () => {
     await fireEvent.changeText(screen.getByLabelText('Hodômetro final (km)'), '10.095');
     await fireEvent.press(screen.getByRole('button', { name: 'Finalizar viagem' }));
 
-    await confirmarNoAlerta();
+    await confirmarNaFolha();
 
     await waitFor(() => expect(repo.fecharViagem).toHaveBeenCalledTimes(1));
     expect(screen.getByRole('alert')).toHaveTextContent('Viagem finalizada.');
@@ -374,7 +349,7 @@ describe('FecharViagemView', () => {
     await fireEvent.press(screen.getByRole('button', { name: 'Continuar viagem' }));
 
     expect(mockBack).toHaveBeenCalledTimes(1);
-    expect(Alert.alert).not.toHaveBeenCalled();
+    expect(screen.queryByText('Finalizar viagem?')).not.toBeOnTheScreen();
     expect(spyFechar).not.toHaveBeenCalled();
   });
 });

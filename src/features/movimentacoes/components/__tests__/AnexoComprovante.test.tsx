@@ -1,7 +1,6 @@
-import { act, fireEvent, render, screen, waitFor } from '@testing-library/react-native';
+import { act, fireEvent, render, screen, waitFor, within } from '@testing-library/react-native';
 import { ImageManipulator } from 'expo-image-manipulator';
 import * as ImagePicker from 'expo-image-picker';
-import { Alert } from 'react-native';
 
 import { uploadComprovante, urlDoComprovante } from '@/lib/storage';
 
@@ -31,7 +30,6 @@ const mockGaleria = ImagePicker.launchImageLibraryAsync as jest.Mock;
 const mockManipular = ImageManipulator.manipulate as jest.Mock;
 const mockUpload = uploadComprovante as jest.MockedFunction<typeof uploadComprovante>;
 const mockUrl = urlDoComprovante as jest.MockedFunction<typeof urlDoComprovante>;
-const mockAlert = jest.spyOn(Alert, 'alert').mockImplementation(() => undefined);
 
 const onChange = jest.fn();
 const onErro = jest.fn();
@@ -55,10 +53,11 @@ async function esperarMiniatura() {
   return miniatura;
 }
 
-// Toca numa opção do último Alert aberto (o Alert nativo não aparece na árvore do teste).
-async function escolherNoAlerta(opcao: string) {
-  const botoes = mockAlert.mock.calls.at(-1)?.[2] ?? [];
-  await act(async () => botoes.find((botao) => botao.text === opcao)?.onPress?.());
+// Toca numa opção da folha aberta (escolha da origem ou confirmação de remover), que aparece na árvore.
+async function escolherNaFolha(opcao: string) {
+  await act(async () => {
+    await fireEvent.press(within(screen.getByTestId('folha')).getByRole('button', { name: opcao }));
+  });
 }
 
 beforeEach(() => {
@@ -85,8 +84,13 @@ describe('AnexoComprovante — anexar (EIX-34)', () => {
 
     await fireEvent.press(screen.getByRole('button', { name: 'Anexar comprovante' }));
 
-    const opcoes = mockAlert.mock.calls[0][2]?.map((botao) => botao.text);
-    expect(opcoes).toEqual(['Câmera', 'Galeria', 'Cancelar']);
+    const folha = within(screen.getByTestId('folha'));
+    expect(folha.getByText('De onde vem a imagem?')).toBeOnTheScreen();
+    expect(folha.getAllByRole('button').map((botao) => botao.props.accessibilityLabel)).toEqual([
+      'Câmera',
+      'Galeria',
+      'Cancelar',
+    ]);
   });
 
   it('câmera: comprime para 1600 px em JPEG 0,6, envia e devolve o caminho (AC 3, 4)', async () => {
@@ -94,7 +98,7 @@ describe('AnexoComprovante — anexar (EIX-34)', () => {
     await renderAnexo();
 
     await fireEvent.press(screen.getByRole('button', { name: 'Anexar comprovante' }));
-    await escolherNoAlerta('Câmera');
+    await escolherNaFolha('Câmera');
 
     expect(mockPermissaoCamera).toHaveBeenCalled();
     expect(mockManipular).toHaveBeenCalledWith('file://original.jpg');
@@ -109,7 +113,7 @@ describe('AnexoComprovante — anexar (EIX-34)', () => {
     await renderAnexo();
 
     await fireEvent.press(screen.getByRole('button', { name: 'Anexar comprovante' }));
-    await escolherNoAlerta('Galeria');
+    await escolherNaFolha('Galeria');
 
     expect(contexto.resize).not.toHaveBeenCalled();
     expect(salvarImagem).toHaveBeenCalledWith({ compress: 0.6, format: 'jpeg' });
@@ -121,7 +125,7 @@ describe('AnexoComprovante — anexar (EIX-34)', () => {
     await renderAnexo();
 
     await fireEvent.press(screen.getByRole('button', { name: 'Anexar comprovante' }));
-    await escolherNoAlerta('Câmera');
+    await escolherNaFolha('Câmera');
 
     expect(mockUpload).not.toHaveBeenCalled();
     expect(onChange).not.toHaveBeenCalled();
@@ -135,10 +139,7 @@ describe('AnexoComprovante — anexar (EIX-34)', () => {
 
     await fireEvent.press(screen.getByRole('button', { name: 'Anexar comprovante' }));
     // Sem esperar o envio terminar: o upload fica pendente até `concluir`.
-    const camera = mockAlert.mock.calls[0][2]?.find((botao) => botao.text === 'Câmera');
-    await act(async () => {
-      camera?.onPress?.();
-    });
+    await escolherNaFolha('Câmera');
 
     expect(await screen.findByText('Enviando comprovante…')).toBeOnTheScreen();
     expect(screen.queryByRole('button', { name: 'Anexar comprovante' })).not.toBeOnTheScreen();
@@ -154,7 +155,7 @@ describe('AnexoComprovante — erros (EIX-34)', () => {
     await renderAnexo();
 
     await fireEvent.press(screen.getByRole('button', { name: 'Anexar comprovante' }));
-    await escolherNoAlerta('Câmera');
+    await escolherNaFolha('Câmera');
 
     expect(mockCamera).not.toHaveBeenCalled();
     expect(onErro).toHaveBeenCalledWith(
@@ -167,7 +168,7 @@ describe('AnexoComprovante — erros (EIX-34)', () => {
     await renderAnexo();
 
     await fireEvent.press(screen.getByRole('button', { name: 'Anexar comprovante' }));
-    await escolherNoAlerta('Galeria');
+    await escolherNaFolha('Galeria');
 
     expect(mockGaleria).not.toHaveBeenCalled();
     expect(onErro).toHaveBeenCalledWith(
@@ -181,7 +182,7 @@ describe('AnexoComprovante — erros (EIX-34)', () => {
     await renderAnexo();
 
     await fireEvent.press(screen.getByRole('button', { name: 'Anexar comprovante' }));
-    await escolherNoAlerta('Câmera');
+    await escolherNaFolha('Câmera');
 
     expect(onErro).toHaveBeenCalledWith('Não foi possível enviar o comprovante. Tente novamente.');
     expect(onChange).not.toHaveBeenCalled();
@@ -194,7 +195,7 @@ describe('AnexoComprovante — erros (EIX-34)', () => {
     await renderAnexo();
 
     await fireEvent.press(screen.getByRole('button', { name: 'Anexar comprovante' }));
-    await escolherNoAlerta('Câmera');
+    await escolherNaFolha('Câmera');
 
     expect(mockUpload).not.toHaveBeenCalled();
     expect(onErro).toHaveBeenCalledWith('Não foi possível preparar a imagem. Tente outra foto.');
@@ -236,7 +237,7 @@ describe('AnexoComprovante — com anexo (EIX-34)', () => {
     await fireEvent.press(screen.getByRole('button', { name: 'Remover' }));
     expect(onChange).not.toHaveBeenCalled();
 
-    await escolherNoAlerta('Remover');
+    await escolherNaFolha('Remover');
     expect(onChange).toHaveBeenCalledWith(null);
   });
 });

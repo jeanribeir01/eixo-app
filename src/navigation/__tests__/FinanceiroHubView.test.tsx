@@ -3,6 +3,7 @@ import { StyleSheet, useWindowDimensions } from 'react-native';
 
 import { buscarMesEmAndamento, type MesEmAndamento } from '@/features/caixa/mesEmAndamento';
 import { movimentacao } from '@/features/inicio/__mocks__/fixtures';
+import { useConexaoStore } from '@/lib/conexao';
 import { colors, radius } from '@/ui';
 
 import { FinanceiroHubView } from '../FinanceiroHubView';
@@ -163,6 +164,42 @@ describe('FinanceiroHubView — o mês em andamento', () => {
 
     expect(mockBuscar).toHaveBeenCalledTimes(2);
     expect(screen.getByText('+ R$ 500,00')).toBeOnTheScreen();
+  });
+});
+
+describe('FinanceiroHubView — sem internet', () => {
+  // Religar a conexão no fim do teste recarrega a tela ainda montada: o mock precisa ter resposta.
+  beforeEach(() => mockBuscar.mockResolvedValue({ ok: true, data: mes() }));
+  afterEach(() => useConexaoStore.setState({ online: true }));
+
+  it('caiu com o mês na tela: o cartão continua e o aviso diz que os dados são de antes', async () => {
+    await renderComMes();
+
+    await act(() => useConexaoStore.setState({ online: false }));
+
+    expect(screen.getByText('Sem internet')).toBeOnTheScreen();
+    expect(screen.getByText(/^Mostrando o que foi carregado às \d{2}:\d{2}\./)).toBeOnTheScreen();
+    expect(screen.getByText('+ R$ 500,00')).toBeOnTheScreen();
+  });
+
+  it('abrir sem internet: o erro diz isso, sem skeleton, e o menu continua tocável', async () => {
+    useConexaoStore.setState({ online: false });
+    await render(<FinanceiroHubView />);
+
+    expect(screen.getByText('Sem internet. A tela carrega sozinha quando a conexão voltar.')).toBeOnTheScreen();
+    expect(screen.queryByLabelText('Carregando o mês')).not.toBeOnTheScreen();
+    expect(mockBuscar).not.toHaveBeenCalled();
+    expect(screen.getByRole('button', { name: 'Movimentações' })).toBeOnTheScreen();
+  });
+
+  it('a conexão voltou: o mês carrega sozinho', async () => {
+    useConexaoStore.setState({ online: false });
+    await render(<FinanceiroHubView />);
+
+    await act(() => useConexaoStore.setState({ online: true }));
+
+    expect(await screen.findByText('+ R$ 500,00')).toBeOnTheScreen();
+    expect(screen.queryByText('Sem internet')).not.toBeOnTheScreen();
   });
 });
 

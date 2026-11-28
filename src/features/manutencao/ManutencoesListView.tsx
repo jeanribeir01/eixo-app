@@ -7,6 +7,7 @@ import { diasEntre, hojeISO, isoParaDataBR } from '@/lib/datas';
 import { formatarMoeda } from '@/lib/money';
 import { useDadosDaTela } from '@/lib/useDadosDaTela';
 import {
+  AvisoSemInternet,
   Button,
   Card,
   Column,
@@ -168,6 +169,8 @@ export function ManutencoesListView() {
     >
       {/* Fora da lista, na coluna: no tablet fica alinhado com as linhas (EIX-94). */}
       <ScreenColumn>
+        {tela.semInternet && tela.status === 'pronto' && <AvisoSemInternet carregadoAs={tela.carregadoAs} />}
+
         {tela.status === 'carregando' && (
           <Column gap="sm">
             <Skeleton height="xxl" accessibilityLabel="Carregando manutenções" />

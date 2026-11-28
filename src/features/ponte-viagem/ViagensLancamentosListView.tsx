@@ -1,8 +1,8 @@
 import { useRouter } from 'expo-router';
-import { ActivityIndicator, FlatList, RefreshControl } from 'react-native';
+import { ActivityIndicator, FlatList, RefreshControl, StyleSheet } from 'react-native';
 
 import { useDadosDaTela } from '@/lib/useDadosDaTela';
-import { EmptyState, ListItem, Screen, Snackbar, colors, useScreenColumn } from '@/ui';
+import { AvisoSemInternet, EmptyState, ListItem, Screen, Snackbar, colors, spacing, useScreenColumn } from '@/ui';
 
 import { descricaoViagem, listarViagensVinculaveis, rotuloViagem } from './ponteRepository';
 
@@ -59,6 +59,8 @@ export function ViagensLancamentosListView() {
             tintColor={colors.accent}
           />
         }
+        ListHeaderComponent={tela.semInternet ? <AvisoSemInternet carregadoAs={tela.carregadoAs} /> : undefined}
+        ListHeaderComponentStyle={styles.cabecalho}
         // As viagens nascem na aba Viagens (Gestor e Motorista), não aqui: o vazio não tem ação de criar.
         ListEmptyComponent={
           <EmptyState
@@ -79,3 +81,9 @@ export function ViagensLancamentosListView() {
     </Screen>
   );
 }
+
+const styles = StyleSheet.create({
+  cabecalho: {
+    paddingBottom: spacing.sm,
+  },
+});

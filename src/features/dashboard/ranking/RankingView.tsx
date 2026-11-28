@@ -7,7 +7,18 @@ import type { EstatisticaRota, EstatisticaVeiculo } from '@/features/bi/queries'
 import { ExportarRelatorio } from '@/features/relatorios/export/ExportarRelatorio';
 import { useDadosDaTela } from '@/lib/useDadosDaTela';
 import { useMenu } from '@/navigation/menu';
-import { Column, EmptyState, ListSection, Screen, Skeleton, Snackbar, Tabs, Text, type SnackbarTone } from '@/ui';
+import {
+  AvisoSemInternet,
+  Column,
+  EmptyState,
+  ListSection,
+  Screen,
+  Skeleton,
+  Snackbar,
+  type SnackbarTone,
+  Tabs,
+  Text,
+} from '@/ui';
 import { motion } from '@/ui/tokens';
 import { useReducedMotion } from '@/ui/useReducedMotion';
 
@@ -183,6 +194,9 @@ export function RankingView() {
       <Text variant="heading">Relatórios</Text>
 
       <FiltroPeriodo value={periodo} onChange={setPeriodo} />
+
+      {/* Um aviso só para a aba inteira: gráficos e ranking dependem da mesma conexão. */}
+      {tela.semInternet && tela.status === 'pronto' && <AvisoSemInternet carregadoAs={tela.carregadoAs} />}
 
       {/* Exportação da US14 (EIX-47): mesmo período do filtro e mesma regra de perfil dos gráficos. */}
       {podeVerCaixa && (

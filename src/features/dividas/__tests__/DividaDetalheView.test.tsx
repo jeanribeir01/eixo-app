@@ -1,5 +1,5 @@
 import { act, fireEvent, render, screen, waitFor } from '@testing-library/react-native';
-import { Alert, Animated, FlatList, StyleSheet, useWindowDimensions } from 'react-native';
+import { Animated, FlatList, StyleSheet, useWindowDimensions } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { porTipo } from '@/testing/componentes';
@@ -197,17 +197,13 @@ describe('DividaDetalheView: saldo e grupos de parcelas', () => {
 });
 });
 
-type BotaoAlerta = { text?: string; onPress?: () => void };
-
-// O Alert do sistema não renderiza na árvore de teste: pega o botão pelo texto e toca nele, como a pessoa faria.
-function botaoDoAlerta(texto: string): BotaoAlerta | undefined {
-  const botoes = (Alert.alert as jest.Mock).mock.calls[0]?.[2] as BotaoAlerta[] | undefined;
-  return botoes?.find((botao) => botao.text === texto);
+// Toca num botão da folha de confirmação, que aparece na árvore como qualquer botão.
+async function tocarNaFolha(rotulo: 'Excluir' | 'Cancelar') {
+  await act(async () => await fireEvent.press(screen.getByRole('button', { name: rotulo })));
 }
 
 describe('DividaDetalheView: excluir dívida (DIV-05)', () => {
   beforeEach(() => {
-    jest.spyOn(Alert, 'alert').mockImplementation(() => {});
     mockBuscar.mockResolvedValue({ ok: true, data: detalhe });
   });
 
@@ -224,17 +220,19 @@ describe('DividaDetalheView: excluir dívida (DIV-05)', () => {
     expect(screen.getByRole('button', { name: 'Excluir dívida' })).toBeOnTheScreen();
   });
 
-  it('confirma no Alert do sistema e não exclui se a pessoa cancelar', async () => {
+  it('confirma na folha, com o que vai acontecer, e não exclui se a pessoa cancelar', async () => {
     await render(<DividaDetalheView id="div-1" />);
 
     await fireEvent.press(await screen.findByRole('button', { name: 'Excluir dívida' }));
 
-    expect(Alert.alert).toHaveBeenCalledWith(
-      'Excluir dívida?',
-      'Financiamento do caminhão\n\n2 parcelas em aberto saem do caixa. A paga continua no histórico.',
-      expect.any(Array),
-    );
-    expect(botaoDoAlerta('Cancelar')).toBeDefined();
+    expect(screen.getByText('Excluir dívida?')).toBeOnTheScreen();
+    expect(
+      screen.getByText('Financiamento do caminhão. 2 parcelas em aberto saem do caixa. A paga continua no histórico.'),
+    ).toBeOnTheScreen();
+
+    await tocarNaFolha('Cancelar');
+
+    expect(screen.queryByText('Excluir dívida?')).not.toBeOnTheScreen();
     expect(mockExcluir).not.toHaveBeenCalled();
   });
 
@@ -245,9 +243,7 @@ describe('DividaDetalheView: excluir dívida (DIV-05)', () => {
     await render(<DividaDetalheView id="div-1" />);
 
     await fireEvent.press(await screen.findByRole('button', { name: 'Excluir dívida' }));
-    await act(async () => {
-      botaoDoAlerta('Excluir')?.onPress?.();
-    });
+    await tocarNaFolha('Excluir');
 
     expect(mockExcluir).toHaveBeenCalledWith('div-1');
     expect(screen.getByRole('alert')).toHaveTextContent(
@@ -270,26 +266,24 @@ describe('DividaDetalheView: excluir dívida (DIV-05)', () => {
     await render(<DividaDetalheView id="div-1" />);
 
     await fireEvent.press(await screen.findByRole('button', { name: 'Excluir dívida' }));
-    await act(async () => {
-      botaoDoAlerta('Excluir')?.onPress?.();
-    });
+    await tocarNaFolha('Excluir');
 
     expect(screen.getByRole('alert')).toHaveTextContent('Dívida não encontrada ou já excluída.');
     expect(screen.getByRole('button', { name: 'Excluir dívida' })).not.toBeDisabled();
     expect(mockBack).not.toHaveBeenCalled();
   });
 
-  it('toque duplo em "Excluir" chama a RPC uma vez só', async () => {
+  it('tocar de novo durante a exclusão não chama a RPC outra vez', async () => {
     let resolver: (valor: Awaited<ReturnType<typeof excluirDivida>>) => void = () => {};
     mockExcluir.mockReturnValue(new Promise((resolve) => (resolver = resolve)));
     await render(<DividaDetalheView id="div-1" />);
 
     await fireEvent.press(await screen.findByRole('button', { name: 'Excluir dívida' }));
-    await act(async () => {
-      botaoDoAlerta('Excluir')?.onPress?.();
-      botaoDoAlerta('Excluir')?.onPress?.();
-    });
+    await tocarNaFolha('Excluir');
+    // Com a exclusão em andamento o botão fica em loading: tocar de novo nem abre a folha.
+    await fireEvent.press(screen.getByRole('button', { name: 'Excluir dívida' }));
 
+    expect(screen.queryByText('Excluir dívida?')).not.toBeOnTheScreen();
     expect(mockExcluir).toHaveBeenCalledTimes(1);
     await act(async () => resolver({ ok: true, data: { parcelasRemovidas: 2, parcelasPreservadas: 1 } }));
   });

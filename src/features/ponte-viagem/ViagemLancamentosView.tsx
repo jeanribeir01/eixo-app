@@ -4,7 +4,19 @@ import { ActivityIndicator } from 'react-native';
 
 import { formatarMoeda } from '@/lib/money';
 import { useDadosDaTela } from '@/lib/useDadosDaTela';
-import { Button, Card, Column, EmptyState, ListItem, ListSection, Screen, Snackbar, Text, colors } from '@/ui';
+import {
+  AvisoSemInternet,
+  Button,
+  Card,
+  Column,
+  EmptyState,
+  ListItem,
+  ListSection,
+  Screen,
+  Snackbar,
+  Text,
+  colors,
+} from '@/ui';
 
 import {
   buscarViagemVinculavel,
@@ -143,6 +155,7 @@ export function ViagemLancamentosView({ viagemId }: ViagemLancamentosViewProps) 
       }
     >
       <Column gap="lg">
+        {tela.semInternet && <AvisoSemInternet carregadoAs={tela.carregadoAs} />}
         <Card variant="feature">
           <Column gap="xs">
             <Text variant="subheading">{viagem.placa}</Text>

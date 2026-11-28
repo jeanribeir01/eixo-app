@@ -1,9 +1,11 @@
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { useRouter } from 'expo-router';
 import { z } from 'zod';
 
 import { formatarPlaca } from '@/features/veiculos/placa';
 import { listarVeiculosSelecionaveis } from '@/features/veiculos/repository';
+import { useCargaUnica } from '@/lib/useCargaUnica';
+import type { Resultado } from '@/lib/useDadosDaTela';
 import { Aviso, Button, CampoData, CampoMoeda, Column, EmptyState, Input, Screen, Select, Skeleton, Snackbar, Tabs, Text } from '@/ui';
 
 import { listarFormasPagamentoAtivas, registrarManutencao } from './manutencaoRepository';
@@ -12,7 +14,6 @@ import type { FormaPagamentoOpcao, StatusPagamento, VeiculoResumo } from './type
 
 type Erros = Partial<Record<keyof ManutencaoFormValues, string>>;
 type Feedback = { mensagem: string; tone: 'success' | 'error' };
-type StatusCarga = 'carregando' | 'pronto' | 'erro';
 type Opcoes = { veiculos: VeiculoResumo[]; formas: FormaPagamentoOpcao[] };
 
 const opcoesStatus: { value: StatusPagamento; label: string }[] = [
@@ -20,13 +21,21 @@ const opcoesStatus: { value: StatusPagamento; label: string }[] = [
   { value: 'Pago', label: 'Pago' },
 ];
 
+// Contrato da EIX-79: só Disponível e Em Manutenção. Veículo em viagem nem aparece; o MN001 da RPC fica
+// para a corrida em que a viagem abre depois de a lista carregar.
+async function buscarOpcoes(): Promise<Resultado<Opcoes>> {
+  const [resultadoVeiculos, resultadoFormas] = await Promise.all([
+    listarVeiculosSelecionaveis('manutencao'),
+    listarFormasPagamentoAtivas(),
+  ]);
+  if (!resultadoVeiculos.ok) return resultadoVeiculos;
+  if (!resultadoFormas.ok) return resultadoFormas;
+  return { ok: true, data: { veiculos: resultadoVeiculos.data, formas: resultadoFormas.data } };
+}
+
 export function ManutencaoFormView() {
   const router = useRouter();
 
-  const [status, setStatus] = useState<StatusCarga>('carregando');
-  const [erroCarga, setErroCarga] = useState<string | null>(null);
-  // Muda a cada "Tentar novamente": o efeito de carga roda de novo.
-  const [tentativa, setTentativa] = useState(0);
   const [opcoes, setOpcoes] = useState<Opcoes>({ veiculos: [], formas: [] });
   // Data de hoje e status Pendente já preenchidos (calculados quando a tela abre).
   const [valores, setValores] = useState<ManutencaoFormValues>(valoresIniciais);
@@ -34,40 +43,9 @@ export function ManutencaoFormView() {
   const [salvando, setSalvando] = useState(false);
   const [feedback, setFeedback] = useState<Feedback | null>(null);
 
-  useEffect(() => {
-    let cancelado = false;
-
-    async function carregar() {
-      setStatus('carregando');
-      // Contrato da EIX-79: só Disponível e Em Manutenção. Veículo em viagem nem aparece; o MN001
-      // da RPC fica para a corrida em que a viagem abre depois de a lista carregar.
-      const [resultadoVeiculos, resultadoFormas] = await Promise.all([
-        listarVeiculosSelecionaveis('manutencao'),
-        listarFormasPagamentoAtivas(),
-      ]);
-      if (cancelado) return;
-
-      if (!resultadoVeiculos.ok) {
-        setErroCarga(resultadoVeiculos.mensagem);
-        setStatus('erro');
-        return;
-      }
-      if (!resultadoFormas.ok) {
-        setErroCarga(resultadoFormas.mensagem);
-        setStatus('erro');
-        return;
-      }
-
-      setOpcoes({ veiculos: resultadoVeiculos.data, formas: resultadoFormas.data });
-      setStatus('pronto');
-    }
-
-    carregar();
-
-    return () => {
-      cancelado = true;
-    };
-  }, [tentativa]);
+  // Carga única das opções (useCargaUnica): sem internet a tela diz isso na hora e tenta de novo
+  // sozinha quando a conexão volta.
+  const { status, erro: erroCarga, tentarDeNovo } = useCargaUnica(buscarOpcoes, setOpcoes);
 
   function alterar<K extends keyof ManutencaoFormValues>(nome: K, valor: ManutencaoFormValues[K]) {
     setValores((atuais) => ({ ...atuais, [nome]: valor }));
@@ -134,7 +112,7 @@ export function ManutencaoFormView() {
           title="Não foi possível carregar"
           description={erroCarga ?? undefined}
           actionLabel="Tentar novamente"
-          onAction={() => setTentativa((atual) => atual + 1)}
+          onAction={tentarDeNovo}
         />
       </Screen>
     );

@@ -250,6 +250,17 @@ Todo botão tem `accessibilityRole="button"` e `accessibilityLabel`. Toda ação
 - **Entrada:** fade e deslize de 8pt para cima em 200 ms. Com "remover animações" ligado no aparelho, só o fade. Some sozinho depois de `duration` (padrão 3 s).
 - Anuncia com `accessibilityRole="alert"`. É o retorno obrigatório de toda ação: "Categoria salva.", "Não foi possível salvar."
 
+### Folha de confirmação e de escolha (`FolhaDeConfirmacao`, `FolhaDeEscolha`)
+- **Nunca o `Alert` nativo.** Os botões do sistema (verde-água, caixa alta no Android) ficam fora do guia. Toda pergunta antes de uma ação usa uma das duas folhas.
+- Folha inferior em `surface`, com o canto `radius.sheet` em cima e o véu `inverted` translúcido, igual ao seletor (`Select`). Título em `subheading` peso 600, mensagem em `body` `textBody`, "Cancelar" ghost no fim. O voltar do Android e o toque no véu cancelam.
+- **Confirmação:** o título pergunta pela ação ("Excluir movimentação?"), a mensagem diz o que acontece depois, e o botão diz a ação ("Excluir", "Finalizar"), nunca "Confirmar". `tom="danger"` quando apaga ou descarta algo.
+- **Escolha:** caminhos equivalentes (Câmera ou Galeria, CSV ou PDF) viram linhas com ícone e descrição, sem seta e sem azul: nenhuma é a principal.
+
+### Sem internet (`AvisoSemInternet`)
+- Toda tela que depende do Supabase segue a mesma regra, aplicada pelo `useDadosDaTela`: **com dados na tela**, eles ficam, e o `AvisoSemInternet` aparece no topo do conteúdo ("Mostrando o que foi carregado às 14:32"); **sem dados**, o estado de erro diz "Sem internet" na hora, sem skeleton. Quando a conexão volta, a tela recarrega sozinha.
+- Telas que leem só do banco local (Viagens, Detalhe da viagem, Início do Motorista) passam `precisaDeInternet: false`: carregam normalmente, e o `IndicadorSincronizacao` é quem fala da conexão.
+- Formulário de edição e detalhe que carregam uma vez só usam o `useCargaUnica`, com a mesma regra. Ele não recarrega quando a conexão volta se a carga já deu certo, para não apagar o que a pessoa digitou.
+
 ### Estado vazio (`EmptyState`)
 - Ícone `lg` em `textMuted` (opcional, decorativo) · título em `subheading` · descrição em `body` `textBody` · ação em `Button` ghost. Tudo centralizado, gap `spacing.md`, respiro vertical `spacing.xl`.
 - Use o ícone do assunto da tela (`"categorias"` em Categorias). Também serve para erro de carga, com a ação "Tentar novamente".

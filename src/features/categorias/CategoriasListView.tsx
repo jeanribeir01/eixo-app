@@ -4,6 +4,7 @@ import { RefreshControl, StyleSheet, type ListRenderItemInfo } from 'react-nativ
 
 import { useDadosDaTela } from '@/lib/useDadosDaTela';
 import {
+  AvisoSemInternet,
   CampoBusca,
   Column,
   EmptyState,
@@ -100,6 +101,8 @@ export function CategoriasListView() {
         />
 
         <CampoBusca placeholder="Buscar categoria" value={busca} onChangeText={setBusca} />
+
+        {tela.semInternet && tela.status === 'pronto' && <AvisoSemInternet carregadoAs={tela.carregadoAs} />}
 
         {tela.status === 'carregando' && (
           <Column gap="sm">

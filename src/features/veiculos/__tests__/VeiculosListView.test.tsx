@@ -1,6 +1,7 @@
-import { fireEvent, render, screen, waitFor, within } from '@testing-library/react-native';
+import { act, fireEvent, render, screen, waitFor, within } from '@testing-library/react-native';
 import { FlatList, ScrollView, StyleSheet, useWindowDimensions } from 'react-native';
 
+import { useConexaoStore } from '@/lib/conexao';
 import { porTipo } from '@/testing/componentes';
 import { segurarPrimeiraCarga } from '@/testing/eventos';
 import { FAB_ALTURA_RESERVADA, spacing } from '@/ui';
@@ -170,6 +171,41 @@ describe('VeiculosListView', () => {
     expect(await screen.findByText('Não foi possível carregar os veículos. Tente novamente.')).toBeOnTheScreen();
     await fireEvent.press(screen.getByRole('button', { name: 'Tentar novamente' }));
     expect(await screen.findByText('ABC-1234')).toBeOnTheScreen();
+  });
+
+  // Antes a lista tinha carga própria e ficava no skeleton para sempre sem internet; agora segue o
+  // useDadosDaTela como as outras.
+  it('abrir sem internet: diz isso na hora, sem consultar, e carrega sozinha quando a conexão volta', async () => {
+    (listarVeiculos as jest.Mock).mockResolvedValue({ ok: true, data: veiculosMock });
+    useConexaoStore.setState({ online: false });
+    try {
+      await render(<VeiculosListView />);
+
+      expect(screen.getByText('Sem internet. A tela carrega sozinha quando a conexão voltar.')).toBeOnTheScreen();
+      expect(screen.queryByLabelText('Carregando veículos')).not.toBeOnTheScreen();
+      expect(listarVeiculos).not.toHaveBeenCalled();
+
+      await act(() => useConexaoStore.setState({ online: true }));
+
+      expect(await screen.findByText('ABC-1234')).toBeOnTheScreen();
+    } finally {
+      useConexaoStore.setState({ online: true });
+    }
+  });
+
+  it('caiu com a lista na tela: a lista fica e o aviso "Sem internet" aparece em cima', async () => {
+    (listarVeiculos as jest.Mock).mockResolvedValue({ ok: true, data: veiculosMock });
+    await render(<VeiculosListView />);
+    await screen.findByText('ABC-1234');
+
+    try {
+      await act(() => useConexaoStore.setState({ online: false }));
+
+      expect(screen.getByText('Sem internet')).toBeOnTheScreen();
+      expect(screen.getByText('ABC-1234')).toBeOnTheScreen();
+    } finally {
+      useConexaoStore.setState({ online: true });
+    }
   });
 
   it('filtro por status consulta o repositório com o status escolhido', async () => {

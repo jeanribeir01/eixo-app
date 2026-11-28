@@ -1,8 +1,9 @@
-import { useEffect, useRef, useState } from 'react';
+import { useCallback, useRef, useState } from 'react';
 import { useRouter } from 'expo-router';
 import { StyleSheet, View } from 'react-native';
 import { z } from 'zod';
 
+import { useCargaUnica } from '@/lib/useCargaUnica';
 import { Aviso, Button, Column, EmptyState, Input, Screen, Select, Skeleton, Snackbar, Text, spacing } from '@/ui';
 
 import { formatarPlaca, normalizarPlaca } from './placa';
@@ -14,8 +15,6 @@ type Campo = 'placa' | 'marca' | 'modelo' | 'ano_fabricacao' | 'capacidade_carga
 type Erros = Partial<Record<Campo, string>>;
 // `desfazer`: depois de desativar, o Snackbar oferece "Desfazer" (reativa na hora).
 type Feedback = { mensagem: string; tone: 'success' | 'error'; desfazer?: boolean };
-type StatusCarga = 'carregando' | 'pronto' | 'erro';
-
 const opcoesStatus = STATUS_VEICULO.filter((status) => status !== 'Inativo').map((status) => ({ label: rotuloStatusVeiculo[status], value: status }));
 
 // Placa tem 7 caracteres nos dois formatos; o hífen da antiga é o 8º, só visual.
@@ -41,8 +40,6 @@ export function VeiculoFormView({ veiculoId }: VeiculoFormViewProps) {
   const router = useRouter();
   const modoEdicao = !!veiculoId;
 
-  const [status, setStatus] = useState<StatusCarga>(modoEdicao ? 'carregando' : 'pronto');
-  const [erroCarga, setErroCarga] = useState<string | null>(null);
   const [placa, setPlaca] = useState('');
   const [marca, setMarca] = useState('');
   const [modelo, setModelo] = useState('');
@@ -59,40 +56,23 @@ export function VeiculoFormView({ veiculoId }: VeiculoFormViewProps) {
   // O "Desfazer" do Snackbar também fecha o Snackbar: sem esta marca, o fechamento voltaria para a lista
   // antes de a reativação terminar.
   const desfazendo = useRef(false);
-  const [tentativa, setTentativa] = useState(0);
 
-  useEffect(() => {
-    if (!veiculoId) return;
-    const id = veiculoId;
-    let cancelado = false;
-
-    async function carregar() {
-      setStatus('carregando');
-      const resultado = await buscarVeiculoPorId(id);
-      if (cancelado) return;
-
-      if (!resultado.ok) {
-        setErroCarga(resultado.mensagem);
-        setStatus('erro');
-        return;
-      }
-
-      setPlaca(formatarPlaca(resultado.data.placa));
-      setMarca(resultado.data.marca);
-      setModelo(resultado.data.modelo);
-      setAnoFabricacao(resultado.data.ano_fabricacao === null ? '' : String(resultado.data.ano_fabricacao));
-      setCapacidade(capacidadeParaTexto(resultado.data.capacidade_carga));
-      setStatusVeiculo(resultado.data.status);
-      setStatusSalvo(resultado.data.status);
-      setStatus('pronto');
-    }
-
-    carregar();
-
-    return () => {
-      cancelado = true;
-    };
-  }, [veiculoId, tentativa]);
+  // Carga única no Editar (useCargaUnica): sem internet a tela diz isso na hora e tenta de novo sozinha
+  // quando a conexão volta.
+  const buscarVeiculo = useCallback(() => buscarVeiculoPorId(veiculoId!), [veiculoId]);
+  const {
+    status,
+    erro: erroCarga,
+    tentarDeNovo,
+  } = useCargaUnica(veiculoId ? buscarVeiculo : null, (veiculo) => {
+    setPlaca(formatarPlaca(veiculo.placa));
+    setMarca(veiculo.marca);
+    setModelo(veiculo.modelo);
+    setAnoFabricacao(veiculo.ano_fabricacao === null ? '' : String(veiculo.ano_fabricacao));
+    setCapacidade(capacidadeParaTexto(veiculo.capacidade_carga));
+    setStatusVeiculo(veiculo.status);
+    setStatusSalvo(veiculo.status);
+  });
 
   async function handleSalvar() {
     if (salvando) return;
@@ -201,7 +181,7 @@ export function VeiculoFormView({ veiculoId }: VeiculoFormViewProps) {
   if (status === 'erro') {
     return (
       <Screen align="center" underHeader>
-        <EmptyState title="Não foi possível carregar o veículo" description={erroCarga ?? undefined} actionLabel="Tentar novamente" onAction={() => setTentativa((atual) => atual + 1)} />
+        <EmptyState title="Não foi possível carregar o veículo" description={erroCarga ?? undefined} actionLabel="Tentar novamente" onAction={tentarDeNovo} />
         <Button label="Voltar" variant="ghost" onPress={() => router.back()} />
       </Screen>
     );

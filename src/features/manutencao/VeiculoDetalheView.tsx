@@ -8,6 +8,7 @@ import { dataLocalISO, isoParaDataBR } from '@/lib/datas';
 import { formatarMoeda } from '@/lib/money';
 import { useDadosDaTela } from '@/lib/useDadosDaTela';
 import {
+  AvisoSemInternet,
   Badge,
   Button,
   Card,
@@ -157,6 +158,7 @@ export function VeiculoDetalheView({ veiculoId }: VeiculoDetalheViewProps) {
         ListHeaderComponentStyle={styles.cabecalho}
         ListHeaderComponent={
           <Column gap="lg">
+            {tela.semInternet && <AvisoSemInternet carregadoAs={tela.carregadoAs} />}
             <Card variant="feature">
               {/* O status fica dentro do cartão, ao lado do rótulo, e não solto acima dele. */}
               <View style={styles.topo}>
