@@ -140,7 +140,7 @@ describe('FormasPagamentoListView — linha (LST-01)', () => {
 
     expect(screen.queryByRole('switch', { name: `Ativa: ${nome}` })).not.toBeOnTheScreen();
     expect(screen.queryByRole('button', { name: nome })).not.toBeOnTheScreen();
-    expect(screen.getAllByText('Padrão do sistema')).toHaveLength(4);
+    expect(screen.getByText(nome)).toBeOnTheScreen();
   });
 
   it('forma editável abre a edição ao tocar na linha', async () => {
@@ -171,10 +171,15 @@ describe('FormasPagamentoListView — linha (LST-01)', () => {
 });
 
 describe('FormasPagamentoListView — desativadas, busca e FAB (LST-01)', () => {
-  it('as disponíveis vêm num grupo com a contagem e não há mais o "Mostrar desativadas"', async () => {
+  it('as ativas vêm em dois grupos com a contagem, as da empresa antes das fixas, sem o "Mostrar desativadas"', async () => {
     await renderComLista();
 
-    expect(screen.getByText('Disponíveis · 5')).toBeOnTheScreen();
+    expect(screen.getAllByRole('header').map((titulo) => titulo.props.children)).toEqual([
+      'Cadastradas pela empresa · 1',
+      'Padrão do sistema · 4',
+    ]);
+    // O grupo diz que as fixas são do sistema: nenhuma linha repete "Padrão do sistema" no subtítulo.
+    expect(screen.getAllByText(/Padrão do sistema/)).toHaveLength(1);
     expect(screen.queryByRole('switch', { name: 'Mostrar desativadas' })).not.toBeOnTheScreen();
   });
 

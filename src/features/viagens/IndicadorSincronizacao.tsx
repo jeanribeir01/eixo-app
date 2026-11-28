@@ -140,7 +140,7 @@ export function IndicadorSincronizacao({
         icone="alerta"
         titulo={emRevisao === 1 ? '1 registro em revisão' : `${emRevisao} registros em revisão`}
       >
-        O gestor vai conferir o que o servidor recusou. Seus dados continuam guardados no aparelho.
+        O gestor vai conferir o que não pôde ser gravado. Seus dados continuam guardados no aparelho.
       </Aviso>
     ) : null;
 

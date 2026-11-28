@@ -40,8 +40,8 @@ const FormaPagamentoLinha = memo(function FormaPagamentoLinha({ forma, onAbrir }
     <ListItem
       icon="formasPagamento"
       title={forma.nome}
-      // Forma fixa (do seed) não muda: o subtítulo explica por que a linha não abre.
-      subtitle={fixa ? 'Padrão do sistema' : undefined}
+      // Forma fixa (do seed) não muda e não abre: o grupo "Padrão do sistema" já diz por quê, sem
+      // repetir o aviso em cada linha.
       onPress={fixa ? undefined : () => onAbrir(forma.id)}
     />
   );
@@ -50,12 +50,19 @@ const FormaPagamentoLinha = memo(function FormaPagamentoLinha({ forma, onAbrir }
 // Cabeçalho e formas numa FlatList só, como nas outras listas do redesign.
 type Linha = { tipo: 'grupo'; id: string; rotulo: string } | { tipo: 'forma'; id: string; forma: FormaPagamento };
 
+// Dois grupos: as que a empresa cadastrou (abrem o Editar) e as fixas do sistema (não abrem). Grupo
+// vazio, por exemplo depois de uma busca, não aparece.
 function comCabecalho(formas: FormaPagamento[]): Linha[] {
-  if (formas.length === 0) return [];
-  return [
-    { tipo: 'grupo', id: 'grupo-disponiveis', rotulo: `Disponíveis · ${formas.length}` },
-    ...formas.map((forma): Linha => ({ tipo: 'forma', id: forma.id, forma })),
-  ];
+  const daEmpresa = formas.filter((forma) => !isFormaFixa(forma.nome));
+  const fixas = formas.filter((forma) => isFormaFixa(forma.nome));
+  const grupo = (id: string, rotulo: string, lista: FormaPagamento[]): Linha[] =>
+    lista.length === 0
+      ? []
+      : [
+          { tipo: 'grupo', id, rotulo: `${rotulo} · ${lista.length}` },
+          ...lista.map((forma): Linha => ({ tipo: 'forma', id: forma.id, forma })),
+        ];
+  return [...grupo('grupo-empresa', 'Cadastradas pela empresa', daEmpresa), ...grupo('grupo-fixas', 'Padrão do sistema', fixas)];
 }
 
 // Fora do componente: a mesma função em todo render, sem precisar de useCallback.

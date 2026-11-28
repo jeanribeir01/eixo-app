@@ -131,10 +131,12 @@ export function RevisoesViagensView() {
           keyExtractor={(item) => item.id}
           style={styles.lista}
           contentContainerStyle={[coluna, styles.conteudo]}
+          // Do ponto de vista do gestor, não do sistema: o que aconteceu, o que fazer e o que não se perde.
           ListHeaderComponent={
             <Text tone="body">
-              Viagens que o servidor recusou e cujo dado local foi preservado. Resolver ou descartar aqui
-              encerra a pendência; a viagem no aparelho não é apagada por esta tela.
+              Viagens que o motorista registrou sem internet e que não puderam ser gravadas, como um hodômetro
+              menor que o anterior. Confira cada uma com ele e marque como resolvida ou descarte. Nada aqui
+              apaga a viagem do aparelho do motorista.
             </Text>
           }
           refreshControl={
@@ -196,7 +198,7 @@ function CartaoRevisao({ revisao, salvando, onDecidir }: CartaoRevisaoProps) {
 
   return (
     <Column gap="md">
-      <Aviso tom="danger" icone="alerta" titulo="O servidor não aceitou esta viagem">
+      <Aviso tom="danger" icone="alerta" titulo="Esta viagem não pôde ser gravada">
         {revisao.mensagem}
       </Aviso>
 

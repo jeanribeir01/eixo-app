@@ -113,7 +113,7 @@ export function pedeAtencaoFrota(entrada: EntradaFrota): ItemAtencao[] {
     itens.push({
       id: 'revisoes',
       titulo: `${plural(entrada.revisoesPendentes, 'viagem', 'viagens')} para revisar`,
-      detalhe: 'Enviada offline e recusada pelo servidor',
+      detalhe: 'Registrada sem internet e não gravada: confira com o motorista',
       icone: 'alerta',
       tom: 'warning',
       href: '/viagens/revisoes',
