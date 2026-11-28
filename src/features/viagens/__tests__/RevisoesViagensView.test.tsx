@@ -105,7 +105,9 @@ describe('RevisoesViagensView', () => {
     expect(screen.getByText('A viagem já foi encerrada no servidor.')).toBeOnTheScreen();
     expect(screen.getByText(/Código: VG005/)).toBeOnTheScreen();
     // O motivo vem primeiro, num aviso; motorista e data numa linha só.
-    expect(screen.getByText('O servidor não aceitou esta viagem')).toBeOnTheScreen();
+    expect(screen.getByText('Esta viagem não pôde ser gravada')).toBeOnTheScreen();
+    // A explicação fala com o gestor, sem "servidor" nem "dado local" (a mensagem da revisão vem do banco).
+    expect(screen.getByText(/^Viagens que o motorista registrou sem internet/)).not.toHaveTextContent(/servidor|dado local/);
     expect(screen.getByText(/^Carlos Motorista · registrada em \d{2}\/\d{2}\/2026 às \d{2}:\d{2}$/)).toBeOnTheScreen();
   });
 
