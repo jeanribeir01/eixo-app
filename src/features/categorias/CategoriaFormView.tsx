@@ -1,8 +1,9 @@
-import { useEffect, useRef, useState } from 'react';
+import { useCallback, useRef, useState } from 'react';
 import { useRouter } from 'expo-router';
 import { ActivityIndicator, StyleSheet, View } from 'react-native';
 import { z } from 'zod';
 
+import { useCargaUnica } from '@/lib/useCargaUnica';
 import {
   Aviso,
   Button,
@@ -25,7 +26,6 @@ import { rotuloTipoCategoria, type TipoCategoria } from './types';
 type Erros = Partial<Record<'titulo' | 'tipo', string>>;
 // `desfazer`: depois de desativar, o Snackbar oferece "Desfazer" (reativa na hora).
 type Feedback = { mensagem: string; tone: 'success' | 'error'; desfazer?: boolean };
-type StatusCarga = 'carregando' | 'pronto' | 'erro';
 
 // Cada tipo diz o que significa: "Entrada" sozinho não diz para que lado vai o dinheiro.
 const OPCOES_TIPO: { tipo: TipoCategoria; descricao: string }[] = [
@@ -45,8 +45,6 @@ export function CategoriaFormView({ categoriaId, tipoInicial }: CategoriaFormVie
   const router = useRouter();
   const modoEdicao = !!categoriaId;
 
-  const [status, setStatus] = useState<StatusCarga>(modoEdicao ? 'carregando' : 'pronto');
-  const [erroCarga, setErroCarga] = useState<string | null>(null);
   const [titulo, setTitulo] = useState('');
   const [tipo, setTipo] = useState<TipoCategoria | null>(tipoInicial ?? null);
   const [erros, setErros] = useState<Erros>({});
@@ -58,34 +56,14 @@ export function CategoriaFormView({ categoriaId, tipoInicial }: CategoriaFormVie
   // antes de a reativação terminar.
   const desfazendo = useRef(false);
 
-  useEffect(() => {
-    if (!categoriaId) return;
-
-    let cancelado = false;
-
-    async function carregar() {
-      setStatus('carregando');
-      const resultado = await buscarCategoriaPorId(categoriaId!);
-      if (cancelado) return;
-
-      if (!resultado.ok) {
-        setErroCarga(resultado.mensagem);
-        setStatus('erro');
-        return;
-      }
-
-      setTitulo(resultado.data.titulo);
-      setTipo(resultado.data.tipo);
-      setAtiva(resultado.data.ativa);
-      setStatus('pronto');
-    }
-
-    carregar();
-
-    return () => {
-      cancelado = true;
-    };
-  }, [categoriaId]);
+  // Carga única no Editar (useCargaUnica): sem internet a tela diz isso na hora e tenta de novo sozinha
+  // quando a conexão volta.
+  const buscarCategoria = useCallback(() => buscarCategoriaPorId(categoriaId!), [categoriaId]);
+  const { status, erro: erroCarga } = useCargaUnica(categoriaId ? buscarCategoria : null, (categoria) => {
+    setTitulo(categoria.titulo);
+    setTipo(categoria.tipo);
+    setAtiva(categoria.ativa);
+  });
 
   async function handleSalvar() {
     const resultado = categoriaSchema.safeParse({ titulo, tipo: tipo ?? undefined });

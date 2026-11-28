@@ -1,12 +1,13 @@
 import { memo, useCallback, useMemo, useState } from 'react';
 import { useRouter } from 'expo-router';
-import { Alert, RefreshControl, StyleSheet, View, type ListRenderItemInfo } from 'react-native';
+import { RefreshControl, StyleSheet, View, type ListRenderItemInfo } from 'react-native';
 
 import { buscarFluxoMensal } from '@/features/dashboard/graficos/queries';
 import { hojeISO, mesDeHoje, nomeDoMes, rotuloDoDia, somarMeses, type AnoMes } from '@/lib/datas';
 import { formatarMoeda } from '@/lib/money';
 import { useDadosDaTela } from '@/lib/useDadosDaTela';
 import {
+  AvisoSemInternet,
   Button,
   Card,
   ChipFiltro,
@@ -14,6 +15,7 @@ import {
   EmptyState,
   FAB,
   FAB_ALTURA_RESERVADA,
+  FolhaDeConfirmacao,
   LinhaDeFiltros,
   List,
   ListItem,
@@ -212,16 +214,9 @@ export function MovimentacoesListView() {
     [atualizarDados],
   );
 
-  // Delete é físico e sem volta: confirmação no diálogo nativo do sistema.
-  const confirmarExclusao = useCallback(
-    (movimentacao: Movimentacao) => {
-      Alert.alert('Excluir movimentação?', movimentacao.descricao, [
-        { text: 'Cancelar', style: 'cancel' },
-        { text: 'Excluir', style: 'destructive', onPress: () => excluir(movimentacao) },
-      ]);
-    },
-    [excluir],
-  );
+  // Delete é físico e sem volta: confirmação na folha do design system antes de apagar.
+  const [aExcluir, setAExcluir] = useState<Movimentacao | null>(null);
+  const confirmarExclusao = useCallback((movimentacao: Movimentacao) => setAExcluir(movimentacao), []);
 
   const abrir = useCallback((id: string) => router.push(`/movimentacoes/${id}/editar`), [router]);
 
@@ -304,6 +299,8 @@ export function MovimentacoesListView() {
           />
         </LinhaDeFiltros>
 
+        {tela.semInternet && tela.status === 'pronto' && <AvisoSemInternet carregadoAs={tela.carregadoAs} />}
+
         {tela.status === 'carregando' && (
           <Column gap="sm">
             <Skeleton height="xxl" accessibilityLabel="Carregando movimentações" />
@@ -360,6 +357,20 @@ export function MovimentacoesListView() {
           renderItem={renderLinha}
         />
       )}
+
+      <FolhaDeConfirmacao
+        visivel={aExcluir !== null}
+        titulo="Excluir movimentação?"
+        mensagem={aExcluir ? `${aExcluir.descricao}. A exclusão não pode ser desfeita.` : undefined}
+        rotuloConfirmar="Excluir"
+        tom="danger"
+        onConfirmar={() => {
+          const movimentacao = aExcluir;
+          setAExcluir(null);
+          if (movimentacao) void excluir(movimentacao);
+        }}
+        onCancelar={() => setAExcluir(null)}
+      />
     </Screen>
   );
 }

@@ -1,11 +1,22 @@
 import { useEffect, useState } from 'react';
-import { ActivityIndicator, Alert, Image, Modal, Pressable, StyleSheet, View } from 'react-native';
+import { ActivityIndicator, Image, Modal, Pressable, StyleSheet, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { ImageManipulator, SaveFormat } from 'expo-image-manipulator';
 import * as ImagePicker from 'expo-image-picker';
 
 import { uploadComprovante, urlDoComprovante } from '@/lib/storage';
-import { Button, Card, Column, Text, colors, radius, spacing, touchTarget } from '@/ui';
+import {
+  Button,
+  Card,
+  Column,
+  FolhaDeConfirmacao,
+  FolhaDeEscolha,
+  Text,
+  colors,
+  radius,
+  spacing,
+  touchTarget,
+} from '@/ui';
 
 // Foto de celular tem 3000–4000 px de largura e passa de 3 MB. Com 1600 px e JPEG 0,6 o arquivo
 // fica bem abaixo de 1 MB e o texto do comprovante continua legível (AC: "máx. ~1MB").
@@ -91,21 +102,14 @@ export function AnexoComprovante({ label, value, onChange, onErro, error }: Anex
     await enviar(await ImagePicker.launchImageLibraryAsync({ mediaTypes: ['images'], allowsEditing: true, quality: 1 }));
   }
 
-  function escolherOrigem() {
-    Alert.alert('Anexar comprovante', 'De onde vem a imagem?', [
-      { text: 'Câmera', onPress: tirarFoto },
-      { text: 'Galeria', onPress: escolherDaGaleria },
-      { text: 'Cancelar', style: 'cancel' },
-    ]);
-  }
+  // Qual folha está aberta: a de escolher a origem da imagem ou a de confirmar a remoção.
+  const [folha, setFolha] = useState<'origem' | 'remover' | null>(null);
+  const fecharFolha = () => setFolha(null);
 
-  // Remover só limpa o campo. O arquivo é apagado pela tela: na hora, se ainda não foi salvo em
-  // nenhuma movimentação, ou depois de salvar, se era o anexo que já estava gravado.
-  function confirmarRemocao() {
-    Alert.alert('Remover comprovante', 'O arquivo será apagado ao salvar a movimentação.', [
-      { text: 'Cancelar', style: 'cancel' },
-      { text: 'Remover', style: 'destructive', onPress: () => onChange(null) },
-    ]);
+  // Fecha a folha antes de abrir a câmera ou a galeria: as duas são telas do sistema por cima do app.
+  function escolher(origem: () => Promise<void>) {
+    fecharFolha();
+    void origem();
   }
 
   return (
@@ -141,10 +145,10 @@ export function AnexoComprovante({ label, value, onChange, onErro, error }: Anex
             <View style={styles.flex}>
               <Text variant="bodySm">Comprovante anexado</Text>
             </View>
-            <Button label="Remover" variant="ghost" onPress={confirmarRemocao} />
+            <Button label="Remover" variant="ghost" onPress={() => setFolha('remover')} />
           </Column>
         ) : (
-          <Button label="Anexar comprovante" variant="ghost" onPress={escolherOrigem} />
+          <Button label="Anexar comprovante" variant="ghost" onPress={() => setFolha('origem')} />
         )}
       </Card>
 
@@ -153,6 +157,37 @@ export function AnexoComprovante({ label, value, onChange, onErro, error }: Anex
           {error}
         </Text>
       )}
+
+      <FolhaDeEscolha
+        visivel={folha === 'origem'}
+        titulo="Anexar comprovante"
+        mensagem="De onde vem a imagem?"
+        opcoes={[
+          { rotulo: 'Câmera', descricao: 'Tirar uma foto agora', icone: 'camera', onPress: () => escolher(tirarFoto) },
+          {
+            rotulo: 'Galeria',
+            descricao: 'Escolher uma imagem do aparelho',
+            icone: 'galeria',
+            onPress: () => escolher(escolherDaGaleria),
+          },
+        ]}
+        onCancelar={fecharFolha}
+      />
+
+      {/* Remover só limpa o campo. O arquivo é apagado pela tela: na hora, se ainda não foi salvo em
+          nenhuma movimentação, ou depois de salvar, se era o anexo que já estava gravado. */}
+      <FolhaDeConfirmacao
+        visivel={folha === 'remover'}
+        titulo="Remover comprovante?"
+        mensagem="O arquivo será apagado ao salvar a movimentação."
+        rotuloConfirmar="Remover"
+        tom="danger"
+        onConfirmar={() => {
+          fecharFolha();
+          onChange(null);
+        }}
+        onCancelar={fecharFolha}
+      />
 
       <Modal visible={telaCheia && !!url} animationType="fade" onRequestClose={() => setTelaCheia(false)}>
         <SafeAreaView style={styles.telaCheia}>

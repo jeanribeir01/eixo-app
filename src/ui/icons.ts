@@ -5,6 +5,7 @@ import { ArrowDownLeftIcon } from 'phosphor-react-native/src/icons/ArrowDownLeft
 import { ArrowsDownUpIcon } from 'phosphor-react-native/src/icons/ArrowsDownUp';
 import { ArrowUpRightIcon } from 'phosphor-react-native/src/icons/ArrowUpRight';
 import { CalendarBlankIcon } from 'phosphor-react-native/src/icons/CalendarBlank';
+import { CameraIcon } from 'phosphor-react-native/src/icons/Camera';
 import { CaretDownIcon } from 'phosphor-react-native/src/icons/CaretDown';
 import { CaretLeftIcon } from 'phosphor-react-native/src/icons/CaretLeft';
 import { CaretRightIcon } from 'phosphor-react-native/src/icons/CaretRight';
@@ -17,9 +18,12 @@ import { CloudCheckIcon } from 'phosphor-react-native/src/icons/CloudCheck';
 import { CreditCardIcon } from 'phosphor-react-native/src/icons/CreditCard';
 import { DotsThreeVerticalIcon } from 'phosphor-react-native/src/icons/DotsThreeVertical';
 import { EnvelopeSimpleIcon } from 'phosphor-react-native/src/icons/EnvelopeSimple';
+import { FileCsvIcon } from 'phosphor-react-native/src/icons/FileCsv';
+import { FilePdfIcon } from 'phosphor-react-native/src/icons/FilePdf';
 import { GaugeIcon } from 'phosphor-react-native/src/icons/Gauge';
 import { GearSixIcon } from 'phosphor-react-native/src/icons/GearSix';
 import { HouseIcon } from 'phosphor-react-native/src/icons/House';
+import { ImageIcon } from 'phosphor-react-native/src/icons/Image';
 import { InfoIcon } from 'phosphor-react-native/src/icons/Info';
 import { LockSimpleIcon } from 'phosphor-react-native/src/icons/LockSimple';
 import { MagnifyingGlassIcon } from 'phosphor-react-native/src/icons/MagnifyingGlass';
@@ -89,6 +93,11 @@ export const icons = {
   enviando: CloudArrowUpIcon,
   enviado: CloudCheckIcon,
   versao: InfoIcon,
+  // Opções das folhas de escolha: de onde vem o comprovante e em que formato sai o relatório.
+  camera: CameraIcon,
+  galeria: ImageIcon,
+  planilha: FileCsvIcon,
+  pdf: FilePdfIcon,
 } as const satisfies Record<string, PhosphorIcon>;
 
 export type IconName = keyof typeof icons;

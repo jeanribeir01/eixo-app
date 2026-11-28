@@ -1,5 +1,5 @@
 import { act, fireEvent, render, screen, within } from '@testing-library/react-native';
-import { Alert, FlatList, RefreshControl, StyleSheet, useWindowDimensions } from 'react-native';
+import { FlatList, RefreshControl, StyleSheet, useWindowDimensions } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { porTipo, todosPorTipo } from '@/testing/componentes';
@@ -111,11 +111,13 @@ async function renderLista() {
   await screen.findByText('Frete Curitiba');
 }
 
-// Abre o diálogo de exclusão da linha e devolve os botões dele (o Alert nativo não aparece na árvore).
+// Abre a folha de exclusão da linha (FolhaDeConfirmacao): ela aparece na árvore, com os botões.
 async function abrirMaisOpcoes(descricao: string) {
-  const alerta = jest.spyOn(Alert, 'alert');
   await fireEvent.press(screen.getByRole('button', { name: `Mais opções: ${descricao}` }));
-  return { alerta, botoes: alerta.mock.calls.at(-1)?.[2] ?? [] };
+}
+
+async function tocarNaFolha(rotulo: 'Excluir' | 'Cancelar') {
+  await act(async () => await fireEvent.press(screen.getByRole('button', { name: rotulo })));
 }
 
 beforeEach(() => {
@@ -141,7 +143,6 @@ beforeEach(() => {
 
 afterEach(() => {
   jest.useRealTimers();
-  // O spy do Alert acumularia chamadas de um teste para o outro.
   jest.restoreAllMocks();
 });
 
@@ -389,28 +390,27 @@ describe('MovimentacoesListView — editar e excluir (LST-02)', () => {
     const linha = screen.getByRole('button', { name: 'Diesel' });
     expect(within(linha).queryByRole('button', { name: 'Mais opções: Diesel' })).not.toBeOnTheScreen();
 
-    const { alerta, botoes } = await abrirMaisOpcoes('Diesel');
+    await abrirMaisOpcoes('Diesel');
 
-    expect(alerta).toHaveBeenCalledWith('Excluir movimentação?', 'Diesel', expect.any(Array));
-    expect(botoes.map((botao) => botao.text)).toEqual(['Cancelar', 'Excluir']);
+    expect(screen.getByText('Excluir movimentação?')).toBeOnTheScreen();
+    expect(screen.getByText('Diesel. A exclusão não pode ser desfeita.')).toBeOnTheScreen();
     expect(mockExcluir).not.toHaveBeenCalled();
 
-    await act(async () => botoes.find((botao) => botao.text === 'Excluir')?.onPress?.());
+    await tocarNaFolha('Excluir');
 
     expect(mockExcluir).toHaveBeenCalledWith('diesel');
     expect(screen.queryByText('Diesel')).not.toBeOnTheScreen();
     expect(screen.getByRole('alert')).toHaveTextContent('Movimentação excluída.');
   });
 
-  it('Cancelar no diálogo mantém a linha', async () => {
+  it('Cancelar na folha fecha sem excluir e mantém a linha', async () => {
     await renderLista();
 
-    const { botoes } = await abrirMaisOpcoes('Diesel');
-    const cancelar = botoes.find((botao) => botao.text === 'Cancelar');
-    expect(cancelar?.style).toBe('cancel');
-    cancelar?.onPress?.();
+    await abrirMaisOpcoes('Diesel');
+    await tocarNaFolha('Cancelar');
 
     expect(mockExcluir).not.toHaveBeenCalled();
+    expect(screen.queryByText('Excluir movimentação?')).not.toBeOnTheScreen();
     expect(screen.getByText('Diesel')).toBeOnTheScreen();
   });
 
@@ -418,8 +418,8 @@ describe('MovimentacoesListView — editar e excluir (LST-02)', () => {
     mockExcluir.mockResolvedValue({ ok: false, mensagem: 'Movimentação não encontrada ou não pode ser excluída.' });
     await renderLista();
 
-    const { botoes } = await abrirMaisOpcoes('Diesel');
-    await act(async () => botoes.find((botao) => botao.text === 'Excluir')?.onPress?.());
+    await abrirMaisOpcoes('Diesel');
+    await tocarNaFolha('Excluir');
 
     expect(screen.getByRole('alert')).toHaveTextContent('Movimentação não encontrada ou não pode ser excluída.');
     expect(screen.getByText('Diesel')).toBeOnTheScreen();
@@ -428,10 +428,10 @@ describe('MovimentacoesListView — editar e excluir (LST-02)', () => {
   it('a tela re-renderizar (Snackbar de erro) não re-renderiza as linhas: elas são memoizadas (EIX-71)', async () => {
     mockExcluir.mockResolvedValue({ ok: false, mensagem: 'Sem conexão.' });
     await renderLista();
-    const { botoes } = await abrirMaisOpcoes('Diesel');
+    await abrirMaisOpcoes('Diesel');
     const rendersAntes = jest.mocked(ListItem).mock.calls.length;
 
-    await act(async () => botoes.find((botao) => botao.text === 'Excluir')?.onPress?.());
+    await tocarNaFolha('Excluir');
 
     // A tela mudou (o Snackbar apareceu), mas nenhuma movimentação mudou: nenhuma linha renderiza de novo.
     expect(screen.getByRole('alert')).toHaveTextContent('Sem conexão.');

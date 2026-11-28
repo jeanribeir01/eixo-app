@@ -1,15 +1,17 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useMemo, useRef, useState } from 'react';
 import { useRouter } from 'expo-router';
-import { Alert, FlatList, StyleSheet, View, type ListRenderItemInfo } from 'react-native';
+import { FlatList, StyleSheet, View, type ListRenderItemInfo } from 'react-native';
 
 import { hojeISO, isoParaDataBR } from '@/lib/datas';
 import { formatarMoeda } from '@/lib/money';
+import { useCargaUnica } from '@/lib/useCargaUnica';
 import {
   Aviso,
   Button,
   Card,
   Column,
   EmptyState,
+  FolhaDeConfirmacao,
   ListItem,
   Screen,
   Skeleton,
@@ -23,7 +25,6 @@ import {
 import { buscarDivida, excluirDivida } from '../dividasRepository';
 import type { DividaDetalhe, Parcela } from '../types';
 
-type Status = 'carregando' | 'pronto' | 'erro';
 type Feedback = { mensagem: string; tone: 'success' | 'error' };
 
 function plural(quantidade: number, singular: string, pluralizado: string): string {
@@ -82,36 +83,19 @@ function subtituloDaParcela(parcela: Parcela, hoje: string): string {
 
 export function DividaDetalheView({ id }: { id: string }) {
   const router = useRouter();
-  const [status, setStatus] = useState<Status>('carregando');
   const [divida, setDivida] = useState<DividaDetalhe | null>(null);
-  const [erro, setErro] = useState<string | null>(null);
-  // Mudar a tentativa dispara a carga de novo ("Tentar novamente").
-  const [tentativa, setTentativa] = useState(0);
   const coluna = useScreenColumn();
   const [excluindo, setExcluindo] = useState(false);
   const [feedback, setFeedback] = useState<Feedback | null>(null);
-  // O Alert guarda a closure do primeiro render: o estado sozinho não barra um segundo toque em "Excluir"
-  // antes do próximo render. O ref é a guarda síncrona (mesmo padrão de Finalizar viagem).
+  // O estado sozinho não barra um segundo toque em "Excluir" antes do próximo render. O ref é a guarda
+  // síncrona (mesmo padrão de Finalizar viagem).
   const excluindoRef = useRef(false);
+  const [confirmando, setConfirmando] = useState(false);
 
-  useEffect(() => {
-    let cancelado = false;
-
-    buscarDivida(id).then((resultado) => {
-      if (cancelado) return;
-      if (!resultado.ok) {
-        setErro(resultado.mensagem);
-        setStatus('erro');
-        return;
-      }
-      setDivida(resultado.data);
-      setStatus('pronto');
-    });
-
-    return () => {
-      cancelado = true;
-    };
-  }, [id, tentativa]);
+  // Carga única (useCargaUnica): sem internet a tela diz isso na hora e tenta de novo sozinha quando a
+  // conexão volta.
+  const buscar = useCallback(() => buscarDivida(id), [id]);
+  const { status, erro, tentarDeNovo } = useCargaUnica(buscar, setDivida);
 
   const linhas = useMemo(() => agruparParcelas(divida?.parcelas ?? []), [divida]);
 
@@ -139,24 +123,11 @@ export function DividaDetalheView({ id }: { id: string }) {
     setFeedback({ mensagem: `Dívida excluída. ${detalhe}${preservadas}`, tone: 'success' });
   }
 
-  // Delete é sem volta para as pendentes: confirmação no diálogo nativo, com o que vai acontecer.
-  function confirmarExclusao(divida: DividaDetalhe) {
-    const emAberto = divida.quantidadeParcelas - divida.parcelasPagas;
-    Alert.alert('Excluir dívida?', `${divida.descricao}\n\n${consequenciaDaExclusao(emAberto, divida.parcelasPagas)}`, [
-      { text: 'Cancelar', style: 'cancel' },
-      { text: 'Excluir', style: 'destructive', onPress: excluir },
-    ]);
-  }
 
   function dispensarFeedback() {
     const eraSucesso = feedback?.tone === 'success';
     setFeedback(null);
     if (eraSucesso) router.back();
-  }
-
-  function tentarDeNovo() {
-    setStatus('carregando');
-    setTentativa((atual) => atual + 1);
   }
 
   if (status === 'carregando') {
@@ -275,10 +246,24 @@ export function DividaDetalheView({ id }: { id: string }) {
               variant="danger"
               loading={excluindo}
               disabled={excluindo}
-              onPress={() => confirmarExclusao(divida)}
+              onPress={() => setConfirmando(true)}
             />
           </Column>
         }
+      />
+
+      {/* Delete é sem volta para as pendentes: a folha repete o que vai acontecer antes do "Excluir". */}
+      <FolhaDeConfirmacao
+        visivel={confirmando}
+        titulo="Excluir dívida?"
+        mensagem={`${divida.descricao}. ${consequenciaDaExclusao(emAberto, divida.parcelasPagas)}`}
+        rotuloConfirmar="Excluir"
+        tom="danger"
+        onConfirmar={() => {
+          setConfirmando(false);
+          void excluir();
+        }}
+        onCancelar={() => setConfirmando(false)}
       />
     </Screen>
   );

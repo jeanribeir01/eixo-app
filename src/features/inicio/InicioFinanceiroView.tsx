@@ -10,7 +10,19 @@ import type { Movimentacao } from '@/features/movimentacoes/types';
 import { hojeISO, isoParaDataBR } from '@/lib/datas';
 import { formatarMoeda } from '@/lib/money';
 import { useDadosDaTela } from '@/lib/useDadosDaTela';
-import { AcaoRapida, Card, Column, EmptyState, ListItem, ListSection, Screen, Skeleton, Snackbar, Text } from '@/ui';
+import {
+  AcaoRapida,
+  AvisoSemInternet,
+  Card,
+  Column,
+  EmptyState,
+  ListItem,
+  ListSection,
+  Screen,
+  Skeleton,
+  Snackbar,
+  Text,
+} from '@/ui';
 import { spacing } from '@/ui/tokens';
 
 import { CabecalhoInicio } from './CabecalhoInicio';
@@ -107,6 +119,7 @@ export function InicioFinanceiroView() {
 
       {tela.status === 'pronto' && tela.dados && (
         <>
+          {tela.semInternet && <AvisoSemInternet carregadoAs={tela.carregadoAs} />}
           <CartaoSaldo resumo={tela.dados} onPress={() => router.push('/caixa')} />
 
           <View testID="acoes-rapidas" style={styles.acoes}>

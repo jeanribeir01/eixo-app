@@ -141,7 +141,7 @@ describe('SaldoProjecaoView', () => {
     expect(buscarResumoCaixa).toHaveBeenCalledTimes(2);
   });
 
-  it('pull-to-refresh busca de novo e mostra o saldo atualizado', async () => {
+  it('pull-to-refresh busca de novo e troca o saldo na tela', async () => {
     (buscarResumoCaixa as jest.Mock)
       .mockResolvedValueOnce({ ok: true, data: resumoCaixaComDados })
       .mockResolvedValueOnce({ ok: true, data: { ...resumoCaixaComDados, saldoAtualCentavos: 1_500_000 } });
@@ -154,7 +154,8 @@ describe('SaldoProjecaoView', () => {
     });
 
     expect(await screen.findByText('+ R$ 15.000,00')).toBeOnTheScreen();
-    expect(screen.getByText('Saldo atualizado.')).toBeOnTheScreen();
+    // Como nas outras listas, o dado novo é o retorno: sem Snackbar de sucesso a cada puxada.
+    expect(screen.queryByText('Saldo atualizado.')).not.toBeOnTheScreen();
   });
 
   it('pull-to-refresh com erro mantém o saldo anterior e avisa', async () => {

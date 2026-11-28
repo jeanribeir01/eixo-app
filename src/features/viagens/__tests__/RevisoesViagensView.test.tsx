@@ -1,5 +1,5 @@
-import { Alert, FlatList, StyleSheet, useWindowDimensions } from 'react-native';
-import { act, fireEvent, render, screen, waitFor } from '@testing-library/react-native';
+import { FlatList, StyleSheet, useWindowDimensions } from 'react-native';
+import { act, fireEvent, render, screen, waitFor, within } from '@testing-library/react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { porTipo } from '@/testing/componentes';
@@ -59,10 +59,10 @@ function revisao(overrides: Partial<RevisaoViagem> = {}): RevisaoViagem {
   };
 }
 
-function confirmarAlerta(): void {
-  jest.spyOn(Alert, 'alert').mockImplementation((_titulo, _mensagem, botoes) => {
-    const confirmar = botoes?.find((botao) => botao.text === 'Resolver' || botao.text === 'Descartar');
-    confirmar?.onPress?.();
+// A decisão pede um "sim" na folha de confirmação, que aparece na árvore com o botão da ação.
+async function confirmarNaFolha(rotulo: 'Resolver' | 'Descartar') {
+  await act(async () => {
+    await fireEvent.press(within(screen.getByTestId('folha')).getByRole('button', { name: rotulo }));
   });
 }
 
@@ -111,8 +111,6 @@ describe('RevisoesViagensView', () => {
 
   it('resolve a revisão com a observação e remove o cartão da fila', async () => {
     mockListar.mockResolvedValue({ ok: true, data: [revisao()] });
-    confirmarAlerta();
-
     await render(<RevisoesViagensView />);
 
     await screen.findByText('BRA2E19');
@@ -124,6 +122,7 @@ describe('RevisoesViagensView', () => {
     await act(async () => {
       await fireEvent.press(screen.getByText('Resolver revisão'));
     });
+    await confirmarNaFolha('Resolver');
 
     await waitFor(() =>
       expect(mockResolver).toHaveBeenCalledWith('revisao-1', {
@@ -137,14 +136,13 @@ describe('RevisoesViagensView', () => {
 
   it('descarta a revisão com feedback de que a viagem local não foi alterada', async () => {
     mockListar.mockResolvedValue({ ok: true, data: [revisao()] });
-    confirmarAlerta();
-
     await render(<RevisoesViagensView />);
 
     await screen.findByText('BRA2E19');
     await act(async () => {
       await fireEvent.press(screen.getByText('Descartar revisão'));
     });
+    await confirmarNaFolha('Descartar');
 
     await waitFor(() =>
       expect(mockResolver).toHaveBeenCalledWith('revisao-1', {
@@ -163,14 +161,13 @@ describe('RevisoesViagensView', () => {
       ok: false,
       mensagem: 'Não foi possível salvar a decisão da revisão. Tente novamente.',
     });
-    confirmarAlerta();
-
     await render(<RevisoesViagensView />);
 
     await screen.findByText('BRA2E19');
     await act(async () => {
       await fireEvent.press(screen.getByText('Resolver revisão'));
     });
+    await confirmarNaFolha('Resolver');
 
     expect(
       await screen.findByText('Não foi possível salvar a decisão da revisão. Tente novamente.'),

@@ -1,91 +1,40 @@
-import { useCallback, useRef, useState } from 'react';
-import { useFocusEffect } from 'expo-router';
 import { RefreshControl, ScrollView } from 'react-native';
 
-import { Column, EmptyState, Screen, Skeleton, Snackbar, colors } from '@/ui';
+import { useDadosDaTela } from '@/lib/useDadosDaTela';
+import { AvisoSemInternet, Column, EmptyState, Screen, Skeleton, Snackbar, colors } from '@/ui';
 
 import { buscarResumoCaixa } from '../fonteResumoCaixa';
 import { PendentesSemDataCard } from './PendentesSemDataCard';
 import { ProjecaoCaixa } from './ProjecaoCaixa';
-import type { ResumoCaixa } from '../resumoCaixa';
 import { SaldoAtualCard } from './SaldoAtualCard';
-
-type Status = 'carregando' | 'pronto' | 'erro';
-
-type Feedback = { mensagem: string; tone: 'success' | 'error' };
 
 // Tela de saldo e projeção (US05 / EIX-51). Só exibe o que o motor de saldo devolve: nenhuma soma
 // acontece no app.
 export function SaldoProjecaoView() {
-  const [status, setStatus] = useState<Status>('carregando');
-  const [resumo, setResumo] = useState<ResumoCaixa | null>(null);
-  const [erro, setErro] = useState<string | null>(null);
-  const [atualizando, setAtualizando] = useState(false);
-  const [feedback, setFeedback] = useState<Feedback | null>(null);
-
-  // Já existe resumo na tela? Ref em vez de ler `resumo`: o callback abaixo não pode depender do
-  // state, senão o useFocusEffect rodaria de novo a cada carga.
-  const temResumo = useRef(false);
-
-  const carregar = useCallback(async () => {
-    // Skeleton só quando ainda não há nada para mostrar. Ao voltar o foco com o saldo na tela, o
-    // dado novo só substitui o antigo, sem a tela piscar.
-    if (!temResumo.current) setStatus('carregando');
-
-    const resultado = await buscarResumoCaixa();
-    if (!resultado.ok) {
-      // Recarga em segundo plano que falha não apaga o saldo que o usuário já está vendo.
-      if (temResumo.current) {
-        setFeedback({ mensagem: resultado.mensagem, tone: 'error' });
-        return;
-      }
-      setErro(resultado.mensagem);
-      setStatus('erro');
-      return;
-    }
-
-    temResumo.current = true;
-    setResumo(resultado.data);
-    setStatus('pronto');
-  }, []);
-
-  // Recarrega sempre que a tela volta ao foco: quem acabou de lançar movimentação/dívida vê o saldo novo.
-  useFocusEffect(
-    useCallback(() => {
-      carregar();
-    }, [carregar]),
-  );
-
-  // Pull-to-refresh mantém o conteúdo na tela (sem skeleton) e só troca quando o dado novo chega.
-  async function handleAtualizar() {
-    setAtualizando(true);
-    const resultado = await buscarResumoCaixa();
-    setAtualizando(false);
-
-    if (!resultado.ok) {
-      setFeedback({ mensagem: resultado.mensagem, tone: 'error' });
-      return;
-    }
-
-    temResumo.current = true;
-    setResumo(resultado.data);
-    setStatus('pronto');
-    setFeedback({ mensagem: 'Saldo atualizado.', tone: 'success' });
-  }
+  // A mesma carga das listas (useDadosDaTela): recarrega ao voltar o foco sem piscar o skeleton (quem
+  // acabou de lançar vê o saldo novo), a recarga que falha vira Snackbar sem apagar o saldo, e sem
+  // internet a tela avisa em vez de ficar carregando.
+  const tela = useDadosDaTela(buscarResumoCaixa);
+  const { status, erro } = tela;
+  const resumo = tela.dados;
 
   const vazio = status === 'pronto' && resumo !== null && resumo.quantidadeMovimentacoes === 0;
 
   return (
     <Screen
       underHeader
-      overlay={feedback && <Snackbar message={feedback.mensagem} tone={feedback.tone} onDismiss={() => setFeedback(null)} />}
+      overlay={
+        tela.feedbackErro ? (
+          <Snackbar message={tela.feedbackErro} tone="error" onDismiss={tela.limparFeedbackErro} />
+        ) : null
+      }
     >
       <ScrollView
         style={{ flex: 1 }}
         refreshControl={
           <RefreshControl
-            refreshing={atualizando}
-            onRefresh={handleAtualizar}
+            refreshing={tela.atualizando}
+            onRefresh={tela.puxarParaAtualizar}
             colors={[colors.accent]}
             tintColor={colors.accent}
             accessibilityLabel="Atualizar saldo"
@@ -93,6 +42,8 @@ export function SaldoProjecaoView() {
         }
       >
         <Column gap="lg">
+          {tela.semInternet && status === 'pronto' && <AvisoSemInternet carregadoAs={tela.carregadoAs} />}
+
           {status === 'carregando' && (
             <Column gap="lg">
               {/* Skeleton com a forma da tela: saldo, projeção e bloco sem data. */}
@@ -107,7 +58,7 @@ export function SaldoProjecaoView() {
               title="Não foi possível carregar"
               description={erro ?? undefined}
               actionLabel="Tentar novamente"
-              onAction={carregar}
+              onAction={tela.recarregar}
             />
           )}
 

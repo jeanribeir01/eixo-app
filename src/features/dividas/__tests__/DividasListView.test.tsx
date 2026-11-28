@@ -2,6 +2,7 @@ import { act, fireEvent, render, screen } from '@testing-library/react-native';
 import { FlatList, StyleSheet, useWindowDimensions } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
+import { useConexaoStore } from '@/lib/conexao';
 import { porTipo } from '@/testing/componentes';
 import { FAB_ALTURA_RESERVADA, spacing } from '@/ui';
 
@@ -87,6 +88,33 @@ describe('DividasListView (EIX-50)', () => {
     expect(screen.queryByText('Dívidas')).not.toBeOnTheScreen();
     expect(screen.queryByText('Eixo Certo')).not.toBeOnTheScreen();
     expect(porTipo(SafeAreaView).props.edges).not.toContain('top');
+  });
+
+  it('sem internet com a lista na tela: a lista fica e o aviso aparece', async () => {
+    mockListar.mockResolvedValue({ ok: true, data: [divida()] });
+    await render(<DividasListView />);
+    await screen.findAllByText('Financiamento do caminhão');
+
+    try {
+      await act(() => useConexaoStore.setState({ online: false }));
+      expect(screen.getByText('Sem internet')).toBeOnTheScreen();
+      expect(screen.getAllByText('Financiamento do caminhão').length).toBeGreaterThan(0);
+    } finally {
+      useConexaoStore.setState({ online: true });
+    }
+  });
+
+  it('abrir sem internet: o erro diz isso, sem skeleton e sem consultar', async () => {
+    mockListar.mockResolvedValue({ ok: true, data: [divida()] });
+    useConexaoStore.setState({ online: false });
+    try {
+      await render(<DividasListView />);
+
+      expect(screen.getByText('Sem internet. A tela carrega sozinha quando a conexão voltar.')).toBeOnTheScreen();
+      expect(mockListar).not.toHaveBeenCalled();
+    } finally {
+      useConexaoStore.setState({ online: true });
+    }
   });
 
   it('tocar na dívida abre o detalhe dela', async () => {

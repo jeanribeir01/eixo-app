@@ -1,8 +1,9 @@
-import { useEffect, useRef, useState } from 'react';
+import { useCallback, useRef, useState } from 'react';
 import { useRouter } from 'expo-router';
 import { StyleSheet, View } from 'react-native';
 import { z } from 'zod';
 
+import { useCargaUnica } from '@/lib/useCargaUnica';
 import { Aviso, Button, Column, EmptyState, Input, Screen, Skeleton, Snackbar, Text, spacing } from '@/ui';
 
 import {
@@ -17,8 +18,6 @@ import { isFormaFixa } from './types';
 type Erros = Partial<Record<'nome', string>>;
 // `desfazer`: depois de desativar, o Snackbar oferece "Desfazer" (reativa na hora).
 type Feedback = { mensagem: string; tone: 'success' | 'error'; desfazer?: boolean };
-type StatusCarga = 'carregando' | 'pronto' | 'erro';
-
 export type FormaPagamentoFormViewProps = {
   formaPagamentoId?: string;
 };
@@ -27,8 +26,6 @@ export function FormaPagamentoFormView({ formaPagamentoId }: FormaPagamentoFormV
   const router = useRouter();
   const modoEdicao = !!formaPagamentoId;
 
-  const [status, setStatus] = useState<StatusCarga>(modoEdicao ? 'carregando' : 'pronto');
-  const [erroCarga, setErroCarga] = useState<string | null>(null);
   const [nome, setNome] = useState('');
   const [nomeOriginal, setNomeOriginal] = useState('');
   const [erros, setErros] = useState<Erros>({});
@@ -40,34 +37,14 @@ export function FormaPagamentoFormView({ formaPagamentoId }: FormaPagamentoFormV
   // antes de a reativação terminar.
   const desfazendo = useRef(false);
 
-  useEffect(() => {
-    if (!formaPagamentoId) return;
-
-    let cancelado = false;
-
-    async function carregar() {
-      setStatus('carregando');
-      const resultado = await buscarFormaPagamentoPorId(formaPagamentoId!);
-      if (cancelado) return;
-
-      if (!resultado.ok) {
-        setErroCarga(resultado.mensagem);
-        setStatus('erro');
-        return;
-      }
-
-      setNome(resultado.data.nome);
-      setNomeOriginal(resultado.data.nome);
-      setAtiva(resultado.data.ativa);
-      setStatus('pronto');
-    }
-
-    carregar();
-
-    return () => {
-      cancelado = true;
-    };
-  }, [formaPagamentoId]);
+  // Carga única no Editar (useCargaUnica): sem internet a tela diz isso na hora e tenta de novo sozinha
+  // quando a conexão volta.
+  const buscarForma = useCallback(() => buscarFormaPagamentoPorId(formaPagamentoId!), [formaPagamentoId]);
+  const { status, erro: erroCarga } = useCargaUnica(formaPagamentoId ? buscarForma : null, (forma) => {
+    setNome(forma.nome);
+    setNomeOriginal(forma.nome);
+    setAtiva(forma.ativa);
+  });
 
   async function handleSalvar() {
     const resultado = formaPagamentoSchema.safeParse({ nome });

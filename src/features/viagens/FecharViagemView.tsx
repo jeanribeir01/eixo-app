@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { useRouter } from 'expo-router';
-import { Alert, StyleSheet, View } from 'react-native';
+import { StyleSheet, View } from 'react-native';
 import { z } from 'zod';
 
 import { horaLocal } from '@/lib/datas';
@@ -10,6 +10,7 @@ import {
   Card,
   Column,
   EmptyState,
+  FolhaDeConfirmacao,
   Input,
   Screen,
   Skeleton,
@@ -49,9 +50,11 @@ export function FecharViagemView({ viagemId }: FecharViagemViewProps) {
   const [erroHodometro, setErroHodometro] = useState<string | null>(null);
   const [fechando, setFechando] = useState(false);
   const [feedback, setFeedback] = useState<Feedback | null>(null);
-  // O Alert guarda a closure do primeiro render; o estado `fechando` sozinho não barra um
-  // segundo toque em "Confirmar" antes do próximo render. O ref é a guarda síncrona.
+  // O estado `fechando` sozinho não barra um segundo toque em "Finalizar" antes do próximo render. O
+  // ref é a guarda síncrona.
   const fechandoRef = useRef(false);
+  // Hodômetro final já validado, esperando o "Finalizar" da folha de confirmação.
+  const [aConfirmar, setAConfirmar] = useState<number | null>(null);
 
   useEffect(() => {
     let cancelado = false;
@@ -115,15 +118,8 @@ export function FecharViagemView({ viagemId }: FecharViagemViewProps) {
 
     setErroHodometro(null);
 
-    // Passo 3.2: confirmação no Alert padrão do sistema, com a distância já formatada. O botão diz a
-    // ação ("Finalizar"), não um "Confirmar" genérico.
-    const mensagem = `${formatarKm(kmCalculado)} rodados nesta viagem.`;
-    const aviso = distanciaExcessiva ? '\n\nA distância está bem acima da estimada para esta rota.' : '';
-
-    Alert.alert('Finalizar viagem?', `${mensagem}${aviso}`, [
-      { text: 'Cancelar', style: 'cancel' },
-      { text: 'Finalizar', onPress: () => executarFechamento(validacao.data.hodometro_final) },
-    ]);
+    // Passo 3.2: confirmação na folha do design system, com a distância já formatada.
+    setAConfirmar(validacao.data.hodometro_final);
   }
 
   async function executarFechamento(hodometroFinalValidado: number) {
@@ -254,6 +250,22 @@ export function FecharViagemView({ viagemId }: FecharViagemViewProps) {
           </Column>
         </Column>
       )}
+
+      {/* O botão diz a ação ("Finalizar"), não um "Confirmar" genérico. */}
+      <FolhaDeConfirmacao
+        visivel={aConfirmar !== null}
+        titulo="Finalizar viagem?"
+        mensagem={`${formatarKm(kmCalculado)} rodados nesta viagem.${
+          distanciaExcessiva ? ' A distância está bem acima da estimada para esta rota.' : ''
+        }`}
+        rotuloConfirmar="Finalizar"
+        onConfirmar={() => {
+          const hodometroFinal = aConfirmar;
+          setAConfirmar(null);
+          if (hodometroFinal !== null) void executarFechamento(hodometroFinal);
+        }}
+        onCancelar={() => setAConfirmar(null)}
+      />
     </Screen>
   );
 }

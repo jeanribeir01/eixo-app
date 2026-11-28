@@ -1,5 +1,7 @@
 import * as Network from 'expo-network';
 
+import { useConexaoStore } from '@/lib/conexao';
+
 import { definirUsuarioLocal } from '../sessaoLocal';
 import * as syncModule from '../sync';
 import { startNetworkSyncListener, useSyncStore } from '../syncStore';
@@ -79,6 +81,15 @@ describe('syncStore e startNetworkSyncListener', () => {
 
     useSyncStore.getState().setOnline(true);
     expect(useSyncStore.getState().isOnline).toBe(true);
+  });
+
+  // As telas do Caixa leem a conexão de src/lib, sem importar viagens (RNF08): o listener de rede é um só.
+  it('setOnline também avisa o estado de conexão compartilhado (src/lib/conexao)', () => {
+    useSyncStore.getState().setOnline(false);
+    expect(useConexaoStore.getState().online).toBe(false);
+
+    useSyncStore.getState().setOnline(true);
+    expect(useConexaoStore.getState().online).toBe(true);
   });
 
   it('sincronizarTudo chama a sincronização completa (pull + outbox) e marca o sucesso', async () => {

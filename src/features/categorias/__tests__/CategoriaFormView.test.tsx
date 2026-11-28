@@ -5,6 +5,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { CategoriaFormView } from '../CategoriaFormView';
 import { atualizarCategoria, buscarCategoriaPorId, criarCategoria, definirAtivaCategoria } from '../categoriasRepository';
 
+import { useConexaoStore } from '@/lib/conexao';
 import { porTipo } from '@/testing/componentes';
 
 // O runner do GitHub Actions é mais lento que a máquina local: o padrão de 5s estourava no CI.
@@ -135,6 +136,24 @@ describe('CategoriaFormView', () => {
     expect(screen.getByLabelText('Título').props.value).toBe('Manutenção');
     // Pelo estado de seleção, não pela cor: o visual da opção marcada é do primitivo OpcaoSelecionavel.
     expect(screen.getByRole('radio', { name: /^Saída\. / })).toBeChecked();
+  });
+
+  // Antes o Editar ficava girando para sempre sem internet; agora segue o useCargaUnica.
+  it('modo editar sem internet: diz isso na hora e preenche sozinho quando a conexão volta', async () => {
+    (buscarCategoriaPorId as jest.Mock).mockResolvedValue({ ok: true, data: { id: '9', titulo: 'Manutenção', tipo: 'Saida' } });
+    useConexaoStore.setState({ online: false });
+    try {
+      await render(<CategoriaFormView categoriaId="9" />);
+
+      expect(screen.getByText('Sem internet. A tela carrega sozinha quando a conexão voltar.')).toBeOnTheScreen();
+      expect(buscarCategoriaPorId).not.toHaveBeenCalled();
+
+      await act(() => useConexaoStore.setState({ online: true }));
+
+      expect((await screen.findByLabelText('Título')).props.value).toBe('Manutenção');
+    } finally {
+      useConexaoStore.setState({ online: true });
+    }
   });
 
   it('modo editar: envia a atualização para o id certo', async () => {

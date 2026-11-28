@@ -4,6 +4,7 @@ import { RefreshControl, StyleSheet, View } from 'react-native';
 
 import { useDadosDaTela } from '@/lib/useDadosDaTela';
 import {
+  AvisoSemInternet,
   CampoBusca,
   Column,
   EmptyState,
@@ -92,6 +93,8 @@ export function RotasListView() {
       {/* Fora da lista, na coluna: no tablet fica alinhado com as linhas (EIX-94). */}
       <ScreenColumn>
         <CampoBusca placeholder="Buscar por cidade" value={busca} onChangeText={setBusca} />
+
+        {tela.semInternet && tela.status === 'pronto' && <AvisoSemInternet carregadoAs={tela.carregadoAs} />}
 
         {tela.status === 'carregando' && (
           <Column gap="sm">

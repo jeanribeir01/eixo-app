@@ -2,6 +2,8 @@ import * as Network from 'expo-network';
 import { AppState, type AppStateStatus } from 'react-native';
 import { create } from 'zustand';
 
+import { useConexaoStore } from '@/lib/conexao';
+
 import { prepararSessaoLocal } from './viagensRepository';
 import { definirUsuarioLocal, obterGeracaoLocal, obterUsuarioLocal } from './sessaoLocal';
 import { aoEscreverLocal } from './syncBus';
@@ -141,7 +143,11 @@ export const useSyncStore = create<SyncState>((set, get) => ({
   sessaoLocalErro: null,
   ultimaSincronizacaoEm: null,
 
-  setOnline: (isOnline: boolean) => set({ isOnline }),
+  // A conexão também vai para src/lib/conexao: as telas do Caixa leem de lá, sem importar viagens (RNF08).
+  setOnline: (isOnline: boolean) => {
+    set({ isOnline });
+    useConexaoStore.getState().definirOnline(isOnline);
+  },
 
   setSincronizando: (sincronizando: boolean) => set({ sincronizando }),
 

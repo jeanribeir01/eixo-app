@@ -69,7 +69,9 @@ export function ViagensListView({ underHeader = false }: ViagensListViewProps) {
       }),
     [ehMotorista, filtroStatus, usuario],
   );
-  const tela = useDadosDaTela(buscar);
+  // A lista vem do banco local (offline-first): sem internet ela carrega normalmente, e o
+  // IndicadorSincronizacao já diz que a conexão caiu.
+  const tela = useDadosDaTela(buscar, { precisaDeInternet: false });
 
   // A contagem também passa pelo hook de tela: ele recarrega no foco e quando o pull termina.
   // Incluir `ultimaSincronizacaoEm` na consulta faz o hook reler a fila depois da sincronização.

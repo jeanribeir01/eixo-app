@@ -1,9 +1,8 @@
-import { useState } from 'react';
-import { Alert } from 'react-native';
+import { useRef, useState } from 'react';
 
 import { rotuloDoPeriodo, type Periodo } from '@/features/dashboard/periodo';
 import { hojeISO } from '@/lib/datas';
-import { Button, Column, Text, type SnackbarTone } from '@/ui';
+import { Button, Column, FolhaDeConfirmacao, FolhaDeEscolha, Text, type SnackbarTone } from '@/ui';
 
 import { nomeDoArquivo } from './arquivo';
 import { compartilharArquivo, gerarArquivoCsv, gerarArquivoPdf } from './compartilhar';
@@ -19,23 +18,6 @@ type ExportarRelatorioProps = {
   // O Snackbar mora no overlay da tela (este componente não tem Screen própria).
   onFeedback: (mensagem: string, tom: SnackbarTone) => void;
 };
-
-// Período sem transação: avisa antes de gerar um arquivo vazio (AC da US14). Avisar, não proibir: o
-// contador pode querer o arquivo vazio como comprovante de que o mês não teve movimento.
-function confirmarPeriodoVazio(rotulo: string): Promise<boolean> {
-  return new Promise((resolver) => {
-    Alert.alert(
-      'Nenhuma transação no período',
-      `${rotulo} não tem transações. O arquivo sairá só com o cabeçalho.`,
-      [
-        { text: 'Cancelar', style: 'cancel', onPress: () => resolver(false) },
-        { text: 'Gerar mesmo assim', onPress: () => resolver(true) },
-      ],
-      // No Android o alerta também fecha pelo botão voltar ou tocando fora: conta como cancelar.
-      { cancelable: true, onDismiss: () => resolver(false) },
-    );
-  });
-}
 
 async function gerarArquivo(formato: FormatoRelatorio, periodo: Periodo, transacoes: TransacaoRelatorio[]) {
   const nome = nomeDoArquivo(periodo, formato);
@@ -55,7 +37,27 @@ async function gerarArquivo(formato: FormatoRelatorio, periodo: Periodo, transac
 // `movimentacao` decide no banco.
 export function ExportarRelatorio({ periodo, onFeedback }: ExportarRelatorioProps) {
   const [exportando, setExportando] = useState(false);
+  const [escolhendoFormato, setEscolhendoFormato] = useState(false);
   const rotulo = rotuloDoPeriodo(periodo);
+
+  // Período sem transação: avisa antes de gerar um arquivo vazio (AC da US14). Avisar, não proibir: o
+  // contador pode querer o arquivo vazio como comprovante de que o mês não teve movimento. A folha
+  // responde pela promessa, para a exportação continuar de onde parou.
+  const [periodoVazio, setPeriodoVazio] = useState(false);
+  const responderPeriodoVazio = useRef<((gerar: boolean) => void) | null>(null);
+
+  function confirmarPeriodoVazio(): Promise<boolean> {
+    return new Promise((resolver) => {
+      responderPeriodoVazio.current = resolver;
+      setPeriodoVazio(true);
+    });
+  }
+
+  function responderVazio(gerar: boolean) {
+    setPeriodoVazio(false);
+    responderPeriodoVazio.current?.(gerar);
+    responderPeriodoVazio.current = null;
+  }
 
   async function exportar(formato: FormatoRelatorio) {
     setExportando(true);
@@ -66,7 +68,7 @@ export function ExportarRelatorio({ periodo, onFeedback }: ExportarRelatorioProp
         return;
       }
 
-      if (busca.data.length === 0 && !(await confirmarPeriodoVazio(rotulo))) return;
+      if (busca.data.length === 0 && !(await confirmarPeriodoVazio())) return;
 
       const arquivo = await gerarArquivo(formato, periodo, busca.data);
       if (!arquivo.ok) {
@@ -92,12 +94,9 @@ export function ExportarRelatorio({ periodo, onFeedback }: ExportarRelatorioProp
   }
 
   // Nada é consultado antes da escolha do formato: cancelar aqui não custa uma ida ao banco.
-  function escolherFormato() {
-    Alert.alert('Exportar relatório', `Transações de ${rotulo}. Em qual formato?`, [
-      { text: 'Planilha (CSV)', onPress: () => void exportar('csv') },
-      { text: 'PDF', onPress: () => void exportar('pdf') },
-      { text: 'Cancelar', style: 'cancel' },
-    ]);
+  function escolher(formato: FormatoRelatorio) {
+    setEscolhendoFormato(false);
+    void exportar(formato);
   }
 
   return (
@@ -108,9 +107,34 @@ export function ExportarRelatorio({ periodo, onFeedback }: ExportarRelatorioProp
       {/* O único cyan preenchido da aba: ela não tem outra ação primária (DESIGN_CYAN §1). */}
       <Button
         label="Exportar"
-        onPress={escolherFormato}
+        onPress={() => setEscolhendoFormato(true)}
         loading={exportando}
         accessibilityLabel={`Exportar relatório de ${rotulo}`}
+      />
+
+      <FolhaDeEscolha
+        visivel={escolhendoFormato}
+        titulo="Exportar relatório"
+        mensagem={`Transações de ${rotulo}. Em qual formato?`}
+        opcoes={[
+          {
+            rotulo: 'Planilha (CSV)',
+            descricao: 'Abre no Excel e no Google Planilhas',
+            icone: 'planilha',
+            onPress: () => escolher('csv'),
+          },
+          { rotulo: 'PDF', descricao: 'Pronto para imprimir ou enviar', icone: 'pdf', onPress: () => escolher('pdf') },
+        ]}
+        onCancelar={() => setEscolhendoFormato(false)}
+      />
+
+      <FolhaDeConfirmacao
+        visivel={periodoVazio}
+        titulo="Nenhuma transação no período"
+        mensagem={`${rotulo} não tem transações. O arquivo sairá só com o cabeçalho.`}
+        rotuloConfirmar="Gerar mesmo assim"
+        onConfirmar={() => responderVazio(true)}
+        onCancelar={() => responderVazio(false)}
       />
     </Column>
   );

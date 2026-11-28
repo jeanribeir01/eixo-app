@@ -1,9 +1,10 @@
 import { useCallback, useState } from 'react';
-import { useFocusEffect, useLocalSearchParams } from 'expo-router';
+import { useLocalSearchParams } from 'expo-router';
 import { ActivityIndicator, StyleSheet, View } from 'react-native';
 
 import { rotuloPerfil, rotuloStatus, type StatusUsuario } from '@/features/auth/permissions';
 import { useProfile } from '@/features/auth/profileStore';
+import { useCargaUnica } from '@/lib/useCargaUnica';
 import {
   Avatar,
   Badge,
@@ -29,8 +30,6 @@ import {
   type Resultado,
 } from './usuariosRepository';
 
-type Status = 'carregando' | 'pronto' | 'erro';
-
 type Feedback = { mensagem: string; tone: 'success' | 'error' };
 
 type Acao = 'perfil' | 'aprovar' | 'bloquear';
@@ -52,48 +51,33 @@ const TOM_DO_STATUS: Record<StatusUsuario, BadgeTone> = {
 // Ordem de privilégio, do maior para o menor, para a lista de escolha ler de cima para baixo.
 const ORDEM_PERFIS: Perfil['nome'][] = ['Admin', 'Financeiro', 'Gestor de Frota', 'Motorista'];
 
+// Usuário e perfis saem juntos; qualquer falha vira o erro da tela. Os perfis vêm na ordem de privilégio.
+async function buscarUsuarioEPerfis(id: string): Promise<Resultado<{ usuario: Usuario; perfis: Perfil[] }>> {
+  const [resultadoUsuario, resultadoPerfis] = await Promise.all([buscarUsuarioPorId(id), listarPerfis()]);
+  if (!resultadoUsuario.ok) return resultadoUsuario;
+  if (!resultadoPerfis.ok) return resultadoPerfis;
+  const perfis = [...resultadoPerfis.data].sort((a, b) => ORDEM_PERFIS.indexOf(a.nome) - ORDEM_PERFIS.indexOf(b.nome));
+  return { ok: true, data: { usuario: resultadoUsuario.data, perfis } };
+}
+
 export function UsuarioDetalheView() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const { usuario: usuarioLogado } = useProfile();
 
-  const [status, setStatus] = useState<Status>('carregando');
-  const [erro, setErro] = useState<string | null>(null);
   const [usuario, setUsuario] = useState<Usuario | null>(null);
   const [perfis, setPerfis] = useState<Perfil[]>([]);
   const [perfilSelecionadoId, setPerfilSelecionadoId] = useState<string | null>(null);
   const [acaoEmAndamento, setAcaoEmAndamento] = useState<Acao | null>(null);
   const [feedback, setFeedback] = useState<Feedback | null>(null);
 
-  const carregar = useCallback(async () => {
-    setStatus('carregando');
-    const [resultadoUsuario, resultadoPerfis] = await Promise.all([buscarUsuarioPorId(id), listarPerfis()]);
-
-    if (!resultadoUsuario.ok) {
-      setErro(resultadoUsuario.mensagem);
-      setStatus('erro');
-      return;
-    }
-    if (!resultadoPerfis.ok) {
-      setErro(resultadoPerfis.mensagem);
-      setStatus('erro');
-      return;
-    }
-
-    setUsuario(resultadoUsuario.data);
-    setPerfilSelecionadoId(resultadoUsuario.data.perfil.id);
-    const ordenados = [...resultadoPerfis.data].sort(
-      (a, b) => ORDEM_PERFIS.indexOf(a.nome) - ORDEM_PERFIS.indexOf(b.nome),
-    );
-    setPerfis(ordenados);
-    setStatus('pronto');
-  }, [id]);
-
-  // Mesmo padrão das listas: carrega ao ganhar foco (e não num useEffect que chama setState).
-  useFocusEffect(
-    useCallback(() => {
-      carregar();
-    }, [carregar]),
-  );
+  // Carga única (useCargaUnica): o seletor de perfil começa no perfil gravado e não volta para ele
+  // sozinho. Sem internet a tela diz isso na hora e tenta de novo quando a conexão volta.
+  const buscar = useCallback(() => buscarUsuarioEPerfis(id), [id]);
+  const { status, erro, tentarDeNovo } = useCargaUnica(buscar, (dados) => {
+    setUsuario(dados.usuario);
+    setPerfilSelecionadoId(dados.usuario.perfil.id);
+    setPerfis(dados.perfis);
+  });
 
   // O banco já recusa (trigger da EIX-30); esconder as ações evita o erro e explica o motivo.
   const ehOProprioUsuario = usuarioLogado?.id === id;
@@ -144,7 +128,7 @@ export function UsuarioDetalheView() {
           title="Não foi possível carregar"
           description={erro ?? undefined}
           actionLabel="Tentar novamente"
-          onAction={carregar}
+          onAction={tentarDeNovo}
         />
       </Screen>
     );

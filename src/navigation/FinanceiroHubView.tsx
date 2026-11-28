@@ -6,7 +6,21 @@ import { ProximosVencimentos } from '@/features/caixa/components/ProximosVencime
 import { buscarMesEmAndamento } from '@/features/caixa/mesEmAndamento';
 import { hojeISO } from '@/lib/datas';
 import { useDadosDaTela } from '@/lib/useDadosDaTela';
-import { Button, Card, Column, FAB, ListItem, ListSection, Screen, Skeleton, Snackbar, Text, useTablet, type IconName } from '@/ui';
+import {
+  AvisoSemInternet,
+  Button,
+  Card,
+  Column,
+  FAB,
+  type IconName,
+  ListItem,
+  ListSection,
+  Screen,
+  Skeleton,
+  Snackbar,
+  Text,
+  useTablet,
+} from '@/ui';
 import { spacing } from '@/ui/tokens';
 
 type Atalho = { titulo: string; descricao: string; icone: IconName; href: Href };
@@ -79,6 +93,7 @@ export function FinanceiroHubView() {
 
       {tela.status === 'pronto' && tela.dados && (
         <>
+          {tela.semInternet && <AvisoSemInternet carregadoAs={tela.carregadoAs} />}
           <MesEmAndamentoCard mes={tela.dados} onPress={() => router.push('/movimentacoes')} />
           <ProximosVencimentos movimentacoes={tela.dados.proximosVencimentos} vencidos={tela.dados.vencidos} hoje={hoje} />
         </>

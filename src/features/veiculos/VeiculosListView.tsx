@@ -1,8 +1,11 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { useFocusEffect, useRouter } from 'expo-router';
+import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useRouter } from 'expo-router';
 import { StyleSheet, View } from 'react-native';
 
+import { useDadosDaTela } from '@/lib/useDadosDaTela';
+
 import {
+  AvisoSemInternet,
   CampoBusca,
   ChipFiltro,
   Column,
@@ -10,23 +13,22 @@ import {
   FAB,
   FAB_ALTURA_RESERVADA,
   GrupoRecolhivel,
+  type IconName,
   LinhaDeFiltros,
   List,
   ListItem,
   Screen,
   ScreenColumn,
   Skeleton,
+  Snackbar,
   Text,
   spacing,
   useScreenColumn,
-  type IconName,
 } from '@/ui';
 
 import { formatarPlaca } from './placa';
 import { listarVeiculos } from './repository';
 import { STATUS_VEICULO, rotuloStatusVeiculo, type StatusVeiculo, type Veiculo } from './types';
-
-type Status = 'carregando' | 'pronto' | 'erro';
 
 // Grupos na ordem em que o gestor olha a frota: o que está rodando, o que pode sair, o que está parado. O
 // status vem do cabeçalho do grupo (critério da US06: o status aparece em cada veículo, agora pelo grupo).
@@ -71,14 +73,9 @@ function formatarCapacidade(toneladas: number): string {
 
 export function VeiculosListView() {
   const router = useRouter();
-  const [status, setStatus] = useState<Status>('carregando');
-  const [veiculos, setVeiculos] = useState<Veiculo[]>([]);
-  const [erro, setErro] = useState<string | null>(null);
   const [busca, setBusca] = useState('');
   const [buscaAplicada, setBuscaAplicada] = useState('');
   const [filtroStatus, setFiltroStatus] = useState<string>(TODOS);
-  // Descarta respostas fora de ordem: se o usuário troca o filtro rápido, só a última vale.
-  const ultimaRequisicao = useRef(0);
   const coluna = useScreenColumn();
 
   useEffect(() => {
@@ -86,31 +83,19 @@ export function VeiculosListView() {
     return () => clearTimeout(timer);
   }, [busca]);
 
-  const carregar = useCallback(async () => {
-    const requisicao = ++ultimaRequisicao.current;
-    setStatus('carregando');
-
-    const resultado = await listarVeiculos({
-      busca: buscaAplicada.trim() || undefined,
-      status: filtroStatus === TODOS ? undefined : (filtroStatus as StatusVeiculo),
-    });
-    if (requisicao !== ultimaRequisicao.current) return;
-
-    if (!resultado.ok) {
-      setErro(resultado.mensagem);
-      setStatus('erro');
-      return;
-    }
-    setVeiculos(resultado.data);
-    setStatus('pronto');
-  }, [buscaAplicada, filtroStatus]);
-
-  // Recarrega ao voltar da criação/edição (a tela não desmonta na pilha) e quando busca/filtro mudam.
-  useFocusEffect(
-    useCallback(() => {
-      carregar();
-    }, [carregar]),
+  // A mesma carga das outras listas (useDadosDaTela): cada busca ou filtro é uma consulta nova, voltar
+  // ao foco recarrega sem piscar o skeleton, e sem internet a tela avisa em vez de ficar carregando.
+  const buscar = useCallback(
+    () =>
+      listarVeiculos({
+        busca: buscaAplicada.trim() || undefined,
+        status: filtroStatus === TODOS ? undefined : (filtroStatus as StatusVeiculo),
+      }),
+    [buscaAplicada, filtroStatus],
   );
+  const tela = useDadosDaTela(buscar);
+  const { status, erro } = tela;
+  const veiculos = useMemo(() => tela.dados ?? [], [tela.dados]);
 
   const filtrando = buscaAplicada.trim() !== '' || filtroStatus !== TODOS;
   const linhas = useMemo(() => agruparPorStatus(veiculos), [veiculos]);
@@ -125,6 +110,12 @@ export function VeiculosListView() {
       list
       // O FAB é a ação de criar e o único azul preenchido da tela, como nas outras listas (DESIGN_CYAN §7).
       fab={<FAB label="Novo veículo" onPress={() => router.push('/frota/novo')} />}
+      // Recarga que falha com a lista já na tela: avisa sem apagar o que está ali.
+      overlay={
+        tela.feedbackErro ? (
+          <Snackbar message={tela.feedbackErro} tone="error" onDismiss={tela.limparFeedbackErro} />
+        ) : null
+      }
     >
       {/* Fora da lista, na coluna: no tablet fica alinhado com as linhas (EIX-94). */}
       <ScreenColumn>
@@ -136,6 +127,8 @@ export function VeiculosListView() {
           <ChipFiltro label="Status" value={filtroStatus} valorPadrao={TODOS} options={opcoesFiltro} onChange={setFiltroStatus} />
         </LinhaDeFiltros>
 
+        {tela.semInternet && status === 'pronto' && <AvisoSemInternet carregadoAs={tela.carregadoAs} />}
+
         {status === 'carregando' && (
           <Column gap="sm">
             <Skeleton height="xxl" accessibilityLabel="Carregando veículos" />
@@ -145,7 +138,12 @@ export function VeiculosListView() {
         )}
 
         {status === 'erro' && (
-          <EmptyState title="Não foi possível carregar" description={erro ?? undefined} actionLabel="Tentar novamente" onAction={carregar} />
+          <EmptyState
+            title="Não foi possível carregar"
+            description={erro ?? undefined}
+            actionLabel="Tentar novamente"
+            onAction={tela.recarregar}
+          />
         )}
 
         {status === 'pronto' && veiculos.length === 0 && (

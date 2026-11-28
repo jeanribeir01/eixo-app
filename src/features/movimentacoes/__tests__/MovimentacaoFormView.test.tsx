@@ -1,7 +1,7 @@
-import { act, fireEvent, render, screen, waitFor } from '@testing-library/react-native';
+import { act, fireEvent, render, screen, waitFor, within } from '@testing-library/react-native';
 import { ImageManipulator } from 'expo-image-manipulator';
 import * as ImagePicker from 'expo-image-picker';
-import { Alert, KeyboardAvoidingView, ScrollView } from 'react-native';
+import { KeyboardAvoidingView, ScrollView } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import {
@@ -67,7 +67,6 @@ jest.mock('@/lib/storage', () => ({
   urlDoComprovante: jest.fn(),
 }));
 
-const mockAlert = jest.spyOn(Alert, 'alert').mockImplementation(() => undefined);
 const mockPermissaoGaleria = ImagePicker.requestMediaLibraryPermissionsAsync as jest.Mock;
 const mockGaleria = ImagePicker.launchImageLibraryAsync as jest.Mock;
 const mockManipular = ImageManipulator.manipulate as jest.Mock;
@@ -174,7 +173,6 @@ beforeEach(() => {
   mockListarViagens.mockReset();
   mockListarViagens.mockResolvedValue({ ok: true, data: [VIAGEM_SP, VIAGEM_BH] });
   mockBuscarViagem.mockReset();
-  mockAlert.mockClear();
   mockRemover.mockReset();
   mockRemover.mockResolvedValue({ ok: true, data: null });
   mockUpload.mockReset();
@@ -189,21 +187,22 @@ beforeEach(() => {
   });
 });
 
-// Toca numa opção do último Alert aberto (o Alert nativo não aparece na árvore do teste).
-async function escolherNoAlerta(opcao: string) {
-  const botoes = mockAlert.mock.calls.at(-1)?.[2] ?? [];
-  await act(async () => botoes.find((botao) => botao.text === opcao)?.onPress?.());
+// Toca numa opção da folha aberta do anexo (origem da imagem ou confirmação de remover).
+async function escolherNaFolha(opcao: string) {
+  await act(async () => {
+    await fireEvent.press(within(screen.getByTestId('folha')).getByRole('button', { name: opcao }));
+  });
 }
 
 async function anexarDaGaleria() {
   await fireEvent.press(screen.getByRole('button', { name: 'Anexar comprovante' }));
-  await escolherNoAlerta('Galeria');
+  await escolherNaFolha('Galeria');
 }
 
 async function removerAnexo() {
   await waitFor(() => expect(screen.getByRole('imagebutton', { name: 'Ver comprovante em tela cheia' })).toBeEnabled());
   await fireEvent.press(screen.getByRole('button', { name: 'Remover' }));
-  await escolherNoAlerta('Remover');
+  await escolherNaFolha('Remover');
 }
 
 describe('MovimentacaoFormView — nova (MOV-01)', () => {
